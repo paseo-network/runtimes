@@ -1,0 +1,25 @@
+[workspace.package]
+version = "1.0.0"
+authors = ["Portico"]
+edition = "2021"
+repository = "https://github.com/paseo-network/runtimes.git"
+license = "Apache License v2" # TODO
+
+[workspace]
+resolver = "2"
+
+members = [
+	"relay/paseo",
+	"relay/paseo/constants",
+	"system-parachains/asset-hubs/asset-hub-paseo"
+]
+
+[profile.release]
+# Paseo runtime requires unwinding.
+panic = "unwind"
+opt-level = 3
+
+[profile.production]
+inherits = "release"
+lto = true
+codegen-units = 1
