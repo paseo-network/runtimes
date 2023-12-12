@@ -20,7 +20,7 @@ pub use pallet_custom_origins::*;
 
 #[frame_support::pallet]
 pub mod pallet_custom_origins {
-	use crate::{Balance, CENTS, GRAND};
+	use crate::{Balance, UNITS, GRAND};
 	use frame_support::pallet_prelude::*;
 
 	#[pallet::config]
@@ -48,15 +48,15 @@ pub mod pallet_custom_origins {
 		ReferendumCanceller,
 		/// Origin able to kill referenda.
 		ReferendumKiller,
-		/// Origin able to spend up to 1 PAS from the treasury at once.
+		/// Origin able to spend up to 250 PAS from the treasury at once.
 		SmallTipper,
-		/// Origin able to spend up to 5 PAS from the treasury at once.
+		/// Origin able to spend up to 1_000 PAS from the treasury at once.
 		BigTipper,
-		/// Origin able to spend up to 50 PAS from the treasury at once.
+		/// Origin able to spend up to 10_000 PAS from the treasury at once.
 		SmallSpender,
-		/// Origin able to spend up to 500 PAS from the treasury at once.
+		/// Origin able to spend up to 100_000 PAS from the treasury at once.
 		MediumSpender,
-		/// Origin able to spend up to 5,000 PAS from the treasury at once.
+		/// Origin able to spend up to 1_000_000 PAS from the treasury at once.
 		BigSpender,
 		/// Origin able to dispatch a whitelisted call.
 		WhitelistedCaller,
@@ -169,7 +169,7 @@ pub mod pallet_custom_origins {
 
 	decl_ensure! {
 		pub type Spender: EnsureOrigin<Success = Balance> {
-			SmallTipper = 250 * 3 * CENTS,
+			SmallTipper = 250 * UNITS,
 			BigTipper = 1 * GRAND,
 			SmallSpender = 10 * GRAND,
 			MediumSpender = 100 * GRAND,
