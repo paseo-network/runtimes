@@ -1,0 +1,39 @@
+[package]
+name = "chain-spec-generator"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+clap = { version = "4.4.4", features = [ "derive" ] }
+hex-literal = "0.4.1"
+serde_json = "1.0.107"
+serde = { version = "1.0.188", features = ["derive"] }
+
+paseo-runtime = { path = "../relay/paseo" }
+paseo-runtime-constants = { path = "../relay/paseo/constants" }
+asset-hub-paseo-runtime = { path = "../system-parachains/asset-hubs/asset-hub-paseo" }
+
+
+sc-chain-spec = "22.0.0"
+polkadot-runtime-parachains = "2.0.0"
+polkadot-primitives = "2.0.0"
+sp-consensus-babe = "0.27.0"
+sp-authority-discovery = "21.0.0"
+sp-core = "23.0.0"
+pallet-staking = "23.0.0"
+sc-consensus-grandpa = "0.14.0"
+pallet-im-online = "22.0.0"
+sp-runtime = "26.0.0"
+sp-consensus-beefy = "8.0.0"
+xcm = { package = "staging-xcm", version = "2.0.1" }
+parachains-common = { version = "2.0.0" }
+cumulus-primitives-core = { version = "0.2.0" }
+
+[features]
+runtime-benchmarks = [
+	"asset-hub-paseo-runtime/runtime-benchmarks",
+	"paseo-runtime/runtime-benchmarks",
+]
