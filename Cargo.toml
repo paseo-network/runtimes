@@ -11,7 +11,7 @@ resolver = "2"
 members = [
 	"relay/paseo",
 	"relay/paseo/constants",
-	"system-parachains/asset-hubs/asset-hub-paseo"
+	"system-parachains/asset-hub-paseo"
 ]
 
 [profile.release]
