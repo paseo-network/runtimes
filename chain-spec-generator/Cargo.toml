@@ -14,7 +14,8 @@ serde = { version = "1.0.188", features = ["derive"] }
 
 paseo-runtime = { path = "../relay/paseo" }
 paseo-runtime-constants = { path = "../relay/paseo/constants" }
-asset-hub-paseo-runtime = { path = "../system-parachains/asset-hubs/asset-hub-paseo" }
+asset-hub-paseo-runtime = { path = "../system-parachains/asset-hub-paseo" }
+
 
 
 sc-chain-spec = "22.0.0"
