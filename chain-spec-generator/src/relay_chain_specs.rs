@@ -15,9 +15,6 @@ use sp_runtime::{traits::IdentifyAccount, Perbill};
 pub type PolkadotChainSpec =
     sc_chain_spec::GenericChainSpec<polkadot_runtime::RuntimeGenesisConfig, NoExtension>;
 
-pub type KusamaChainSpec =
-    sc_chain_spec::GenericChainSpec<kusama_runtime::RuntimeGenesisConfig, NoExtension>;
-
 const DEFAULT_PROTOCOL_ID: &str = "pas";
 
 /// Returns the properties for the [`PolkadotChainSpec`].
@@ -81,26 +78,6 @@ fn polkadot_session_keys(
         para_validator,
         para_assignment,
         authority_discovery,
-    }
-}
-
-fn kusama_session_keys(
-    babe: BabeId,
-    grandpa: GrandpaId,
-    im_online: ImOnlineId,
-    para_validator: ValidatorId,
-    para_assignment: AssignmentId,
-    authority_discovery: AuthorityDiscoveryId,
-    beefy: BeefyId,
-) -> kusama_runtime::SessionKeys {
-    kusama_runtime::SessionKeys {
-        babe,
-        grandpa,
-        im_online,
-        para_validator,
-        para_assignment,
-        authority_discovery,
-        beefy,
     }
 }
 
@@ -286,123 +263,12 @@ pub fn polkadot_testnet_genesis(
     }
 }
 
-/// Helper function to create kusama `RuntimeGenesisConfig` for testing
-pub fn kusama_testnet_genesis(
-    wasm_binary: &[u8],
-    initial_authorities: Vec<(
-        AccountId,
-        AccountId,
-        BabeId,
-        GrandpaId,
-        ImOnlineId,
-        ValidatorId,
-        AssignmentId,
-        AuthorityDiscoveryId,
-        BeefyId,
-    )>,
-    _root_key: AccountId,
-    endowed_accounts: Option<Vec<AccountId>>,
-) -> kusama_runtime::RuntimeGenesisConfig {
-    let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(testnet_accounts);
-
-    const ENDOWMENT: u128 = 1_000_000 * KSM;
-    const STASH: u128 = 100 * KSM;
-
-    kusama_runtime::RuntimeGenesisConfig {
-        system: kusama_runtime::SystemConfig {
-            code: wasm_binary.to_vec(),
-            ..Default::default()
-        },
-        indices: kusama_runtime::IndicesConfig { indices: vec![] },
-        balances: kusama_runtime::BalancesConfig {
-            balances: endowed_accounts
-                .iter()
-                .map(|k| (k.clone(), ENDOWMENT))
-                .collect(),
-        },
-        beefy: Default::default(),
-        session: kusama_runtime::SessionConfig {
-            keys: initial_authorities
-                .iter()
-                .map(|x| {
-                    (
-                        x.0.clone(),
-                        x.0.clone(),
-                        kusama_session_keys(
-                            x.2.clone(),
-                            x.3.clone(),
-                            x.4.clone(),
-                            x.5.clone(),
-                            x.6.clone(),
-                            x.7.clone(),
-                            x.8.clone(),
-                        ),
-                    )
-                })
-                .collect::<Vec<_>>(),
-        },
-        staking: kusama_runtime::StakingConfig {
-            minimum_validator_count: 1,
-            validator_count: initial_authorities.len() as u32,
-            stakers: initial_authorities
-                .iter()
-                .map(|x| {
-                    (
-                        x.0.clone(),
-                        x.0.clone(),
-                        STASH,
-                        kusama_runtime::StakerStatus::Validator,
-                    )
-                })
-                .collect(),
-            invulnerables: initial_authorities.iter().map(|x| x.0.clone()).collect(),
-            force_era: Forcing::NotForcing,
-            slash_reward_fraction: Perbill::from_percent(10),
-            ..Default::default()
-        },
-        babe: kusama_runtime::BabeConfig {
-            authorities: Default::default(),
-            epoch_config: Some(kusama_runtime::BABE_GENESIS_EPOCH_CONFIG),
-            ..Default::default()
-        },
-        grandpa: Default::default(),
-        im_online: Default::default(),
-        authority_discovery: kusama_runtime::AuthorityDiscoveryConfig {
-            keys: vec![],
-            ..Default::default()
-        },
-        claims: kusama_runtime::ClaimsConfig {
-            claims: vec![],
-            vesting: vec![],
-        },
-        vesting: kusama_runtime::VestingConfig { vesting: vec![] },
-        treasury: Default::default(),
-        hrmp: Default::default(),
-        configuration: kusama_runtime::ConfigurationConfig {
-            config: default_parachains_host_configuration(),
-        },
-        paras: Default::default(),
-        xcm_pallet: Default::default(),
-        nomination_pools: Default::default(),
-        nis_counterpart_balances: Default::default(),
-    }
-}
-
 fn polkadot_development_config_genesis(
     wasm_binary: &[u8],
 ) -> polkadot_runtime::RuntimeGenesisConfig {
     polkadot_testnet_genesis(
         wasm_binary,
         vec![get_authority_keys_from_seed_no_beefy("Alice")],
-        get_account_id_from_seed::<sr25519::Public>("Alice"),
-        None,
-    )
-}
-
-fn kusama_development_config_genesis(wasm_binary: &[u8]) -> kusama_runtime::RuntimeGenesisConfig {
-    kusama_testnet_genesis(
-        wasm_binary,
-        vec![get_authority_keys_from_seed("Alice")],
         get_account_id_from_seed::<sr25519::Public>("Alice"),
         None,
     )
@@ -423,24 +289,6 @@ pub fn polkadot_development_config() -> Result<Box<dyn ChainSpec>, String> {
         Some(DEFAULT_PROTOCOL_ID),
         None,
         Some(polkadot_chain_spec_properties()),
-        Default::default(),
-    )))
-}
-
-/// Kusama development config (single validator Alice)
-pub fn kusama_development_config() -> Result<Box<dyn ChainSpec>, String> {
-    let wasm_binary = kusama_runtime::WASM_BINARY.ok_or("Kusama development wasm not available")?;
-
-    Ok(Box::new(KusamaChainSpec::from_genesis(
-        "Kusama Development",
-        "kusama_dev",
-        ChainType::Development,
-        move || kusama_development_config_genesis(wasm_binary),
-        vec![],
-        None,
-        Some(DEFAULT_PROTOCOL_ID),
-        None,
-        None,
         Default::default(),
     )))
 }
@@ -472,36 +320,6 @@ pub fn polkadot_local_testnet_config() -> Result<Box<dyn ChainSpec>, String> {
         Some(DEFAULT_PROTOCOL_ID),
         None,
         Some(polkadot_chain_spec_properties()),
-        Default::default(),
-    )))
-}
-
-fn kusama_local_testnet_genesis(wasm_binary: &[u8]) -> kusama_runtime::RuntimeGenesisConfig {
-    kusama_testnet_genesis(
-        wasm_binary,
-        vec![
-            get_authority_keys_from_seed("Alice"),
-            get_authority_keys_from_seed("Bob"),
-        ],
-        get_account_id_from_seed::<sr25519::Public>("Alice"),
-        None,
-    )
-}
-
-/// Kusama local testnet config (multivalidator Alice + Bob)
-pub fn kusama_local_testnet_config() -> Result<Box<dyn ChainSpec>, String> {
-    let wasm_binary = kusama_runtime::WASM_BINARY.ok_or("Kusama development wasm not available")?;
-
-    Ok(Box::new(KusamaChainSpec::from_genesis(
-        "Kusama Local Testnet",
-        "kusama_local_testnet",
-        ChainType::Local,
-        move || kusama_local_testnet_genesis(wasm_binary),
-        vec![],
-        None,
-        Some(DEFAULT_PROTOCOL_ID),
-        None,
-        None,
         Default::default(),
     )))
 }
