@@ -1,8 +1,7 @@
-use kusama_runtime_constants::currency::UNITS as KSM;
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 use pallet_staking::Forcing;
+use paseo_runtime_constants::currency::UNITS as PAS;
 use polkadot_primitives::{AccountId, AccountPublic, AssignmentId, ValidatorId};
-use polkadot_runtime_constants::currency::UNITS as PAS;
 use polkadot_runtime_parachains::configuration::HostConfiguration;
 use sc_chain_spec::{ChainSpec, ChainType, NoExtension};
 use sc_consensus_grandpa::AuthorityId as GrandpaId;
