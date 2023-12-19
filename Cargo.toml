@@ -14,6 +14,10 @@ members = [
 	"system-parachains/asset-hub-paseo"
 ]
 
+exclude = [
+  "chain-spec-generator"
+]
+
 [profile.release]
 # Paseo runtime requires unwinding.
 panic = "unwind"

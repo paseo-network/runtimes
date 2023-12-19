@@ -76,7 +76,7 @@ pallet-staking-reward-curve = { version = "8.0.0" }
 pallet-staking-runtime-api = { default-features = false , version = "9.0.0" }
 frame-system = { default-features = false , version = "23.0.0" }
 frame-system-rpc-runtime-api = { default-features = false , version = "21.0.0" }
-polkadot-runtime-constants = { package = "polkadot-runtime-constants", path = "constants", default-features = false }
+paseo-runtime-constants = { package = "paseo-runtime-constants", path = "constants", default-features = false }
 pallet-timestamp = { default-features = false , version = "22.0.0" }
 pallet-tips = { default-features = false , version = "22.0.0" }
 pallet-treasury = { default-features = false , version = "22.0.0" }
@@ -185,7 +185,7 @@ std = [
 	"pallet-xcm-benchmarks?/std",
 	"pallet-xcm/std",
 	"parity-scale-codec/std",
-	"polkadot-runtime-constants/std",
+	"paseo-runtime-constants/std",
 	"primitives/std",
 	"runtime-common/std",
 	"runtime-parachains/std",
