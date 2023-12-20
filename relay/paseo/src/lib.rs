@@ -157,7 +157,7 @@ pub fn native_version() -> NativeVersion {
 
 parameter_types! {
     pub const Version: RuntimeVersion = VERSION;
-    pub const SS58Prefix: u8 = 0;
+    pub const SS58Prefix: u8 = 42;
 }
 
 impl frame_system::Config for Runtime {

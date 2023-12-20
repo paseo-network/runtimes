@@ -20,6 +20,8 @@ const DEFAULT_PROTOCOL_ID: &str = "pas";
 pub fn paseo_chain_spec_properties() -> serde_json::map::Map<String, serde_json::Value> {
     serde_json::json!({
         "tokenDecimals": 10,
+        "ss58Format": 42,
+        "tokenSymbol": "PAS"
     })
     .as_object()
     .expect("Map given; qed")
@@ -183,7 +185,7 @@ pub fn paseo_genesis(
     let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(testnet_accounts);
 
     const ENDOWMENT: u128 = 1_000_000_000_000_000 * PAS;
-    const STASH: u128 = 100_000_000_000 * PAS;
+    const STASH: u128 = 1_000_000_000 * PAS;
 
     paseo_runtime::RuntimeGenesisConfig {
         system: paseo_runtime::SystemConfig {
@@ -268,17 +270,15 @@ pub fn paseo_genesis(
 fn paseo_config_genesis(wasm_binary: &[u8]) -> paseo_runtime::RuntimeGenesisConfig {
     paseo_genesis(
         wasm_binary,
+        // initial authorities
         vec![
             get_authority_keys_from_seed_no_beefy("Alice"),
             get_authority_keys_from_seed_no_beefy("Bob"),
         ],
+        //root key
         get_account_id_from_seed::<sr25519::Public>("Alice"),
-        Some(vec![
-            get_account_id_from_seed::<sr25519::Public>("Alice"),
-            get_account_id_from_seed::<sr25519::Public>("Bob"),
-            get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-            get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-        ]),
+        // endowed accounts
+        None,
     )
 }
 
@@ -303,12 +303,15 @@ pub fn paseo_config() -> Result<Box<dyn ChainSpec>, String> {
 fn paseo_local_genesis(wasm_binary: &[u8]) -> paseo_runtime::RuntimeGenesisConfig {
     paseo_genesis(
         wasm_binary,
+        // initial authorities
         vec![
             get_authority_keys_from_seed_no_beefy("Alice"),
             get_authority_keys_from_seed_no_beefy("Bob"),
         ],
+        //root key
         get_account_id_from_seed::<sr25519::Public>("Alice"),
-        Some(vec![get_account_id_from_seed::<sr25519::Public>("Alice")]),
+        // endowed accounts
+        None,
     )
 }
 

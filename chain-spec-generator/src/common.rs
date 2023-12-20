@@ -1,9 +1,5 @@
 use crate::{
-    relay_chain_specs::{PaseoChainSpec},
-    system_parachains_specs::{
-        AssetHubPaseoChainSpec,
-    },
-    ChainSpec,
+    relay_chain_specs::PaseoChainSpec, system_parachains_specs::AssetHubPaseoChainSpec, ChainSpec,
 };
 use polkadot_primitives::{AccountId, AccountPublic};
 use sp_core::{sr25519, Pair, Public};

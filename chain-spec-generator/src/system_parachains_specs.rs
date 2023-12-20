@@ -20,7 +20,6 @@ pub type AssetHubPaseoChainSpec =
 
 const ASSET_HUB_PASEO_ED: Balance = parachains_common::polkadot::currency::EXISTENTIAL_DEPOSIT;
 
-
 /// The default XCM version to set in genesis config.
 const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
 
@@ -64,8 +63,10 @@ pub fn asset_hub_paseo_session_keys(
 /// Generate the session keys from individual elements.
 ///
 /// The input must be a tuple of individual keys (a single arg for now since we have just one key).
-pub fn asset_hub_kusama_session_keys(keys: AssetHubPolkadotAuraId) -> asset_hub_paseo_runtime::SessionKeys {
-	asset_hub_paseo_runtime::SessionKeys { aura: keys }
+pub fn asset_hub_kusama_session_keys(
+    keys: AssetHubPolkadotAuraId,
+) -> asset_hub_paseo_runtime::SessionKeys {
+    asset_hub_paseo_runtime::SessionKeys { aura: keys }
 }
 
 // AssetHubPolkadot
@@ -101,8 +102,8 @@ fn asset_hub_polkadot_genesis(
                 .into_iter()
                 .map(|(acc, aura)| {
                     (
-                        acc.clone(),                           // account id
-                        acc,                                   // validator id
+                        acc.clone(),                        // account id
+                        acc,                                // validator id
                         asset_hub_paseo_session_keys(aura), // session keys
                     )
                 })
