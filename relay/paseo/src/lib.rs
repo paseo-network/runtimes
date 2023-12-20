@@ -99,7 +99,7 @@ use sp_runtime::traits::Get;
 pub use sp_runtime::BuildStorage;
 
 /// Constant values used within the runtime.
-use polkadot_runtime_constants::{currency::*, fee::*, time::*};
+use paseo_runtime_constants::{currency::*, fee::*, time::*};
 
 // Weights used in the runtime.
 mod weights;
@@ -117,20 +117,20 @@ use governance::{
 
 pub mod xcm_config;
 
-pub const LOG_TARGET: &'static str = "runtime::polkadot";
+pub const LOG_TARGET: &'static str = "runtime::paseo";
 
-impl_runtime_weights!(polkadot_runtime_constants);
+impl_runtime_weights!(paseo_runtime_constants);
 
 // Make the WASM binary available.
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-// Polkadot version identifier;
-/// Runtime version (Polkadot).
+// Paseo version identifier;
+/// Runtime version (Paseo).
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: create_runtime_str!("polkadot"),
-	impl_name: create_runtime_str!("parity-polkadot"),
+	spec_name: create_runtime_str!("paseo"),
+	impl_name: create_runtime_str!("paseo-testnet"),
 	authoring_version: 0,
 	spec_version: 1_000_000,
 	impl_version: 0,
@@ -1467,8 +1467,11 @@ construct_runtime! {
 
 		// Generalized message queue
 		MessageQueue: pallet_message_queue::{Pallet, Call, Storage, Event<T>} = 100,
+
 	}
 }
+
+
 
 /// The address format for describing accounts.
 pub type Address = sp_runtime::MultiAddress<AccountId, ()>;
