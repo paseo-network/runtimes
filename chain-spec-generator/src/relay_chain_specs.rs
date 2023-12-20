@@ -11,13 +11,13 @@ use sp_consensus_beefy::ecdsa_crypto::AuthorityId as BeefyId;
 use sp_core::{sr25519, Pair, Public};
 use sp_runtime::{traits::IdentifyAccount, Perbill};
 
-pub type PolkadotChainSpec =
-    sc_chain_spec::GenericChainSpec<polkadot_runtime::RuntimeGenesisConfig, NoExtension>;
+pub type PaseoChainSpec =
+    sc_chain_spec::GenericChainSpec<paseo_runtime::RuntimeGenesisConfig, NoExtension>;
 
 const DEFAULT_PROTOCOL_ID: &str = "pas";
 
-/// Returns the properties for the [`PolkadotChainSpec`].
-pub fn polkadot_chain_spec_properties() -> serde_json::map::Map<String, serde_json::Value> {
+/// Returns the properties for the [`PaseoChainSpec`].
+pub fn paseo_chain_spec_properties() -> serde_json::map::Map<String, serde_json::Value> {
     serde_json::json!({
         "tokenDecimals": 10,
     })
@@ -62,15 +62,15 @@ fn default_parachains_host_configuration() -> HostConfiguration<polkadot_primiti
     }
 }
 
-fn polkadot_session_keys(
+fn paseo_session_keys(
     babe: BabeId,
     grandpa: GrandpaId,
     im_online: ImOnlineId,
     para_validator: ValidatorId,
     para_assignment: AssignmentId,
     authority_discovery: AuthorityDiscoveryId,
-) -> polkadot_runtime::SessionKeys {
-    polkadot_runtime::SessionKeys {
+) -> paseo_runtime::SessionKeys {
+    paseo_runtime::SessionKeys {
         babe,
         grandpa,
         im_online,
@@ -165,7 +165,7 @@ fn testnet_accounts() -> Vec<AccountId> {
     ]
 }
 
-pub fn polkadot_testnet_genesis(
+pub fn paseo_genesis(
     wasm_binary: &[u8],
     initial_authorities: Vec<(
         AccountId,
@@ -179,32 +179,32 @@ pub fn polkadot_testnet_genesis(
     )>,
     _root_key: AccountId,
     endowed_accounts: Option<Vec<AccountId>>,
-) -> polkadot_runtime::RuntimeGenesisConfig {
+) -> paseo_runtime::RuntimeGenesisConfig {
     let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(testnet_accounts);
 
     const ENDOWMENT: u128 = 1_000_000 * PAS;
-    const STASH: u128 = 100 * PAS;
+    const STASH: u128 = 100_000 * PAS;
 
-    polkadot_runtime::RuntimeGenesisConfig {
-        system: polkadot_runtime::SystemConfig {
+    paseo_runtime::RuntimeGenesisConfig {
+        system: paseo_runtime::SystemConfig {
             code: wasm_binary.to_vec(),
             ..Default::default()
         },
-        indices: polkadot_runtime::IndicesConfig { indices: vec![] },
-        balances: polkadot_runtime::BalancesConfig {
+        indices: paseo_runtime::IndicesConfig { indices: vec![] },
+        balances: paseo_runtime::BalancesConfig {
             balances: endowed_accounts
                 .iter()
                 .map(|k| (k.clone(), ENDOWMENT))
                 .collect(),
         },
-        session: polkadot_runtime::SessionConfig {
+        session: paseo_runtime::SessionConfig {
             keys: initial_authorities
                 .iter()
                 .map(|x| {
                     (
                         x.0.clone(),
                         x.0.clone(),
-                        polkadot_session_keys(
+                        paseo_session_keys(
                             x.2.clone(),
                             x.3.clone(),
                             x.4.clone(),
@@ -216,7 +216,7 @@ pub fn polkadot_testnet_genesis(
                 })
                 .collect::<Vec<_>>(),
         },
-        staking: polkadot_runtime::StakingConfig {
+        staking: paseo_runtime::StakingConfig {
             minimum_validator_count: 1,
             validator_count: initial_authorities.len() as u32,
             stakers: initial_authorities
@@ -226,7 +226,7 @@ pub fn polkadot_testnet_genesis(
                         x.0.clone(),
                         x.0.clone(),
                         STASH,
-                        polkadot_runtime::StakerStatus::Validator,
+                        paseo_runtime::StakerStatus::Validator,
                     )
                 })
                 .collect(),
@@ -235,65 +235,40 @@ pub fn polkadot_testnet_genesis(
             slash_reward_fraction: Perbill::from_percent(10),
             ..Default::default()
         },
-        babe: polkadot_runtime::BabeConfig {
+        babe: paseo_runtime::BabeConfig {
             authorities: Default::default(),
-            epoch_config: Some(polkadot_runtime::BABE_GENESIS_EPOCH_CONFIG),
+            epoch_config: Some(paseo_runtime::BABE_GENESIS_EPOCH_CONFIG),
             ..Default::default()
         },
         grandpa: Default::default(),
         im_online: Default::default(),
-        authority_discovery: polkadot_runtime::AuthorityDiscoveryConfig {
+        authority_discovery: paseo_runtime::AuthorityDiscoveryConfig {
             keys: vec![],
             ..Default::default()
         },
-        claims: polkadot_runtime::ClaimsConfig {
+        claims: paseo_runtime::ClaimsConfig {
             claims: vec![],
             vesting: vec![],
         },
-        vesting: polkadot_runtime::VestingConfig { vesting: vec![] },
+        vesting: paseo_runtime::VestingConfig { vesting: vec![] },
         treasury: Default::default(),
         hrmp: Default::default(),
-        configuration: polkadot_runtime::ConfigurationConfig {
+        configuration: paseo_runtime::ConfigurationConfig {
             config: default_parachains_host_configuration(),
         },
         paras: Default::default(),
         xcm_pallet: Default::default(),
         nomination_pools: Default::default(),
+        // sudo: paseo_runtime::SudoConfig {
+        //     key: root_key,
+        // },
     }
 }
 
-fn polkadot_development_config_genesis(
+fn paseo_config_genesis(
     wasm_binary: &[u8],
-) -> polkadot_runtime::RuntimeGenesisConfig {
-    polkadot_testnet_genesis(
-        wasm_binary,
-        vec![get_authority_keys_from_seed_no_beefy("Alice")],
-        get_account_id_from_seed::<sr25519::Public>("Alice"),
-        None,
-    )
-}
-
-/// Polkadot development config (single validator Alice)
-pub fn polkadot_development_config() -> Result<Box<dyn ChainSpec>, String> {
-    let wasm_binary =
-        polkadot_runtime::WASM_BINARY.ok_or("Polkadot development wasm not available")?;
-
-    Ok(Box::new(PolkadotChainSpec::from_genesis(
-        "Polakdot Development",
-        "polkadot_dev",
-        ChainType::Development,
-        move || polkadot_development_config_genesis(wasm_binary),
-        vec![],
-        None,
-        Some(DEFAULT_PROTOCOL_ID),
-        None,
-        Some(polkadot_chain_spec_properties()),
-        Default::default(),
-    )))
-}
-
-fn polkadot_local_testnet_genesis(wasm_binary: &[u8]) -> polkadot_runtime::RuntimeGenesisConfig {
-    polkadot_testnet_genesis(
+) -> paseo_runtime::RuntimeGenesisConfig {
+    paseo_genesis(
         wasm_binary,
         vec![
             get_authority_keys_from_seed_no_beefy("Alice"),
@@ -304,21 +279,52 @@ fn polkadot_local_testnet_genesis(wasm_binary: &[u8]) -> polkadot_runtime::Runti
     )
 }
 
-/// Polkadot local testnet config (multivalidator Alice + Bob)
-pub fn polkadot_local_testnet_config() -> Result<Box<dyn ChainSpec>, String> {
+/// Paseo config
+pub fn paseo_config() -> Result<Box<dyn ChainSpec>, String> {
     let wasm_binary =
-        polkadot_runtime::WASM_BINARY.ok_or("Polkadot development wasm not available")?;
+        paseo_runtime::WASM_BINARY.ok_or("Paseo wasm not available")?;
 
-    Ok(Box::new(PolkadotChainSpec::from_genesis(
-        "Polkadot Local Testnet",
-        "polkadot_testnet",
-        ChainType::Local,
-        move || polkadot_local_testnet_genesis(wasm_binary),
+    Ok(Box::new(PaseoChainSpec::from_genesis(
+        "Paseo Testnet",
+        "paseo",
+        ChainType::Live,
+        move || paseo_config_genesis(wasm_binary),
         vec![],
         None,
         Some(DEFAULT_PROTOCOL_ID),
         None,
-        Some(polkadot_chain_spec_properties()),
+        Some(paseo_chain_spec_properties()),
+        Default::default(),
+    )))
+}
+
+fn paseo_local_genesis(wasm_binary: &[u8]) -> paseo_runtime::RuntimeGenesisConfig {
+    paseo_genesis(
+        wasm_binary,
+        vec![
+            get_authority_keys_from_seed_no_beefy("Alice"),
+            get_authority_keys_from_seed_no_beefy("Bob"),
+        ],
+        get_account_id_from_seed::<sr25519::Public>("Alice"),
+        None,
+    )
+}
+
+/// Paseo local config (multivalidator Alice + Bob)
+pub fn paseo_local_config() -> Result<Box<dyn ChainSpec>, String> {
+    let wasm_binary =
+        paseo_runtime::WASM_BINARY.ok_or("Paseo development wasm not available")?;
+
+    Ok(Box::new(PaseoChainSpec::from_genesis(
+        "Paseo Local Testnet",
+        "paseo_local",
+        ChainType::Local,
+        move || paseo_local_genesis(wasm_binary),
+        vec![],
+        None,
+        Some(DEFAULT_PROTOCOL_ID),
+        None,
+        Some(paseo_chain_spec_properties()),
         Default::default(),
     )))
 }
