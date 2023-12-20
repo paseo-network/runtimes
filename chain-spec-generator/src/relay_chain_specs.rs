@@ -177,7 +177,7 @@ pub fn paseo_genesis(
         AssignmentId,
         AuthorityDiscoveryId,
     )>,
-    _root_key: AccountId,
+    root_key: AccountId,
     endowed_accounts: Option<Vec<AccountId>>,
 ) -> paseo_runtime::RuntimeGenesisConfig {
     let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(testnet_accounts);
@@ -259,15 +259,13 @@ pub fn paseo_genesis(
         paras: Default::default(),
         xcm_pallet: Default::default(),
         nomination_pools: Default::default(),
-        // sudo: paseo_runtime::SudoConfig {
-        //     key: root_key,
-        // },
+        sudo: paseo_runtime::SudoConfig {
+            key: Some(root_key),
+        },
     }
 }
 
-fn paseo_config_genesis(
-    wasm_binary: &[u8],
-) -> paseo_runtime::RuntimeGenesisConfig {
+fn paseo_config_genesis(wasm_binary: &[u8]) -> paseo_runtime::RuntimeGenesisConfig {
     paseo_genesis(
         wasm_binary,
         vec![
@@ -275,14 +273,13 @@ fn paseo_config_genesis(
             get_authority_keys_from_seed_no_beefy("Bob"),
         ],
         get_account_id_from_seed::<sr25519::Public>("Alice"),
-        None,
+        Some(vec![get_account_id_from_seed::<sr25519::Public>("Alice")]),
     )
 }
 
 /// Paseo config
 pub fn paseo_config() -> Result<Box<dyn ChainSpec>, String> {
-    let wasm_binary =
-        paseo_runtime::WASM_BINARY.ok_or("Paseo wasm not available")?;
+    let wasm_binary = paseo_runtime::WASM_BINARY.ok_or("Paseo wasm not available")?;
 
     Ok(Box::new(PaseoChainSpec::from_genesis(
         "Paseo Testnet",
@@ -306,14 +303,13 @@ fn paseo_local_genesis(wasm_binary: &[u8]) -> paseo_runtime::RuntimeGenesisConfi
             get_authority_keys_from_seed_no_beefy("Bob"),
         ],
         get_account_id_from_seed::<sr25519::Public>("Alice"),
-        None,
+        Some(vec![get_account_id_from_seed::<sr25519::Public>("Alice")]),
     )
 }
 
 /// Paseo local config (multivalidator Alice + Bob)
 pub fn paseo_local_config() -> Result<Box<dyn ChainSpec>, String> {
-    let wasm_binary =
-        paseo_runtime::WASM_BINARY.ok_or("Paseo development wasm not available")?;
+    let wasm_binary = paseo_runtime::WASM_BINARY.ok_or("Paseo development wasm not available")?;
 
     Ok(Box::new(PaseoChainSpec::from_genesis(
         "Paseo Local Testnet",

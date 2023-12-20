@@ -5389,6 +5389,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-sudo"
+version = "23.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f10e6b5329062c8d78a9d845ebd1201b9b505e2a4b5aa6b4fdceeeccde0c323c"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-timestamp"
 version = "22.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5790,6 +5806,7 @@ dependencies = [
  "pallet-staking-reward-curve",
  "pallet-staking-reward-fn",
  "pallet-staking-runtime-api",
+ "pallet-sudo",
  "pallet-timestamp",
  "pallet-tips",
  "pallet-transaction-payment",
