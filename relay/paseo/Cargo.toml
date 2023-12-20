@@ -69,7 +69,7 @@ pallet-proxy = { default-features = false , version = "23.0.0" }
 pallet-referenda = { default-features = false , version = "23.0.0" }
 pallet-scheduler = { default-features = false , version = "24.0.0" }
 pallet-session = { default-features = false , version = "23.0.0" }
-pallet-sudo = { default-features = false, version = "26.0.0" }
+pallet-sudo = { default-features = false, version = "23.0.0" }
 frame-support = { default-features = false , version = "23.0.0" }
 pallet-staking = { default-features = false , version = "23.0.0" }
 pallet-staking-reward-fn = { default-features = false, version = "14.0.0" }
