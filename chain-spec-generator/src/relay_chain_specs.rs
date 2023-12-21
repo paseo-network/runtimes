@@ -208,8 +208,8 @@ pub fn paseo_genesis(
 ) -> paseo_runtime::RuntimeGenesisConfig {
     let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(testnet_accounts);
 
-    const ENDOWMENT: u128 = 1_000_000_000_000_000 * PAS;
-    const STASH: u128 = 1_000_000_000 * PAS;
+    const ENDOWMENT: u128 = 10_000_000_000_000_000 * PAS; // 1M PAS
+    const STASH: u128 = 1_000_000_000_000_000 * PAS; // 100k PAS
 
     paseo_runtime::RuntimeGenesisConfig {
         system: paseo_runtime::SystemConfig {
@@ -243,7 +243,7 @@ pub fn paseo_genesis(
                 .collect::<Vec<_>>(),
         },
         staking: paseo_runtime::StakingConfig {
-            minimum_validator_count: 1,
+            minimum_validator_count: 2,
             validator_count: initial_authorities.len() as u32,
             stakers: initial_authorities
                 .iter()
@@ -259,6 +259,9 @@ pub fn paseo_genesis(
             invulnerables: initial_authorities.iter().map(|x| x.0.clone()).collect(),
             force_era: Forcing::NotForcing,
             slash_reward_fraction: Perbill::from_percent(10),
+            min_nominator_bond: 2_500_000_000_000, // 250 PAS
+            min_validator_bond: STASH,
+            max_validator_count: 200,
             ..Default::default()
         },
         babe: paseo_runtime::BabeConfig {
@@ -354,6 +357,9 @@ fn paseo_config_genesis(wasm_binary: &[u8]) -> paseo_runtime::RuntimeGenesisConf
         hex!(NOT_PROVIDED_YET).unchecked_into(), // authority discovery key (sr25519/2)
     ); */
 
+    let root_key: AccountId32 =
+        hex!("06dd5a888daa57d1bcb763f269e5cf4bfe73b44d106b34ce572dcee124057a6b").into();
+
     let initial_paseo_validators: Vec<Sessions> = vec![paradox, stake_plus, amforc];
 
     paseo_genesis(
@@ -361,7 +367,7 @@ fn paseo_config_genesis(wasm_binary: &[u8]) -> paseo_runtime::RuntimeGenesisConf
         // initial authorities
         initial_paseo_validators,
         //root key
-        get_account_id_from_seed::<sr25519::Public>("Alice"),
+        root_key,
         // endowed accounts
         Some(vec![stash_paradox, stash_stake_plus, stash_amforc]),
     )
