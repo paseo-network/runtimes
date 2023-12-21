@@ -1,6 +1,6 @@
 # Runtimes
 
-Runtime for Paseo Polkadot community testnet.
+Work In Progress runtime for Paseo Polkadot community testnet.
 
 ## Structure
 
