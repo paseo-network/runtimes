@@ -311,8 +311,8 @@ fn paseo_config_genesis(wasm_binary: &[u8]) -> paseo_runtime::RuntimeGenesisConf
         hex!("32eebacd223f4aef33d98a667a68f9e371f40384257c6d31030952b9d94e1152").into();
 
     let paradox: Sessions = (
-        stash_paradox, // stash account (sr25519/1)
-        stash_paradox, // stash account  (sr25519/1)
+        stash_paradox.clone(), // stash account (sr25519/1)
+        stash_paradox.clone(), // stash account  (sr25519/1)
         hex!("b07d600e3487e2712dcc3879c7b17c9b29cd2243b45f0d9343c591b89cf82a65").unchecked_into(), // babe key (sr25519/2)
         hex!("c8caee6f6eddc41c6cc55e554343392cbc13d2a8a57b97f6f85fc965bdd20ce8").unchecked_into(), // grandpa key (ed25519)
         hex!("0edf2a41cb81178704560b02c35f5e01a5a97a568ebc10c025ade18b6ab2fa1d").unchecked_into(), // im online key (sr25519/2)
@@ -322,8 +322,8 @@ fn paseo_config_genesis(wasm_binary: &[u8]) -> paseo_runtime::RuntimeGenesisConf
     );
 
     let stake_plus: Sessions = (
-        stash_stake_plus, // stash account (sr25519/1)
-        stash_stake_plus, // stash account  (sr25519/1)
+        stash_stake_plus.clone(), // stash account (sr25519/1)
+        stash_stake_plus.clone(), // stash account  (sr25519/1)
         hex!("74b6c7c8fdf1e3bfd09c0bdd8216f3c4073f66e2687f99b3c50a564ea5b87f58").unchecked_into(), // babe key (sr25519/2)
         hex!("a9641167f560ad26ebadb38939bd4e0bc2143d4e8b60286dd291d08b323fc684").unchecked_into(), // grandpa key (ed25519)
         hex!("74b6c7c8fdf1e3bfd09c0bdd8216f3c4073f66e2687f99b3c50a564ea5b87f58").unchecked_into(), // im online key (sr25519/2)
@@ -333,8 +333,8 @@ fn paseo_config_genesis(wasm_binary: &[u8]) -> paseo_runtime::RuntimeGenesisConf
     );
 
     let amforc: Sessions = (
-        stash_amforc, // stash account (sr25519/1)
-        stash_amforc, // stash account  (sr25519/1)
+        stash_amforc.clone(), // stash account (sr25519/1)
+        stash_amforc.clone(), // stash account  (sr25519/1)
         hex!("58108e1651614afc6a535c426fc013945e93533faa33819fe4e69423fe323302").unchecked_into(), // babe key (sr25519/2)
         hex!("8270a62b61639ee56113834aecec01de6cda91413a5111b89f74d6585da34f50").unchecked_into(), // grandpa key (ed25519)
         hex!("58108e1651614afc6a535c426fc013945e93533faa33819fe4e69423fe323302").unchecked_into(), // im online key (sr25519/2)
