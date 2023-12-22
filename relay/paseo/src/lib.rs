@@ -1692,6 +1692,8 @@ mod benches {
         [pallet_xcm, XcmPallet]
         [pallet_xcm_benchmarks::fungible, pallet_xcm_benchmarks::fungible::Pallet::<Runtime>]
         [pallet_xcm_benchmarks::generic, pallet_xcm_benchmarks::generic::Pallet::<Runtime>]
+        // Sudo
+        [pallet_sudo, Sudo]
     );
 }
 

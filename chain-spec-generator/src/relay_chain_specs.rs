@@ -97,60 +97,7 @@ where
 }
 
 /// Helper function to generate stash, controller and session key from seed
-pub fn get_authority_keys_from_seed(
-    seed: &str,
-) -> (
-    AccountId,
-    AccountId,
-    BabeId,
-    GrandpaId,
-    ImOnlineId,
-    ValidatorId,
-    AssignmentId,
-    AuthorityDiscoveryId,
-    BeefyId,
-) {
-    let keys = get_authority_keys_from_seed_no_beefy(seed);
-    (
-        keys.0,
-        keys.1,
-        keys.2,
-        keys.3,
-        keys.4,
-        keys.5,
-        keys.6,
-        keys.7,
-        get_from_seed::<BeefyId>(seed),
-    )
-}
-
-/// Helper function to generate stash, controller and session key from seed
 pub fn get_authority_keys_from_seed_no_beefy(
-    seed: &str,
-) -> (
-    AccountId,
-    AccountId,
-    BabeId,
-    GrandpaId,
-    ImOnlineId,
-    ValidatorId,
-    AssignmentId,
-    AuthorityDiscoveryId,
-) {
-    (
-        get_account_id_from_seed::<sr25519::Public>(&format!("{}//stash", seed)),
-        get_account_id_from_seed::<sr25519::Public>(seed),
-        get_from_seed::<BabeId>(seed),
-        get_from_seed::<GrandpaId>(seed),
-        get_from_seed::<ImOnlineId>(seed),
-        get_from_seed::<ValidatorId>(seed),
-        get_from_seed::<AssignmentId>(seed),
-        get_from_seed::<AuthorityDiscoveryId>(seed),
-    )
-}
-
-/// Helper function to generate stash, controller and session key from seed
-pub fn generate_paseo_session_keys(
     seed: &str,
 ) -> (
     AccountId,
@@ -208,8 +155,9 @@ pub fn paseo_genesis(
 ) -> paseo_runtime::RuntimeGenesisConfig {
     let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(testnet_accounts);
 
-    const ENDOWMENT: u128 = 10_000_000_000_000_000 * PAS; // 1M PAS
-    const STASH: u128 = 1_000_000_000_000_000 * PAS; // 100k PAS
+    const ENDOWMENT: u128 = 1_000_000 * PAS; // 1M PAS
+    const ROOT_ENDOWMENT: u128 = 100_000_000 * PAS; // 100M PAS
+    const STASH: u128 = 1_000_00 * PAS; // 100k PAS
 
     paseo_runtime::RuntimeGenesisConfig {
         system: paseo_runtime::SystemConfig {
@@ -221,6 +169,7 @@ pub fn paseo_genesis(
             balances: endowed_accounts
                 .iter()
                 .map(|k| (k.clone(), ENDOWMENT))
+                .chain(std::iter::once((root_key.clone(), ROOT_ENDOWMENT)))
                 .collect(),
         },
         session: paseo_runtime::SessionConfig {
@@ -261,7 +210,7 @@ pub fn paseo_genesis(
             slash_reward_fraction: Perbill::from_percent(10),
             min_nominator_bond: 2_500_000_000_000, // 250 PAS
             min_validator_bond: STASH,
-            max_validator_count: 200,
+            max_validator_count: Some(200),
             ..Default::default()
         },
         babe: paseo_runtime::BabeConfig {
@@ -307,11 +256,13 @@ fn paseo_config_genesis(wasm_binary: &[u8]) -> paseo_runtime::RuntimeGenesisConf
     );
 
     let stash_paradox: AccountId32 =
-        hex!("043393e76c137dfdc403a6fd9a2d6129d470d51c5a67bd40517378030c87170d").into();
+        hex!("043393e76c137dfdc403a6fd9a2d6129d470d51c5a67bd40517378030c87170d").into(); //16WWmr2Xqgy5fna35GsNHXMU7vDBM12gzHCFGibQjSmKpAN
     let stash_stake_plus: AccountId32 =
-        hex!("82c3105dbd4bb206428d8a8b7ea1f19965a0668dd583b06c3b75daa181fe654c").into();
+        hex!("82c3105dbd4bb206428d8a8b7ea1f19965a0668dd583b06c3b75daa181fe654c").into(); //13xTAvbANb5yZuFHv3pAKgxmCWYRKXHX5NTRwVChSUoaF7iz
     let stash_amforc: AccountId32 =
-        hex!("32eebacd223f4aef33d98a667a68f9e371f40384257c6d31030952b9d94e1152").into();
+        hex!("32eebacd223f4aef33d98a667a68f9e371f40384257c6d31030952b9d94e1152").into(); //129nK5nVDE2EDPBYwUubQ5DMRW8cGh95hTm5QDBDkPSwtxeZ
+    let stash_dwellir: AccountId32 =
+        hex!("9492b8c38442c79061bdbb8d38dcd28138938a7fd476edf89ecdec06a5a9d20f").into(); //14MofzwMbLm1JeBxLi2BKBRHXJce87DE5UWnttgGBBrQcEy9
 
     let paradox: Sessions = (
         stash_paradox.clone(), // stash account (sr25519/1)
@@ -340,36 +291,41 @@ fn paseo_config_genesis(wasm_binary: &[u8]) -> paseo_runtime::RuntimeGenesisConf
         stash_amforc.clone(), // stash account  (sr25519/1)
         hex!("58108e1651614afc6a535c426fc013945e93533faa33819fe4e69423fe323302").unchecked_into(), // babe key (sr25519/2)
         hex!("8270a62b61639ee56113834aecec01de6cda91413a5111b89f74d6585da34f50").unchecked_into(), // grandpa key (ed25519)
-        hex!("58108e1651614afc6a535c426fc013945e93533faa33819fe4e69423fe323302").unchecked_into(), // im online key (sr25519/2)
-        hex!("58108e1651614afc6a535c426fc013945e93533faa33819fe4e69423fe323302").unchecked_into(), // validator key (sr25519/2)
-        hex!("58108e1651614afc6a535c426fc013945e93533faa33819fe4e69423fe323302").unchecked_into(), // assignment key (sr25519/2)
-        hex!("58108e1651614afc6a535c426fc013945e93533faa33819fe4e69423fe323302").unchecked_into(), // authority discovery key (sr25519/2)
+        hex!("74bd654c470ed9b94972c1f997593fab7bdd4d6b85e3cf49401265668142584e").unchecked_into(), // im online key (sr25519/2)
+        hex!("ad90a2c3fa2c756f974628dd279adb87935f7ea509856276e3b86f759b22451c").unchecked_into(), // validator key (sr25519/2)
+        hex!("c083b0d0bd7d6ffd14562b4c9e28738b087ccc32262170c633c18359ff848779").unchecked_into(), // assignment key (sr25519/2)
+        hex!("92cb05c48fc643f057626c669604675c5ad5a836266f260ae7030c6fdc17a543").unchecked_into(), // authority discovery key (sr25519/2)
     );
 
-    /* const DWELLIR: Sessions = (
-        hex!("9492b8c38442c79061bdbb8d38dcd28138938a7fd476edf89ecdec06a5a9d20f").into(), // stash account (sr25519/1)
-        hex!("9492b8c38442c79061bdbb8d38dcd28138938a7fd476edf89ecdec06a5a9d20f").into(), // stash account  (sr25519/1)
-        hex!(NOT_PROVIDED_YET).unchecked_into(), // babe key (sr25519/2)
-        hex!(NOT_PROVIDED_YET).unchecked_into(), // grandpa key (ed25519)
-        hex!(NOT_PROVIDED_YET).unchecked_into(), // im online key (sr25519/2)
-        hex!(NOT_PROVIDED_YET).unchecked_into(), // validator key (sr25519/2)
-        hex!(NOT_PROVIDED_YET).unchecked_into(), // assignment key (sr25519/2)
-        hex!(NOT_PROVIDED_YET).unchecked_into(), // authority discovery key (sr25519/2)
-    ); */
+    let dwellir: Sessions = (
+        stash_dwellir.clone(), // stash account (sr25519/1)
+        stash_dwellir.clone(), // stash account  (sr25519/1)
+        hex!("90374c6fa6fce19759bde550aab6683bc70c0fab41cff5d7cff2afaf6f20f207").unchecked_into(), // babe key (sr25519/2)
+        hex!("d8af99e3f470f5517d930f7563998dcd9d0fbfd1726d534f576600982bbe4467").unchecked_into(), // grandpa key (ed25519)
+        hex!("08935102ac2d00e539ddf202ba0edacaf5313b6dfcc254fedbfd65d60e896a10").unchecked_into(), // im online key (sr25519/2)
+        hex!("8a07138ebd5fed989028622eead2abe8a5cd74b9573aed5223fee102515d844e").unchecked_into(), // validator key (sr25519/2)
+        hex!("b08599be75d608ba790623270c95f73aab22827770fbefef22f79f2baef27345").unchecked_into(), // assignment key (sr25519/2)
+        hex!("c8a709c1a71c9b4efbbd8341de35baaebba33d8cf50b32c2bfd550ab4fa3175f").unchecked_into(), // authority discovery key (sr25519/2)
+    );
 
     let root_key: AccountId32 =
-        hex!("06dd5a888daa57d1bcb763f269e5cf4bfe73b44d106b34ce572dcee124057a6b").into();
+        hex!("7e939ef17e229e9a29210d95cb0b607e0030d54899c05f791a62d5c6f4557659").into();
 
-    let initial_paseo_validators: Vec<Sessions> = vec![paradox, stake_plus, amforc];
+    let initial_paseo_validators: Vec<Sessions> = vec![paradox, stake_plus, amforc, dwellir];
 
     paseo_genesis(
         wasm_binary,
         // initial authorities
         initial_paseo_validators,
         //root key
-        root_key,
+        root_key.clone(),
         // endowed accounts
-        Some(vec![stash_paradox, stash_stake_plus, stash_amforc]),
+        Some(vec![
+            stash_paradox,
+            stash_stake_plus,
+            stash_amforc,
+            stash_dwellir,
+        ]),
     )
 }
 
