@@ -155,8 +155,9 @@ pub fn paseo_genesis(
 ) -> paseo_runtime::RuntimeGenesisConfig {
     let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(testnet_accounts);
 
-    const ENDOWMENT: u128 = 10_000_000_000_000_000 * PAS; // 1M PAS
-    const STASH: u128 = 1_000_000_000_000_000 * PAS; // 100k PAS
+    const ENDOWMENT: u128 = 1_000_000 * PAS; // 1M PAS
+    const ROOT_ENDOWMENT: u128 = 100_000_000 * PAS; // 100M PAS
+    const STASH: u128 = 1_000_00 * PAS; // 100k PAS
 
     paseo_runtime::RuntimeGenesisConfig {
         system: paseo_runtime::SystemConfig {
@@ -168,6 +169,7 @@ pub fn paseo_genesis(
             balances: endowed_accounts
                 .iter()
                 .map(|k| (k.clone(), ENDOWMENT))
+                .chain(std::iter::once((root_key.clone(), ROOT_ENDOWMENT)))
                 .collect(),
         },
         session: paseo_runtime::SessionConfig {
@@ -316,7 +318,7 @@ fn paseo_config_genesis(wasm_binary: &[u8]) -> paseo_runtime::RuntimeGenesisConf
         // initial authorities
         initial_paseo_validators,
         //root key
-        root_key,
+        root_key.clone(),
         // endowed accounts
         Some(vec![
             stash_paradox,
