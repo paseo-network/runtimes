@@ -117,12 +117,12 @@
             "5F2A2bL6WopW8NEmxQmABY8cLtYmdDjNzsiwnCDLtPn44orx",
             "5F2A2bL6WopW8NEmxQmABY8cLtYmdDjNzsiwnCDLtPn44orx",
             {
-              "grandpa": "5FtogAafr84XWztyWjhPPLXEphfwXzATBhhFfgwX6tDnyiqm",
-              "babe": "5Ehji52QzDFBgFVeE1r4KiorXhKykUhMTkJ5w1L95H67Js1D",
-              "im_online": "5Ehji52QzDFBgFVeE1r4KiorXhKykUhMTkJ5w1L95H67Js1D",
-              "para_validator": "5Ehji52QzDFBgFVeE1r4KiorXhKykUhMTkJ5w1L95H67Js1D",
-              "para_assignment": "5Ehji52QzDFBgFVeE1r4KiorXhKykUhMTkJ5w1L95H67Js1D",
-              "authority_discovery": "5Ehji52QzDFBgFVeE1r4KiorXhKykUhMTkJ5w1L95H67Js1D"
+              "grandpa": "5DnsybZrEvzyqM1fS417NrhrMeutghze9MyvwRvQ9RNfFbqn",
+              "babe": "5HjYBosKACVd2gcorcaZp4CaJ1GhRSveg7nYfvBgdCft7CWa",
+              "im_online": "5GdsQ63Le2o9EUPovYJafUTZUc1tyd8SqwbJGbgkAa3zkoF3",
+              "para_validator": "5CqiRBrjoshoKPB1QBQA5XTcfdCcw5Cvn28vy4fTQariiK9u",
+              "para_assignment": "5HWZuEUYCNcPxGMtN7SFg9qT6q5ur9CJGJ8cgphw343aoj2R",
+              "authority_discovery": "5Cwh76FwQoFndjVRdarLQPz1tkX3Qq7hE1PSLFkmF9371Zru"
             }
           ],
           [
@@ -141,12 +141,12 @@
             "5FRWXfgHjZVXs7BSP4yBB2b8fgczRof5zynJjbgud6ptRrUA",
             "5FRWXfgHjZVXs7BSP4yBB2b8fgczRof5zynJjbgud6ptRrUA",
             {
-              "grandpa": "5GxpN74xe4ra9CGHShGVqKHnPGKAMxuDcU4uYoi56ShVuKUW",
-              "babe": "5FKoBNeqcUKCeUACrh66zamX13PgkHf1abZxm7zmz8fNvShr",
-              "im_online": "5CFx16Cr73YvNgLa6tr99P4er4BgURUrgyTQPtnbAHpRWWcd",
-              "para_validator": "5FBgZrv2BDXUo4sXX5oRGwBZW2GLP1xjVaA5RvG6eCb86KCV",
-              "para_assignment": "5G49yMq1muGMbzz7MwMwDJ6kS8zj9tYHxykAFNUQz3eXCj8y",
-              "authority_discovery": "5Gbo48Yrx1Z4kjFVXxexvY7uZLY1nY7EziXL674rSDNu13sG"
+              "grandpa": "5Gd6xKX7T1qSkryDi6yHKsCzTS4rdQsrfHksVaPp6e8dyfrc",
+              "babe": "5G12tk2kENTtiizWZh4ZRwwYNYQf8RVmq46HjbaMPCnn9mvE",
+              "im_online": "5CDYTQchi2fenLjx2MkyEo8NtWwA6kuYBXdifk2pnJA36EuL",
+              "para_validator": "5HNH2byQM7ewDFoBHtGG23wHosPSvNr24jBYnjnuUvDgFrUx",
+              "para_assignment": "5GNuqwUC9VPZQY5Wh4fSEfEcJu5TfLcQvfbodXBgYK4HmUBs",
+              "authority_discovery": "5EjjdsTjFdtSiJ8ZvYuUdcb4WC1p7drTajeNvsCB1iAyDb6J"
             }
           ]
         ]
