@@ -58,7 +58,7 @@ pallet-xcm-benchmarks = { default-features = false, optional = true , version = 
 polkadot-core-primitives = { default-features = false, version = "2.0.0" }
 polkadot-parachain-primitives = { default-features = false, version = "1.0.0" }
 polkadot-runtime-common = { default-features = false, version = "2.0.0" }
-polkadot-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes.git", tag = "v1.0.1" ,default-features = false}
+paseo-runtime-constants = { path = "../../relay/paseo/constants", default-features = false}
 xcm = { package = "staging-xcm", default-features = false, version = "2.0.1" }
 xcm-builder = { package = "staging-xcm-builder", default-features = false, version = "2.0.1" }
 xcm-executor = { package = "staging-xcm-executor", default-features = false, version = "2.0.0" }
@@ -185,7 +185,7 @@ std = [
 	"polkadot-core-primitives/std",
 	"polkadot-parachain-primitives/std",
 	"polkadot-runtime-common/std",
-	"polkadot-runtime-constants/std",
+	"paseo-runtime-constants/std",
 	"scale-info/std",
 	"sp-api/std",
 	"sp-block-builder/std",

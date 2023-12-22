@@ -13,6 +13,9 @@ members = [
 	"relay/paseo/constants",
 	"system-parachains/asset-hub-paseo"
 ]
+exclude = [
+  "chain-spec-generator"
+]
 
 [profile.release]
 # Paseo runtime requires unwinding.
