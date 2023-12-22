@@ -278,12 +278,12 @@ fn paseo_config_genesis(wasm_binary: &[u8]) -> paseo_runtime::RuntimeGenesisConf
     let stake_plus: Sessions = (
         stash_stake_plus.clone(), // stash account (sr25519/1)
         stash_stake_plus.clone(), // stash account  (sr25519/1)
-        hex!("74b6c7c8fdf1e3bfd09c0bdd8216f3c4073f66e2687f99b3c50a564ea5b87f58").unchecked_into(), // babe key (sr25519/2)
-        hex!("a9641167f560ad26ebadb38939bd4e0bc2143d4e8b60286dd291d08b323fc684").unchecked_into(), // grandpa key (ed25519)
-        hex!("74b6c7c8fdf1e3bfd09c0bdd8216f3c4073f66e2687f99b3c50a564ea5b87f58").unchecked_into(), // im online key (sr25519/2)
-        hex!("74b6c7c8fdf1e3bfd09c0bdd8216f3c4073f66e2687f99b3c50a564ea5b87f58").unchecked_into(), // validator key (sr25519/2)
-        hex!("74b6c7c8fdf1e3bfd09c0bdd8216f3c4073f66e2687f99b3c50a564ea5b87f58").unchecked_into(), // assignment key (sr25519/2)
-        hex!("74b6c7c8fdf1e3bfd09c0bdd8216f3c4073f66e2687f99b3c50a564ea5b87f58").unchecked_into(), // authority discovery key (sr25519/2)
+        hex!("facb2f987caac6c1290a9784b1efdba78343d39aed805addb12945efbe444000").unchecked_into(), // babe key (sr25519/2)
+        hex!("4c669b04865e9acaf7b72bdfcb0099d70d9ec63c8c2d6b8cb0552815d7b50a0a").unchecked_into(), // grandpa key (ed25519)
+        hex!("ca3c2703db1633a27eff681d979967988c3a6752c669fd41f1abde10f3b05446").unchecked_into(), // im online key (sr25519/2)
+        hex!("2253ee3c02d89582602ca5b0570cfc01dc82cc8d1b9d2071eb5db6318749124b").unchecked_into(), // validator key (sr25519/2)
+        hex!("f0e6c42698fffc28f9fc769fddcdf165af54c171cde43690cc8f73c853de1f04").unchecked_into(), // assignment key (sr25519/2)
+        hex!("26e2fc857945d01520797a75388c58e710c9fefedd28387af70880f1682be41e").unchecked_into(), // authority discovery key (sr25519/2)
     );
 
     let amforc: Sessions = (
@@ -300,12 +300,12 @@ fn paseo_config_genesis(wasm_binary: &[u8]) -> paseo_runtime::RuntimeGenesisConf
     let dwellir: Sessions = (
         stash_dwellir.clone(), // stash account (sr25519/1)
         stash_dwellir.clone(), // stash account  (sr25519/1)
-        hex!("90374c6fa6fce19759bde550aab6683bc70c0fab41cff5d7cff2afaf6f20f207").unchecked_into(), // babe key (sr25519/2)
-        hex!("d8af99e3f470f5517d930f7563998dcd9d0fbfd1726d534f576600982bbe4467").unchecked_into(), // grandpa key (ed25519)
-        hex!("08935102ac2d00e539ddf202ba0edacaf5313b6dfcc254fedbfd65d60e896a10").unchecked_into(), // im online key (sr25519/2)
-        hex!("8a07138ebd5fed989028622eead2abe8a5cd74b9573aed5223fee102515d844e").unchecked_into(), // validator key (sr25519/2)
-        hex!("b08599be75d608ba790623270c95f73aab22827770fbefef22f79f2baef27345").unchecked_into(), // assignment key (sr25519/2)
-        hex!("c8a709c1a71c9b4efbbd8341de35baaebba33d8cf50b32c2bfd550ab4fa3175f").unchecked_into(), // authority discovery key (sr25519/2)
+        hex!("ae240842b74e5dd778972e451558134f434c7a1d8a52bc70519f38054e245533").unchecked_into(), // babe key (sr25519/2)
+        hex!("c9a68a26e9aa37ba6334f1a20275e3be7d3a9d4aa988627eadac8ea0d0a2dfbf").unchecked_into(), // grandpa key (ed25519)
+        hex!("06bd8fd81e50cda2bd67bf6893d921d1aae5cb08409ae43e0bff4d54e1830e58").unchecked_into(), // im online key (sr25519/2)
+        hex!("ea9400f05e7fb75a3f7a92febbf58e5a3060dd06132ed6d5d68a3d75ec452826").unchecked_into(), // validator key (sr25519/2)
+        hex!("bed3b452f869d187be58a4ba98588611084283810728fa75981e792beaec4151").unchecked_into(), // assignment key (sr25519/2)
+        hex!("763d070989ead31f265b40cc7a0cd29d47799b766d6a7f084e44c82baedfc01e").unchecked_into(), // authority discovery key (sr25519/2)
     );
 
     let root_key: AccountId32 =
