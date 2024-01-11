@@ -6,7 +6,12 @@
     "/dns/paseo.bootnode.amforc.com/tcp/30333/wss/p2p/12D3KooWFD81HC9memUwuGMLvhDDEfmXjn6jC4n7zyNs3vToXapS",
     "/dns/paseo.bootnode.amforc.com/tcp/30344/p2p/12D3KooWFD81HC9memUwuGMLvhDDEfmXjn6jC4n7zyNs3vToXapS"
   ],
-  "telemetryEndpoints": null,
+  "telemetryEndpoints": [
+    [
+      "wss://telemetry.polkadot.io/submit/",
+      0
+    ]
+  ],
   "protocolId": "pas",
   "properties": {
     "ss58Format": 42,
