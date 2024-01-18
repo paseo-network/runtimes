@@ -4,7 +4,9 @@
   "chainType": "Live",
   "bootNodes": [
     "/dns/paseo.bootnode.amforc.com/tcp/30333/wss/p2p/12D3KooWFD81HC9memUwuGMLvhDDEfmXjn6jC4n7zyNs3vToXapS",
-    "/dns/paseo.bootnode.amforc.com/tcp/30344/p2p/12D3KooWFD81HC9memUwuGMLvhDDEfmXjn6jC4n7zyNs3vToXapS"
+    "/dns/paseo.bootnode.amforc.com/tcp/30344/p2p/12D3KooWFD81HC9memUwuGMLvhDDEfmXjn6jC4n7zyNs3vToXapS",
+    "/dns/boot.gatotech.network/tcp/33400/p2p/12D3KooWEvz5Ygv3MhCUNTVQbUTVhzhvf4KKcNoe5M5YbVLPBeeW",
+    "/dns/boot.gatotech.network/tcp/35400/wss/p2p/12D3KooWEvz5Ygv3MhCUNTVQbUTVhzhvf4KKcNoe5M5YbVLPBeeW"
   ],
   "telemetryEndpoints": [
     [
