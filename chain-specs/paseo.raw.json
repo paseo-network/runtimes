@@ -16,7 +16,9 @@
     "/dns/pso16.rotko.net/tcp/33246/p2p/12D3KooWRH8eBMhw8c7bucy6pJfy94q4dKpLkF3pmeGohHmemdRu",
     "/dns/pso16.rotko.net/tcp/35246/wss/p2p/12D3KooWRH8eBMhw8c7bucy6pJfy94q4dKpLkF3pmeGohHmemdRu",
     "/dns/paseo-boot-ng.dwellir.com/tcp/443/wss/p2p/12D3KooWBLLFKDGBxCwq3QmU3YwWKXUx953WwprRshJQicYu4Cfr",
-    "/dns/paseo-boot-ng.dwellir.com/tcp/30354/p2p/12D3KooWBLLFKDGBxCwq3QmU3YwWKXUx953WwprRshJQicYu4Cfr"
+    "/dns/paseo-boot-ng.dwellir.com/tcp/30354/p2p/12D3KooWBLLFKDGBxCwq3QmU3YwWKXUx953WwprRshJQicYu4Cfr",
+    "/dns/boot.stake.plus/tcp/43334/wss/p2p/12D3KooWNhgAC3hjZHxaT52EpPFZohkCL1AHFAijqcN8xB9Rwud2",
+    "/dns/boot.stake.plus/tcp/43333/p2p/12D3KooWNhgAC3hjZHxaT52EpPFZohkCL1AHFAijqcN8xB9Rwud2"    
   ],
   "telemetryEndpoints": [
     [
