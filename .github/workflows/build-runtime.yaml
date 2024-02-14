@@ -31,7 +31,7 @@ jobs:
         uses: chevdor/srtool-actions@v0.9.1
         with:
           chain: ${{ matrix.runtime }}
-          package: "portico-runtime"
+          package: "paseo-runtime"
           runtime_dir: "relay/paseo"
           profile: "production"
 
