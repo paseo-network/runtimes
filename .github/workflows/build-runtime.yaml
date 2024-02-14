@@ -13,9 +13,6 @@ jobs:
     strategy:
       matrix:
         runtime: ["paseo"]
-        path: "relay/paseo"
-        profile: "production"
-        package: "paseo-runtime"
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
@@ -34,8 +31,8 @@ jobs:
         uses: chevdor/srtool-actions@v0.9.1
         with:
           chain: ${{ matrix.runtime }}
-          package: ${{ matrix.package }}
-          runtime_dir: ${{ matrix.path }}
+          package: "portico-runtime"
+          runtime_dir: "relay/paseo"
           profile: "production"
 
       - name: Store srtool digest to disk
