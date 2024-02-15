@@ -33,7 +33,7 @@
 //!
 //! ### Native Balances
 //!
-//! Asset Hub Polkadot uses its parent DOT token as its native asset.
+//! Asset Hub Polkadot uses its parent PAS token as its native asset.
 //!
 //! ### Governance
 //!
@@ -49,7 +49,7 @@
 //! ### XCM
 //!
 //! Because Asset Hub is fully under the control of the Relay Chain, it is meant to be a
-//! `TrustedTeleporter`. It can also serve as a reserve location to other parachains for DOT as well
+//! `TrustedTeleporter`. It can also serve as a reserve location to other parachains for PAS as well
 //! as other local assets.
 
 #![cfg_attr(not(feature = "std"), no_std)]

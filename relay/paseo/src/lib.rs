@@ -514,9 +514,9 @@ parameter_types! {
 	pub const SignedMaxRefunds: u32 = 16 / 4;
 	pub const SignedFixedDeposit: Balance = deposit(2, 0);
 	pub const SignedDepositIncreaseFactor: Percent = Percent::from_percent(10);
-	// 0.01 DOT per KB of solution data.
+	// 0.01 PAS per KB of solution data.
 	pub const SignedDepositByte: Balance = deposit(0, 10) / 1024;
-	// Each good submission will get 1 DOT as reward
+	// Each good submission will get 1 PAS as reward
 	pub SignedRewardBase: Balance = 1 * UNITS;
 	pub BetterUnsignedThreshold: Perbill = Perbill::from_rational(5u32, 10_000);
 
@@ -1502,9 +1502,9 @@ impl frame_support::traits::OnRuntimeUpgrade for InitiateNominationPools {
 	fn on_runtime_upgrade() -> frame_support::weights::Weight {
 		// we use one as an indicator if this has already been set.
 		if pallet_nomination_pools::MaxPools::<Runtime>::get().is_none() {
-			// 5 DOT to join a pool.
+			// 5 PAS to join a pool.
 			pallet_nomination_pools::MinJoinBond::<Runtime>::put(5 * UNITS);
-			// 100 DOT to create a pool.
+			// 100 PAS to create a pool.
 			pallet_nomination_pools::MinCreateBond::<Runtime>::put(100 * UNITS);
 
 			// Initialize with limits for now.
@@ -2340,7 +2340,7 @@ sp_api::impl_runtime_apis! {
 					Ok(AssetHubLocation::get())
 				}
 				fn worst_case_holding(_depositable_count: u32) -> MultiAssets {
-					// Polkadot only knows about DOT
+					// Polkadot only knows about PAS
 					vec![MultiAsset { id: Concrete(TokenLocation::get()), fun: Fungible(1_000_000 * UNITS) }].into()
 				}
 			}

@@ -53,7 +53,7 @@ use xcm_executor::traits::WithOriginFilter;
 
 parameter_types! {
 	pub const RootLocation: MultiLocation = Here.into_location();
-	/// The location of the DOT token, from the context of this chain. Since this token is native to this
+	/// The location of the PAS token, from the context of this chain. Since this token is native to this
 	/// chain, we make it synonymous with it and thus it is the `Here` location, which means "equivalent to
 	/// the context".
 	pub const TokenLocation: MultiLocation = Here.into_location();
