@@ -1533,6 +1533,12 @@ impl pallet_asset_rate::Config for Runtime {
 	type BenchmarkHelper = runtime_common::impls::benchmarks::AssetRateArguments;
 }
 
+impl pallet_sudo::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type RuntimeCall = RuntimeCall;
+    type WeightInfo = weights::pallet_sudo::WeightInfo<Runtime>;
+}
+
 construct_runtime! {
 	pub enum Runtime
 	{
@@ -1639,6 +1645,9 @@ construct_runtime! {
 		// refer to block<N>. See issue #160 for details.
 		Mmr: pallet_mmr = 201,
 		BeefyMmrLeaf: pallet_beefy_mmr = 202,
+
+		// Sudo.
+        Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 255,
 	}
 }
 
