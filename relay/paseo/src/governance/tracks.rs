@@ -256,7 +256,7 @@ const TRACKS_DATA: [(u16, pallet_referenda::TrackInfo<Balance, BlockNumber>); 15
 			decision_deposit: 200 * DOLLARS,
 			prepare_period: 4 * HOURS,
 			decision_period: 28 * DAYS,
-			confirm_period: 4 * DAYS,
+			confirm_period: 24 * HOURS,
 			min_enactment_period: 24 * HOURS,
 			min_approval: APP_MEDIUM_SPENDER,
 			min_support: SUP_MEDIUM_SPENDER,
