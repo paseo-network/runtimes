@@ -1,18 +1,18 @@
 // Copyright (C) Parity Technologies (UK) Ltd.
-// This file is part of Polkadot.
+// This file is part of Paseo.
 
-// Polkadot is free software: you can redistribute it and/or modify
+// Paseo is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 
-// Polkadot is distributed in the hope that it will be useful,
+// Paseo is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
 // You should have received a copy of the GNU General Public License
-// along with Polkadot.  If not, see <http://www.gnu.org/licenses/>.
+// along with Paseo.  If not, see <http://www.gnu.org/licenses/>.
 
 //! XCM configuration for Paseo.
 
@@ -57,8 +57,8 @@ parameter_types! {
 	/// chain, we make it synonymous with it and thus it is the `Here` location, which means "equivalent to
 	/// the context".
 	pub const TokenLocation: MultiLocation = Here.into_location();
-	/// The Polkadot network ID. This is named.
-	pub const ThisNetwork: NetworkId = NetworkId::Polkadot;
+	/// The Paseo network ID. This is named.
+	pub const ThisNetwork: NetworkId = NetworkId::Paseo;
 	/// Our location in the universe of consensus systems.
 	pub const UniversalLocation: InteriorMultiLocation = X1(GlobalConsensus(ThisNetwork::get()));
 	/// The Checking Account, which holds any native assets that have been teleported out and not back in (yet).
@@ -147,7 +147,7 @@ parameter_types! {
 	pub const MaxAssetsIntoHolding: u32 = 64;
 }
 
-/// Polkadot Relay recognizes/respects AssetHub, Collectives, and BridgeHub chains as teleporters.
+/// Paseo Relay recognizes/respects AssetHub, Collectives, and BridgeHub chains as teleporters.
 pub type TrustedTeleporters = (
 	xcm_builder::Case<DotForAssetHub>,
 	xcm_builder::Case<DotForCollectives>,
@@ -338,7 +338,7 @@ impl xcm_executor::Config for XcmConfig {
 	type XcmSender = XcmRouter;
 	type AssetTransactor = LocalAssetTransactor;
 	type OriginConverter = LocalOriginConverter;
-	// Polkadot Relay recognises no chains which act as reserves.
+	// Paseo Relay recognises no chains which act as reserves.
 	type IsReserve = ();
 	type IsTeleporter = TrustedTeleporters;
 	type UniversalLocation = UniversalLocation;

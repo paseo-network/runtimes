@@ -144,7 +144,7 @@ pub fn asset_hub_polkadot_local_testnet_config() -> Result<Box<dyn ChainSpec>, S
 
     Ok(Box::new(AssetHubPaseoChainSpec::from_genesis(
         // Name
-        "Polkadot Asset Hub Local",
+        "Paseo Asset Hub Local",
         // ID
         "asset-hub-polkadot-local",
         ChainType::Local,

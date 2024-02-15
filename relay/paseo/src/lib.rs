@@ -1,20 +1,20 @@
 // Copyright (C) Parity Technologies (UK) Ltd.
-// This file is part of Polkadot.
+// This file is part of Paseo.
 
-// Polkadot is free software: you can redistribute it and/or modify
+// Paseo is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 
-// Polkadot is distributed in the hope that it will be useful,
+// Paseo is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
 // You should have received a copy of the GNU General Public License
-// along with Polkadot.  If not, see <http://www.gnu.org/licenses/>.
+// along with Paseo.  If not, see <http://www.gnu.org/licenses/>.
 
-//! The Polkadot runtime. This can be compiled with `#[no_std]`, ready for Wasm.
+//! The Paseo runtime. This can be compiled with `#[no_std]`, ready for Wasm.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
@@ -673,7 +673,7 @@ parameter_types! {
 	pub const MaxNominations: u32 = <NposCompactSolution16 as frame_election_provider_support::NposSolution>::LIMIT as u32;
 }
 
-/// Custom version of `runtime_commong::era_payout` somewhat tailored for Polkadot's crowdloan
+/// Custom version of `runtime_commong::era_payout` somewhat tailored for Paseo's crowdloan
 /// unlock history. The only tweak should be
 ///
 /// ```diff
@@ -1031,7 +1031,7 @@ parameter_types! {
 }
 
 parameter_types! {
-	pub Prefix: &'static [u8] = b"Pay DOTs to the Polkadot account:";
+	pub Prefix: &'static [u8] = b"Pay DOTs to the Paseo account:";
 }
 
 impl claims::Config for Runtime {
@@ -1721,7 +1721,7 @@ pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 #[cfg(feature = "runtime-benchmarks")]
 mod benches {
 	frame_benchmarking::define_benchmarks!(
-		// Polkadot
+		// Paseo
 		// NOTE: Make sure to prefix these with `runtime_common::` so
 		// the that path resolves correctly in the generated file.
 		[runtime_common::auctions, Auctions]
@@ -2340,7 +2340,7 @@ sp_api::impl_runtime_apis! {
 					Ok(AssetHubLocation::get())
 				}
 				fn worst_case_holding(_depositable_count: u32) -> MultiAssets {
-					// Polkadot only knows about PAS
+					// Paseo only knows about PAS
 					vec![MultiAsset { id: Concrete(TokenLocation::get()), fun: Fungible(1_000_000 * UNITS) }].into()
 				}
 			}
@@ -2377,12 +2377,12 @@ sp_api::impl_runtime_apis! {
 				}
 
 				fn worst_case_asset_exchange() -> Result<(MultiAssets, MultiAssets), BenchmarkError> {
-					// Polkadot doesn't support asset exchanges
+					// Paseo doesn't support asset exchanges
 					Err(BenchmarkError::Skip)
 				}
 
 				fn universal_alias() -> Result<(MultiLocation, Junction), BenchmarkError> {
-					// The XCM executor of Polkadot doesn't have a configured `UniversalAliases`
+					// The XCM executor of Paseo doesn't have a configured `UniversalAliases`
 					Err(BenchmarkError::Skip)
 				}
 
@@ -2409,18 +2409,18 @@ sp_api::impl_runtime_apis! {
 				}
 
 				fn unlockable_asset() -> Result<(MultiLocation, MultiLocation, MultiAsset), BenchmarkError> {
-					// Polkadot doesn't support asset locking
+					// Paseo doesn't support asset locking
 					Err(BenchmarkError::Skip)
 				}
 
 				fn export_message_origin_and_destination(
 				) -> Result<(MultiLocation, NetworkId, InteriorMultiLocation), BenchmarkError> {
-					// Polkadot doesn't support exporting messages
+					// Paseo doesn't support exporting messages
 					Err(BenchmarkError::Skip)
 				}
 
 				fn alias_origin() -> Result<(MultiLocation, MultiLocation), BenchmarkError> {
-					// The XCM executor of Polkadot doesn't have a configured `Aliasers`
+					// The XCM executor of Paseo doesn't have a configured `Aliasers`
 					Err(BenchmarkError::Skip)
 				}
 			}

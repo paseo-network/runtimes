@@ -45,7 +45,7 @@ use xcm_executor::{traits::WithOriginFilter, XcmExecutor};
 
 parameter_types! {
 	pub const DotLocation: MultiLocation = MultiLocation::parent();
-	pub const RelayNetwork: Option<NetworkId> = Some(NetworkId::Polkadot);
+	pub const RelayNetwork: Option<NetworkId> = Some(NetworkId::Paseo);
 	pub RelayChainOrigin: RuntimeOrigin = cumulus_pallet_xcm::Origin::Relay.into();
 	pub UniversalLocation: InteriorMultiLocation =
 		X2(GlobalConsensus(RelayNetwork::get().unwrap()), Parachain(ParachainInfo::parachain_id().into()));
@@ -396,7 +396,7 @@ impl xcm_executor::Config for XcmConfig {
 	type XcmSender = XcmRouter;
 	type AssetTransactor = AssetTransactors;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
-	// Asset Hub Polkadot does not recognize a reserve location for any asset. This does not prevent
+	// Asset Hub Paseo does not recognize a reserve location for any asset. This does not prevent
 	// Asset Hub acting _as_ a reserve location for PAS and assets created under `pallet-assets`.
 	// For PAS, users must use teleport where allowed (e.g. with the Relay Chain).
 	type IsReserve = ();
