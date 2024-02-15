@@ -4893,6 +4893,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fcec9f73ecb8d0439a13043a253a9fd90aa6bf5aece6470194bbfc7f79256d88"
 dependencies = [
  "docify",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
