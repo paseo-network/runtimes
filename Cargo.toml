@@ -1,6 +1,6 @@
 [workspace.package]
 version = "1.0.0"
-authors = ["Portico"]
+authors = ["Paseo Core Team"]
 edition = "2021"
 repository = "https://github.com/paseo-network/runtimes.git"
 license = "Apache License v2" # TODO
