@@ -137,7 +137,7 @@ impl_runtime_weights!(paseo_runtime_constants);
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-// Portico version identifier;
+// Paseo version identifier;
 /// Runtime version (Paseo).
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
