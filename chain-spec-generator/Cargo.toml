@@ -12,30 +12,26 @@ hex-literal = "0.4.1"
 serde_json = "1.0.107"
 serde = { version = "1.0.188", features = ["derive"] }
 
-sc-chain-spec = "22.0.0"
-sc-consensus-grandpa = "0.14.0"
-sp-consensus-babe = "0.27.0"
-sp-authority-discovery = "21.0.0"
-sp-core = "23.0.0"
-sp-runtime = "26.0.0"
-sp-consensus-beefy = "8.0.0"
-
-pallet-staking = "23.0.0"
-pallet-im-online = "22.0.0"
-
-polkadot-runtime-parachains = "2.0.0"
-polkadot-primitives = "2.0.0"
-parachains-common = { version = "2.0.0" }
-cumulus-primitives-core = { version = "0.2.0" }
-
-xcm = { package = "staging-xcm", version = "2.0.1" }
+sc-chain-spec = "24.0.0"
+polkadot-runtime-parachains = "4.0.0"
+polkadot-primitives = "4.0.0"
+sp-consensus-babe = "0.29.0"
+sp-authority-discovery = "23.0.0"
+sp-core = "25.0.0"
+pallet-staking = "25.0.0"
+sc-consensus-grandpa = "0.16.0"
+pallet-im-online = "24.0.0"
+sp-runtime = "28.0.0"
+sp-consensus-beefy = "10.0.0"
+xcm = { package = "staging-xcm", version = "4.0.0" }
+parachains-common = { version = "4.0.0" }
+cumulus-primitives-core = { version = "0.4.0" }
 
 paseo-runtime = { path = "../relay/paseo" }
 paseo-runtime-constants = { path = "../relay/paseo/constants" }
-asset-hub-paseo-runtime = { path = "../system-parachains/asset-hub-paseo" }
+
 
 [features]
 runtime-benchmarks = [
-	"asset-hub-paseo-runtime/runtime-benchmarks",
 	"paseo-runtime/runtime-benchmarks",
 ]
