@@ -396,12 +396,12 @@ impl xcm_executor::Config for XcmConfig {
 	type XcmSender = XcmRouter;
 	type AssetTransactor = AssetTransactors;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
-	// Asset Hub Polkadot does not recognize a reserve location for any asset. This does not prevent
-	// Asset Hub acting _as_ a reserve location for DOT and assets created under `pallet-assets`.
-	// For DOT, users must use teleport where allowed (e.g. with the Relay Chain).
+	// Asset Hub Paseo does not recognize a reserve location for any asset. This does not prevent
+	// Asset Hub acting _as_ a reserve location for PAS and assets created under `pallet-assets`.
+	// For PAS, users must use teleport where allowed (e.g. with the Relay Chain).
 	type IsReserve = ();
 	// We allow:
-	// - teleportation of DOT
+	// - teleportation of PAS
 	// - teleportation of sibling parachain's assets (as ForeignCreators)
 	type IsTeleporter = (
 		NativeAsset,

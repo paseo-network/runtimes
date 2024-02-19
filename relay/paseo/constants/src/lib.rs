@@ -1,18 +1,18 @@
 // Copyright (C) Parity Technologies (UK) Ltd.
-// This file is part of Polkadot.
+// This file is part of Paseo.
 
-// Polkadot is free software: you can redistribute it and/or modify
+// Paseo is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 
-// Polkadot is distributed in the hope that it will be useful,
+// Paseo is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
 // You should have received a copy of the GNU General Public License
-// along with Polkadot.  If not, see <http://www.gnu.org/licenses/>.
+// along with Paseo.  If not, see <http://www.gnu.org/licenses/>.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -86,7 +86,7 @@ pub mod fee {
     impl WeightToFeePolynomial for WeightToFee {
         type Balance = Balance;
         fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
-            // in Polkadot, extrinsic base weight (smallest non-zero weight) is mapped to 1/10 CENT:
+            // in Paseo, extrinsic base weight (smallest non-zero weight) is mapped to 1/10 CENT:
             let p = super::currency::CENTS;
             let q = 10 * Balance::from(ExtrinsicBaseWeight::get().ref_time());
             smallvec![WeightToFeeCoefficient {
@@ -106,18 +106,41 @@ pub mod xcm {
         // Preallocated for the Root body.
         #[allow(dead_code)]
         const ROOT_INDEX: u32 = 0;
-        // The bodies corresponding to the Polkadot OpenGov Origins.
+        // The bodies corresponding to the Paseo OpenGov Origins.
         pub const FELLOWSHIP_ADMIN_INDEX: u32 = 1;
+        // The body corresponding to the Treasurer OpenGov track.
+        pub const TREASURER_INDEX: u32 = 2;
     }
 }
 
 /// System Parachains.
 pub mod system_parachain {
-    /// Statemint parachain ID.
-    pub const STATEMINT_ID: u32 = 1000;
+    use xcm::latest::prelude::*;
+
+    /// Asset Hub parachain ID.
+    pub const ASSET_HUB_ID: u32 = 1000;
     /// Collectives parachain ID.
     pub const COLLECTIVES_ID: u32 = 1001;
+    /// Bridge Hub parachain ID.
+    pub const BRIDGE_HUB_ID: u32 = 1002;
+
+    frame_support::match_types! {
+        // System parachains from Paseo point of view.
+        pub type SystemParachains: impl Contains<MultiLocation> = {
+            MultiLocation {
+                parents: 0,
+                interior: X1(Parachain(
+                    ASSET_HUB_ID |
+                    COLLECTIVES_ID |
+                    BRIDGE_HUB_ID
+                )),
+            }
+        };
+    }
 }
+
+/// Paseo Treasury pallet instance.
+pub const TREASURY_PALLET_ID: u8 = 19;
 
 #[cfg(test)]
 mod tests {

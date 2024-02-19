@@ -13,15 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! # Asset Hub Polkadot Runtime
+//! # Asset Hub Paseo Runtime
 //!
-//! Asset Hub Polkadot is a parachain that provides an interface to create, manage, and use assets.
+//! Asset Hub Paseo is a parachain that provides an interface to create, manage, and use assets.
 //! Assets may be fungible or non-fungible.
 //!
 //! ## Renaming
 //!
 //! This chain was originally known as "Statemint". You may see references to Statemint, Statemine,
-//! and Westmint throughout the codebase. These are synonymous with "Asset Hub Polkadot, Kusama, and
+//! and Westmint throughout the codebase. These are synonymous with "Asset Hub Paseo, Kusama, and
 //! Westend", respectively.
 //!
 //! ## Assets
@@ -33,12 +33,12 @@
 //!
 //! ### Native Balances
 //!
-//! Asset Hub Polkadot uses its parent DOT token as its native asset.
+//! Asset Hub Paseo uses its parent PAS token as its native asset.
 //!
 //! ### Governance
 //!
 //! As a system parachain, Asset Hub defers its governance (namely, its `Root` origin), to its
-//! Relay Chain parent, Polkadot.
+//! Relay Chain parent, Paseo.
 //!
 //! ### Collator Selection
 //!
@@ -49,7 +49,7 @@
 //! ### XCM
 //!
 //! Because Asset Hub is fully under the control of the Relay Chain, it is meant to be a
-//! `TrustedTeleporter`. It can also serve as a reserve location to other parachains for DOT as well
+//! `TrustedTeleporter`. It can also serve as a reserve location to other parachains for PAS as well
 //! as other local assets.
 
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -114,7 +114,7 @@ use xcm_config::{
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 
-// Polkadot imports
+// Paseo imports
 use pallet_xcm::{EnsureXcm, IsVoiceOfBody};
 use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 use xcm::latest::BodyId;

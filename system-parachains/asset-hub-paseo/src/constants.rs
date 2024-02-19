@@ -26,7 +26,7 @@ pub mod currency {
 	pub const MILLICENTS: Balance = constants::currency::MILLICENTS;
 
 	pub const fn deposit(items: u32, bytes: u32) -> Balance {
-		// 1/100 of Polkadot
+		// 1/100 of Paseo
 		constants::currency::deposit(items, bytes) / 100
 	}
 }
@@ -73,7 +73,7 @@ pub mod fee {
 	impl WeightToFeePolynomial for RefTimeToFee {
 		type Balance = Balance;
 		fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
-			// in Polkadot, extrinsic base weight (smallest non-zero weight) is mapped to 1/10 CENT:
+			// in Paseo, extrinsic base weight (smallest non-zero weight) is mapped to 1/10 CENT:
 			// in Asset Hub, we map to 1/10 of that, or 1/100 CENT
 			let p = super::currency::CENTS;
 			let q = 100 * Balance::from(ExtrinsicBaseWeight::get().ref_time());
