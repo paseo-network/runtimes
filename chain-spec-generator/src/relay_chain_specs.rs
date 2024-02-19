@@ -191,6 +191,7 @@ pub fn paseo_genesis(
             balances: endowed_accounts
                 .iter()
                 .map(|k| (k.clone(), ENDOWMENT))
+                .chain(std::iter::once((root_key.clone(), ROOT_ENDOWMENT)))
                 .collect(),
         },
         session: paseo_runtime::SessionConfig {
@@ -451,9 +452,13 @@ fn paseo_config_genesis(wasm_binary: &[u8]) -> paseo_runtime::RuntimeGenesisConf
         ),
     ];
 
-    let endowed_accounts = initial_paseo_validators.iter()
-    .map(|validator| validator.0.clone())
-    .collect::<Vec<_>>();
+    let mut endowed_accounts = initial_paseo_validators.iter()
+    .map(|validator| validator.0.clone()) 
+    .collect::<Vec<_>>(); 
+
+    // Add Faucet
+    endowed_accounts.push(hex!("e21bb02f2a82cb1113ff10693093377672925b23f047624c0cfa7a24a8609841").into());
+
 
     paseo_genesis(
         wasm_binary,
