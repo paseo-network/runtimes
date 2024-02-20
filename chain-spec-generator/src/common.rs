@@ -1,5 +1,5 @@
 use crate::{
-    relay_chain_specs::PaseoChainSpec, system_parachains_specs::AssetHubPaseoChainSpec, ChainSpec,
+    relay_chain_specs::PaseoChainSpec, ChainSpec,
 };
 use polkadot_primitives::{AccountId, AccountPublic};
 use sp_core::{sr25519, Pair, Public};
@@ -51,9 +51,6 @@ pub fn from_json_file(filepath: &str, supported: String) -> Result<Box<dyn Chain
     match &chain_spec.id {
         x if x.starts_with("paseo") | x.starts_with("pas") => {
             Ok(Box::new(PaseoChainSpec::from_json_file(path)?))
-        }
-        x if x.starts_with("asset-hub-paseo") => {
-            Ok(Box::new(AssetHubPaseoChainSpec::from_json_file(path)?))
         }
         _ => Err(format!(
             "Unknown chain 'id' in json file. Only supported: {supported}'"
