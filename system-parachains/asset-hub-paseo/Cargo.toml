@@ -1,10 +1,10 @@
 [package]
 authors.workspace = true
 build = "build.rs"
-description = "Asset Hub Polkadot parachain runtime"
+description = "Asset Hub Paseo parachain runtime"
 edition.workspace = true
 license.workspace = true
-name = "asset-hub-polkadot-runtime"
+name = "asset-hub-paseo-runtime"
 repository.workspace = true
 version.workspace = true
 
@@ -15,12 +15,7 @@ log = { version = "0.4.20", default-features = false }
 scale-info = { version = "2.10.0", default-features = false, features = ["derive"] }
 
 # Local
-bp-asset-hub-kusama = { path = "../asset-hub-kusama/primitives", default-features = false}
-bp-asset-hub-polkadot = { path = "./primitives", default-features = false}
-bp-bridge-hub-kusama = { path = "../../bridge-hubs/bridge-hub-kusama/primitives", default-features = false}
-bp-bridge-hub-polkadot = { path = "../../bridge-hubs/bridge-hub-polkadot/primitives", default-features = false}
-kusama-runtime-constants = { path = "../../../relay/kusama/constants", default-features = false}
-polkadot-runtime-constants = { path = "../../../relay/polkadot/constants", default-features = false}
+paseo-runtime-constants = { path = "../../relay/paseo/constants", default-features = false}
 
 # Substrate
 frame-benchmarking = { default-features = false, optional = true, version = "25.0.0" }
@@ -85,9 +80,6 @@ parachains-common = { default-features = false , version = "4.0.0" }
 system-parachains-constants = { path = "../../constants", default-features = false }
 assets-common = { default-features = false , version = "0.4.0" }
 
-# Bridges
-pallet-xcm-bridge-hub-router = { default-features = false , version = "0.2.0" }
-
 [dev-dependencies]
 hex-literal = "0.4.1"
 asset-test-utils = { version = "4.0.0" }
@@ -121,7 +113,6 @@ runtime-benchmarks = [
 	"pallet-uniques/runtime-benchmarks",
 	"pallet-utility/runtime-benchmarks",
 	"pallet-xcm-benchmarks/runtime-benchmarks",
-	"pallet-xcm-bridge-hub-router/runtime-benchmarks",
 	"pallet-xcm/runtime-benchmarks",
 	"polkadot-parachain-primitives/runtime-benchmarks",
 	"polkadot-runtime-common/runtime-benchmarks",
@@ -161,10 +152,6 @@ try-runtime = [
 ]
 std = [
 	"assets-common/std",
-	"bp-asset-hub-kusama/std",
-	"bp-asset-hub-polkadot/std",
-	"bp-bridge-hub-kusama/std",
-	"bp-bridge-hub-polkadot/std",
 	"codec/std",
 	"cumulus-pallet-aura-ext/std",
 	"cumulus-pallet-dmp-queue/std",
@@ -181,7 +168,6 @@ std = [
 	"frame-system-rpc-runtime-api/std",
 	"frame-system/std",
 	"frame-try-runtime?/std",
-	"kusama-runtime-constants/std",
 	"log/std",
 	"pallet-asset-tx-payment/std",
 	"pallet-assets/std",
@@ -207,7 +193,7 @@ std = [
 	"polkadot-core-primitives/std",
 	"polkadot-parachain-primitives/std",
 	"polkadot-runtime-common/std",
-	"polkadot-runtime-constants/std",
+	"paseo-runtime-constants/std",
 	"scale-info/std",
 	"sp-api/std",
 	"sp-block-builder/std",

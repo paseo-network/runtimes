@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 mod common;
 mod relay_chain_specs;
+mod system_parachains_specs;
 
 #[derive(Parser)]
 struct Cli {
@@ -27,7 +28,12 @@ fn main() -> Result<(), String> {
             (
                 "paseo-local",
                 Box::new(|| relay_chain_specs::paseo_local_config()) as Box<_>,
-            )
+            ),
+            (
+				"asset-hub-paseo-local",
+				Box::new(|| system_parachains_specs::asset_hub_paseo_local_testnet_config())
+					as Box<_>,
+			),
         ]);
 
     if let Some(function) = supported_chains.get(&*cli.chain) {

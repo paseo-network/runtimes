@@ -11,6 +11,7 @@ resolver = "2"
 members = [
 	"relay/paseo",
 	"relay/paseo/constants"
+	"system-parachains/asset-hub-paseo",
 ]
 exclude = [
   "chain-spec-generator"
