@@ -10,7 +10,7 @@ resolver = "2"
 
 members = [
 	"relay/paseo",
-	"relay/paseo/constants"
+	"relay/paseo/constants",
 	"system-parachains/asset-hub-paseo",
 ]
 exclude = [

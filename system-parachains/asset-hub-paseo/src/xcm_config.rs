@@ -16,7 +16,7 @@
 use super::{
 	AccountId, AllPalletsWithSystem, Assets, Authorship, Balance, Balances, ForeignAssets,
 	ParachainInfo, ParachainSystem, PolkadotXcm, PriceForParentDelivery, Runtime, RuntimeCall,
-	RuntimeEvent, RuntimeOrigin, ToKusamaXcmRouter, TransactionByteFee, TrustBackedAssetsInstance,
+	RuntimeEvent, RuntimeOrigin, TrustBackedAssetsInstance,
 	WeightToFee, XcmpQueue,
 };
 use crate::ForeignAssetsInstance;
@@ -35,7 +35,7 @@ use parachains_common::{
 	},
 };
 use polkadot_parachain_primitives::primitives::Sibling;
-use polkadot_runtime_constants::system_parachain;
+use paseo_runtime_constants::system_parachain;
 use sp_runtime::traits::{AccountIdConversion, ConvertInto};
 use system_parachains_constants::TREASURY_PALLET_ID;
 use xcm::latest::prelude::*;
@@ -44,7 +44,7 @@ use xcm_builder::{
 	AllowSubscriptionsFrom, AllowTopLevelPaidExecutionFrom, CurrencyAdapter,
 	DenyReserveTransferToRelayChain, DenyThenTry, DescribeAllTerminal, DescribeFamily,
 	EnsureXcmOrigin, FrameTransactionalProcessor, FungiblesAdapter,
-	GlobalConsensusParachainConvertsFor, HashedDescription, IsConcrete, LocalMint, NoChecking,
+	HashedDescription, IsConcrete, LocalMint, NoChecking,
 	ParentAsSuperuser, ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative,
 	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
 	SovereignSignedViaLocation, StartsWith, StartsWithExplicitGlobalConsensus, TakeWeightCredit,
@@ -65,7 +65,7 @@ parameter_types! {
 	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
 	pub FellowshipLocation: MultiLocation = MultiLocation::new(1, Parachain(1001));
 	pub const GovernanceLocation: MultiLocation = MultiLocation::parent();
-	pub RelayTreasuryLocation: MultiLocation = (Parent, PalletInstance(polkadot_runtime_constants::TREASURY_PALLET_ID)).into();
+	pub RelayTreasuryLocation: MultiLocation = (Parent, PalletInstance(paseo_runtime_constants::TREASURY_PALLET_ID)).into();
 	pub TreasuryAccount: Option<AccountId> = Some(TREASURY_PALLET_ID.into_account_truncating());
 }
 
@@ -217,17 +217,6 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 				return true
 			}
 		}
-
-		// Allow to change dedicated storage items (called by governance-like)
-		match call {
-			RuntimeCall::System(frame_system::Call::set_storage { items })
-				if items.iter().all(|(k, _)| {
-					k.eq(&bridging::XcmBridgeHubRouterBaseFee::key()) ||
-						k.eq(&bridging::XcmBridgeHubRouterByteFee::key())
-				}) =>
-				return true,
-			_ => (),
-		};
 
 		matches!(
 			call,
@@ -532,11 +521,11 @@ type LocalXcmRouter = (
 
 /// The means for routing XCM messages which are not for local execution into the right message
 /// queues.
-pub type XcmRouter = WithUniqueTopic<(
+pub type XcmRouter = WithUniqueTopic<
 	// The means for routing XCM messages which are not for local execution into the right message
 	// queues.
 	LocalXcmRouter
-)>;
+>;
 
 #[cfg(feature = "runtime-benchmarks")]
 parameter_types! {

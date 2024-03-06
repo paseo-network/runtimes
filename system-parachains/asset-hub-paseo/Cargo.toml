@@ -77,7 +77,7 @@ cumulus-primitives-utility = { default-features = false , version = "0.4.0" }
 pallet-collator-selection = { default-features = false , version = "6.0.0" }
 parachain-info = { package = "staging-parachain-info", default-features = false , version = "0.4.0" }
 parachains-common = { default-features = false , version = "4.0.0" }
-system-parachains-constants = { path = "../../constants", default-features = false }
+system-parachains-constants = { path = "../constants", default-features = false }
 assets-common = { default-features = false , version = "0.4.0" }
 
 [dev-dependencies]
@@ -144,7 +144,6 @@ try-runtime = [
 	"pallet-transaction-payment/try-runtime",
 	"pallet-uniques/try-runtime",
 	"pallet-utility/try-runtime",
-	"pallet-xcm-bridge-hub-router/try-runtime",
 	"pallet-xcm/try-runtime",
 	"parachain-info/try-runtime",
 	"polkadot-runtime-common/try-runtime",
@@ -186,7 +185,6 @@ std = [
 	"pallet-uniques/std",
 	"pallet-utility/std",
 	"pallet-xcm-benchmarks?/std",
-	"pallet-xcm-bridge-hub-router/std",
 	"pallet-xcm/std",
 	"parachain-info/std",
 	"parachains-common/std",
