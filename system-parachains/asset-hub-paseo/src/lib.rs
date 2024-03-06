@@ -1297,7 +1297,7 @@ mod tests {
 	use crate::{CENTS, MILLICENTS};
 	use sp_runtime::traits::Zero;
 	use sp_weights::WeightToFee;
-	use system_parachains_constants::polkadot::fee;
+	use system_parachains_constants::paseo::fee;
 
 	/// We can fit at least 1000 transfers in a block.
 	#[test]
