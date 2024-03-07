@@ -141,7 +141,7 @@ fn asset_hub_paseo_local_genesis(
 
 pub fn asset_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, String> {
 	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("ss58Format".into(), 0.into());
+	properties.insert("ss58Format".into(), 42.into());
 	properties.insert("tokenSymbol".into(), "PAS".into());
 	properties.insert("tokenDecimals".into(), 10.into());
 
