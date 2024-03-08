@@ -11,13 +11,13 @@ assignees: ''
 
 ## Preparation
 
-- [ ] **Upgrade Proposal Review**: Confirm that the upgrade proposal has been fully reviewed and approved.
-- [ ] **Impact Analysis Completed**: Assess and document the expected impact of the upgrade on existing systems and users.
+- [ ] **Upgrade Proposal Review**: Confirm that the core team agreed on the upcoming Runtime Upgrade.
+- [ ] **Impact Analysis Completed**: Which would be the impact of this Runtime Upgrade?.
 - [ ] **Communication Plan**: Draft and approve the communication plan for the upgrade.
 
 ## Pre-Upgrade
 
-- [ ] **Schedule Upgrade Window**: Decide on and communicate the upgrade window to all stakeholders.
+- [ ] **Schedule Upgrade Window**: Decide on and communicate the upgrade window to all stakeholders. Use always CET Timezone for scheduling or communicating deadlines.
 - [ ] **Notify Stakeholders**: Distribute the communication plan through all relevant channels.
 - [ ] **Prepare Upgrade Guide**: Ensure detailed upgrade instructions are available and easy to follow.
 - [ ] **Validator Coordination**: Confirm that validators are informed and prepared for the upgrade.
@@ -25,7 +25,7 @@ assignees: ''
 ## Execution
 
 - [ ] **Final Pre-Upgrade Check**: Conduct a last-minute check to ensure all systems and stakeholders are ready.
-- [ ] **Deploy Upgrade**: Initiate the runtime upgrade process according to the planned procedure.
+- [ ] **Deploy Upgrade**: Initiate the runtime upgrade process according to the planned procedure. Use always CET Timezone for scheduling or communicating deadlines.
 - [ ] **Monitor Deployment**: Closely monitor the network for any immediate issues during the upgrade.
 
 ## Validation
