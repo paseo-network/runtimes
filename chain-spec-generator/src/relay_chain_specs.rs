@@ -191,7 +191,6 @@ pub fn paseo_genesis(
             balances: endowed_accounts
                 .iter()
                 .map(|k| (k.clone(), ENDOWMENT))
-                .chain(std::iter::once((root_key.clone(), ROOT_ENDOWMENT)))
                 .collect(),
         },
         session: paseo_runtime::SessionConfig {
@@ -271,7 +270,7 @@ fn paseo_local_genesis(wasm_binary: &[u8]) -> paseo_runtime::RuntimeGenesisConfi
     paseo_genesis(
         wasm_binary,
         // initial authorities
-        vec![get_authority_keys_from_seed("Alice")],
+        vec![get_authority_keys_from_seed("Alice"),get_authority_keys_from_seed("Charlie"),get_authority_keys_from_seed("Bob")],
         //root key
         get_account_id_from_seed::<sr25519::Public>("Alice"),
         // endowed accounts
@@ -477,7 +476,7 @@ pub fn paseo_local_config() -> Result<Box<dyn ChainSpec>, String> {
 
     Ok(Box::new(PaseoChainSpec::from_genesis(
         "Paseo Local Testnet",
-        "paseo_local",
+        "paseo-local",
         ChainType::Local,
         move || paseo_local_genesis(wasm_binary),
         vec![],

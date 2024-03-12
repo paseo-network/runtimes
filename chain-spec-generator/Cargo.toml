@@ -38,3 +38,7 @@ runtime-benchmarks = [
 	"paseo-runtime/runtime-benchmarks",
 	"asset-hub-paseo-runtime/runtime-benchmarks",
 ]
+fast-runtime = [
+	"paseo-runtime/fast-runtime",
+	"asset-hub-paseo-runtime/fast-runtime",
+]

@@ -43,14 +43,6 @@ const ASSET_HUB_PASEO_ED: Balance = parachains_common::polkadot::currency::EXIST
 /// The default XCM version to set in genesis config.
 const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
 
-/// Invulnerable Collators
-pub fn invulnerables() -> Vec<(AccountId, AuraId)> {
-	vec![
-		(get_account_id_from_seed::<sr25519::Public>("Alice"), get_from_seed::<AuraId>("Alice")),
-		(get_account_id_from_seed::<sr25519::Public>("Bob"), get_from_seed::<AuraId>("Bob")),
-	]
-}
-
 /// Invulnerable Collators for the particular case of AssetHubPolkadot
 pub fn invulnerables_asset_hub_paseo() -> Vec<(AccountId, AssetHubPolkadotAuraId)> {
 	vec![
