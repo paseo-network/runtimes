@@ -27,8 +27,8 @@ use runtime_common::{
         DealWithFees, LocatableAssetConverter, VersionedLocatableAsset,
         VersionedMultiLocationConverter,
     },
-    paras_registrar, paras_sudo_wrapper, prod_or_fast, slots, BlockHashCount, BlockLength, CurrencyToVote,
-    SlowAdjustingFeeUpdate,
+    paras_registrar, paras_sudo_wrapper, prod_or_fast, slots, BlockHashCount, BlockLength,
+    CurrencyToVote, SlowAdjustingFeeUpdate,
 };
 
 use runtime_parachains::{
