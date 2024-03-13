@@ -1435,9 +1435,8 @@ impl paras_registrar::Config for Runtime {
 }
 
 parameter_types! {
-    // 12 weeks = 3 months per lease period -> 8 lease periods ~ 2 years
     // 1 week leases to accomodate for teams willing to use the relay sporadically until on demand scheduler is integrated.
-    pub LeasePeriod: BlockNumber = prod_or_fast!(1 * WEEKS, 12 * WEEKS, "DOT_LEASE_PERIOD");
+    pub LeasePeriod: BlockNumber = prod_or_fast!(1 * WEEKS, 1 * DAYS, "DOT_LEASE_PERIOD");
 }
 
 impl slots::Config for Runtime {
