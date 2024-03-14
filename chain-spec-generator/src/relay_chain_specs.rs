@@ -178,7 +178,6 @@ pub fn paseo_genesis(
     let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(testnet_accounts);
 
     const ENDOWMENT: u128 = 1_000_000 * PAS; // 1M PAS
-    const ROOT_ENDOWMENT: u128 = 100_000_000 * PAS; // 100M PAS
     const STASH: u128 = 1_000_00 * PAS; // 100k PAS
 
     paseo_runtime::RuntimeGenesisConfig {
