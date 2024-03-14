@@ -36,6 +36,7 @@ pub struct Extensions {
 pub type AssetHubPaseoChainSpec =
 	sc_chain_spec::GenericChainSpec<asset_hub_paseo_runtime::RuntimeGenesisConfig, Extensions>;
 
+const AH_PROTOCOL_ID: &str = "ah-pas";
 
 // We allow the polkadot assethub
 const ASSET_HUB_PASEO_ED: Balance = parachains_common::polkadot::currency::EXISTENTIAL_DEPOSIT;
@@ -44,24 +45,24 @@ const ASSET_HUB_PASEO_ED: Balance = parachains_common::polkadot::currency::EXIST
 const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
 
 /// Invulnerable Collators for the particular case of AssetHubPolkadot
-pub fn invulnerables_asset_hub_paseo() -> Vec<(AccountId, AssetHubPolkadotAuraId)> {
-	vec![
-		(
-			get_account_id_from_seed::<sr25519::Public>("Alice"),
-			get_from_seed::<AssetHubPolkadotAuraId>("Alice"),
-		),
-		(
-			get_account_id_from_seed::<sr25519::Public>("Bob"),
-			get_from_seed::<AssetHubPolkadotAuraId>("Bob"),
-		),
-	]
+pub fn invulnerables_asset_hub_paseo() -> Vec<(AccountId, AuraId)> {
+		vec![
+			(
+				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				get_from_seed::<AuraId>("Alice"),
+			),
+			(
+				get_account_id_from_seed::<sr25519::Public>("Bob"),
+				get_from_seed::<AuraId>("Bob"),
+			),
+		]
 }
 
 /// Generate the session keys from individual elements.
 ///
 /// The input must be a tuple of individual keys (a single arg for now since we have just one key).
 pub fn asset_hub_paseo_session_keys(
-	keys: AssetHubPolkadotAuraId,
+	keys: AuraId,
 ) -> asset_hub_paseo_runtime::SessionKeys {
 	asset_hub_paseo_runtime::SessionKeys { aura: keys }
 }
@@ -70,7 +71,7 @@ pub fn asset_hub_paseo_session_keys(
 // AssetHubPolkadot
 fn asset_hub_paseo_genesis(
 	wasm_binary: &[u8],
-	invulnerables: Vec<(AccountId, AssetHubPolkadotAuraId)>,
+	invulnerables: Vec<(AccountId, AuraId)>,
 	endowed_accounts: Vec<AccountId>,
 	id: ParaId,
 ) -> asset_hub_paseo_runtime::RuntimeGenesisConfig {
@@ -149,7 +150,7 @@ pub fn asset_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, Stri
 		move || asset_hub_paseo_local_genesis(wasm_binary),
 		Vec::new(),
 		None,
-		None,
+		Some(AH_PROTOCOL_ID),
 		None,
 		Some(properties),
 		Extensions { relay_chain: "paseo-local".into(), para_id: 1000 },

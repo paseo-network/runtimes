@@ -220,3 +220,5 @@ experimental = [ "pallet-aura/experimental" ]
 # deployment. This will disable stuff that shouldn't be part of the on-chain wasm
 # to make it smaller like logging for example.
 on-chain-release-build = [ "sp-api/disable-logging" ]
+
+fast-runtime = []
