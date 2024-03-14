@@ -202,7 +202,7 @@ pub fn asset_hub_paseo_testnet_config() -> Result<Box<dyn ChainSpec>, String> {
 		"Paseo Asset Hub",
 		// ID
 		"asset-hub-paseo",
-		ChainType::Local,
+		ChainType::Live,
 		move || asset_hub_paseo_config_genesis(wasm_binary),
 		Vec::new(),
 		None,
