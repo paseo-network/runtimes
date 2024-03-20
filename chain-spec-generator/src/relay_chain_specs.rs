@@ -158,6 +158,7 @@ pub fn paseo_genesis(
         balances: paseo_runtime::BalancesConfig {
             balances: endowed_accounts
                 .iter()
+                .filter(|k| root_key.ne(k)) // Root key has a separate endowment
                 .map(|k| (k.clone(), ENDOWMENT))
                 .chain(std::iter::once((root_key.clone(), ROOT_ENDOWMENT)))
                 .collect(),
