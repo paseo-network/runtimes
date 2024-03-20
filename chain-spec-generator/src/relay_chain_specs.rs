@@ -143,10 +143,8 @@ pub fn paseo_genesis(
         BeefyId
     )>,
     root_key: AccountId,
-    endowed_accounts: Option<Vec<AccountId>>,
+    endowed_accounts: Vec<AccountId>,
 ) -> paseo_runtime::RuntimeGenesisConfig {
-    let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(testnet_accounts);
-
     const ENDOWMENT: u128 = 1_000_000 * PAS; // 1M PAS
     const ROOT_ENDOWMENT: u128 = 100_000_000 * PAS; // 100M PAS
     const STASH: u128 = 1_000_00 * PAS; // 100k PAS
@@ -245,7 +243,7 @@ fn paseo_local_genesis(wasm_binary: &[u8]) -> paseo_runtime::RuntimeGenesisConfi
         //root key
         get_account_id_from_seed::<sr25519::Public>("Alice"),
         // endowed accounts
-        None,
+        testnet_accounts(),
     )
 }
 
@@ -437,7 +435,7 @@ fn paseo_config_genesis(wasm_binary: &[u8]) -> paseo_runtime::RuntimeGenesisConf
         //root key
         root_key.clone(),
         // endowed accounts
-        Some(endowed_accounts),
+        endowed_accounts,
     )
 }
 
