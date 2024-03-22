@@ -271,7 +271,7 @@ fn paseo_local_genesis(wasm_binary: &[u8]) -> paseo_runtime::RuntimeGenesisConfi
     paseo_genesis(
         wasm_binary,
         // initial authorities
-        vec![get_authority_keys_from_seed("Alice")],
+        vec![get_authority_keys_from_seed("Alice"), get_authority_keys_from_seed("Bob")],
         //root key
         get_account_id_from_seed::<sr25519::Public>("Alice"),
         // endowed accounts
