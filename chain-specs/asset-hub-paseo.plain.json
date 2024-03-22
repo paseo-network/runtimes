@@ -2,7 +2,10 @@
   "name": "Paseo Asset Hub",
   "id": "asset-hub-paseo",
   "chainType": "Live",
-  "bootNodes": [],
+  "bootNodes": [
+    "/dns/assethub-paseo-bootnode.radiumblock.com/tcp/30333/p2p/12D3KooWP8aNgAjkYzH1QuwLjYyNqfpWkJkFRgdtUuey9KzEJciq",
+    "/dns/assethub-paseo-bootnode.radiumblock.com/tcp/30336/wss/p2p/12D3KooWP8aNgAjkYzH1QuwLjYyNqfpWkJkFRgdtUuey9KzEJciq"
+  ],
   "telemetryEndpoints": null,
   "protocolId": "ah-pas",
   "properties": {
