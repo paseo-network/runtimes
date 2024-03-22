@@ -2,15 +2,17 @@ use hex_literal::hex;
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 use pallet_staking::Forcing;
 use paseo_runtime_constants::currency::UNITS as PAS;
-use polkadot_primitives::{AccountId, AccountPublic, AssignmentId, ValidatorId};
+use polkadot_primitives::{AccountId, AssignmentId, ValidatorId};
 use polkadot_runtime_parachains::configuration::HostConfiguration;
 use sc_chain_spec::{ChainSpec, ChainType, NoExtension};
 use sc_consensus_grandpa::AuthorityId as GrandpaId;
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use sp_consensus_babe::AuthorityId as BabeId;
 use sp_consensus_beefy::ecdsa_crypto::AuthorityId as BeefyId;
-use sp_core::{crypto::UncheckedInto, sr25519, Pair, Public};
-use sp_runtime::{traits::IdentifyAccount, AccountId32, Perbill};
+use sp_core::{crypto::UncheckedInto, sr25519};
+use sp_runtime::{AccountId32, Perbill};
+
+use crate::common::{get_account_id_from_seed, get_from_seed, testnet_accounts};
 
 pub type PaseoChainSpec =
     sc_chain_spec::GenericChainSpec<paseo_runtime::RuntimeGenesisConfig, NoExtension>;
@@ -83,21 +85,6 @@ fn paseo_session_keys(
         beefy,
     }
 }
-/// Helper function to generate a crypto pair from seed
-pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
-    TPublic::Pair::from_string(&format!("//{}", seed), None)
-        .expect("static values are valid; qed")
-        .public()
-}
-
-/// Helper function to generate an account ID from seed
-pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
-where
-    AccountPublic: From<<TPublic::Pair as Pair>::Public>,
-{
-    AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
-}
-
 
 /// Helper function to generate stash, controller and session key from seed
 pub fn get_authority_keys_from_seed(
@@ -142,23 +129,6 @@ pub fn get_authority_keys_from_seed_no_beefy(
     )
 }
 
-fn testnet_accounts() -> Vec<AccountId> {
-    vec![
-        get_account_id_from_seed::<sr25519::Public>("Alice"),
-        get_account_id_from_seed::<sr25519::Public>("Bob"),
-        get_account_id_from_seed::<sr25519::Public>("Charlie"),
-        get_account_id_from_seed::<sr25519::Public>("Dave"),
-        get_account_id_from_seed::<sr25519::Public>("Eve"),
-        get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-        get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-        get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-        get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-        get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-        get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-        get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-    ]
-}
-
 pub fn paseo_genesis(
     wasm_binary: &[u8],
     initial_authorities: Vec<(
@@ -173,10 +143,8 @@ pub fn paseo_genesis(
         BeefyId
     )>,
     root_key: AccountId,
-    endowed_accounts: Option<Vec<AccountId>>,
+    endowed_accounts: Vec<AccountId>,
 ) -> paseo_runtime::RuntimeGenesisConfig {
-    let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(testnet_accounts);
-
     const ENDOWMENT: u128 = 1_000_000 * PAS; // 1M PAS
     const ROOT_ENDOWMENT: u128 = 100_000_000 * PAS; // 100M PAS
     const STASH: u128 = 1_000_00 * PAS; // 100k PAS
@@ -190,6 +158,7 @@ pub fn paseo_genesis(
         balances: paseo_runtime::BalancesConfig {
             balances: endowed_accounts
                 .iter()
+                .filter(|k| root_key.ne(k)) // Root key has a separate endowment
                 .map(|k| (k.clone(), ENDOWMENT))
                 .chain(std::iter::once((root_key.clone(), ROOT_ENDOWMENT)))
                 .collect(),
@@ -275,7 +244,7 @@ fn paseo_local_genesis(wasm_binary: &[u8]) -> paseo_runtime::RuntimeGenesisConfi
         //root key
         get_account_id_from_seed::<sr25519::Public>("Alice"),
         // endowed accounts
-        None,
+        testnet_accounts(),
     )
 }
 
@@ -467,7 +436,7 @@ fn paseo_config_genesis(wasm_binary: &[u8]) -> paseo_runtime::RuntimeGenesisConf
         //root key
         root_key.clone(),
         // endowed accounts
-        Some(endowed_accounts),
+        endowed_accounts,
     )
 }
 
