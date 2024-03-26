@@ -146,7 +146,6 @@ pub fn paseo_genesis(
     endowed_accounts: Vec<AccountId>,
 ) -> paseo_runtime::RuntimeGenesisConfig {
     const ENDOWMENT: u128 = 1_000_000 * PAS; // 1M PAS
-    const ROOT_ENDOWMENT: u128 = 100_000_000 * PAS; // 100M PAS
     const STASH: u128 = 1_000_00 * PAS; // 100k PAS
 
     paseo_runtime::RuntimeGenesisConfig {
@@ -160,7 +159,6 @@ pub fn paseo_genesis(
                 .iter()
                 .filter(|k| root_key.ne(k)) // Root key has a separate endowment
                 .map(|k| (k.clone(), ENDOWMENT))
-                .chain(std::iter::once((root_key.clone(), ROOT_ENDOWMENT)))
                 .collect(),
         },
         session: paseo_runtime::SessionConfig {
@@ -240,7 +238,7 @@ fn paseo_local_genesis(wasm_binary: &[u8]) -> paseo_runtime::RuntimeGenesisConfi
     paseo_genesis(
         wasm_binary,
         // initial authorities
-        vec![get_authority_keys_from_seed("Alice"), get_authority_keys_from_seed("Bob")],
+        vec![get_authority_keys_from_seed("Alice"),get_authority_keys_from_seed("Charlie"),get_authority_keys_from_seed("Bob")],
         //root key
         get_account_id_from_seed::<sr25519::Public>("Alice"),
         // endowed accounts
@@ -446,7 +444,7 @@ pub fn paseo_local_config() -> Result<Box<dyn ChainSpec>, String> {
 
     Ok(Box::new(PaseoChainSpec::from_genesis(
         "Paseo Local Testnet",
-        "paseo_local",
+        "paseo-local",
         ChainType::Local,
         move || paseo_local_genesis(wasm_binary),
         vec![],
