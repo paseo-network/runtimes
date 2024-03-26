@@ -27,8 +27,8 @@ use runtime_common::{
         DealWithFees, LocatableAssetConverter, VersionedLocatableAsset,
         VersionedMultiLocationConverter,
     },
-    paras_registrar, prod_or_fast, slots, BlockHashCount, BlockLength, CurrencyToVote,
-    SlowAdjustingFeeUpdate,
+    paras_registrar, paras_sudo_wrapper, prod_or_fast, slots, BlockHashCount, BlockLength,
+    CurrencyToVote, SlowAdjustingFeeUpdate,
 };
 
 use runtime_parachains::{
@@ -144,7 +144,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("paseo"),
     impl_name: create_runtime_str!("paseo-testnet"),
     authoring_version: 0,
-    spec_version: 1_001_002,
+    spec_version: 1_001_003,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 25,
@@ -1435,8 +1435,8 @@ impl paras_registrar::Config for Runtime {
 }
 
 parameter_types! {
-    // 12 weeks = 3 months per lease period -> 8 lease periods ~ 2 years
-    pub LeasePeriod: BlockNumber = prod_or_fast!(12 * WEEKS, 12 * WEEKS, "DOT_LEASE_PERIOD");
+    // 1 week leases to accomodate for teams willing to use the relay sporadically until on demand scheduler is integrated.
+    pub LeasePeriod: BlockNumber = prod_or_fast!(1 * WEEKS, 1 * DAYS, "DOT_LEASE_PERIOD");
 }
 
 impl slots::Config for Runtime {
@@ -1557,6 +1557,8 @@ impl pallet_sudo::Config for Runtime {
     type WeightInfo = weights::pallet_sudo::WeightInfo<Runtime>;
 }
 
+impl paras_sudo_wrapper::Config for Runtime {}
+
 construct_runtime! {
     pub enum Runtime
     {
@@ -1665,6 +1667,7 @@ construct_runtime! {
         BeefyMmrLeaf: pallet_beefy_mmr = 202,
 
         // Sudo.
+        ParasSudoWrapper: paras_sudo_wrapper = 250,
         Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 255,
     }
 }
