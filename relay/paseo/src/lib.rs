@@ -1667,7 +1667,7 @@ construct_runtime! {
         BeefyMmrLeaf: pallet_beefy_mmr = 202,
 
         // Sudo.
-        ParaSudoWrapper: paras_sudo_wrapper = 250,
+        ParasSudoWrapper: paras_sudo_wrapper = 250,
         Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 255,
     }
 }
