@@ -16,7 +16,8 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub mod paseo;
+pub mod kusama;
+pub mod polkadot;
 
 use frame_support::{
 	weights::{constants::WEIGHT_REF_TIME_PER_SECOND, Weight},
