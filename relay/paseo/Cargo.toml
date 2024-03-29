@@ -1,5 +1,5 @@
 [package]
-name = "paseo-runtime"
+name = "polkadot-runtime"
 build = "build.rs"
 repository.workspace = true
 version.workspace = true
@@ -77,14 +77,13 @@ pallet-referenda = { default-features = false , version = "25.0.0" }
 pallet-scheduler = { default-features = false , version = "26.0.0" }
 pallet-session = { default-features = false , version = "25.0.0" }
 frame-support = { default-features = false , version = "25.0.0" }
-pallet-sudo = { default-features = false , version = "25.0.0" }
-pallet-staking = { default-features = false , version = "25.0.0" }
+pallet-staking = { default-features = false , version = "25.0.1" }
 pallet-staking-reward-fn = { default-features = false, version = "16.0.0" }
 pallet-staking-reward-curve = { version = "10.0.0" }
 pallet-staking-runtime-api = { default-features = false , version = "11.0.0" }
 frame-system = { default-features = false , version = "25.0.0" }
 frame-system-rpc-runtime-api = { default-features = false , version = "23.0.0" }
-paseo-runtime-constants = { package = "paseo-runtime-constants", path = "constants", default-features = false }
+polkadot-runtime-constants = { package = "polkadot-runtime-constants", path = "constants", default-features = false }
 pallet-timestamp = { default-features = false , version = "24.0.0" }
 pallet-tips = { default-features = false , version = "24.0.0" }
 pallet-treasury = { default-features = false , version = "24.0.0" }
@@ -184,7 +183,6 @@ std = [
 	"pallet-scheduler/std",
 	"pallet-session-benchmarking?/std",
 	"pallet-session/std",
-	"pallet-sudo/std",
 	"pallet-staking-reward-fn/std",
 	"pallet-staking-runtime-api/std",
 	"pallet-staking/std",
@@ -199,7 +197,7 @@ std = [
 	"pallet-xcm-benchmarks?/std",
 	"pallet-xcm/std",
 	"parity-scale-codec/std",
-	"paseo-runtime-constants/std",
+	"polkadot-runtime-constants/std",
 	"primitives/std",
 	"runtime-common/std",
 	"runtime-parachains/std",
@@ -264,7 +262,6 @@ runtime-benchmarks = [
 	"pallet-referenda/runtime-benchmarks",
 	"pallet-scheduler/runtime-benchmarks",
 	"pallet-session-benchmarking/runtime-benchmarks",
-	"pallet-sudo/runtime-benchmarks",
 	"pallet-staking/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"pallet-tips/runtime-benchmarks",
@@ -320,7 +317,6 @@ try-runtime = [
 	"pallet-referenda/try-runtime",
 	"pallet-scheduler/try-runtime",
 	"pallet-session/try-runtime",
-	"pallet-sudo/try-runtime",
 	"pallet-staking/try-runtime",
 	"pallet-timestamp/try-runtime",
 	"pallet-tips/try-runtime",
