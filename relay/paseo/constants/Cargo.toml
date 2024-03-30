@@ -1,5 +1,5 @@
 [package]
-name = "paseo-runtime-constants"
+name = "polkadot-runtime-constants"
 repository.workspace = true
 version.workspace = true
 authors.workspace = true
