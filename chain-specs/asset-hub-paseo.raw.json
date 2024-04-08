@@ -4,7 +4,9 @@
   "chainType": "Live",
   "bootNodes": [
     "/dns/assethub-paseo-bootnode.radiumblock.com/tcp/30333/p2p/12D3KooWP8aNgAjkYzH1QuwLjYyNqfpWkJkFRgdtUuey9KzEJciq",
-    "/dns/assethub-paseo-bootnode.radiumblock.com/tcp/30336/wss/p2p/12D3KooWP8aNgAjkYzH1QuwLjYyNqfpWkJkFRgdtUuey9KzEJciq"
+    "/dns/assethub-paseo-bootnode.radiumblock.com/tcp/30336/wss/p2p/12D3KooWP8aNgAjkYzH1QuwLjYyNqfpWkJkFRgdtUuey9KzEJciq",
+    "/dns/asset-hub-paseo.bootnode.amforc.com/tcp/30333/wss/p2p/12D3KooWERfFUg8UFPCakzTFkktdRYeG2cD3A9ga1DfynbPdYqGL",
+    "/dns/asset-hub-paseo.bootnode.amforc.com/tcp/30345/p2p/12D3KooWERfFUg8UFPCakzTFkktdRYeG2cD3A9ga1DfynbPdYqGL"
   ],
   "telemetryEndpoints": null,
   "protocolId": "ah-pas",
