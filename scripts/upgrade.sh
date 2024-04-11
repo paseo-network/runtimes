@@ -5,6 +5,7 @@ set -e
 read -p "Enter the current paseo runtime version (without v as prefix): " CURRENT_TAG
 read -p "Enter the new polkadot runtime version (without v as prefix): " NEXT_TAG
 
+rm -rf tmp
 mkdir tmp
 cd tmp
 
