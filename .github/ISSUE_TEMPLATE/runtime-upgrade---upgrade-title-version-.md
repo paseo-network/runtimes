@@ -24,6 +24,7 @@ assignees: ''
 
 ## Execution
 
+- [ ] **DB Backup**: Ask any infrastructure provider to produce a backup of the network before commiting the upgrade.
 - [ ] **Notify Stakeholders**: Distribute the communication plan through all relevant channels.
 - [ ] **Schedule Upgrade Window**: Decide on and communicate the upgrade window to all stakeholders. Use always CET Timezone for scheduling or communicating deadlines.
 - [ ] **Final Pre-Upgrade Check**: Conduct a last-minute check to ensure all systems and stakeholders are ready.
