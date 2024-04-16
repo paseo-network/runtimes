@@ -38,7 +38,6 @@ assignees: ''
 
 ## Post-Upgrade
 
-- [ ] **Update Documentation**: Revise all relevant documentation to reflect changes introduced by the upgrade.
 - [ ] **Announce Completion**: Inform stakeholders that the upgrade has been successfully completed.
 - [ ] **Post-Upgrade Review**: Conduct a review meeting to discuss the upgrade process, identify any issues, and document lessons learned.
 
