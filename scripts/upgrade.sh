@@ -23,6 +23,7 @@ git checkout tags/${POLKADOT_CURRENT_TAG}
 
 echo "\n----- Copying runtime files to paseo folder -----"
 cp -fr relay/polkadot/* ../paseo_runtime/relay/paseo/.
+cp -fr system-parachains/asset-hubs/asset-hub-polkadot/* ../paseo_runtime/system-parachains/asset-hub-paseo/.
 
 POLKADOT_NEXT_TAG=v${NEXT_TAG}
 echo "\n----- Checking out tag ${POLKADOT_NEXT_TAG} -----"
@@ -46,7 +47,9 @@ git switch -c feat/${NEXT_TAG}
 
 echo "\n----- Commiting new polkadot runtime into paseo repo -----"
 rm -rf relay/paseo/*
+rm -rf system-parachains/asset-hub-paseo/*
 cp -rf ../polkadot_runtime/relay/polkadot/* relay/paseo/.
+cp -rf ../polkadot_runtime/system-parachains/asset-hubs/asset-hub-polkadot/* system-parachains/asset-hub-paseo/.
 git add .
 git commit -m "initial polkadot ${NEXT_TAG} code"
 
