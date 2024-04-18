@@ -37,4 +37,5 @@ rls*.log
 runtime/wasm/target/
 substrate.code-workspace
 target/
-**/tmp
+**/tmp_runtime
+**/tmp_hub

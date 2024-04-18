@@ -5,9 +5,9 @@ set -e
 read -p "Enter the current paseo runtime version (without v as prefix): " CURRENT_TAG
 read -p "Enter the new polkadot runtime version (without v as prefix): " NEXT_TAG
 
-rm -rf tmp
-mkdir tmp
-cd tmp
+rm -rf tmp_hub
+mkdir tmp_hub
+cd tmp_hub
 
 echo "\n----- Cloning paseo runtime repo -----"
 git clone https://github.com/paseo-network/runtimes.git paseo_runtime
@@ -22,7 +22,6 @@ git checkout tags/${POLKADOT_CURRENT_TAG}
 
 
 echo "\n----- Copying runtime files to paseo folder -----"
-cp -fr relay/polkadot/* ../paseo_runtime/relay/paseo/.
 cp -fr system-parachains/asset-hubs/asset-hub-polkadot/* ../paseo_runtime/system-parachains/asset-hub-paseo/.
 
 POLKADOT_NEXT_TAG=v${NEXT_TAG}
@@ -31,7 +30,7 @@ git checkout tags/${POLKADOT_NEXT_TAG}
 
 echo "\n----- Commiting current polkadot runtime on paseo repo -----"
 cd ../paseo_runtime
-git switch -c tmp/${CURRENT_TAG}
+git switch -c tmp/${CURRENT_TAG}-hub
 git add .
 git commit -m "go back from paseo to polkadot"
 
@@ -42,13 +41,11 @@ LATEST_COMMIT=$(git rev-parse HEAD)
 
 echo "\n----- Creating new branch from main on paseo repo -----"
 git switch main
-git switch -c feat/${NEXT_TAG}
+git switch -c feat/${NEXT_TAG}-hub
 
 
 echo "\n----- Commiting new polkadot runtime into paseo repo -----"
-rm -rf relay/paseo/*
 rm -rf system-parachains/asset-hub-paseo/*
-cp -rf ../polkadot_runtime/relay/polkadot/* relay/paseo/.
 cp -rf ../polkadot_runtime/system-parachains/asset-hubs/asset-hub-polkadot/* system-parachains/asset-hub-paseo/.
 git add .
 git commit -m "initial polkadot ${NEXT_TAG} code"
