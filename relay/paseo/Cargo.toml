@@ -64,6 +64,7 @@ pallet-proxy = { workspace = true }
 pallet-referenda = { workspace = true }
 pallet-scheduler = { workspace = true }
 pallet-session = { workspace = true }
+pallet-sudo = { workspace = true }
 frame-support = { workspace = true }
 pallet-staking = { workspace = true }
 pallet-staking-reward-fn = { workspace = true }
@@ -72,7 +73,7 @@ pallet-staking-runtime-api = { workspace = true }
 pallet-state-trie-migration = { workspace = true }
 frame-system = { workspace = true }
 frame-system-rpc-runtime-api = { workspace = true }
-paseo-runtime-constants = { package = "paseo-runtime-constants", path = "constants", default-features = false }
+paseo-runtime-constants = { workspace = true }
 pallet-timestamp = { workspace = true }
 pallet-treasury = { workspace = true }
 pallet-whitelist = { workspace = true }

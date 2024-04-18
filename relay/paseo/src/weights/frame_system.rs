@@ -47,6 +47,8 @@ use core::marker::PhantomData;
 /// Weight functions for `frame_system`.
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> frame_system::WeightInfo for WeightInfo<T> {
+	fn authorize_upgrade() -> frame_election_provider_support::Weight { todo!() }
+fn apply_authorized_upgrade() -> frame_election_provider_support::Weight { todo!() }
 	/// The range of component `b` is `[0, 3932160]`.
 	fn remark(b: u32, ) -> Weight {
 		// Proof Size summary in bytes:

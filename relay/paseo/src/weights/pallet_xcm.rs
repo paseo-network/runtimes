@@ -47,6 +47,10 @@ use core::marker::PhantomData;
 /// Weight functions for `pallet_xcm`.
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_xcm::WeightInfo for WeightInfo<T> {
+	fn transfer_assets() -> frame_election_provider_support::Weight { todo!() }
+fn new_query() -> frame_election_provider_support::Weight { todo!() }
+fn take_response() -> frame_election_provider_support::Weight { todo!() }
+fn claim_assets() -> frame_election_provider_support::Weight { todo!() }
 	/// Storage: `Dmp::DeliveryFeeFactor` (r:1 w:0)
 	/// Proof: `Dmp::DeliveryFeeFactor` (`max_values`: None, `max_size`: None, mode: `Measured`)
 	/// Storage: `XcmPallet::SupportedVersion` (r:1 w:0)

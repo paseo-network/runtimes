@@ -47,6 +47,7 @@ use core::marker::PhantomData;
 /// Weight functions for `pallet_vesting`.
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_vesting::WeightInfo for WeightInfo<T> {
+	fn force_remove_vesting_schedule(_: u32, _: u32) -> frame_election_provider_support::Weight { todo!() }
 	/// Storage: `Vesting::Vesting` (r:1 w:1)
 	/// Proof: `Vesting::Vesting` (`max_values`: None, `max_size`: Some(1057), added: 3532, mode: `MaxEncodedLen`)
 	/// Storage: `Balances::Locks` (r:1 w:1)

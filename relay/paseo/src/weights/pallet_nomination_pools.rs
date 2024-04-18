@@ -47,6 +47,7 @@ use core::marker::PhantomData;
 /// Weight functions for `pallet_nomination_pools`.
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_nomination_pools::WeightInfo for WeightInfo<T> {
+	fn set_commission_claim_permission() -> frame_election_provider_support::Weight { todo!() }
 	/// Storage: `NominationPools::MinJoinBond` (r:1 w:0)
 	/// Proof: `NominationPools::MinJoinBond` (`max_values`: Some(1), `max_size`: Some(16), added: 511, mode: `MaxEncodedLen`)
 	/// Storage: `NominationPools::PoolMembers` (r:1 w:1)
