@@ -41,7 +41,7 @@ LATEST_COMMIT=$(git rev-parse HEAD)
 
 echo "\n----- Creating new branch from main on paseo repo -----"
 git switch main
-git switch -c feat/${NEXT_TAG}-hub
+git switch -c release/${NEXT_TAG}-hub
 
 
 echo "\n----- Commiting new polkadot runtime into paseo repo -----"
