@@ -1,5 +1,5 @@
 [package]
-name = "polkadot-runtime"
+name = "paseo-runtime"
 build = "build.rs"
 repository.workspace = true
 version.workspace = true
@@ -72,7 +72,7 @@ pallet-staking-runtime-api = { workspace = true }
 pallet-state-trie-migration = { workspace = true }
 frame-system = { workspace = true }
 frame-system-rpc-runtime-api = { workspace = true }
-polkadot-runtime-constants = { package = "polkadot-runtime-constants", path = "constants", default-features = false }
+paseo-runtime-constants = { package = "paseo-runtime-constants", path = "constants", default-features = false }
 pallet-timestamp = { workspace = true }
 pallet-treasury = { workspace = true }
 pallet-whitelist = { workspace = true }
@@ -164,6 +164,7 @@ std = [
 	"pallet-scheduler/std",
 	"pallet-session-benchmarking?/std",
 	"pallet-session/std",
+	"pallet-sudo/std",
 	"pallet-staking-reward-fn/std",
 	"pallet-staking-runtime-api/std",
 	"pallet-staking/std",
@@ -178,7 +179,7 @@ std = [
 	"pallet-xcm-benchmarks?/std",
 	"pallet-xcm/std",
 	"parity-scale-codec/std",
-	"polkadot-runtime-constants/std",
+	"paseo-runtime-constants/std",
 	"primitives/std",
 	"runtime-common/std",
 	"runtime-parachains/std",
@@ -234,6 +235,7 @@ runtime-benchmarks = [
 	"pallet-referenda/runtime-benchmarks",
 	"pallet-scheduler/runtime-benchmarks",
 	"pallet-session-benchmarking/runtime-benchmarks",
+	"pallet-sudo/runtime-benchmarks",
 	"pallet-staking/runtime-benchmarks",
 	"pallet-state-trie-migration/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
@@ -284,6 +286,7 @@ try-runtime = [
 	"pallet-referenda/try-runtime",
 	"pallet-scheduler/try-runtime",
 	"pallet-session/try-runtime",
+	"pallet-sudo/try-runtime",
 	"pallet-staking/try-runtime",
 	"pallet-state-trie-migration/try-runtime",
 	"pallet-timestamp/try-runtime",
