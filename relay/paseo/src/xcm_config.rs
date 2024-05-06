@@ -17,9 +17,9 @@
 //! XCM configuration for Paseo.
 
 use super::{
-    parachains_origin, AccountId, AllPalletsWithSystem, Balances, Dmp, FellowshipAdmin,
-    GeneralAdmin, ParaId, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, StakingAdmin,
-    TransactionByteFee, Treasurer, Treasury, WeightToFee, XcmPallet,
+	parachains_origin, AccountId, AllPalletsWithSystem, Balances, Dmp, FellowshipAdmin,
+	GeneralAdmin, ParaId, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, StakingAdmin,
+	TransactionByteFee, Treasurer, Treasury, WeightToFee, XcmPallet,
 };
 use frame_support::{
 	parameter_types,
@@ -49,11 +49,11 @@ use xcm_builder::{
 
 parameter_types! {
 	pub const RootLocation: Location = Here.into_location();
-    /// The location of the PAS token, from the context of this chain. Since this token is native to this
-    /// chain, we make it synonymous with it and thus it is the `Here` location, which means "equivalent to
-    /// the context".
+	/// The location of the PAS token, from the context of this chain. Since this token is native to this
+	/// chain, we make it synonymous with it and thus it is the `Here` location, which means "equivalent to
+	/// the context".
 	pub const TokenLocation: Location = Here.into_location();
-    /// The Polkadot network ID. This is named. TODO To rename to Paseo.
+	/// The Polkadot network ID. This is named. TODO To rename to Paseo.
 	pub const ThisNetwork: NetworkId = NetworkId::Polkadot;
 	/// Our location in the universe of consensus systems.
 	pub UniversalLocation: InteriorLocation = [GlobalConsensus(ThisNetwork::get())].into();
@@ -68,12 +68,12 @@ parameter_types! {
 /// The canonical means of converting a `Location` into an `AccountId`, used when we want to
 /// determine the sovereign account controlled by a location.
 pub type SovereignAccountOf = (
-    // We can convert a child parachain using the standard `AccountId` conversion.
-    ChildParachainConvertsVia<ParaId, AccountId>,
-    // We can directly alias an `AccountId32` into a local account.
-    AccountId32Aliases<ThisNetwork, AccountId>,
-    // Foreign locations alias into accounts according to a hash of their standard description.
-    HashedDescription<AccountId, DescribeFamily<DescribeAllTerminal>>,
+	// We can convert a child parachain using the standard `AccountId` conversion.
+	ChildParachainConvertsVia<ParaId, AccountId>,
+	// We can directly alias an `AccountId32` into a local account.
+	AccountId32Aliases<ThisNetwork, AccountId>,
+	// Foreign locations alias into accounts according to a hash of their standard description.
+	HashedDescription<AccountId, DescribeFamily<DescribeAllTerminal>>,
 );
 
 /// Our asset transactor. This is what allows us to interact with the runtime assets from the point
@@ -97,17 +97,17 @@ pub type LocalAssetTransactor = FungibleAdapter<
 /// local dispatch. This is a conversion function from an `OriginKind` type along with the
 /// `Location` value and returns an `Origin` value or an error.
 type LocalOriginConverter = (
-    // If the origin kind is `Sovereign`, then return a `Signed` origin with the account determined
-    // by the `SovereignAccountOf` converter.
-    SovereignSignedViaLocation<SovereignAccountOf, RuntimeOrigin>,
-    // If the origin kind is `Native` and the XCM origin is a child parachain, then we can express
-    // it with the special `parachains_origin::Origin` origin variant.
-    ChildParachainAsNative<parachains_origin::Origin, RuntimeOrigin>,
-    // If the origin kind is `Native` and the XCM origin is the `AccountId32` location, then it can
-    // be expressed using the `Signed` origin variant.
-    SignedAccountId32AsNative<ThisNetwork, RuntimeOrigin>,
-    // Xcm origins can be represented natively under the Xcm pallet's Xcm origin.
-    XcmPassthrough<RuntimeOrigin>,
+	// If the origin kind is `Sovereign`, then return a `Signed` origin with the account determined
+	// by the `SovereignAccountOf` converter.
+	SovereignSignedViaLocation<SovereignAccountOf, RuntimeOrigin>,
+	// If the origin kind is `Native` and the XCM origin is a child parachain, then we can express
+	// it with the special `parachains_origin::Origin` origin variant.
+	ChildParachainAsNative<parachains_origin::Origin, RuntimeOrigin>,
+	// If the origin kind is `Native` and the XCM origin is the `AccountId32` location, then it can
+	// be expressed using the `Signed` origin variant.
+	SignedAccountId32AsNative<ThisNetwork, RuntimeOrigin>,
+	// Xcm origins can be represented natively under the Xcm pallet's Xcm origin.
+	XcmPassthrough<RuntimeOrigin>,
 );
 
 parameter_types! {
@@ -123,13 +123,13 @@ parameter_types! {
 }
 
 pub type PriceForChildParachainDelivery =
-    ExponentialPrice<FeeAssetId, BaseDeliveryFee, TransactionByteFee, Dmp>;
+	ExponentialPrice<FeeAssetId, BaseDeliveryFee, TransactionByteFee, Dmp>;
 
 /// The XCM router. When we want to send an XCM message, we use this type. It amalgamates all of our
 /// individual routers.
 pub type XcmRouter = WithUniqueTopic<(
-    // Only one router so far - use DMP to communicate with child parachains.
-    ChildParachainRouter<Runtime, XcmPallet, PriceForChildParachainDelivery>,
+	// Only one router so far - use DMP to communicate with child parachains.
+	ChildParachainRouter<Runtime, XcmPallet, PriceForChildParachainDelivery>,
 )>;
 
 parameter_types! {
@@ -145,9 +145,9 @@ parameter_types! {
 
 /// Paseo Relay recognizes/respects AssetHub, Collectives, and BridgeHub chains as teleporters.
 pub type TrustedTeleporters = (
-    xcm_builder::Case<DotForAssetHub>,
-    xcm_builder::Case<DotForCollectives>,
-    xcm_builder::Case<DotForBridgeHub>,
+	xcm_builder::Case<DotForAssetHub>,
+	xcm_builder::Case<DotForCollectives>,
+	xcm_builder::Case<DotForBridgeHub>,
 );
 
 pub struct CollectivesOrFellows;
@@ -177,22 +177,22 @@ impl Contains<Location> for LocalPlurality {
 
 /// The barriers one of which must be passed for an XCM message to be executed.
 pub type Barrier = TrailingSetTopicAsId<(
-    // Weight that is paid for may be consumed.
-    TakeWeightCredit,
-    // Expected responses are OK.
-    AllowKnownQueryResponses<XcmPallet>,
-    WithComputedOrigin<
-        (
-            // If the message is one that immediately attempts to pay for execution, then allow it.
-            AllowTopLevelPaidExecutionFrom<Everything>,
-            // Subscriptions for version tracking are OK.
-            AllowSubscriptionsFrom<OnlyParachains>,
-            // Collectives and Fellows plurality get free execution.
-            AllowExplicitUnpaidExecutionFrom<CollectivesOrFellows>,
-        ),
-        UniversalLocation,
-        ConstU32<8>,
-    >,
+	// Weight that is paid for may be consumed.
+	TakeWeightCredit,
+	// Expected responses are OK.
+	AllowKnownQueryResponses<XcmPallet>,
+	WithComputedOrigin<
+		(
+			// If the message is one that immediately attempts to pay for execution, then allow it.
+			AllowTopLevelPaidExecutionFrom<Everything>,
+			// Subscriptions for version tracking are OK.
+			AllowSubscriptionsFrom<OnlyParachains>,
+			// Collectives and Fellows plurality get free execution.
+			AllowExplicitUnpaidExecutionFrom<CollectivesOrFellows>,
+		),
+		UniversalLocation,
+		ConstU32<8>,
+	>,
 )>;
 
 /// Locations that will not be charged fees in the executor, neither for execution nor delivery.
@@ -252,23 +252,23 @@ parameter_types! {
 
 /// Type to convert the `GeneralAdmin` origin to a Plurality `Location` value.
 pub type GeneralAdminToPlurality =
-    OriginToPluralityVoice<RuntimeOrigin, GeneralAdmin, GeneralAdminBodyId>;
+	OriginToPluralityVoice<RuntimeOrigin, GeneralAdmin, GeneralAdminBodyId>;
 
 /// Type to convert an `Origin` type value into a `Location` value which represents an interior
 /// location of this chain.
 pub type LocalOriginToLocation = (
-    GeneralAdminToPlurality,
-    // And a usual Signed origin to be used in XCM as a corresponding AccountId32
-    SignedToAccountId32<RuntimeOrigin, AccountId, ThisNetwork>,
+	GeneralAdminToPlurality,
+	// And a usual Signed origin to be used in XCM as a corresponding AccountId32
+	SignedToAccountId32<RuntimeOrigin, AccountId, ThisNetwork>,
 );
 
 /// Type to convert the `StakingAdmin` origin to a Plurality `Location` value.
 pub type StakingAdminToPlurality =
-    OriginToPluralityVoice<RuntimeOrigin, StakingAdmin, StakingAdminBodyId>;
+	OriginToPluralityVoice<RuntimeOrigin, StakingAdmin, StakingAdminBodyId>;
 
 /// Type to convert the `FellowshipAdmin` origin to a Plurality `Location` value.
 pub type FellowshipAdminToPlurality =
-    OriginToPluralityVoice<RuntimeOrigin, FellowshipAdmin, FellowshipAdminBodyId>;
+	OriginToPluralityVoice<RuntimeOrigin, FellowshipAdmin, FellowshipAdminBodyId>;
 
 /// Type to convert the `Treasurer` origin to a Plurality `Location` value.
 pub type TreasurerToPlurality = OriginToPluralityVoice<RuntimeOrigin, Treasurer, TreasurerBodyId>;

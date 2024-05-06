@@ -20,14 +20,14 @@ pub use pallet_custom_origins::*;
 
 #[frame_support::pallet]
 pub mod pallet_custom_origins {
-    use crate::{Balance, DOLLARS, GRAND};
-    use frame_support::pallet_prelude::*;
+	use crate::{Balance, DOLLARS, GRAND};
+	use frame_support::pallet_prelude::*;
 
-    #[pallet::config]
-    pub trait Config: frame_system::Config {}
+	#[pallet::config]
+	pub trait Config: frame_system::Config {}
 
-    #[pallet::pallet]
-    pub struct Pallet<T>(_);
+	#[pallet::pallet]
+	pub struct Pallet<T>(_);
 
 	#[derive(PartialEq, Eq, Clone, MaxEncodedLen, Encode, Decode, TypeInfo, RuntimeDebug)]
 	#[pallet::origin]
@@ -65,7 +65,7 @@ pub mod pallet_custom_origins {
 		WishForChange,
 	}
 
-    macro_rules! decl_unit_ensures {
+	macro_rules! decl_unit_ensures {
 		( $name:ident: $success_type:ty = $success:expr ) => {
 			pub struct $name;
 			impl<O: Into<Result<Origin, O>> + From<Origin>>
@@ -108,7 +108,7 @@ pub mod pallet_custom_origins {
 		WishForChange,
 	);
 
-    macro_rules! decl_ensure {
+	macro_rules! decl_ensure {
 		(
 			$vis:vis type $name:ident: EnsureOrigin<Success = $success_type:ty> {
 				$( $item:ident = $success:expr, )*
@@ -141,14 +141,14 @@ pub mod pallet_custom_origins {
 		}
 	}
 
-    decl_ensure! {
-        pub type Spender: EnsureOrigin<Success = Balance> {
-            SmallTipper = 250 * DOLLARS,
-            BigTipper = 1 * GRAND,
-            SmallSpender = 10 * GRAND,
-            MediumSpender = 100 * GRAND,
-            BigSpender = 1_000 * GRAND,
-            Treasurer = 10_000 * GRAND,
-        }
-    }
+	decl_ensure! {
+		pub type Spender: EnsureOrigin<Success = Balance> {
+			SmallTipper = 250 * DOLLARS,
+			BigTipper = 1 * GRAND,
+			SmallSpender = 10 * GRAND,
+			MediumSpender = 100 * GRAND,
+			BigSpender = 1_000 * GRAND,
+			Treasurer = 10_000 * GRAND,
+		}
+	}
 }

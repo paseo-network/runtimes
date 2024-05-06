@@ -17,11 +17,12 @@
 
 use crate::common::{get_account_id_from_seed, get_from_seed, testnet_accounts};
 use cumulus_primitives_core::ParaId;
+use hex_literal::hex;
 use parachains_common::{AccountId, AuraId, Balance};
 use sc_chain_spec::{ChainSpec, ChainSpecExtension, ChainSpecGroup, ChainType};
 use serde::{Deserialize, Serialize};
-use sp_core::{crypto::UncheckedInto, sr25519};//use sp_keyring::AccountKeyring::{Alice, Bob, Charlie};
-use hex_literal::hex;
+use sp_core::{crypto::UncheckedInto, sr25519}; /* use sp_keyring::AccountKeyring::{Alice,
+                                                * Bob, Charlie}; */
 
 /// Generic extensions for Parachain ChainSpecs.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ChainSpecGroup, ChainSpecExtension)]
@@ -45,27 +46,23 @@ const ASSET_HUB_PASEO_ED: Balance = parachains_common::polkadot::currency::EXIST
 const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
 
 pub fn invulnerables_asset_hub_paseo_local() -> Vec<(AccountId, AuraId)> {
-		vec![
-			(
-				get_account_id_from_seed::<sr25519::Public>("Alice"),
-				get_from_seed::<AuraId>("Alice"),
-			),
-			(
-				get_account_id_from_seed::<sr25519::Public>("Bob"),
-				get_from_seed::<AuraId>("Bob"),
-			),
-		]
+	vec![
+		(get_account_id_from_seed::<sr25519::Public>("Alice"), get_from_seed::<AuraId>("Alice")),
+		(get_account_id_from_seed::<sr25519::Public>("Bob"), get_from_seed::<AuraId>("Bob")),
+	]
 }
 
 pub fn invulnerables_asset_hub_paseo() -> Vec<(AccountId, AuraId)> {
 	vec![
 		(
 			hex!("0efe248e3ddcfcb4f29675b70fc0a8e2db66b65381c45d299427b60d05f76108").into(),
-			hex!("3a73f2eed5d458e4b427be3afbd20e6d7a0b6972f5295a0b1062a96fe6d83610").unchecked_into(),
+			hex!("3a73f2eed5d458e4b427be3afbd20e6d7a0b6972f5295a0b1062a96fe6d83610")
+				.unchecked_into(),
 		),
 		(
 			hex!("8eef6710734f5d1e7d2eb303fa8f04e9bef65fb680647b24624723f95b868964").into(),
-			hex!("de05506c73f35cf0bd50652b719369c2e20be9bf2c8522bd6cb61059a0cb0033").unchecked_into(),
+			hex!("de05506c73f35cf0bd50652b719369c2e20be9bf2c8522bd6cb61059a0cb0033")
+				.unchecked_into(),
 		),
 	]
 }
@@ -73,18 +70,16 @@ pub fn invulnerables_asset_hub_paseo() -> Vec<(AccountId, AuraId)> {
 /// Generate the session keys from individual elements.
 ///
 /// The input must be a tuple of individual keys (a single arg for now since we have just one key).
-pub fn asset_hub_paseo_session_keys(
-	keys: AuraId,
-) -> asset_hub_paseo_runtime::SessionKeys {
+pub fn asset_hub_paseo_session_keys(keys: AuraId) -> asset_hub_paseo_runtime::SessionKeys {
 	asset_hub_paseo_runtime::SessionKeys { aura: keys }
 }
 
 pub fn ah_endowed_accounts() -> Vec<AccountId> {
-	invulnerables_asset_hub_paseo().iter().map(
-		|collator| collator.0.clone()
-	).collect::<Vec<_>>()
+	invulnerables_asset_hub_paseo()
+		.iter()
+		.map(|collator| collator.0.clone())
+		.collect::<Vec<_>>()
 }
-
 
 // AssetHubPolkadot
 fn asset_hub_paseo_genesis(
@@ -119,8 +114,8 @@ fn asset_hub_paseo_genesis(
 				.into_iter()
 				.map(|(acc, aura)| {
 					(
-						acc.clone(),                           // account id
-						acc,                                   // validator id
+						acc.clone(),                        // account id
+						acc,                                // validator id
 						asset_hub_paseo_session_keys(aura), // session keys
 					)
 				})
@@ -174,7 +169,6 @@ pub fn asset_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, Stri
 		Extensions { relay_chain: "paseo-local".into(), para_id: 1000 },
 	)))
 }
-
 
 fn asset_hub_paseo_config_genesis(
 	wasm_binary: &[u8],

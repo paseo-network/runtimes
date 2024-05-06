@@ -22,55 +22,55 @@ pub use self::currency::DOLLARS;
 
 /// Money matters.
 pub mod currency {
-    use primitives::Balance;
+	use primitives::Balance;
 
-    /// The existential deposit.
-    pub const EXISTENTIAL_DEPOSIT: Balance = 100 * CENTS;
+	/// The existential deposit.
+	pub const EXISTENTIAL_DEPOSIT: Balance = 100 * CENTS;
 
-    pub const UNITS: Balance = 10_000_000_000;
-    pub const DOLLARS: Balance = UNITS; // 10_000_000_000
-    pub const GRAND: Balance = DOLLARS * 1_000; // 10_000_000_000_000
-    pub const CENTS: Balance = DOLLARS / 100; // 100_000_000
-    pub const MILLICENTS: Balance = CENTS / 1_000; // 100_000
+	pub const UNITS: Balance = 10_000_000_000;
+	pub const DOLLARS: Balance = UNITS; // 10_000_000_000
+	pub const GRAND: Balance = DOLLARS * 1_000; // 10_000_000_000_000
+	pub const CENTS: Balance = DOLLARS / 100; // 100_000_000
+	pub const MILLICENTS: Balance = CENTS / 1_000; // 100_000
 
-    pub const fn deposit(items: u32, bytes: u32) -> Balance {
-        items as Balance * 20 * DOLLARS + (bytes as Balance) * 100 * MILLICENTS
-    }
+	pub const fn deposit(items: u32, bytes: u32) -> Balance {
+		items as Balance * 20 * DOLLARS + (bytes as Balance) * 100 * MILLICENTS
+	}
 }
 
 /// Time and blocks.
 pub mod time {
-    use primitives::{BlockNumber, Moment};
-    use runtime_common::prod_or_fast;
-    pub const MILLISECS_PER_BLOCK: Moment = 6000;
-    pub const SLOT_DURATION: Moment = MILLISECS_PER_BLOCK;
-    pub const EPOCH_DURATION_IN_SLOTS: BlockNumber = prod_or_fast!(1 * HOURS, 1 * MINUTES);
+	use primitives::{BlockNumber, Moment};
+	use runtime_common::prod_or_fast;
+	pub const MILLISECS_PER_BLOCK: Moment = 6000;
+	pub const SLOT_DURATION: Moment = MILLISECS_PER_BLOCK;
+	pub const EPOCH_DURATION_IN_SLOTS: BlockNumber = prod_or_fast!(1 * HOURS, 1 * MINUTES);
 
-    // These time units are defined in number of blocks.
-    pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
-    pub const HOURS: BlockNumber = MINUTES * 60;
-    pub const DAYS: BlockNumber = HOURS * 24;
-    pub const WEEKS: BlockNumber = DAYS * 7;
+	// These time units are defined in number of blocks.
+	pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
+	pub const HOURS: BlockNumber = MINUTES * 60;
+	pub const DAYS: BlockNumber = HOURS * 24;
+	pub const WEEKS: BlockNumber = DAYS * 7;
 
-    // 1 in 4 blocks (on average, not counting collisions) will be primary babe blocks.
-    // The choice of is done in accordance to the slot duration and expected target
-    // block time, for safely resisting network delays of maximum two seconds.
-    // <https://research.web3.foundation/en/latest/polkadot/BABE/Babe/#6-practical-results>
-    pub const PRIMARY_PROBABILITY: (u64, u64) = (1, 4);
+	// 1 in 4 blocks (on average, not counting collisions) will be primary babe blocks.
+	// The choice of is done in accordance to the slot duration and expected target
+	// block time, for safely resisting network delays of maximum two seconds.
+	// <https://research.web3.foundation/en/latest/polkadot/BABE/Babe/#6-practical-results>
+	pub const PRIMARY_PROBABILITY: (u64, u64) = (1, 4);
 }
 
 /// Fee-related.
 pub mod fee {
-    use crate::weights::ExtrinsicBaseWeight;
-    use frame_support::weights::{
-        WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
-    };
-    use primitives::Balance;
-    use smallvec::smallvec;
-    pub use sp_runtime::Perbill;
+	use crate::weights::ExtrinsicBaseWeight;
+	use frame_support::weights::{
+		WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
+	};
+	use primitives::Balance;
+	use smallvec::smallvec;
+	pub use sp_runtime::Perbill;
 
-    /// The block saturation level. Fees will be updates based on this value.
-    pub const TARGET_BLOCK_FULLNESS: Perbill = Perbill::from_percent(25);
+	/// The block saturation level. Fees will be updates based on this value.
+	pub const TARGET_BLOCK_FULLNESS: Perbill = Perbill::from_percent(25);
 
 	/// Cost of every transaction byte at Kusama relay chain.
 	pub const TRANSACTION_BYTE_FEE: Balance = 10 * super::currency::MILLICENTS;
@@ -123,12 +123,12 @@ pub mod system_parachain {
 	use primitives::Id;
 	use xcm_builder::IsChildSystemParachain;
 
-    /// Asset Hub parachain ID.
-    pub const ASSET_HUB_ID: u32 = 1000;
-    /// Collectives parachain ID.
-    pub const COLLECTIVES_ID: u32 = 1001;
-    /// Bridge Hub parachain ID.
-    pub const BRIDGE_HUB_ID: u32 = 1002;
+	/// Asset Hub parachain ID.
+	pub const ASSET_HUB_ID: u32 = 1000;
+	/// Collectives parachain ID.
+	pub const COLLECTIVES_ID: u32 = 1001;
+	/// Bridge Hub parachain ID.
+	pub const BRIDGE_HUB_ID: u32 = 1002;
 
 	// System parachains from Polkadot point of view.
 	pub type SystemParachains = IsChildSystemParachain<Id>;
@@ -139,30 +139,30 @@ pub const TREASURY_PALLET_ID: u8 = 19;
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        currency::{CENTS, DOLLARS, MILLICENTS},
-        fee::WeightToFee,
-    };
-    use crate::weights::ExtrinsicBaseWeight;
-    use frame_support::weights::WeightToFee as WeightToFeeT;
-    use runtime_common::MAXIMUM_BLOCK_WEIGHT;
+	use super::{
+		currency::{CENTS, DOLLARS, MILLICENTS},
+		fee::WeightToFee,
+	};
+	use crate::weights::ExtrinsicBaseWeight;
+	use frame_support::weights::WeightToFee as WeightToFeeT;
+	use runtime_common::MAXIMUM_BLOCK_WEIGHT;
 
-    #[test]
-    // Test that the fee for `MAXIMUM_BLOCK_WEIGHT` of weight has sane bounds.
-    fn full_block_fee_is_correct() {
-        // A full block should cost between 10 and 100 DOLLARS.
-        let full_block = WeightToFee::weight_to_fee(&MAXIMUM_BLOCK_WEIGHT);
-        assert!(full_block >= 10 * DOLLARS);
-        assert!(full_block <= 100 * DOLLARS);
-    }
+	#[test]
+	// Test that the fee for `MAXIMUM_BLOCK_WEIGHT` of weight has sane bounds.
+	fn full_block_fee_is_correct() {
+		// A full block should cost between 10 and 100 DOLLARS.
+		let full_block = WeightToFee::weight_to_fee(&MAXIMUM_BLOCK_WEIGHT);
+		assert!(full_block >= 10 * DOLLARS);
+		assert!(full_block <= 100 * DOLLARS);
+	}
 
-    #[test]
-    // This function tests that the fee for `ExtrinsicBaseWeight` of weight is correct
-    fn extrinsic_base_fee_is_correct() {
-        // `ExtrinsicBaseWeight` should cost 1/10 of a CENT
-        println!("Base: {}", ExtrinsicBaseWeight::get());
-        let x = WeightToFee::weight_to_fee(&ExtrinsicBaseWeight::get());
-        let y = CENTS / 10;
-        assert!(x.max(y) - x.min(y) < MILLICENTS);
-    }
+	#[test]
+	// This function tests that the fee for `ExtrinsicBaseWeight` of weight is correct
+	fn extrinsic_base_fee_is_correct() {
+		// `ExtrinsicBaseWeight` should cost 1/10 of a CENT
+		println!("Base: {}", ExtrinsicBaseWeight::get());
+		let x = WeightToFee::weight_to_fee(&ExtrinsicBaseWeight::get());
+		let y = CENTS / 10;
+		assert!(x.max(y) - x.min(y) < MILLICENTS);
+	}
 }
