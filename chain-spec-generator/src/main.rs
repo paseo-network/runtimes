@@ -38,15 +38,9 @@ fn main() -> Result<(), String> {
 
 	let supported_chains =
 		HashMap::<_, Box<dyn Fn() -> Result<Box<dyn ChainSpec>, String>>>::from([
-			(
-				"paseo-dev",
-				Box::new(|| relay_chain_specs::paseo_development_config()) as Box<_>,
-			),
-			(
-				"paseo-local",
-				Box::new(|| relay_chain_specs::paseo_local_testnet_config()) as Box<_>,
-			),
-/* 			(
+			("paseo-dev", Box::new(|| relay_chain_specs::paseo_development_config()) as Box<_>),
+			("paseo-local", Box::new(|| relay_chain_specs::paseo_local_testnet_config()) as Box<_>),
+			/* 			(
 				"asset-hub-paseo-local",
 				Box::new(|| system_parachains_specs::asset_hub_paseo_local_testnet_config())
 					as Box<_>,

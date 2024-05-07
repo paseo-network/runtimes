@@ -16,7 +16,7 @@
 // along with Polkadot.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
-	relay_chain_specs::{PaseoChainSpec},
+	relay_chain_specs::PaseoChainSpec,
 	//system_parachains_specs::{AssetHubPaseoChainSpec},
 	ChainSpec,
 };
@@ -70,8 +70,8 @@ pub fn from_json_file(filepath: &str, supported: String) -> Result<Box<dyn Chain
 	match &chain_spec.id {
 		x if x.starts_with("paseo") | x.starts_with("dot") =>
 			Ok(Box::new(PaseoChainSpec::from_json_file(path)?)),
-/* 		x if x.starts_with("asset-hub-paseo") =>
-			Ok(Box::new(AssetHubPolkadotChainSpec::from_json_file(path)?)), */
+		/* 		x if x.starts_with("asset-hub-paseo") =>
+		Ok(Box::new(AssetHubPolkadotChainSpec::from_json_file(path)?)), */
 		_ => Err(format!("Unknown chain 'id' in json file. Only supported: {supported}'")),
 	}
 }
