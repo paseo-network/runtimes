@@ -20,50 +20,52 @@ pub use pallet_custom_origins::*;
 
 #[frame_support::pallet]
 pub mod pallet_custom_origins {
-    use crate::{Balance, DOLLARS, GRAND};
-    use frame_support::pallet_prelude::*;
+	use crate::{Balance, DOLLARS, GRAND};
+	use frame_support::pallet_prelude::*;
 
-    #[pallet::config]
-    pub trait Config: frame_system::Config {}
+	#[pallet::config]
+	pub trait Config: frame_system::Config {}
 
-    #[pallet::pallet]
-    pub struct Pallet<T>(_);
+	#[pallet::pallet]
+	pub struct Pallet<T>(_);
 
-    #[derive(PartialEq, Eq, Clone, MaxEncodedLen, Encode, Decode, TypeInfo, RuntimeDebug)]
-    #[pallet::origin]
-    pub enum Origin {
-        /// Origin able to cancel slashes and manage minimum commission.
-        StakingAdmin,
-        /// Origin for spending up to $10,000,000 PAS from the treasury as well as generally
-        /// administering it.
-        Treasurer,
-        /// Origin for managing the composition of the fellowship.
-        FellowshipAdmin,
-        /// Origin for managing the registrar and permissioned HRMP channel operations.
-        GeneralAdmin,
-        /// Origin for starting auctions.
-        AuctionAdmin,
-        /// Origin able to force slot leases.
-        LeaseAdmin,
-        /// Origin able to cancel referenda.
-        ReferendumCanceller,
-        /// Origin able to kill referenda.
-        ReferendumKiller,
-        /// Origin able to spend around $250 from the treasury at once.
-        SmallTipper,
-        /// Origin able to spend around $1,000 from the treasury at once.
-        BigTipper,
-        /// Origin able to spend around $10,000 from the treasury at once.
-        SmallSpender,
-        /// Origin able to spend around $100,000 from the treasury at once.
-        MediumSpender,
-        /// Origin able to spend up to $1,000,000 PAS from the treasury at once.
-        BigSpender,
-        /// Origin able to dispatch a whitelisted call.
-        WhitelistedCaller,
-    }
+	#[derive(PartialEq, Eq, Clone, MaxEncodedLen, Encode, Decode, TypeInfo, RuntimeDebug)]
+	#[pallet::origin]
+	pub enum Origin {
+		/// Origin able to cancel slashes and manage minimum commission.
+		StakingAdmin,
+		/// Origin for spending up to $10,000,000 DOT from the treasury as well as generally
+		/// administering it.
+		Treasurer,
+		/// Origin for managing the composition of the fellowship.
+		FellowshipAdmin,
+		/// Origin for managing the registrar and permissioned HRMP channel operations.
+		GeneralAdmin,
+		/// Origin for starting auctions.
+		AuctionAdmin,
+		/// Origin able to force slot leases.
+		LeaseAdmin,
+		/// Origin able to cancel referenda.
+		ReferendumCanceller,
+		/// Origin able to kill referenda.
+		ReferendumKiller,
+		/// Origin able to spend around $250 from the treasury at once.
+		SmallTipper,
+		/// Origin able to spend around $1,000 from the treasury at once.
+		BigTipper,
+		/// Origin able to spend around $10,000 from the treasury at once.
+		SmallSpender,
+		/// Origin able to spend around $100,000 from the treasury at once.
+		MediumSpender,
+		/// Origin able to spend up to $1,000,000 DOT from the treasury at once.
+		BigSpender,
+		/// Origin able to dispatch a whitelisted call.
+		WhitelistedCaller,
+		/// Origin for signaling that the network wishes for some change.
+		WishForChange,
+	}
 
-    macro_rules! decl_unit_ensures {
+	macro_rules! decl_unit_ensures {
 		( $name:ident: $success_type:ty = $success:expr ) => {
 			pub struct $name;
 			impl<O: Into<Result<Origin, O>> + From<Origin>>
@@ -93,19 +95,20 @@ pub mod pallet_custom_origins {
 		};
 		() => {}
 	}
-    decl_unit_ensures!(
-        StakingAdmin,
-        Treasurer,
-        FellowshipAdmin,
-        GeneralAdmin,
-        AuctionAdmin,
-        LeaseAdmin,
-        ReferendumCanceller,
-        ReferendumKiller,
-        WhitelistedCaller,
-    );
+	decl_unit_ensures!(
+		StakingAdmin,
+		Treasurer,
+		FellowshipAdmin,
+		GeneralAdmin,
+		AuctionAdmin,
+		LeaseAdmin,
+		ReferendumCanceller,
+		ReferendumKiller,
+		WhitelistedCaller,
+		WishForChange,
+	);
 
-    macro_rules! decl_ensure {
+	macro_rules! decl_ensure {
 		(
 			$vis:vis type $name:ident: EnsureOrigin<Success = $success_type:ty> {
 				$( $item:ident = $success:expr, )*
@@ -138,14 +141,14 @@ pub mod pallet_custom_origins {
 		}
 	}
 
-    decl_ensure! {
-        pub type Spender: EnsureOrigin<Success = Balance> {
-            SmallTipper = 250 * DOLLARS,
-            BigTipper = 1 * GRAND,
-            SmallSpender = 10 * GRAND,
-            MediumSpender = 100 * GRAND,
-            BigSpender = 1_000 * GRAND,
-            Treasurer = 10_000 * GRAND,
-        }
-    }
+	decl_ensure! {
+		pub type Spender: EnsureOrigin<Success = Balance> {
+			SmallTipper = 250 * DOLLARS,
+			BigTipper = 1 * GRAND,
+			SmallSpender = 10 * GRAND,
+			MediumSpender = 100 * GRAND,
+			BigSpender = 1_000 * GRAND,
+			Treasurer = 10_000 * GRAND,
+		}
+	}
 }

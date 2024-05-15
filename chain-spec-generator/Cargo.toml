@@ -1,41 +1,43 @@
 [package]
 name = "chain-spec-generator"
-version = "1.1.0"
-authors = ["Paseo Core Team"]
-edition = "2021"
-repository = "https://github.com/paseo-network/runtimes.git"
-license = "Apache License v2" # TODO
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+repository.workspace = true
+license.workspace = true
 
 [dependencies]
-clap = { version = "4.4.4", features = [ "derive" ] }
-hex-literal = "0.4.1"
-serde_json = "1.0.107"
-serde = { version = "1.0.188", features = ["derive"] }
-
-sc-chain-spec = "24.0.0"
-polkadot-runtime-parachains = "4.0.0"
-polkadot-primitives = "4.0.0"
-sp-consensus-babe = "0.29.0"
-sp-authority-discovery = "23.0.0"
-sp-core = "25.0.0"
-pallet-staking = "25.0.0"
-sp-keyring = "28.0.0"
-sc-consensus-grandpa = "0.16.0"
-pallet-im-online = "24.0.0"
-sp-runtime = "28.0.0"
-sp-consensus-beefy = "10.0.0"
-xcm = { package = "staging-xcm", version = "4.0.0" }
-parachains-common = { version = "4.0.0" }
-cumulus-primitives-core = { version = "0.4.0" }
+clap = { features = [ "derive" ] , workspace = true }
+serde_json = { workspace = true }
+serde = { features = ["derive"] , workspace = true }
 
 paseo-runtime = { path = "../relay/paseo" }
-paseo-runtime-constants = { path = "../relay/paseo/constants" }
-asset-hub-paseo-runtime = { path = "../system-parachains/asset-hub-paseo" }
+paseo-runtime-constants = { path = "../relay/paseo/constants", default-features = true }
 
+sc-chain-spec = { workspace = true }
+polkadot-runtime-parachains = { workspace = true, default-features = true }
+polkadot-primitives = { workspace = true, default-features = true }
+sp-consensus-babe = { workspace = true, default-features = true }
+sp-authority-discovery = { workspace = true, default-features = true }
+sp-core = { workspace = true, default-features = true }
+pallet-staking = { workspace = true, default-features = true }
+sc-consensus-grandpa = { workspace = true }
+sp-runtime = { workspace = true, default-features = true }
+sp-consensus-beefy = { workspace = true, default-features = true }
+xcm = { package = "staging-xcm", version = "8.0.1" }
+parachains-common = { workspace = true, default-features = true }
+cumulus-primitives-core = { workspace = true, default-features = true }
 
 [features]
+fast-runtime = [
+	"paseo-runtime/fast-runtime"
+]
 runtime-benchmarks = [
 	"paseo-runtime/runtime-benchmarks",
-	"asset-hub-paseo-runtime/runtime-benchmarks",
+	"cumulus-primitives-core/runtime-benchmarks",
+	"pallet-staking/runtime-benchmarks",
+	"parachains-common/runtime-benchmarks",
+	"polkadot-primitives/runtime-benchmarks",
+	"polkadot-runtime-parachains/runtime-benchmarks",
+	"sp-runtime/runtime-benchmarks"
 ]
-fast-runtime = ["paseo-runtime/fast-runtime"]

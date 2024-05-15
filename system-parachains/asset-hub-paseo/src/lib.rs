@@ -100,8 +100,8 @@ use frame_system::{
 use pallet_nfts::PalletFeatures;
 use parachains_common::{
 	impls::{AssetsToBlockAuthor, DealWithFees},
-	AccountId, AuraId, AssetIdForTrustBackedAssets, Balance, BlockNumber,
-	Hash, Header, Nonce, Signature,
+	AccountId, AssetIdForTrustBackedAssets, AuraId, Balance, BlockNumber, Hash, Header, Nonce,
+	Signature,
 };
 
 use sp_runtime::RuntimeDebug;
