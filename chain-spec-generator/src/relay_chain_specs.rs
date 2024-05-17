@@ -229,14 +229,14 @@ fn paseo_development_config_genesis() -> serde_json::Value {
 	)
 }
 
-/// Polkadot development config (single validator Alice)
+/// Paseo development config (single validator Alice)
 pub fn paseo_development_config() -> Result<Box<dyn ChainSpec>, String> {
 	Ok(Box::new(
 		PaseoChainSpec::builder(
-			paseo_runtime::WASM_BINARY.ok_or("Polkadot development wasm not available")?,
+			paseo_runtime::WASM_BINARY.ok_or("Paseo development wasm not available")?,
 			Default::default(),
 		)
-		.with_name("Polakdot Development")
+		.with_name("Paseo Development")
 		.with_id("paseo-dev")
 		.with_chain_type(ChainType::Development)
 		.with_genesis_config_patch(paseo_development_config_genesis())
@@ -254,14 +254,14 @@ fn paseo_local_testnet_genesis() -> serde_json::Value {
 	)
 }
 
-/// Polkadot local testnet config (multivalidator Alice + Bob)
+/// Paseo local testnet config (multivalidator Alice + Bob)
 pub fn paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, String> {
 	Ok(Box::new(
 		PaseoChainSpec::builder(
-			paseo_runtime::WASM_BINARY.ok_or("Polkadot development wasm not available")?,
+			paseo_runtime::WASM_BINARY.ok_or("Paseo development wasm not available")?,
 			Default::default(),
 		)
-		.with_name("Polkadot Local Testnet")
+		.with_name("Paseo Local Testnet")
 		.with_id("paseo-local")
 		.with_chain_type(ChainType::Local)
 		.with_genesis_config_patch(paseo_local_testnet_genesis())
