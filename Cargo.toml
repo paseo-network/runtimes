@@ -75,6 +75,8 @@ pallet-collator-selection = { version = "10.0.2", default-features = false }
 pallet-collective = { version = "29.0.0", default-features = false }
 pallet-conviction-voting = { version = "29.0.0", default-features = false }
 pallet-core-fellowship = { version = "13.0.0", default-features = false }
+pallet-election-provider-multi-phase = { version = "28.0.0", default-features = false }
+pallet-election-provider-support-benchmarking = { version = "28.0.0", default-features = false }
 pallet-fast-unstake = { version = "28.0.0", default-features = false }
 pallet-glutton = { version = "15.0.0", default-features = false }
 pallet-grandpa = { version = "29.0.0", default-features = false }
@@ -170,6 +172,10 @@ xcm = { version = "8.0.1", default-features = false, package = "staging-xcm" }
 xcm-builder = { version = "8.0.1", default-features = false, package = "staging-xcm-builder" }
 xcm-emulator = { version = "0.6.0" }
 xcm-executor = { version = "8.0.1", default-features = false, package = "staging-xcm-executor" }
+
+# Local dependencies
+
+paseo-runtime-constants = { package = "paseo-runtime-constants", path = "relay/paseo/constants", default-features = false }
 
 [workspace]
 resolver = "2"

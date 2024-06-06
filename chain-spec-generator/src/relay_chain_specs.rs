@@ -18,12 +18,12 @@
 use pallet_staking::Forcing;
 use paseo_runtime_constants::currency::UNITS as DOT;
 use polkadot_primitives::{AccountId, AccountPublic, AssignmentId, ValidatorId};
-use polkadot_runtime_parachains::configuration::HostConfiguration;
+use runtime_parachains::configuration::HostConfiguration;
 use sc_chain_spec::{ChainSpec, ChainType, NoExtension};
-use sc_consensus_grandpa::AuthorityId as GrandpaId;
-use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
-use sp_consensus_babe::AuthorityId as BabeId;
-use sp_consensus_beefy::ecdsa_crypto::AuthorityId as BeefyId;
+use grandpa::AuthorityId as GrandpaId;
+use authority_discovery_primitives::AuthorityId as AuthorityDiscoveryId;
+use babe_primitives::AuthorityId as BabeId;
+use beefy_primitives::ecdsa_crypto::AuthorityId as BeefyId;
 use sp_core::{sr25519, Pair, Public};
 use sp_runtime::{traits::IdentifyAccount, Perbill};
 

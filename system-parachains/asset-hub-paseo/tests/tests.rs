@@ -82,7 +82,7 @@ fn test_ed_is_one_hundredth_of_relay() {
 		)])
 		.build()
 		.execute_with(|| {
-			let relay_ed = polkadot_runtime_constants::currency::EXISTENTIAL_DEPOSIT;
+			let relay_ed = paseo_runtime_constants::currency::EXISTENTIAL_DEPOSIT;
 			let asset_hub_ed = ExistentialDeposit::get();
 			assert_eq!(relay_ed / 100, asset_hub_ed);
 		});
