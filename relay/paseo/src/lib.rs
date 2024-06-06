@@ -1,20 +1,20 @@
 // Copyright (C) Parity Technologies (UK) Ltd.
-// This file is part of Polkadot.
+// This file is part of Paseo.
 
-// Polkadot is free software: you can redistribute it and/or modify
+// Paseo is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 
-// Polkadot is distributed in the hope that it will be useful,
+// Paseo is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
 // You should have received a copy of the GNU General Public License
-// along with Polkadot.  If not, see <http://www.gnu.org/licenses/>.
+// along with Paseo.  If not, see <http://www.gnu.org/licenses/>.
 
-//! The Polkadot runtime. This can be compiled with `#[no_std]`, ready for Wasm.
+//! The Paseo runtime. This can be compiled with `#[no_std]`, ready for Wasm.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
@@ -26,8 +26,8 @@ use polkadot_runtime_common::{
 	impls::{
 		DealWithFees, LocatableAssetConverter, VersionedLocatableAsset, VersionedLocationConverter,
 	},
-	paras_registrar, prod_or_fast, slots, BlockHashCount, BlockLength, CurrencyToVote,
-	SlowAdjustingFeeUpdate,
+	paras_registrar, paras_sudo_wrapper, prod_or_fast, slots, BlockHashCount, BlockLength,
+	CurrencyToVote, SlowAdjustingFeeUpdate,
 };
 
 use runtime_parachains::{
@@ -116,7 +116,7 @@ pub use pallet_timestamp::Call as TimestampCall;
 pub use sp_runtime::BuildStorage;
 
 /// Constant values used within the runtime.
-use polkadot_runtime_constants::{currency::*, fee::*, time::*, TREASURY_PALLET_ID};
+use paseo_runtime_constants::{currency::*, fee::*, time::*, TREASURY_PALLET_ID};
 
 // Weights used in the runtime.
 mod weights;
@@ -132,21 +132,20 @@ use governance::{
 pub mod impls;
 pub mod xcm_config;
 
-pub const LOG_TARGET: &str = "runtime::polkadot";
+pub const LOG_TARGET: &'static str = "runtime::paseo";
 
-use polkadot_runtime_common as runtime_common;
-impl_runtime_weights!(polkadot_runtime_constants);
+impl_runtime_weights!(paseo_runtime_constants);
 
 // Make the WASM binary available.
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-// Polkadot version identifier;
-/// Runtime version (Polkadot).
+// Paseo version identifier;
+/// Runtime version (Paseo).
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: create_runtime_str!("polkadot"),
-	impl_name: create_runtime_str!("parity-polkadot"),
+	spec_name: create_runtime_str!("paseo"),
+	impl_name: create_runtime_str!("paseo-testnet"),
 	authoring_version: 0,
 	spec_version: 1_002_004,
 	impl_version: 0,
@@ -170,7 +169,7 @@ pub fn native_version() -> NativeVersion {
 
 parameter_types! {
 	pub const Version: RuntimeVersion = VERSION;
-	pub const SS58Prefix: u8 = 0;
+	pub const SS58Prefix: u8 = 42;
 }
 
 impl frame_system::Config for Runtime {
@@ -213,7 +212,7 @@ pub struct OriginPrivilegeCmp;
 impl PrivilegeCmp<OriginCaller> for OriginPrivilegeCmp {
 	fn cmp_privilege(left: &OriginCaller, right: &OriginCaller) -> Option<Ordering> {
 		if left == right {
-			return Some(Ordering::Equal)
+			return Some(Ordering::Equal);
 		}
 
 		match (left, right) {
@@ -402,7 +401,7 @@ impl pallet_beefy_mmr::Config for Runtime {
 }
 
 parameter_types! {
-	pub const TransactionByteFee: Balance = polkadot_runtime_constants::fee::TRANSACTION_BYTE_FEE;
+	pub const TransactionByteFee: Balance = 10 * MILLICENTS;
 	/// This value increases the priority of `Operational` transactions by adding
 	/// a "virtual tip" that's equal to the `OperationalFeeMultiplier * final_fee`.
 	pub const OperationalFeeMultiplier: u8 = 5;
@@ -531,9 +530,9 @@ parameter_types! {
 	pub const SignedMaxRefunds: u32 = 16 / 4;
 	pub const SignedFixedDeposit: Balance = deposit(2, 0);
 	pub const SignedDepositIncreaseFactor: Percent = Percent::from_percent(10);
-	// 0.01 DOT per KB of solution data.
+	// 0.01 PAS per KB of solution data.
 	pub const SignedDepositByte: Balance = deposit(0, 10) / 1024;
-	// Each good submission will get 1 DOT as reward
+	// Each good submission will get 1 PAS as reward
 	pub SignedRewardBase: Balance = UNITS;
 
 	// 4 hour session, 1 hour unsigned phase, 32 offchain executions.
@@ -693,7 +692,7 @@ parameter_types! {
 	pub const MaxNominations: u32 = <NposCompactSolution16 as frame_election_provider_support::NposSolution>::LIMIT as u32;
 }
 
-/// Custom version of `runtime_commong::era_payout` somewhat tailored for Polkadot's crowdloan
+/// Custom version of `runtime_commong::era_payout` somewhat tailored for Paseo's crowdloan
 /// unlock history. The only tweak should be
 ///
 /// ```diff
@@ -1042,7 +1041,7 @@ parameter_types! {
 }
 
 parameter_types! {
-	pub Prefix: &'static [u8] = b"Pay DOTs to the Polkadot account:";
+	pub Prefix: &'static [u8] = b"Pay DOTs to the Paseo account:";
 }
 
 impl claims::Config for Runtime {
@@ -1433,13 +1432,7 @@ impl paras_registrar::Config for Runtime {
 
 parameter_types! {
 	// 12 weeks = 3 months per lease period -> 8 lease periods ~ 2 years
-	pub LeasePeriod: BlockNumber = prod_or_fast!(12 * WEEKS, 12 * WEEKS, "DOT_LEASE_PERIOD");
-	// Polkadot Genesis was on May 26, 2020.
-	// Target Parachain Onboarding Date: Dec 15, 2021.
-	// Difference is 568 days.
-	// We want a lease period to start on the target onboarding date.
-	// 568 % (12 * 7) = 64 day offset
-	pub LeaseOffset: BlockNumber = prod_or_fast!(64 * DAYS, 0, "DOT_LEASE_OFFSET");
+	pub LeasePeriod: BlockNumber = prod_or_fast!(1 * WEEKS, 1 * DAYS, "DOT_LEASE_PERIOD");
 }
 
 impl slots::Config for Runtime {
@@ -1447,7 +1440,7 @@ impl slots::Config for Runtime {
 	type Currency = Balances;
 	type Registrar = Registrar;
 	type LeasePeriod = LeasePeriod;
-	type LeaseOffset = LeaseOffset;
+	type LeaseOffset = ();
 	type ForceOrigin = EitherOf<EnsureRoot<Self::AccountId>, LeaseAdmin>;
 	type WeightInfo = weights::runtime_common_slots::WeightInfo<Runtime>;
 }
@@ -1523,9 +1516,9 @@ impl frame_support::traits::OnRuntimeUpgrade for InitiateNominationPools {
 	fn on_runtime_upgrade() -> frame_support::weights::Weight {
 		// we use one as an indicator if this has already been set.
 		if pallet_nomination_pools::MaxPools::<Runtime>::get().is_none() {
-			// 5 DOT to join a pool.
+			// 5 PAS to join a pool.
 			pallet_nomination_pools::MinJoinBond::<Runtime>::put(5 * UNITS);
-			// 100 DOT to create a pool.
+			// 100 PAS to create a pool.
 			pallet_nomination_pools::MinCreateBond::<Runtime>::put(100 * UNITS);
 
 			// Initialize with limits for now.
@@ -1627,6 +1620,14 @@ impl pallet_im_online::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type ValidatorSet = Historical;
 }
+
+impl pallet_sudo::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type WeightInfo = weights::pallet_sudo::WeightInfo<Runtime>;
+}
+
+impl paras_sudo_wrapper::Config for Runtime {}
 
 construct_runtime! {
 	pub enum Runtime
@@ -1737,6 +1738,10 @@ construct_runtime! {
 		// refer to block<N>. See issue #160 for details.
 		Mmr: pallet_mmr = 201,
 		BeefyMmrLeaf: pallet_beefy_mmr = 202,
+
+		// Sudo.
+		ParaSudoWrapper: paras_sudo_wrapper = 250,
+		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 255,
 	}
 }
 
@@ -1958,6 +1963,8 @@ mod benches {
 		[pallet_xcm, PalletXcmExtrinsiscsBenchmark::<Runtime>]
 		[pallet_xcm_benchmarks::fungible, pallet_xcm_benchmarks::fungible::Pallet::<Runtime>]
 		[pallet_xcm_benchmarks::generic, pallet_xcm_benchmarks::generic::Pallet::<Runtime>]
+		// Sudo
+		[pallet_sudo, Sudo]
 	);
 }
 
@@ -2536,7 +2543,7 @@ sp_api::impl_runtime_apis! {
 					TokenLocation::get(),
 					ExistentialDeposit::get()
 				).into());
-				pub AssetHubParaId: ParaId = polkadot_runtime_constants::system_parachain::ASSET_HUB_ID.into();
+				pub AssetHubParaId: ParaId = paseo_runtime_constants::system_parachain::ASSET_HUB_ID.into();
 				pub const RandomParaId: ParaId = ParaId::new(43211234);
 			}
 
@@ -2618,7 +2625,7 @@ sp_api::impl_runtime_apis! {
 					Ok(AssetHubLocation::get())
 				}
 				fn worst_case_holding(_depositable_count: u32) -> Assets {
-					// Polkadot only knows about DOT
+					// Polkadot only knows about PAS
 					vec![Asset { id: AssetId(TokenLocation::get()), fun: Fungible(1_000_000 * UNITS) }].into()
 				}
 			}
@@ -2687,18 +2694,18 @@ sp_api::impl_runtime_apis! {
 				}
 
 				fn unlockable_asset() -> Result<(Location, Location, Asset), BenchmarkError> {
-					// Polkadot doesn't support asset locking
+					// Paseo doesn't support asset locking
 					Err(BenchmarkError::Skip)
 				}
 
 				fn export_message_origin_and_destination(
 				) -> Result<(Location, NetworkId, InteriorLocation), BenchmarkError> {
-					// Polkadot doesn't support exporting messages
+					// Paseo doesn't support exporting messages
 					Err(BenchmarkError::Skip)
 				}
 
 				fn alias_origin() -> Result<(Location, Location), BenchmarkError> {
-					// The XCM executor of Polkadot doesn't have a configured `Aliasers`
+					// The XCM executor of Paseo doesn't have a configured `Aliasers`
 					Err(BenchmarkError::Skip)
 				}
 			}
@@ -2912,7 +2919,7 @@ mod test {
 	fn check_treasury_pallet_id() {
 		assert_eq!(
 			<Treasury as frame_support::traits::PalletInfoAccess>::index() as u8,
-			polkadot_runtime_constants::TREASURY_PALLET_ID
+			paseo_runtime_constants::TREASURY_PALLET_ID
 		);
 	}
 
@@ -3072,7 +3079,7 @@ mod remote_tests {
 
 	async fn remote_ext_test_setup() -> RemoteExternalities<Block> {
 		let transport: Transport =
-			var("WS").unwrap_or("wss://rpc.polkadot.io:443".to_string()).into();
+			var("WS").unwrap_or("wss://paseo.rpc.amforc.com:443".to_string()).into();
 		let maybe_state_snapshot: Option<SnapshotConfig> = var("SNAP").map(|s| s.into()).ok();
 		Builder::<Block>::default()
 			.mode(if let Some(state_snapshot) = maybe_state_snapshot {
@@ -3095,7 +3102,7 @@ mod remote_tests {
 	#[tokio::test]
 	async fn dispatch_all_proposals() {
 		if var("RUN_OPENGOV_TEST").is_err() {
-			return
+			return;
 		}
 
 		sp_tracing::try_init_simple();
@@ -3141,7 +3148,7 @@ mod remote_tests {
 	#[tokio::test]
 	async fn run_migrations() {
 		if var("RUN_MIGRATION_TESTS").is_err() {
-			return
+			return;
 		}
 
 		sp_tracing::try_init_simple();
@@ -3154,7 +3161,7 @@ mod remote_tests {
 	async fn try_fast_unstake_all() {
 		sp_tracing::try_init_simple();
 		let transport: Transport =
-			var("WS").unwrap_or("wss://rpc.polkadot.io:443".to_string()).into();
+			var("WS").unwrap_or("wss://paseo.rpc.amforc.com:443".to_string()).into();
 		let maybe_state_snapshot: Option<SnapshotConfig> = var("SNAP").map(|s| s.into()).ok();
 		let mut ext = Builder::<Block>::default()
 			.mode(if let Some(state_snapshot) = maybe_state_snapshot {
