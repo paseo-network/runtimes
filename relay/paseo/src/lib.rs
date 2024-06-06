@@ -134,6 +134,7 @@ pub mod xcm_config;
 
 pub const LOG_TARGET: &'static str = "runtime::paseo";
 
+use polkadot_runtime_common as runtime_common;
 impl_runtime_weights!(paseo_runtime_constants);
 
 // Make the WASM binary available.
