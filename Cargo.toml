@@ -1,27 +1,19 @@
 [workspace.package]
 version = "1.0.0"
-authors = ["Polkadot Fellowship"]
+authors = ["Paseo Core Team"]
 edition = "2021"
-repository = "https://github.com/polkadot-fellows/runtimes.git"
-license = "GPL-3.0-only"                                        # TODO <https://github.com/polkadot-fellows/runtimes/issues/29>
+repository = "https://github.com/paseo-network/runtimes.git"
+license = "GPL-3.0-only"
 
 [workspace.dependencies]
 assert_matches = { version = "1.5.0" }
-asset-hub-kusama-emulated-chain = { path = "integration-tests/emulated/chains/parachains/assets/asset-hub-kusama" }
-asset-hub-kusama-runtime = { path = "system-parachains/asset-hubs/asset-hub-kusama" }
-asset-hub-polkadot-emulated-chain = { path = "integration-tests/emulated/chains/parachains/assets/asset-hub-polkadot" }
-asset-hub-polkadot-runtime = { path = "system-parachains/asset-hubs/asset-hub-polkadot" }
 asset-test-utils = { version = "8.0.1" }
 assets-common = { version = "0.8.0", default-features = false }
 authority-discovery-primitives = { version = "27.0.0", default-features = false, package = "sp-authority-discovery" }
 babe-primitives = { version = "0.33.0", default-features = false, package = "sp-consensus-babe" }
 beefy-primitives = { version = "14.0.0", default-features = false, package = "sp-consensus-beefy" }
 binary-merkle-tree = { version = "14.0.0", default-features = false }
-bp-asset-hub-kusama = { path = "system-parachains/asset-hubs/asset-hub-kusama/primitives", default-features = false }
-bp-asset-hub-polkadot = { path = "system-parachains/asset-hubs/asset-hub-polkadot/primitives", default-features = false }
 bp-bridge-hub-cumulus = { version = "0.8.0", default-features = false }
-bp-bridge-hub-kusama = { path = "system-parachains/bridge-hubs/bridge-hub-kusama/primitives", default-features = false }
-bp-bridge-hub-polkadot = { path = "system-parachains/bridge-hubs/bridge-hub-polkadot/primitives", default-features = false }
 bp-header-chain = { version = "0.8.1", default-features = false }
 bp-kusama = { version = "0.6.0", default-features = false }
 bp-messages = { version = "0.8.0", default-features = false }
@@ -32,18 +24,10 @@ bp-relayers = { version = "0.8.0", default-features = false }
 bp-runtime = { version = "0.8.0", default-features = false }
 bp-xcm-bridge-hub-router = { version = "0.7.0", default-features = false }
 bridge-hub-common = { version = "0.1.0", default-features = false }
-bridge-hub-kusama-emulated-chain = { path = "integration-tests/emulated/chains/parachains/bridges/bridge-hub-kusama" }
-bridge-hub-kusama-runtime = { path = "system-parachains/bridge-hubs/bridge-hub-kusama" }
-bridge-hub-polkadot-emulated-chain = { path = "integration-tests/emulated/chains/parachains/bridges/bridge-hub-polkadot" }
-bridge-hub-polkadot-runtime = { path = "system-parachains/bridge-hubs/bridge-hub-polkadot" }
 bridge-hub-test-utils = { version = "0.8.0" }
 bridge-runtime-common = { version = "0.8.0", default-features = false }
 clap = { version = "4.5.0" }
 codec = { package = "parity-scale-codec", version = "3.6.9", default-features = false }
-collectives-polkadot-emulated-chain = { path = "integration-tests/emulated/chains/parachains/collectives/collectives-polkadot" }
-collectives-polkadot-runtime = { path = "system-parachains/collectives/collectives-polkadot" }
-collectives-polkadot-runtime-constants = { path = "system-parachains/collectives/collectives-polkadot/constants" }
-coretime-kusama-runtime = { path = "system-parachains/coretime/coretime-kusama" }
 cumulus-pallet-aura-ext = { version = "0.8.0", default-features = false }
 cumulus-pallet-dmp-queue = { version = "0.8.0", default-features = false }
 cumulus-pallet-parachain-system = { version = "0.8.1", default-features = false }
@@ -54,10 +38,6 @@ cumulus-primitives-aura = { version = "0.8.0", default-features = false }
 cumulus-primitives-core = { version = "0.8.0", default-features = false }
 cumulus-primitives-utility = { version = "0.8.1", default-features = false }
 emulated-integration-tests-common = { version = "4.0.0" }
-encointer-balances-tx-payment = { version = "~6.1.0", default-features = false }
-encointer-balances-tx-payment-rpc-runtime-api = { version = "~6.1.0", default-features = false }
-encointer-kusama-runtime = { path = "system-parachains/encointer" }
-encointer-primitives = { version = "~6.1.0", default-features = false }
 enumflags2 = { version = "0.7.7" }
 frame-benchmarking = { version = "29.0.0", default-features = false }
 frame-election-provider-support = { version = "29.0.0", default-features = false }
@@ -67,15 +47,8 @@ frame-system = { version = "29.0.0", default-features = false }
 frame-system-benchmarking = { version = "29.0.0", default-features = false }
 frame-system-rpc-runtime-api = { version = "27.0.0", default-features = false }
 frame-try-runtime = { version = "0.35.0", default-features = false }
-glutton-kusama-runtime = { path = "system-parachains/gluttons/glutton-kusama" }
 grandpa = { version = "0.20.0", package = "sc-consensus-grandpa" }
 hex-literal = { version = "0.4.1" }
-integration-tests-helpers = { path = "integration-tests/emulated/helpers" }
-kusama-emulated-chain = { path = "integration-tests/emulated/chains/relays/kusama" }
-kusama-polkadot-system-emulated-network = { path = "integration-tests/emulated/networks/kusama-polkadot-system" }
-kusama-runtime = { path = "relay/kusama", package = "staging-kusama-runtime" }
-kusama-runtime-constants = { path = "relay/kusama/constants", default-features = false }
-kusama-system-emulated-network = { path = "integration-tests/emulated/networks/kusama-system" }
 log = { version = "0.4.20", default-features = false }
 pallet-alliance = { version = "28.0.0", default-features = false }
 pallet-asset-conversion = { version = "11.0.0", default-features = false }
@@ -102,18 +75,6 @@ pallet-collator-selection = { version = "10.0.2", default-features = false }
 pallet-collective = { version = "29.0.0", default-features = false }
 pallet-conviction-voting = { version = "29.0.0", default-features = false }
 pallet-core-fellowship = { version = "13.0.0", default-features = false }
-pallet-election-provider-multi-phase = { version = "28.0.0", default-features = false }
-pallet-election-provider-support-benchmarking = { version = "28.0.0", default-features = false }
-pallet-encointer-balances = { version = "~6.1.0", default-features = false }
-pallet-encointer-bazaar = { version = "~6.1.0", default-features = false }
-pallet-encointer-bazaar-rpc-runtime-api = { version = "~6.1.0", default-features = false }
-pallet-encointer-ceremonies = { version = "~6.1.0", default-features = false }
-pallet-encointer-ceremonies-rpc-runtime-api = { version = "~6.1.0", default-features = false }
-pallet-encointer-communities = { version = "~6.1.0", default-features = false }
-pallet-encointer-communities-rpc-runtime-api = { version = "~6.1.0", default-features = false }
-pallet-encointer-faucet = { version = "~6.1.0", default-features = false }
-pallet-encointer-reputation-commitments = { version = "~6.1.0", default-features = false }
-pallet-encointer-scheduler = { version = "~6.1.0", default-features = false }
 pallet-fast-unstake = { version = "28.0.0", default-features = false }
 pallet-glutton = { version = "15.0.0", default-features = false }
 pallet-grandpa = { version = "29.0.0", default-features = false }
@@ -165,18 +126,10 @@ parachain-info = { version = "0.8.0", default-features = false, package = "stagi
 parachains-common = { version = "8.0.0", default-features = false }
 parachains-runtimes-test-utils = { version = "8.0.0" }
 paste = { version = "1.0.14" }
-penpal-emulated-chain = { path = "integration-tests/emulated/chains/parachains/testing/penpal" }
-penpal-runtime = { version = "0.15.1" }
-people-kusama-emulated-chain = { path = "integration-tests/emulated/chains/parachains/people/people-kusama" }
-people-kusama-runtime = { path = "system-parachains/people/people-kusama" }
 polkadot-core-primitives = { version = "8.0.0", default-features = false }
-polkadot-emulated-chain = { path = "integration-tests/emulated/chains/relays/polkadot" }
 polkadot-parachain-primitives = { version = "7.0.0", default-features = false }
 polkadot-primitives = { version = "8.0.1", default-features = false }
-polkadot-runtime = { path = "relay/polkadot" }
 polkadot-runtime-common = { version = "8.0.1", default-features = false }
-polkadot-runtime-constants = { path = "relay/polkadot/constants", default-features = false }
-polkadot-system-emulated-network = { path = "integration-tests/emulated/networks/polkadot-system" }
 primitive-types = { version = "0.12.2", default-features = false }
 remote-externalities = { version = "0.36.0", package = "frame-remote-externalities" }
 runtime-parachains = { version = "8.0.1", default-features = false, package = "polkadot-runtime-parachains" }
@@ -186,18 +139,6 @@ separator = { version = "0.4.1" }
 serde = { version = "1.0.196" }
 serde_json = { version = "1.0.113" }
 smallvec = { version = "1.13.1" }
-snowbridge-beacon-primitives = { version = "0.1.0", default-features = false }
-snowbridge-core = { version = "0.1.1", default-features = false }
-snowbridge-outbound-queue-runtime-api = { version = "0.1.1", default-features = false }
-snowbridge-pallet-ethereum-client = { version = "0.1.2", default-features = false }
-snowbridge-pallet-inbound-queue = { version = "0.1.1", default-features = false }
-snowbridge-pallet-inbound-queue-fixtures = { version = "0.9.0" }
-snowbridge-pallet-outbound-queue = { version = "0.1.1", default-features = false }
-snowbridge-pallet-system = { version = "0.1.1", default-features = false }
-snowbridge-router-primitives = { version = "0.1.0", default-features = false }
-snowbridge-runtime-common = { version = "0.1.0", default-features = false }
-snowbridge-runtime-test-common = { version = "0.1.0" }
-snowbridge-system-runtime-api = { version = "0.1.0", default-features = false }
 sp-api = { version = "27.0.0", default-features = false }
 sp-application-crypto = { version = "31.0.0", default-features = false }
 sp-arithmetic = { version = "24.0.0", default-features = false }
@@ -235,44 +176,8 @@ resolver = "2"
 
 members = [
 	"chain-spec-generator",
-	"integration-tests/emulated/chains/parachains/assets/asset-hub-kusama",
-	"integration-tests/emulated/chains/parachains/assets/asset-hub-polkadot",
-	"integration-tests/emulated/chains/parachains/bridges/bridge-hub-kusama",
-	"integration-tests/emulated/chains/parachains/bridges/bridge-hub-polkadot",
-	"integration-tests/emulated/chains/parachains/collectives/collectives-polkadot",
-	"integration-tests/emulated/chains/parachains/people/people-kusama",
-	"integration-tests/emulated/chains/parachains/testing/penpal",
-	"integration-tests/emulated/chains/relays/kusama",
-	"integration-tests/emulated/chains/relays/polkadot",
-	"integration-tests/emulated/helpers",
-	"integration-tests/emulated/networks/kusama-polkadot-system",
-	"integration-tests/emulated/networks/kusama-system",
-	"integration-tests/emulated/networks/polkadot-system",
-	"integration-tests/emulated/tests/assets/asset-hub-kusama",
-	"integration-tests/emulated/tests/assets/asset-hub-polkadot",
-	"integration-tests/emulated/tests/bridges/bridge-hub-kusama",
-	"integration-tests/emulated/tests/bridges/bridge-hub-polkadot",
-	"integration-tests/emulated/tests/collectives/collectives-polkadot",
-	"integration-tests/emulated/tests/people/people-kusama",
-	"relay/kusama",
-	"relay/kusama/constants",
-	"relay/polkadot",
-	"relay/polkadot/constants",
-	"system-parachains/asset-hubs/asset-hub-kusama",
-	"system-parachains/asset-hubs/asset-hub-kusama/primitives",
-	"system-parachains/asset-hubs/asset-hub-polkadot",
-	"system-parachains/asset-hubs/asset-hub-polkadot/primitives",
-	"system-parachains/bridge-hubs/bridge-hub-kusama",
-	"system-parachains/bridge-hubs/bridge-hub-kusama/primitives",
-	"system-parachains/bridge-hubs/bridge-hub-polkadot",
-	"system-parachains/bridge-hubs/bridge-hub-polkadot/primitives",
-	"system-parachains/collectives/collectives-polkadot",
-	"system-parachains/collectives/collectives-polkadot/constants",
-	"system-parachains/constants",
-	"system-parachains/coretime/coretime-kusama",
-	"system-parachains/encointer",
-	"system-parachains/gluttons/glutton-kusama",
-	"system-parachains/people/people-kusama",
+	"relay/paseo",
+	"relay/paseo/constants"
 ]
 
 [profile.release]
