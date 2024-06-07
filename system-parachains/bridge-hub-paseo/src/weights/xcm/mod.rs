@@ -1,23 +1,23 @@
 // Copyright (C) Parity Technologies (UK) Ltd.
-// This file is part of Cumulus.
+// SPDX-License-Identifier: Apache-2.0
 
-// Cumulus is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// Cumulus is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with Cumulus.  If not, see <http://www.gnu.org/licenses/>.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// 	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 mod pallet_xcm_benchmarks_fungible;
 mod pallet_xcm_benchmarks_generic;
 
 use crate::{xcm_config::MaxAssetsIntoHolding, Runtime};
+use codec::Encode;
 use frame_support::weights::Weight;
 use pallet_xcm_benchmarks_fungible::WeightInfo as XcmFungibleWeight;
 use pallet_xcm_benchmarks_generic::WeightInfo as XcmGeneric;
@@ -25,13 +25,13 @@ use sp_std::prelude::*;
 use xcm::{latest::prelude::*, DoubleEncoded};
 
 trait WeighAssets {
-	fn weigh_multi_assets(&self, weight: Weight) -> Weight;
+	fn weigh_assets(&self, weight: Weight) -> Weight;
 }
 
 const MAX_ASSETS: u64 = 100;
 
 impl WeighAssets for AssetFilter {
-	fn weigh_multi_assets(&self, weight: Weight) -> Weight {
+	fn weigh_assets(&self, weight: Weight) -> Weight {
 		match self {
 			Self::Definite(assets) => weight.saturating_mul(assets.inner().iter().count() as u64),
 			Self::Wild(asset) => match asset {
@@ -51,21 +51,21 @@ impl WeighAssets for AssetFilter {
 }
 
 impl WeighAssets for Assets {
-	fn weigh_multi_assets(&self, weight: Weight) -> Weight {
+	fn weigh_assets(&self, weight: Weight) -> Weight {
 		weight.saturating_mul(self.inner().iter().count() as u64)
 	}
 }
 
-pub struct AssetHubPolkadotXcmWeight<Call>(core::marker::PhantomData<Call>);
-impl<Call> XcmWeightInfo<Call> for AssetHubPolkadotXcmWeight<Call> {
+pub struct BridgeHubRococoXcmWeight<Call>(core::marker::PhantomData<Call>);
+impl<Call> XcmWeightInfo<Call> for BridgeHubRococoXcmWeight<Call> {
 	fn withdraw_asset(assets: &Assets) -> Weight {
-		assets.weigh_multi_assets(XcmFungibleWeight::<Runtime>::withdraw_asset())
+		assets.weigh_assets(XcmFungibleWeight::<Runtime>::withdraw_asset())
 	}
 	fn reserve_asset_deposited(assets: &Assets) -> Weight {
-		assets.weigh_multi_assets(XcmFungibleWeight::<Runtime>::reserve_asset_deposited())
+		assets.weigh_assets(XcmFungibleWeight::<Runtime>::reserve_asset_deposited())
 	}
 	fn receive_teleported_asset(assets: &Assets) -> Weight {
-		assets.weigh_multi_assets(XcmFungibleWeight::<Runtime>::receive_teleported_asset())
+		assets.weigh_assets(XcmFungibleWeight::<Runtime>::receive_teleported_asset())
 	}
 	fn query_response(
 		_query_id: &u64,
@@ -76,14 +76,10 @@ impl<Call> XcmWeightInfo<Call> for AssetHubPolkadotXcmWeight<Call> {
 		XcmGeneric::<Runtime>::query_response()
 	}
 	fn transfer_asset(assets: &Assets, _dest: &Location) -> Weight {
-		assets.weigh_multi_assets(XcmFungibleWeight::<Runtime>::transfer_asset())
+		assets.weigh_assets(XcmFungibleWeight::<Runtime>::transfer_asset())
 	}
-	fn transfer_reserve_asset(
-		assets: &Assets,
-		_dest: &Location,
-		_xcm: &Xcm<()>,
-	) -> Weight {
-		assets.weigh_multi_assets(XcmFungibleWeight::<Runtime>::transfer_reserve_asset())
+	fn transfer_reserve_asset(assets: &Assets, _dest: &Location, _xcm: &Xcm<()>) -> Weight {
+		assets.weigh_assets(XcmFungibleWeight::<Runtime>::transfer_reserve_asset())
 	}
 	fn transact(
 		_origin_type: &OriginKind,
@@ -119,14 +115,10 @@ impl<Call> XcmWeightInfo<Call> for AssetHubPolkadotXcmWeight<Call> {
 	}
 
 	fn deposit_asset(assets: &AssetFilter, _dest: &Location) -> Weight {
-		assets.weigh_multi_assets(XcmFungibleWeight::<Runtime>::deposit_asset())
+		assets.weigh_assets(XcmFungibleWeight::<Runtime>::deposit_asset())
 	}
-	fn deposit_reserve_asset(
-		assets: &AssetFilter,
-		_dest: &Location,
-		_xcm: &Xcm<()>,
-	) -> Weight {
-		assets.weigh_multi_assets(XcmFungibleWeight::<Runtime>::deposit_reserve_asset())
+	fn deposit_reserve_asset(assets: &AssetFilter, _dest: &Location, _xcm: &Xcm<()>) -> Weight {
+		assets.weigh_assets(XcmFungibleWeight::<Runtime>::deposit_reserve_asset())
 	}
 	fn exchange_asset(_give: &AssetFilter, _receive: &Assets, _maximal: &bool) -> Weight {
 		Weight::MAX
@@ -136,14 +128,10 @@ impl<Call> XcmWeightInfo<Call> for AssetHubPolkadotXcmWeight<Call> {
 		_reserve: &Location,
 		_xcm: &Xcm<()>,
 	) -> Weight {
-		assets.weigh_multi_assets(XcmFungibleWeight::<Runtime>::initiate_reserve_withdraw())
+		assets.weigh_assets(XcmFungibleWeight::<Runtime>::initiate_reserve_withdraw())
 	}
-	fn initiate_teleport(
-		assets: &AssetFilter,
-		_dest: &Location,
-		_xcm: &Xcm<()>,
-	) -> Weight {
-		assets.weigh_multi_assets(XcmFungibleWeight::<Runtime>::initiate_teleport())
+	fn initiate_teleport(assets: &AssetFilter, _dest: &Location, _xcm: &Xcm<()>) -> Weight {
+		assets.weigh_assets(XcmFungibleWeight::<Runtime>::initiate_teleport())
 	}
 	fn report_holding(_response_info: &QueryResponseInfo, _assets: &AssetFilter) -> Weight {
 		XcmGeneric::<Runtime>::report_holding()
@@ -176,10 +164,10 @@ impl<Call> XcmWeightInfo<Call> for AssetHubPolkadotXcmWeight<Call> {
 		XcmGeneric::<Runtime>::unsubscribe_version()
 	}
 	fn burn_asset(assets: &Assets) -> Weight {
-		assets.weigh_multi_assets(XcmGeneric::<Runtime>::burn_asset())
+		assets.weigh_assets(XcmGeneric::<Runtime>::burn_asset())
 	}
 	fn expect_asset(assets: &Assets) -> Weight {
-		assets.weigh_multi_assets(XcmGeneric::<Runtime>::expect_asset())
+		assets.weigh_assets(XcmGeneric::<Runtime>::expect_asset())
 	}
 	fn expect_origin(_origin: &Option<Location>) -> Weight {
 		XcmGeneric::<Runtime>::expect_origin()
@@ -209,10 +197,11 @@ impl<Call> XcmWeightInfo<Call> for AssetHubPolkadotXcmWeight<Call> {
 		XcmGeneric::<Runtime>::clear_transact_status()
 	}
 	fn universal_origin(_: &Junction) -> Weight {
-		XcmGeneric::<Runtime>::universal_origin()
-	}
-	fn export_message(_: &NetworkId, _: &Junctions, _: &Xcm<()>) -> Weight {
 		Weight::MAX
+	}
+	fn export_message(_: &NetworkId, _: &Junctions, inner: &Xcm<()>) -> Weight {
+		let inner_encoded_len = inner.encode().len() as u32;
+		XcmGeneric::<Runtime>::export_message(inner_encoded_len)
 	}
 	fn lock_asset(_: &Asset, _: &Location) -> Weight {
 		Weight::MAX

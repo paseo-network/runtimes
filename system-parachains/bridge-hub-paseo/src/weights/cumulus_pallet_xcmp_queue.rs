@@ -32,7 +32,7 @@
 // --output
 // cumulus/parachains/runtimes/bridge-hubs/bridge-hub-rococo/src/weights/cumulus_pallet_xcmp_queue.rs
 // --extrinsic
-//
+// 
 
 #![cfg_attr(rustfmt, rustfmt_skip)]
 #![allow(unused_parens)]
@@ -135,7 +135,7 @@ impl<T: frame_system::Config> cumulus_pallet_xcmp_queue::WeightInfo for WeightIn
 	}
 	/// Storage: UNKNOWN KEY `0x7b3237373ffdfeb1cab4222e3b520d6b345d8e88afa015075c945637c07e8f20` (r:1 w:1)
 	/// Proof: UNKNOWN KEY `0x7b3237373ffdfeb1cab4222e3b520d6b345d8e88afa015075c945637c07e8f20` (r:1 w:1)
-	fn on_idle_large_msg() -> Weight {
+		fn on_idle_large_msg() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `65710`
 		//  Estimated: `69175`

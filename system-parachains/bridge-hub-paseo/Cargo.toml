@@ -1,12 +1,12 @@
 [package]
 authors.workspace = true
 build = "build.rs"
-description = "Asset Hub Paseo parachain runtime"
+description = "Bridge Hub Paseo parachain runtime"
 edition.workspace = true
 license.workspace = true
-name = "asset-hub-paseo-runtime"
+name = "bridge-hub-paseo-runtime"
 repository.workspace = true
-version = "1.2.0"
+version = "1.1.2"
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive", "max-encoded-len"] }
@@ -18,13 +18,13 @@ scale-info = { version = "2.10.0", default-features = false, features = ["derive
 paseo-runtime-constants = { path = "../../relay/paseo/constants", default-features = false}
 
 # Substrate
-frame-benchmarking = { workspace = true, optional = true  }
+frame-benchmarking = { workspace = true }
 frame-executive = { workspace = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
-frame-system-benchmarking = { workspace = true, optional = true }
+frame-system-benchmarking = { optional = true , workspace = true }
 frame-system-rpc-runtime-api = { workspace = true }
-frame-try-runtime = { workspace = true, optional = true }
+frame-try-runtime = { optional = true, workspace = true }
 pallet-asset-tx-payment = { workspace = true }
 pallet-assets = { workspace = true }
 pallet-aura = { workspace = true }
@@ -66,15 +66,15 @@ xcm-builder = { package = "staging-xcm-builder", default-features = false, versi
 xcm-executor = { package = "staging-xcm-executor", default-features = false, version = "13.0.0" }
 
 # Cumulus
-cumulus-pallet-aura-ext = { default-features = false , version = "0.13.0" }
-cumulus-pallet-dmp-queue = { default-features = false , version = "0.13.0" }
-cumulus-pallet-parachain-system = { default-features = false, features = ["parameterized-consensus-hook",] , version = "0.13.0" }
-cumulus-pallet-session-benchmarking = { default-features = false, version = "15.0.0" }
-cumulus-pallet-xcm = { default-features = false , version = "0.13.0" }
-cumulus-pallet-xcmp-queue = { default-features = false , features = ["bridging"] , version = "0.13.0" }
-cumulus-primitives-core = { default-features = false , version = "0.13.0" }
-cumulus-primitives-utility = { default-features = false , version = "0.13.0" }
-pallet-collator-selection = { default-features = false , version = "15.0.0" }
+cumulus-pallet-aura-ext = { workspace = true }
+cumulus-pallet-dmp-queue = { workspace = true }
+cumulus-pallet-parachain-system = { workspace = true, features = ["parameterized-consensus-hook",] }
+cumulus-pallet-session-benchmarking = { workspace = true }
+cumulus-pallet-xcm = { workspace = true }
+cumulus-pallet-xcmp-queue = { workspace = true, features = ["bridging"] }
+cumulus-primitives-core = { workspace = true }
+cumulus-primitives-utility = { workspace = true }
+pallet-collator-selection = { workspace = true }
 parachain-info = { package = "staging-parachain-info", default-features = false , version = "0.13.0" }
 parachains-common = { default-features = false , version = "13.0.0" }
 system-parachains-constants = { path = "../constants", default-features = false }
@@ -132,7 +132,7 @@ try-runtime = [
 	"frame-executive/try-runtime",
 	"frame-support/try-runtime",
 	"frame-system/try-runtime",
-	"frame-try-runtime/try-runtime",
+	"frame-try-runtime?/try-runtime",
 	"pallet-asset-tx-payment/try-runtime",
 	"pallet-assets/try-runtime",
 	"pallet-aura/try-runtime",
@@ -163,7 +163,7 @@ std = [
 	"cumulus-pallet-xcmp-queue/std",
 	"cumulus-primitives-core/std",
 	"cumulus-primitives-utility/std",
-	"frame-benchmarking?/std",
+	"frame-benchmarking/std",
 	"frame-executive/std",
 	"frame-support/std",
 	"frame-system-benchmarking?/std",

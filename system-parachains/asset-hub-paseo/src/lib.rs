@@ -63,7 +63,7 @@ mod weights;
 pub mod xcm_config;
 
 use assets_common::{
-	foreign_creators::ForeignCreators, matching::FromSiblingParachain, MultiLocationForAssetId,
+	foreign_creators::ForeignCreators, matching::FromSiblingParachain,
 };
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use sp_api::impl_runtime_apis;
@@ -84,11 +84,11 @@ use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
 	construct_runtime,
 	dispatch::DispatchClass,
-	genesis_builder_helper::{build_config, create_default_config},
+	genesis_builder_helper::{build_state, get_preset},
 	parameter_types,
 	traits::{
 		AsEnsureOriginWithArg, ConstBool, ConstU32, ConstU64, ConstU8, EitherOfDiverse,
-		InstanceFilter, OnRuntimeUpgrade,
+		InstanceFilter,
 	},
 	weights::{ConstantMultiplier, Weight},
 	PalletId,
@@ -111,7 +111,7 @@ use system_parachains_constants::{
 	SLOT_DURATION,
 };
 use xcm_config::{
-	DotLocation, FellowshipLocation, ForeignAssetsConvertedConcreteId, GovernanceLocation,
+	TokenLocation, FellowshipLocation, ForeignAssetsConvertedConcreteId, GovernanceLocation,
 	TrustBackedAssetsConvertedConcreteId, XcmConfig, XcmOriginToTransactDispatchOrigin,
 };
 
@@ -249,7 +249,7 @@ parameter_types! {
 impl pallet_transaction_payment::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type OnChargeTransaction =
-		pallet_transaction_payment::CurrencyAdapter<Balances, DealWithFees<Runtime>>;
+		pallet_transaction_payment::FungibleAdapter<Balances, DealWithFees<Runtime>>;
 	type WeightToFee = WeightToFee;
 	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 	type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
@@ -314,8 +314,8 @@ pub type ForeignAssetsInstance = pallet_assets::Instance2;
 impl pallet_assets::Config<ForeignAssetsInstance> for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
-	type AssetId = MultiLocationForAssetId;
-	type AssetIdParameter = MultiLocationForAssetId;
+	type AssetId = xcm::v3::Location;
+	type AssetIdParameter = xcm::v3::Location;
 	type Currency = Balances;
 	type CreateOrigin = ForeignCreators<
 		(FromSiblingParachain<parachain_info::Pallet<Runtime>>,),
@@ -569,7 +569,7 @@ parameter_types! {
 	// Fellows pluralistic body.
 	pub const FellowsBodyId: BodyId = BodyId::Technical;
 	/// The asset ID for the asset that we use to pay for message delivery fees.
-	pub FeeAssetId: AssetId = Concrete(xcm_config::DotLocation::get());
+	pub FeeAssetId: AssetId = AssetId(xcm_config::TokenLocation::get());
 	/// The base fee for the message delivery fees.
 	pub const ToSiblingBaseDeliveryFee: u128 = CENTS.saturating_mul(3);
 	pub const ToParentBaseDeliveryFee: u128 = CENTS.saturating_mul(3);
@@ -816,17 +816,19 @@ pub type SignedExtra = (
 pub type UncheckedExtrinsic =
 	generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
 /// Migrations to apply on runtime upgrade.
-pub type Migrations =
-	frame_support::migrations::VersionedMigration<0, 1, UniquesMigration, Uniques, RocksDbWeight>;
+pub type Migrations = ();
+/// TODO check if we can remove
+//	frame_support::migrations::VersionedMigration<0, 1, UniquesMigration, Uniques, RocksDbWeight>;
 
 /// Migration for Uniques to V1
-pub struct UniquesMigration;
+//pub struct UniquesMigration;
 
-impl OnRuntimeUpgrade for UniquesMigration {
-	fn on_runtime_upgrade() -> Weight {
-		pallet_uniques::migration::migrate_to_v1::<Runtime, (), pallet_uniques::Pallet<Runtime>>()
-	}
-}
+// TODO check if we can remove
+//impl OnRuntimeUpgrade for UniquesMigration {
+	//fn on_runtime_upgrade() -> Weight {
+		//pallet_uniques::migration::migrate_to_v1::<Runtime, (), pallet_uniques::Pallet<Runtime>>()
+	//}
+//}
 
 /// Executive: handles dispatch to the various modules.
 pub type Executive = frame_executive::Executive<
@@ -873,7 +875,7 @@ impl_runtime_apis! {
 		}
 
 		fn authorities() -> Vec<AuraId> {
-			Aura::authorities().into_inner()
+			pallet_aura::Authorities::<Runtime>::get().into_inner()
 		}
 	}
 
@@ -886,7 +888,7 @@ impl_runtime_apis! {
 			Executive::execute_block(block)
 		}
 
-		fn initialize_block(header: &<Block as BlockT>::Header) {
+		fn initialize_block(header: &<Block as BlockT>::Header) -> sp_runtime::ExtrinsicInclusionMode {
 			Executive::initialize_block(header)
 		}
 	}
@@ -1009,14 +1011,14 @@ impl_runtime_apis! {
 		AccountId,
 	> for Runtime
 	{
-		fn query_account_balances(account: AccountId) -> Result<xcm::VersionedMultiAssets, assets_common::runtime_api::FungiblesAccessError> {
+		fn query_account_balances(account: AccountId) -> Result<xcm::VersionedAssets, assets_common::runtime_api::FungiblesAccessError> {
 			use assets_common::fungible_conversion::{convert, convert_balance};
 			Ok([
 				// collect pallet_balance
 				{
 					let balance = Balances::free_balance(account.clone());
 					if balance > 0 {
-						vec![convert_balance::<DotLocation, Balance>(balance)?]
+						vec![convert_balance::<TokenLocation, Balance>(balance)?]
 					} else {
 						vec![]
 					}
@@ -1045,12 +1047,16 @@ impl_runtime_apis! {
 	}
 
 	impl sp_genesis_builder::GenesisBuilder<Block> for Runtime {
-		fn create_default_config() -> Vec<u8> {
-			create_default_config::<RuntimeGenesisConfig>()
+		fn build_state(config: Vec<u8>) -> sp_genesis_builder::Result {
+			build_state::<RuntimeGenesisConfig>(config)
 		}
 
-		fn build_config(config: Vec<u8>) -> sp_genesis_builder::Result {
-			build_config::<RuntimeGenesisConfig>(config)
+		fn get_preset(id: &Option<sp_genesis_builder::PresetId>) -> Option<Vec<u8>> {
+			get_preset::<RuntimeGenesisConfig>(id, |_| None)
+		}
+
+		fn preset_names() -> Vec<sp_genesis_builder::PresetId> {
+			vec![]
 		}
 	}
 
@@ -1128,12 +1134,12 @@ impl_runtime_apis! {
 			impl cumulus_pallet_session_benchmarking::Config for Runtime {}
 
 			use xcm::latest::prelude::*;
-			use xcm_config::{DotLocation, MaxAssetsIntoHolding};
+			use xcm_config::{TokenLocation, MaxAssetsIntoHolding};
 			use pallet_xcm_benchmarks::asset_instance_from;
 
 			parameter_types! {
 				pub ExistentialDepositMultiAsset: Option<MultiAsset> = Some((
-					DotLocation::get(),
+					TokenLocation::get(),
 					ExistentialDeposit::get()
 				).into());
 			}
@@ -1147,7 +1153,7 @@ impl_runtime_apis! {
 					PriceForParentDelivery,
 				>;
 				fn valid_destination() -> Result<MultiLocation, BenchmarkError> {
-					Ok(DotLocation::get())
+					Ok(TokenLocation::get())
 				}
 				fn worst_case_holding(depositable_count: u32) -> MultiAssets {
 					// A mix of fungible, non-fungible, and concrete assets.
@@ -1169,7 +1175,7 @@ impl_runtime_apis! {
 						.collect::<Vec<_>>();
 
 					assets.push(MultiAsset {
-						id: Concrete(DotLocation::get()),
+						id: Concrete(TokenLocation::get()),
 						fun: Fungible(1_000_000 * UNITS),
 					});
 					assets.into()
@@ -1178,8 +1184,8 @@ impl_runtime_apis! {
 
 			parameter_types! {
 				pub const TrustedTeleporter: Option<(MultiLocation, MultiAsset)> = Some((
-					DotLocation::get(),
-					MultiAsset { fun: Fungible(UNITS), id: Concrete(DotLocation::get()) },
+					TokenLocation::get(),
+					MultiAsset { fun: Fungible(UNITS), id: Concrete(TokenLocation::get()) },
 				));
 				pub const CheckedAccount: Option<(AccountId, xcm_builder::MintLocation)> = None;
 				pub const TrustedReserve: Option<(MultiLocation, MultiAsset)> = None;
@@ -1194,7 +1200,7 @@ impl_runtime_apis! {
 
 				fn get_multi_asset() -> MultiAsset {
 					MultiAsset {
-						id: Concrete(DotLocation::get()),
+						id: Concrete(TokenLocation::get()),
 						fun: Fungible(UNITS),
 					}
 				}
@@ -1218,23 +1224,23 @@ impl_runtime_apis! {
 				}
 
 				fn transact_origin_and_runtime_call() -> Result<(MultiLocation, RuntimeCall), BenchmarkError> {
-					Ok((DotLocation::get(), frame_system::Call::remark_with_event { remark: vec![] }.into()))
+					Ok((TokenLocation::get(), frame_system::Call::remark_with_event { remark: vec![] }.into()))
 				}
 
 				fn subscribe_origin() -> Result<MultiLocation, BenchmarkError> {
-					Ok(DotLocation::get())
+					Ok(TokenLocation::get())
 				}
 
 				fn claimable_asset() -> Result<(MultiLocation, MultiLocation, MultiAssets), BenchmarkError> {
-					let origin = DotLocation::get();
-					let assets: MultiAssets = (Concrete(DotLocation::get()), 1_000 * UNITS).into();
+					let origin = TokenLocation::get();
+					let assets: MultiAssets = (Concrete(TokenLocation::get()), 1_000 * UNITS).into();
 					let ticket = MultiLocation { parents: 0, interior: Here };
 					Ok((origin, ticket, assets))
 				}
 
 				fn fee_asset() -> Result<MultiAsset, BenchmarkError> {
 					Ok(MultiAsset {
-						id: Concrete(DotLocation::get()),
+						id: Concrete(TokenLocation::get()),
 						fun: Fungible(1_000_000 * UNITS),
 					})
 				}

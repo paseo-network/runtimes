@@ -24,7 +24,7 @@ pallet-staking = { workspace = true, default-features = true }
 sc-consensus-grandpa = { workspace = true }
 sp-runtime = { workspace = true, default-features = true }
 sp-consensus-beefy = { workspace = true, default-features = true }
-xcm = { package = "staging-xcm", version = "8.0.1" }
+xcm = { package = "staging-xcm", version = "13.0.1" }
 parachains-common = { workspace = true, default-features = true }
 cumulus-primitives-core = { workspace = true, default-features = true }
 
