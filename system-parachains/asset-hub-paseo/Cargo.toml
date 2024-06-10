@@ -30,6 +30,7 @@ pallet-assets = { workspace = true }
 pallet-aura = { workspace = true }
 pallet-authorship = { workspace = true }
 pallet-balances = { workspace = true }
+pallet-message-queue = { workspace = true }
 pallet-multisig = { workspace = true }
 pallet-nfts = { workspace = true }
 pallet-nfts-runtime-api = { workspace = true }
@@ -73,12 +74,17 @@ cumulus-pallet-session-benchmarking = { default-features = false, version = "15.
 cumulus-pallet-xcm = { default-features = false , version = "0.13.0" }
 cumulus-pallet-xcmp-queue = { default-features = false , features = ["bridging"] , version = "0.13.0" }
 cumulus-primitives-core = { default-features = false , version = "0.13.0" }
-cumulus-primitives-utility = { default-features = false , version = "0.13.0" }
-pallet-collator-selection = { default-features = false , version = "15.0.0" }
+cumulus-primitives-utility = { workspace = true }
+pallet-collator-selection = { workspace = true }
 parachain-info = { package = "staging-parachain-info", default-features = false , version = "0.13.0" }
-parachains-common = { default-features = false , version = "13.0.0" }
+parachains-common = { workspace = true }
 system-parachains-constants = { path = "../constants", default-features = false }
 assets-common = { default-features = false , version = "0.13.0" }
+
+# Bridges
+bp-bridge-hub-paseo = { path = "../bridge-hub-paseo/primitives", default-features = false }
+pallet-xcm-bridge-hub-router = { workspace = true }
+snowbridge-router-primitives = { workspace = true }
 
 [dev-dependencies]
 hex-literal = "0.4.1"
@@ -114,6 +120,7 @@ runtime-benchmarks = [
 	"pallet-utility/runtime-benchmarks",
 	"pallet-xcm-benchmarks/runtime-benchmarks",
 	"pallet-xcm/runtime-benchmarks",
+	"pallet-xcm-bridge-hub-router/runtime-benchmarks",
 	"polkadot-parachain-primitives/runtime-benchmarks",
 	"polkadot-runtime-common/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
@@ -121,7 +128,8 @@ runtime-benchmarks = [
 	"xcm-executor/runtime-benchmarks",
 	"cumulus-pallet-dmp-queue/runtime-benchmarks",
 	"cumulus-primitives-core/runtime-benchmarks",
-	"parachains-common/runtime-benchmarks"
+	"parachains-common/runtime-benchmarks",
+	"snowbridge-router-primitives/runtime-benchmarks"
 ]
 try-runtime = [
 	"cumulus-pallet-aura-ext/try-runtime",
@@ -151,9 +159,11 @@ try-runtime = [
 	"parachain-info/try-runtime",
 	"polkadot-runtime-common/try-runtime",
 	"sp-runtime/try-runtime",
+	"pallet-xcm-bridge-hub-router/try-runtime",
 ]
 std = [
 	"assets-common/std",
+	"bp-bridge-hub-paseo/std",
 	"codec/std",
 	"cumulus-pallet-aura-ext/std",
 	"cumulus-pallet-dmp-queue/std",
@@ -215,6 +225,8 @@ std = [
 	"xcm-builder/std",
 	"xcm-executor/std",
 	"xcm/std",
+	"pallet-xcm-bridge-hub-router/std",
+	"snowbridge-router-primitives/std",
 ]
 
 # A feature that should be enabled when the runtime should be build for on-chain

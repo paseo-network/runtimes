@@ -18,10 +18,11 @@ use super::{
 	ParachainInfo, ParachainSystem, PolkadotXcm, PriceForParentDelivery, Runtime, RuntimeCall,
 	RuntimeEvent, RuntimeOrigin, TrustBackedAssetsInstance, WeightToFee, XcmpQueue, CollatorSelection
 };
+use parachains_common::xcm_config::ParentRelayOrSiblingParachains;
 use crate::{ForeignAssetsInstance};
 use assets_common::matching::{FromSiblingParachain, IsForeignConcreteAsset};
 use frame_support::{
-	match_types, parameter_types,
+	parameter_types,
 	traits::{tokens::imbalance::{ResolveTo}, ConstU32, Contains, Equals, Everything, Nothing, PalletInfoAccess},
 };
 use frame_system::EnsureRoot;
@@ -38,17 +39,17 @@ use system_parachains_constants::TREASURY_PALLET_ID;
 use xcm::latest::prelude::*;
 use xcm_builder::{
 	AccountId32Aliases, AllowExplicitUnpaidExecutionFrom, AllowKnownQueryResponses,
-	AllowSubscriptionsFrom, AllowTopLevelPaidExecutionFrom, FungibleTransactor,
+	AllowSubscriptionsFrom, AllowTopLevelPaidExecutionFrom, FungibleAdapter, FungiblesAdapter,
 	DenyReserveTransferToRelayChain, DenyThenTry, DescribeAllTerminal, DescribeFamily,
-	EnsureXcmOrigin, FrameTransactionalProcessor, FungiblesAdapter, HashedDescription, IsConcrete,
+	EnsureXcmOrigin, FrameTransactionalProcessor, HashedDescription, IsConcrete,
 	LocalMint, NoChecking, ParentAsSuperuser, ParentIsPreset, RelayChainAsNative,
 	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
 	SignedToAccountId32, SovereignSignedViaLocation, StartsWith, StartsWithExplicitGlobalConsensus,
 	TakeWeightCredit, TrailingSetTopicAsId, UsingComponents, WeightInfoBounds, WithComputedOrigin,
-	WithUniqueTopic, XcmFeeToAccount, XcmFeeManagerFromComponents, FungibleAdapter,
+	WithUniqueTopic, XcmFeeToAccount, XcmFeeManagerFromComponents, AllowHrmpNotificationsFromRelayChain, NetworkExportTableItem
 };
 use xcm_executor::{traits::WithOriginFilter, XcmExecutor};
-use xcm::opaque::lts::Junctions::{X1, X2};
+use assets_common::matching::FromNetwork;
 
 parameter_types! {
 	pub const TokenLocation: Location = Location::parent();
@@ -64,7 +65,7 @@ parameter_types! {
 	pub const GovernanceLocation: Location = Location::parent();
 	pub StakingPot: AccountId = CollatorSelection::account_id();
 	pub RelayTreasuryLocation: Location = (Parent, PalletInstance(paseo_runtime_constants::TREASURY_PALLET_ID)).into();
-	pub TreasuryAccount: Option<AccountId> = Some(TREASURY_PALLET_ID.into_account_truncating());
+	pub TreasuryAccount: AccountId = TREASURY_PALLET_ID.into_account_truncating();
 }
 
 /// Type for specifying how a `Location` can be converted into an `AccountId`. This is used
@@ -221,7 +222,6 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 						pallet_collator_selection::Call::remove_invulnerable { .. },
 				) | RuntimeCall::Session(pallet_session::Call::purge_keys { .. }) |
 				RuntimeCall::XcmpQueue(..) |
-				RuntimeCall::DmpQueue(..) |
 				RuntimeCall::Assets(
 					pallet_assets::Call::create { .. } |
 						pallet_assets::Call::force_create { .. } |
@@ -348,6 +348,13 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 	}
 }
 
+pub struct ParentOrParentsPlurality;
+impl Contains<Location> for ParentOrParentsPlurality {
+	fn contains(location: &Location) -> bool {
+		matches!(location.unpack(), (1, []) | (1, [Plurality { .. }]))
+	}
+}
+
 pub type Barrier = TrailingSetTopicAsId<
 	DenyThenTry<
 		DenyReserveTransferToRelayChain,
@@ -366,11 +373,13 @@ pub type Barrier = TrailingSetTopicAsId<
 					// sibling bridge hub get free execution.
 					AllowExplicitUnpaidExecutionFrom<(
 						ParentOrParentsPlurality,
-						FellowshipEntities,
 						Equals<RelayTreasuryLocation>,
+						Equals<bridging::SiblingBridgeHub>,
 					)>,
 					// Subscriptions for version tracking are OK.
-					AllowSubscriptionsFrom<ParentOrSiblings>,
+					AllowSubscriptionsFrom<ParentRelayOrSiblingParachains>,
+					// HRMP notifications from the relay chain are OK.
+					AllowHrmpNotificationsFromRelayChain,
 				),
 				UniversalLocation,
 				ConstU32<8>,
@@ -392,7 +401,6 @@ pub type AssetFeeAsExistentialDepositMultiplierFeeCharger = AssetFeeAsExistentia
 pub type WaivedLocations = (
 	RelayOrOtherSystemParachains<AllSiblingSystemParachains, Runtime>,
 	Equals<RelayTreasuryLocation>,
-	FellowshipEntities,
 );
 
 /// Cases where a remote origin is accepted as trusted Teleporter for a given asset:
@@ -476,6 +484,10 @@ impl xcm_executor::Config for XcmConfig {
 	type SafeCallFilter = SafeCallFilter;
 	type Aliasers = Nothing;
 	type TransactionalProcessor = FrameTransactionalProcessor;
+	type HrmpNewChannelOpenRequestHandler = ();
+	type HrmpChannelAcceptedHandler = ();
+	type HrmpChannelClosingHandler = ();
+	type XcmRecorder = PolkadotXcm;
 }
 
 /// Converts a local signed origin into an XCM multilocation.
@@ -549,6 +561,105 @@ pub type ForeignCreatorsSovereignAccountOf = (
 	AccountId32Aliases<RelayNetwork, AccountId>,
 	ParentIsPreset<AccountId>,
 );
+
+/// All configuration related to bridging
+pub mod bridging {
+	use super::*;
+	use assets_common::matching;
+	use sp_std::collections::btree_set::BTreeSet;
+	use crate::xcm_config::bridging::to_ethereum::BridgeTable;
+
+	// common/shared parameters
+	parameter_types! {
+		pub SiblingBridgeHubParaId: u32 = bp_bridge_hub_paseo::BRIDGE_HUB_PASEO_PARACHAIN_ID;
+		pub SiblingBridgeHub: Location = Location::new(1, [Parachain(SiblingBridgeHubParaId::get())]);
+		/// Router expects payment with this `AssetId`.
+		/// (`AssetId` has to be aligned with `BridgeTable`)
+		pub XcmBridgeHubRouterFeeAssetId: AssetId = TokenLocation::get().into();
+
+		pub EthereumBridgeTable: sp_std::vec::Vec<NetworkExportTableItem> =
+			sp_std::vec::Vec::new().into_iter()
+			.chain(to_ethereum::BridgeTable::get())
+			.collect();
+	}
+
+	pub type NetworkExportTable = xcm_builder::NetworkExportTable<BridgeTable>;
+
+	pub type EthereumNetworkExportTable = xcm_builder::NetworkExportTable<EthereumBridgeTable>;
+
+	pub mod to_ethereum {
+		use super::*;
+		use bp_bridge_hub_paseo::snowbridge::EthereumNetwork;
+
+		parameter_types! {
+			/// User fee for ERC20 token transfer back to Ethereum.
+			/// (initially was calculated by test `OutboundQueue::calculate_fees` - ETH/ROC 1/400 and fee_per_gas 20 GWEI = 2200698000000 + *25%)
+			/// Needs to be more than fee calculated from DefaultFeeConfig FeeConfigRecord in snowbridge:parachain/pallets/outbound-queue/src/lib.rs
+			/// Polkadot uses 10 decimals, Kusama and Paseo 12 decimals.
+			pub const DefaultBridgeHubEthereumBaseFee: Balance = 2_750_872_500_000;
+			pub storage BridgeHubEthereumBaseFee: Balance = DefaultBridgeHubEthereumBaseFee::get();
+			pub SiblingBridgeHubWithEthereumInboundQueueInstance: Location = Location::new(
+				1,
+				[
+					Parachain(SiblingBridgeHubParaId::get()),
+					PalletInstance(bp_bridge_hub_paseo::snowbridge::InboundQueuePalletInstance::get())
+				]
+			);
+
+			/// Set up exporters configuration.
+			/// `Option<Asset>` represents static "base fee" which is used for total delivery fee calculation.
+			pub BridgeTable: sp_std::vec::Vec<NetworkExportTableItem> = sp_std::vec![
+				NetworkExportTableItem::new(
+					EthereumNetwork::get(),
+					Some(sp_std::vec![Junctions::Here]),
+					SiblingBridgeHub::get(),
+					Some((
+						XcmBridgeHubRouterFeeAssetId::get(),
+						BridgeHubEthereumBaseFee::get(),
+					).into())
+				),
+			];
+
+			/// Universal aliases
+			pub UniversalAliases: BTreeSet<(Location, Junction)> = BTreeSet::from_iter(
+				sp_std::vec![
+					(SiblingBridgeHubWithEthereumInboundQueueInstance::get(), GlobalConsensus(EthereumNetwork::get())),
+				]
+			);
+		}
+
+		pub type IsTrustedBridgedReserveLocationForForeignAsset =
+		matching::IsForeignConcreteAsset<FromNetwork<UniversalLocation, EthereumNetwork>>;
+
+		impl Contains<(Location, Junction)> for UniversalAliases {
+			fn contains(alias: &(Location, Junction)) -> bool {
+				UniversalAliases::get().contains(alias)
+			}
+		}
+	}
+
+	/// Benchmarks helper for bridging configuration.
+	#[cfg(feature = "runtime-benchmarks")]
+	pub struct BridgingBenchmarksHelper;
+
+	#[cfg(feature = "runtime-benchmarks")]
+	impl BridgingBenchmarksHelper {
+		pub fn prepare_universal_alias() -> Option<(Location, Junction)> {
+			let alias =
+				to_westend::UniversalAliases::get()
+					.into_iter()
+					.find_map(|(location, junction)| {
+						match to_westend::SiblingBridgeHubWithBridgeHubWestendInstance::get()
+							.eq(&location)
+						{
+							true => Some((location, junction)),
+							false => None,
+						}
+					});
+			Some(alias.expect("we expect here BridgeHubRococo to Westend mapping at least"))
+		}
+	}
+}
 
 /// Simple conversion of `u32` into an `AssetId` for use in benchmarking.
 pub struct XcmBenchmarkHelper;

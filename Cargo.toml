@@ -184,6 +184,9 @@ static_assertions = { version = "1.1.0" }
 substrate-wasm-builder = { version = "22.0.0" }
 tokio = { version = "1.36.0" }
 xcm-emulator = { version = "0.11.0" }
+xcm = { package = "staging-xcm", default-features = false, version = "13.0.1" }
+xcm-builder = { package = "staging-xcm-builder", default-features = false, version = "13.0.0" }
+xcm-executor = { package = "staging-xcm-executor", default-features = false, version = "13.0.0" }
 paseo-runtime-constants = { package = "paseo-runtime-constants", path = "relay/paseo/constants", default-features = false }
 
 [workspace]
@@ -194,7 +197,8 @@ members = [
 	"relay/paseo",
 	"relay/paseo/constants",
 	"system-parachains/asset-hub-paseo",
-	"system-parachains/bridge-hub-paseo"
+	"system-parachains/bridge-hub-paseo",
+	"system-parachains/bridge-hub-paseo/primitives"
 ]
 
 [profile.release]

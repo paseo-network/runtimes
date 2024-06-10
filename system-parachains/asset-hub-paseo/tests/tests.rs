@@ -17,35 +17,39 @@
 
 //! Tests for the Polkadot Asset Hub (previously known as Statemint) chain.
 
-use asset_hub_polkadot_runtime::{
+use asset_hub_paseo_runtime::{
 	xcm_config::{
-		bridging::{self, XcmBridgeHubRouterFeeAssetId},
-		AssetFeeAsExistentialDepositMultiplierFeeCharger, CheckingAccount, DotLocation,
-		ForeignCreatorsSovereignAccountOf, LocationToAccountId, TreasuryAccount,
+		AssetFeeAsExistentialDepositMultiplierFeeCharger, CheckingAccount, TokenLocation,
+		ForeignCreatorsSovereignAccountOf,
 		TrustBackedAssetsPalletLocation, XcmConfig,
 	},
 	AllPalletsWithoutSystem, AssetDeposit, Assets, Balances, ExistentialDeposit, ForeignAssets,
 	ForeignAssetsInstance, MetadataDepositBase, MetadataDepositPerByte, ParachainSystem, Runtime,
-	RuntimeCall, RuntimeEvent, SessionKeys, ToKusamaXcmRouterInstance, TrustBackedAssetsInstance,
-	XcmpQueue,
+	RuntimeCall, RuntimeEvent, SessionKeys, TrustBackedAssetsInstance,
 };
 use asset_test_utils::{
-	test_cases_over_bridge::TestBridgingConfig, CollatorSessionKey, CollatorSessionKeys, ExtBuilder,
+	CollatorSessionKey, CollatorSessionKeys, ExtBuilder,
 };
-use codec::{Decode, Encode};
-use cumulus_primitives_utility::ChargeWeightInFungibles;
+use codec::{Encode, Decode};
 use frame_support::{
 	assert_noop, assert_ok,
 	traits::fungibles::InspectEnumerable,
 	weights::{Weight, WeightToFee as WeightToFeeT},
 };
+use frame_support::traits::fungible::Mutate;
 use parachains_common::{
-	AccountId, AssetHubPolkadotAuraId as AuraId, AssetIdForTrustBackedAssets, Balance,
+	AccountId, AuraId, AssetIdForTrustBackedAssets, Balance,
 };
+use cumulus_primitives_utility::ChargeWeightInFungibles;
 use sp_runtime::traits::MaybeEquivalence;
-use system_parachains_constants::polkadot::fee::WeightToFee;
-use xcm::latest::prelude::*;
-use xcm_executor::traits::{Identity, JustTry, WeightTrader};
+use system_parachains_constants::paseo::fee::WeightToFee;
+use paseo_runtime_constants::time::SLOT_DURATION;
+use system_parachains_constants::paseo::{consensus::*};
+use xcm::latest::prelude::{Assets as XcmAssets, *};
+use xcm_executor::traits::{JustTry, WeightTrader};
+use asset_test_utils::SlotDurations;
+use sp_consensus_aura::SlotDuration;
+use xcm_builder::WithLatestLocationConverter;
 
 const ALICE: [u8; 32] = [1u8; 32];
 const SOME_ASSET_ADMIN: [u8; 32] = [5u8; 32];
@@ -59,16 +63,19 @@ fn collator_session_key(account: [u8; 32]) -> CollatorSessionKey<Runtime> {
 	CollatorSessionKey::new(
 		AccountId::from(account),
 		AccountId::from(account),
-		SessionKeys { aura: AuraId::from(sp_core::ed25519::Public::from_raw(account)) },
+		SessionKeys { aura: AuraId::from(sp_core::sr25519::Public::from_raw(account)) },
 	)
 }
 
 fn collator_session_keys() -> CollatorSessionKeys<Runtime> {
-	CollatorSessionKeys::new(
-		AccountId::from(ALICE),
-		AccountId::from(ALICE),
-		SessionKeys { aura: AuraId::from(sp_core::ed25519::Public::from_raw(ALICE)) },
-	)
+	CollatorSessionKeys::default().add(collator_session_key(ALICE))
+}
+
+fn slot_durations() -> SlotDurations {
+	SlotDurations {
+		relay: SlotDuration::from_millis(RELAY_CHAIN_SLOT_DURATION_MILLIS.into()),
+		para: SlotDuration::from_millis(SLOT_DURATION),
+	}
 }
 
 #[test]
@@ -78,11 +85,11 @@ fn test_ed_is_one_hundredth_of_relay() {
 		.with_session_keys(vec![(
 			AccountId::from(ALICE),
 			AccountId::from(ALICE),
-			SessionKeys { aura: AuraId::from(sp_core::ed25519::Public::from_raw(ALICE)) },
+			SessionKeys { aura: AuraId::from(sp_core::sr25519::Public::from_raw(ALICE)) },
 		)])
 		.build()
 		.execute_with(|| {
-			let relay_ed = polkadot_runtime_constants::currency::EXISTENTIAL_DEPOSIT;
+			let relay_ed = paseo_runtime_constants::currency::EXISTENTIAL_DEPOSIT;
 			let asset_hub_ed = ExistentialDeposit::get();
 			assert_eq!(relay_ed / 100, asset_hub_ed);
 		});
@@ -95,7 +102,7 @@ fn test_asset_xcm_trader() {
 		.with_session_keys(vec![(
 			AccountId::from(ALICE),
 			AccountId::from(ALICE),
-			SessionKeys { aura: AuraId::from(sp_core::ed25519::Public::from_raw(ALICE)) },
+			SessionKeys { aura: AuraId::from(sp_core::sr25519::Public::from_raw(ALICE)) },
 		)])
 		.build()
 		.execute_with(|| {
@@ -141,8 +148,8 @@ fn test_asset_xcm_trader() {
 
 			// Lets pay with: asset_amount_needed + asset_amount_extra
 			let asset_amount_extra = 100_u128;
-			let asset: MultiAsset =
-				(asset_multilocation, asset_amount_needed + asset_amount_extra).into();
+			let asset: Asset =
+				(asset_multilocation.clone(), asset_amount_needed + asset_amount_extra).into();
 
 			let mut trader = <XcmConfig as xcm_executor::Config>::Trader::new();
 			let ctx = XcmContext { origin: None, message_id: XcmHash::default(), topic: None };
@@ -151,7 +158,7 @@ fn test_asset_xcm_trader() {
 			let unused_assets = trader.buy_weight(bought, asset.into(), &ctx).expect("Expected Ok");
 			// Check whether a correct amount of unused assets is returned
 			assert_ok!(
-				unused_assets.ensure_contains(&(asset_multilocation, asset_amount_extra).into())
+				unused_assets.ensure_contains(&(asset_multilocation.clone(), asset_amount_extra).into())
 			);
 
 			// Drop trader
@@ -178,7 +185,7 @@ fn test_asset_xcm_trader_with_refund() {
 		.with_session_keys(vec![(
 			AccountId::from(ALICE),
 			AccountId::from(ALICE),
-			SessionKeys { aura: AuraId::from(sp_core::ed25519::Public::from_raw(ALICE)) },
+			SessionKeys { aura: AuraId::from(sp_core::sr25519::Public::from_raw(ALICE)) },
 		)])
 		.build()
 		.execute_with(|| {
@@ -217,7 +224,7 @@ fn test_asset_xcm_trader_with_refund() {
 			// lets calculate amount needed
 			let amount_bought = WeightToFee::weight_to_fee(&bought);
 
-			let asset: MultiAsset = (asset_multilocation, amount_bought).into();
+			let asset: Asset = (asset_multilocation.clone(), amount_bought).into();
 
 			// Make sure buy_weight does not return an error
 			assert_ok!(trader.buy_weight(bought, asset.clone().into(), &ctx));
@@ -235,7 +242,7 @@ fn test_asset_xcm_trader_with_refund() {
 
 			assert_eq!(
 				trader.refund_weight(bought - weight_used, &ctx),
-				Some((asset_multilocation, amount_refunded).into())
+				Some((asset_multilocation.clone(), amount_refunded).into())
 			);
 
 			// Drop trader
@@ -261,7 +268,7 @@ fn test_asset_xcm_trader_refund_not_possible_since_amount_less_than_ed() {
 		.with_session_keys(vec![(
 			AccountId::from(ALICE),
 			AccountId::from(ALICE),
-			SessionKeys { aura: AuraId::from(sp_core::ed25519::Public::from_raw(ALICE)) },
+			SessionKeys { aura: AuraId::from(sp_core::sr25519::Public::from_raw(ALICE)) },
 		)])
 		.build()
 		.execute_with(|| {
@@ -296,7 +303,7 @@ fn test_asset_xcm_trader_refund_not_possible_since_amount_less_than_ed() {
 				"we are testing what happens when the amount does not exceed ED"
 			);
 
-			let asset: MultiAsset = (asset_multilocation, amount_bought).into();
+			let asset: Asset = (asset_multilocation, amount_bought).into();
 
 			// Buy weight should return an error
 			assert_noop!(trader.buy_weight(bought, asset.into(), &ctx), XcmError::TooExpensive);
@@ -316,7 +323,7 @@ fn test_that_buying_ed_refund_does_not_refund() {
 		.with_session_keys(vec![(
 			AccountId::from(ALICE),
 			AccountId::from(ALICE),
-			SessionKeys { aura: AuraId::from(sp_core::ed25519::Public::from_raw(ALICE)) },
+			SessionKeys { aura: AuraId::from(sp_core::sr25519::Public::from_raw(ALICE)) },
 		)])
 		.build()
 		.execute_with(|| {
@@ -350,11 +357,11 @@ fn test_that_buying_ed_refund_does_not_refund() {
 
 			// We know we will have to buy at least ED, so lets make sure first it will
 			// fail with a payment of less than ED
-			let asset: MultiAsset = (asset_multilocation, amount_bought).into();
+			let asset: Asset = (asset_multilocation.clone(), amount_bought).into();
 			assert_noop!(trader.buy_weight(bought, asset.into(), &ctx), XcmError::TooExpensive);
 
 			// Now lets buy ED at least
-			let asset: MultiAsset = (asset_multilocation, ExistentialDeposit::get()).into();
+			let asset: Asset = (asset_multilocation.clone(), ExistentialDeposit::get()).into();
 
 			// Buy weight should work
 			assert_ok!(trader.buy_weight(bought, asset.into(), &ctx));
@@ -381,7 +388,7 @@ fn test_asset_xcm_trader_not_possible_for_non_sufficient_assets() {
 		.with_session_keys(vec![(
 			AccountId::from(ALICE),
 			AccountId::from(ALICE),
-			SessionKeys { aura: AuraId::from(sp_core::ed25519::Public::from_raw(ALICE)) },
+			SessionKeys { aura: AuraId::from(sp_core::sr25519::Public::from_raw(ALICE)) },
 		)])
 		.build()
 		.execute_with(|| {
@@ -420,7 +427,7 @@ fn test_asset_xcm_trader_not_possible_for_non_sufficient_assets() {
 
 			let asset_multilocation = AssetIdForTrustBackedAssetsConvert::convert_back(&1).unwrap();
 
-			let asset: MultiAsset = (asset_multilocation, asset_amount_needed).into();
+			let asset: Asset = (asset_multilocation, asset_amount_needed).into();
 
 			// Make sure again buy_weight does return an error
 			assert_noop!(trader.buy_weight(bought, asset.into(), &ctx), XcmError::TooExpensive);
@@ -445,29 +452,30 @@ fn test_assets_balances_api_works() {
 		.with_session_keys(vec![(
 			AccountId::from(ALICE),
 			AccountId::from(ALICE),
-			SessionKeys { aura: AuraId::from(sp_core::ed25519::Public::from_raw(ALICE)) },
+			SessionKeys { aura: AuraId::from(sp_core::sr25519::Public::from_raw(ALICE)) },
 		)])
 		.build()
 		.execute_with(|| {
 			let local_asset_id = 1;
-			let foreign_asset_id_multilocation =
-				MultiLocation { parents: 1, interior: X2(Parachain(1234), GeneralIndex(12345)) };
+			let foreign_asset_id_location = xcm::v3::Location::new(
+				1,
+				[xcm::v3::Junction::Parachain(1234), xcm::v3::Junction::GeneralIndex(12345)],
+			);
 
 			// check before
 			assert_eq!(Assets::balance(local_asset_id, AccountId::from(ALICE)), 0);
 			assert_eq!(
-				ForeignAssets::balance(foreign_asset_id_multilocation, AccountId::from(ALICE)),
+				ForeignAssets::balance(foreign_asset_id_location, AccountId::from(ALICE)),
 				0
 			);
 			assert_eq!(Balances::free_balance(AccountId::from(ALICE)), 0);
 			assert!(Runtime::query_account_balances(AccountId::from(ALICE))
 				.unwrap()
-				.try_as::<MultiAssets>()
+				.try_as::<XcmAssets>()
 				.unwrap()
 				.is_none());
 
 			// Drip some balance
-			use frame_support::traits::fungible::Mutate;
 			let some_currency = ExistentialDeposit::get();
 			Balances::mint_into(&AccountId::from(ALICE), some_currency).unwrap();
 
@@ -493,7 +501,7 @@ fn test_assets_balances_api_works() {
 			let foreign_asset_minimum_asset_balance = 3333333_u128;
 			assert_ok!(ForeignAssets::force_create(
 				RuntimeHelper::root_origin(),
-				foreign_asset_id_multilocation,
+				foreign_asset_id_location,
 				AccountId::from(SOME_ASSET_ADMIN).into(),
 				false,
 				foreign_asset_minimum_asset_balance
@@ -502,7 +510,7 @@ fn test_assets_balances_api_works() {
 			// We first mint enough asset for the account to exist for assets
 			assert_ok!(ForeignAssets::mint(
 				RuntimeHelper::origin_of(AccountId::from(SOME_ASSET_ADMIN)),
-				foreign_asset_id_multilocation,
+				foreign_asset_id_location,
 				AccountId::from(ALICE).into(),
 				6 * foreign_asset_minimum_asset_balance
 			));
@@ -513,12 +521,12 @@ fn test_assets_balances_api_works() {
 				minimum_asset_balance
 			);
 			assert_eq!(
-				ForeignAssets::balance(foreign_asset_id_multilocation, AccountId::from(ALICE)),
+				ForeignAssets::balance(foreign_asset_id_location, AccountId::from(ALICE)),
 				6 * minimum_asset_balance
 			);
 			assert_eq!(Balances::free_balance(AccountId::from(ALICE)), some_currency);
 
-			let result: MultiAssets = Runtime::query_account_balances(AccountId::from(ALICE))
+			let result: XcmAssets = Runtime::query_account_balances(AccountId::from(ALICE))
 				.unwrap()
 				.try_into()
 				.unwrap();
@@ -526,7 +534,7 @@ fn test_assets_balances_api_works() {
 
 			// check currency
 			assert!(result.inner().iter().any(|asset| asset.eq(
-				&assets_common::fungible_conversion::convert_balance::<DotLocation, Balance>(
+				&assets_common::fungible_conversion::convert_balance::<TokenLocation, Balance>(
 					some_currency
 				)
 				.unwrap()
@@ -539,7 +547,10 @@ fn test_assets_balances_api_works() {
 				.into())));
 			// check foreign asset
 			assert!(result.inner().iter().any(|asset| asset.eq(&(
-				Identity::convert_back(&foreign_asset_id_multilocation).unwrap(),
+				WithLatestLocationConverter::<xcm::v3::Location>::convert_back(
+					&foreign_asset_id_location
+				)
+					.unwrap(),
 				6 * foreign_asset_minimum_asset_balance
 			)
 				.into())));
@@ -554,16 +565,11 @@ asset_test_utils::include_teleports_for_native_asset_works!(
 	WeightToFee,
 	ParachainSystem,
 	collator_session_keys(),
+	slot_durations(),
 	ExistentialDeposit::get(),
 	Box::new(|runtime_event_encoded: Vec<u8>| {
 		match RuntimeEvent::decode(&mut &runtime_event_encoded[..]) {
 			Ok(RuntimeEvent::PolkadotXcm(event)) => Some(event),
-			_ => None,
-		}
-	}),
-	Box::new(|runtime_event_encoded: Vec<u8>| {
-		match RuntimeEvent::decode(&mut &runtime_event_encoded[..]) {
-			Ok(RuntimeEvent::XcmpQueue(event)) => Some(event),
 			_ => None,
 		}
 	}),
@@ -579,11 +585,8 @@ asset_test_utils::include_teleports_for_foreign_assets_works!(
 	ParachainSystem,
 	ForeignCreatorsSovereignAccountOf,
 	ForeignAssetsInstance,
-	asset_test_utils::CollatorSessionKeys::new(
-		AccountId::from(ALICE),
-		AccountId::from(ALICE),
-		SessionKeys { aura: AuraId::from(sp_core::ed25519::Public::from_raw(ALICE)) }
-	),
+	collator_session_keys(),
+	slot_durations(),
 	ExistentialDeposit::get(),
 	Box::new(|runtime_event_encoded: Vec<u8>| {
 		match RuntimeEvent::decode(&mut &runtime_event_encoded[..]) {
@@ -598,6 +601,7 @@ asset_test_utils::include_teleports_for_foreign_assets_works!(
 		}
 	})
 );
+
 
 asset_test_utils::include_asset_transactor_transfer_with_local_consensus_currency_works!(
 	Runtime,
@@ -637,15 +641,14 @@ asset_test_utils::include_asset_transactor_transfer_with_pallet_assets_instance_
 	Runtime,
 	XcmConfig,
 	ForeignAssetsInstance,
-	MultiLocation,
+	xcm::v3::Location,
 	JustTry,
-	asset_test_utils::CollatorSessionKeys::new(
-		AccountId::from(ALICE),
-		AccountId::from(ALICE),
-		SessionKeys { aura: AuraId::from(sp_core::ed25519::Public::from_raw(ALICE)) }
-	),
+	collator_session_keys(),
 	ExistentialDeposit::get(),
-	MultiLocation { parents: 1, interior: X2(Parachain(1313), GeneralIndex(12345)) },
+	xcm::v3::Location::new(
+		1,
+		[xcm::v3::Junction::Parachain(1313), xcm::v3::Junction::GeneralIndex(12345)]
+	),
 	Box::new(|| {
 		assert!(Assets::asset_ids().collect::<Vec<_>>().is_empty());
 	}),
@@ -660,13 +663,9 @@ asset_test_utils::include_create_and_manage_foreign_assets_for_local_consensus_p
 	WeightToFee,
 	ForeignCreatorsSovereignAccountOf,
 	ForeignAssetsInstance,
-	MultiLocation,
-	JustTry,
-	asset_test_utils::CollatorSessionKeys::new(
-		AccountId::from(ALICE),
-		AccountId::from(ALICE),
-		SessionKeys { aura: AuraId::from(sp_core::ed25519::Public::from_raw(ALICE)) }
-	),
+	xcm::v3::Location,
+	WithLatestLocationConverter<xcm::v3::Location>,
+	collator_session_keys(),
 	ExistentialDeposit::get(),
 	AssetDeposit::get(),
 	MetadataDepositBase::get(),
