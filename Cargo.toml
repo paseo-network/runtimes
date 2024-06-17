@@ -3,15 +3,18 @@ version = "1.0.0"
 authors = ["Paseo Core Team"]
 edition = "2021"
 repository = "https://github.com/paseo-network/runtimes.git"
-license = "Apache License v2" # TODO
+license = "GPL-3.0-only"
 
 [workspace.dependencies]
 assert_matches = { version = "1.5.0" }
 asset-test-utils = { version = "8.0.1" }
 assets-common = { version = "0.8.0", default-features = false }
+authority-discovery-primitives = { version = "27.0.0", default-features = false, package = "sp-authority-discovery" }
+babe-primitives = { version = "0.33.0", default-features = false, package = "sp-consensus-babe" }
+beefy-primitives = { version = "14.0.0", default-features = false, package = "sp-consensus-beefy" }
 binary-merkle-tree = { version = "14.0.0", default-features = false }
 bp-bridge-hub-cumulus = { version = "0.8.0", default-features = false }
-bp-header-chain = { version = "0.8.0", default-features = false }
+bp-header-chain = { version = "0.8.1", default-features = false }
 bp-kusama = { version = "0.6.0", default-features = false }
 bp-messages = { version = "0.8.0", default-features = false }
 bp-parachains = { version = "0.8.0", default-features = false }
@@ -24,6 +27,7 @@ bridge-hub-common = { version = "0.1.0", default-features = false }
 bridge-hub-test-utils = { version = "0.8.0" }
 bridge-runtime-common = { version = "0.8.0", default-features = false }
 clap = { version = "4.5.0" }
+codec = { package = "parity-scale-codec", version = "3.6.9", default-features = false }
 cumulus-pallet-aura-ext = { version = "0.8.0", default-features = false }
 cumulus-pallet-dmp-queue = { version = "0.8.0", default-features = false }
 cumulus-pallet-parachain-system = { version = "0.8.1", default-features = false }
@@ -38,12 +42,12 @@ enumflags2 = { version = "0.7.7" }
 frame-benchmarking = { version = "29.0.0", default-features = false }
 frame-election-provider-support = { version = "29.0.0", default-features = false }
 frame-executive = { version = "29.0.0", default-features = false }
-frame-remote-externalities = { version = "0.36.0" }
 frame-support = { version = "29.0.2", default-features = false }
 frame-system = { version = "29.0.0", default-features = false }
 frame-system-benchmarking = { version = "29.0.0", default-features = false }
 frame-system-rpc-runtime-api = { version = "27.0.0", default-features = false }
 frame-try-runtime = { version = "0.35.0", default-features = false }
+grandpa = { version = "0.20.0", package = "sc-consensus-grandpa" }
 hex-literal = { version = "0.4.1" }
 log = { version = "0.4.20", default-features = false }
 pallet-alliance = { version = "28.0.0", default-features = false }
@@ -65,9 +69,9 @@ pallet-bridge-grandpa = { version = "0.8.0", default-features = false }
 pallet-bridge-messages = { version = "0.8.0", default-features = false }
 pallet-bridge-parachains = { version = "0.8.0", default-features = false }
 pallet-bridge-relayers = { version = "0.8.0", default-features = false }
-pallet-broker = { version = "0.7.0", default-features = false }
+pallet-broker = { version = "0.7.1", default-features = false }
 pallet-child-bounties = { version = "28.0.0", default-features = false }
-pallet-collator-selection = { version = "10.0.0", default-features = false }
+pallet-collator-selection = { version = "10.0.2", default-features = false }
 pallet-collective = { version = "29.0.0", default-features = false }
 pallet-conviction-voting = { version = "29.0.0", default-features = false }
 pallet-core-fellowship = { version = "13.0.0", default-features = false }
@@ -116,48 +120,32 @@ pallet-uniques = { version = "29.0.0", default-features = false }
 pallet-utility = { version = "29.0.0", default-features = false }
 pallet-vesting = { version = "29.0.0", default-features = false }
 pallet-whitelist = { version = "28.0.0", default-features = false }
-pallet-xcm = { version = "8.0.4", default-features = false }
+pallet-xcm = { version = "8.0.5", default-features = false }
 pallet-xcm-benchmarks = { version = "8.0.2", default-features = false }
 pallet-xcm-bridge-hub = { version = "0.3.0", default-features = false }
 pallet-xcm-bridge-hub-router = { version = "0.6.0", default-features = false }
+parachain-info = { version = "0.8.0", default-features = false, package = "staging-parachain-info" }
 parachains-common = { version = "8.0.0", default-features = false }
 parachains-runtimes-test-utils = { version = "8.0.0" }
-parity-scale-codec = { version = "3.6.9", default-features = false }
 paste = { version = "1.0.14" }
-penpal-runtime = { version = "0.15.1" }
 polkadot-core-primitives = { version = "8.0.0", default-features = false }
 polkadot-parachain-primitives = { version = "7.0.0", default-features = false }
 polkadot-primitives = { version = "8.0.1", default-features = false }
 polkadot-runtime-common = { version = "8.0.1", default-features = false }
-polkadot-runtime-parachains = { version = "8.0.1", default-features = false }
 primitive-types = { version = "0.12.2", default-features = false }
+remote-externalities = { version = "0.36.0", package = "frame-remote-externalities" }
+runtime-parachains = { version = "8.0.1", default-features = false, package = "polkadot-runtime-parachains" }
 sc-chain-spec = { version = "28.0.0" }
-sc-consensus-grandpa = { version = "0.20.0" }
 scale-info = { version = "2.10.0", default-features = false }
 separator = { version = "0.4.1" }
 serde = { version = "1.0.196" }
 serde_json = { version = "1.0.113" }
 smallvec = { version = "1.13.1" }
-snowbridge-beacon-primitives = { version = "0.1.0", default-features = false }
-snowbridge-core = { version = "0.1.1", default-features = false }
-snowbridge-outbound-queue-runtime-api = { version = "0.1.1", default-features = false }
-snowbridge-pallet-ethereum-client = { version = "0.1.1", default-features = false }
-snowbridge-pallet-inbound-queue = { version = "0.1.1", default-features = false }
-snowbridge-pallet-inbound-queue-fixtures = { version = "0.9.0" }
-snowbridge-pallet-outbound-queue = { version = "0.1.1", default-features = false }
-snowbridge-pallet-system = { version = "0.1.1", default-features = false }
-snowbridge-router-primitives = { version = "0.1.0", default-features = false }
-snowbridge-runtime-common = { version = "0.1.0", default-features = false }
-snowbridge-runtime-test-common = { version = "0.1.0" }
-snowbridge-system-runtime-api = { version = "0.1.0", default-features = false }
 sp-api = { version = "27.0.0", default-features = false }
 sp-application-crypto = { version = "31.0.0", default-features = false }
 sp-arithmetic = { version = "24.0.0", default-features = false }
-sp-authority-discovery = { version = "27.0.0", default-features = false }
 sp-block-builder = { version = "27.0.0", default-features = false }
 sp-consensus-aura = { version = "0.33.0", default-features = false }
-sp-consensus-babe = { version = "0.33.0", default-features = false }
-sp-consensus-beefy = { version = "14.0.0", default-features = false }
 sp-core = { version = "29.0.0", default-features = false }
 sp-debug-derive = { version = "14.0.0", default-features = false }
 sp-genesis-builder = { version = "0.8.0", default-features = false }
@@ -176,14 +164,17 @@ sp-transaction-pool = { version = "27.0.0", default-features = false }
 sp-trie = { version = "30.0.0" }
 sp-version = { version = "30.0.0", default-features = false }
 sp-weights = { version = "28.0.0", default-features = false }
-staging-parachain-info = { version = "0.8.0", default-features = false }
-staging-xcm = { version = "8.0.1", default-features = false }
-staging-xcm-builder = { version = "8.0.1", default-features = false }
-staging-xcm-executor = { version = "8.0.1", default-features = false }
 static_assertions = { version = "1.1.0" }
 substrate-wasm-builder = { version = "18.0.0" }
+system-parachains-constants = { path = "system-parachains/constants", default-features = false }
 tokio = { version = "1.36.0" }
+xcm = { version = "8.0.1", default-features = false, package = "staging-xcm" }
+xcm-builder = { version = "8.0.1", default-features = false, package = "staging-xcm-builder" }
 xcm-emulator = { version = "0.6.0" }
+xcm-executor = { version = "8.0.1", default-features = false, package = "staging-xcm-executor" }
+
+# Local dependencies
+
 paseo-runtime-constants = { package = "paseo-runtime-constants", path = "relay/paseo/constants", default-features = false }
 
 [workspace]

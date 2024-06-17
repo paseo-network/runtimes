@@ -18,7 +18,6 @@ mod pallet_xcm_benchmarks_fungible;
 mod pallet_xcm_benchmarks_generic;
 
 use crate::Runtime;
-use frame_support::weights::Weight;
 use sp_std::prelude::*;
 use xcm::{latest::prelude::*, DoubleEncoded};
 
@@ -56,7 +55,7 @@ impl WeighAssets for AssetFilter {
 		match self {
 			Self::Definite(assets) => assets
 				.inner()
-				.into_iter()
+				.iter()
 				.map(From::from)
 				.map(|t| match t {
 					AssetTypes::Balances => balances_weight,
@@ -77,8 +76,8 @@ impl WeighAssets for AssetFilter {
 impl WeighAssets for Assets {
 	fn weigh_multi_assets(&self, balances_weight: Weight) -> Weight {
 		self.inner()
-			.into_iter()
-			.map(|m| <AssetTypes as From<&Asset>>::from(m))
+			.iter()
+			.map(<AssetTypes as From<&Asset>>::from)
 			.map(|t| match t {
 				AssetTypes::Balances => balances_weight,
 				AssetTypes::Unknown => Weight::MAX,
