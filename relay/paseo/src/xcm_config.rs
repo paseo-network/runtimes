@@ -155,8 +155,8 @@ impl Contains<Location> for CollectivesOrFellows {
 	fn contains(loc: &Location) -> bool {
 		matches!(
 			loc.unpack(),
-			(0, [Parachain(COLLECTIVES_ID)]) |
-				(0, [Parachain(COLLECTIVES_ID), Plurality { id: BodyId::Technical, .. }])
+			(0, [Parachain(COLLECTIVES_ID)])
+				| (0, [Parachain(COLLECTIVES_ID), Plurality { id: BodyId::Technical, .. }])
 		)
 	}
 }
