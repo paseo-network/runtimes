@@ -29,7 +29,7 @@ use sp_runtime::{traits::IdentifyAccount, Perbill};
 
 pub type PaseoChainSpec = sc_chain_spec::GenericChainSpec<(), NoExtension>;
 
-const DEFAULT_PROTOCOL_ID: &str = "dot";
+const DEFAULT_PROTOCOL_ID: &str = "pas";
 
 /// Returns the properties for the [`PaseoChainSpec`].
 pub fn paseo_chain_spec_properties() -> serde_json::map::Map<String, serde_json::Value> {
