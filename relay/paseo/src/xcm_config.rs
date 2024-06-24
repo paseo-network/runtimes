@@ -24,16 +24,15 @@ use super::{
 use frame_support::{
 	parameter_types,
 	traits::{Contains, Equals, Everything, Nothing},
-	weights::Weight,
 };
 use frame_system::EnsureRoot;
 use pallet_xcm::XcmPassthrough;
-use paseo_runtime_constants::{
-	currency::CENTS, system_parachain::*, xcm::body::FELLOWSHIP_ADMIN_INDEX,
-};
-use runtime_common::{
+use polkadot_runtime_common::{
 	xcm_sender::{ChildParachainRouter, ExponentialPrice},
 	ToAuthor,
+};
+use paseo_runtime_constants::{
+	currency::CENTS, system_parachain::*, xcm::body::FELLOWSHIP_ADMIN_INDEX,
 };
 use sp_core::ConstU32;
 use xcm::latest::prelude::*;
@@ -155,8 +154,8 @@ impl Contains<Location> for CollectivesOrFellows {
 	fn contains(loc: &Location) -> bool {
 		matches!(
 			loc.unpack(),
-			(0, [Parachain(COLLECTIVES_ID)]) |
-				(0, [Parachain(COLLECTIVES_ID), Plurality { id: BodyId::Technical, .. }])
+			(0, [Parachain(COLLECTIVES_ID)])
+				| (0, [Parachain(COLLECTIVES_ID), Plurality { id: BodyId::Technical, .. }])
 		)
 	}
 }

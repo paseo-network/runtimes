@@ -17,7 +17,7 @@
 use super::*;
 use core::marker::PhantomData;
 use frame_support::traits::{tokens::ConversionFromAssetBalance, Contains};
-use primitives::Id as ParaId;
+use polkadot_primitives::Id as ParaId;
 use xcm_builder::IsChildSystemParachain;
 
 // TODO: replace by types from polkadot-sdk https://github.com/paritytech/polkadot-sdk/pull/3659
@@ -43,8 +43,8 @@ where
 			V3 { location, asset_id } => (location.try_into()?, asset_id.try_into()?),
 			V4 { location, asset_id } => (location, asset_id),
 		};
-		if asset_id.0.contains_parents_only(1) &&
-			IsChildSystemParachain::<ParaId>::contains(&location)
+		if asset_id.0.contains_parents_only(1)
+			&& IsChildSystemParachain::<ParaId>::contains(&location)
 		{
 			Ok(balance)
 		} else {

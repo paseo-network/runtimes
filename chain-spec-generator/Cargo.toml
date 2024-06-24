@@ -15,15 +15,15 @@ paseo-runtime = { path = "../relay/paseo" }
 paseo-runtime-constants = { path = "../relay/paseo/constants", default-features = true }
 
 sc-chain-spec = { workspace = true }
-polkadot-runtime-parachains = { workspace = true, default-features = true }
+runtime-parachains = { workspace = true, default-features = true }
 polkadot-primitives = { workspace = true, default-features = true }
-sp-consensus-babe = { workspace = true, default-features = true }
-sp-authority-discovery = { workspace = true, default-features = true }
+babe-primitives = { workspace = true, default-features = true }
+authority-discovery-primitives = { workspace = true, default-features = true }
 sp-core = { workspace = true, default-features = true }
 pallet-staking = { workspace = true, default-features = true }
-sc-consensus-grandpa = { workspace = true }
+grandpa = { workspace = true }
 sp-runtime = { workspace = true, default-features = true }
-sp-consensus-beefy = { workspace = true, default-features = true }
+beefy-primitives = { workspace = true, default-features = true }
 xcm = { package = "staging-xcm", version = "8.0.1" }
 parachains-common = { workspace = true, default-features = true }
 cumulus-primitives-core = { workspace = true, default-features = true }
@@ -38,6 +38,6 @@ runtime-benchmarks = [
 	"pallet-staking/runtime-benchmarks",
 	"parachains-common/runtime-benchmarks",
 	"polkadot-primitives/runtime-benchmarks",
-	"polkadot-runtime-parachains/runtime-benchmarks",
+	"runtime-parachains/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks"
 ]

@@ -18,7 +18,6 @@ mod pallet_xcm_benchmarks_fungible;
 mod pallet_xcm_benchmarks_generic;
 
 use crate::Runtime;
-use frame_support::weights::Weight;
 use sp_std::prelude::*;
 use xcm::{latest::prelude::*, DoubleEncoded};
 
@@ -36,8 +35,9 @@ pub enum AssetTypes {
 impl From<&Asset> for AssetTypes {
 	fn from(asset: &Asset) -> Self {
 		match asset {
-			Asset { id: AssetId(Location { parents: 0, interior: Here }), .. } =>
-				AssetTypes::Balances,
+			Asset { id: AssetId(Location { parents: 0, interior: Here }), .. } => {
+				AssetTypes::Balances
+			},
 			_ => AssetTypes::Unknown,
 		}
 	}
@@ -55,7 +55,7 @@ impl WeighAssets for AssetFilter {
 		match self {
 			Self::Definite(assets) => assets
 				.inner()
-				.into_iter()
+				.iter()
 				.map(From::from)
 				.map(|t| match t {
 					AssetTypes::Balances => balances_weight,
@@ -65,8 +65,9 @@ impl WeighAssets for AssetFilter {
 			// We don't support any NFTs on Polkadot, so these two variants will always match
 			// only 1 kind of fungible asset.
 			Self::Wild(AllOf { .. } | AllOfCounted { .. }) => balances_weight,
-			Self::Wild(AllCounted(count)) =>
-				balances_weight.saturating_mul(MAX_ASSETS.min(*count as u64)),
+			Self::Wild(AllCounted(count)) => {
+				balances_weight.saturating_mul(MAX_ASSETS.min(*count as u64))
+			},
 			Self::Wild(All) => balances_weight.saturating_mul(MAX_ASSETS),
 		}
 	}
@@ -75,8 +76,8 @@ impl WeighAssets for AssetFilter {
 impl WeighAssets for Assets {
 	fn weigh_multi_assets(&self, balances_weight: Weight) -> Weight {
 		self.inner()
-			.into_iter()
-			.map(|m| <AssetTypes as From<&Asset>>::from(m))
+			.iter()
+			.map(<AssetTypes as From<&Asset>>::from)
 			.map(|t| match t {
 				AssetTypes::Balances => balances_weight,
 				AssetTypes::Unknown => Weight::MAX,
