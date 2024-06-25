@@ -1,8 +1,8 @@
 [package]
-name = "polkadot-runtime"
+name = "paseo-runtime"
 build = "build.rs"
 repository.workspace = true
-version.workspace = true
+version = "1.2.4"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -65,6 +65,7 @@ pallet-proxy = { workspace = true }
 pallet-referenda = { workspace = true }
 pallet-scheduler = { workspace = true }
 pallet-session = { workspace = true }
+pallet-sudo = { workspace = true }
 frame-support = { workspace = true }
 pallet-staking = { workspace = true }
 pallet-staking-reward-fn = { workspace = true }
@@ -73,7 +74,7 @@ pallet-staking-runtime-api = { workspace = true }
 pallet-state-trie-migration = { workspace = true }
 frame-system = { workspace = true }
 frame-system-rpc-runtime-api = { workspace = true }
-polkadot-runtime-constants = { workspace = true }
+paseo-runtime-constants = { workspace = true }
 pallet-timestamp = { workspace = true }
 pallet-treasury = { workspace = true }
 pallet-whitelist = { workspace = true }
@@ -164,6 +165,7 @@ std = [
 	"pallet-scheduler/std",
 	"pallet-session-benchmarking?/std",
 	"pallet-session/std",
+	"pallet-sudo/std",
 	"pallet-staking-reward-fn/std",
 	"pallet-staking-runtime-api/std",
 	"pallet-staking/std",
@@ -177,9 +179,10 @@ std = [
 	"pallet-whitelist/std",
 	"pallet-xcm-benchmarks?/std",
 	"pallet-xcm/std",
+	"codec/std",
+	"paseo-runtime-constants/std",
 	"polkadot-primitives/std",
 	"polkadot-runtime-common/std",
-	"polkadot-runtime-constants/std",
 	"runtime-parachains/std",
 	"scale-info/std",
 	"substrate-wasm-builder",
@@ -237,6 +240,7 @@ runtime-benchmarks = [
 	"pallet-referenda/runtime-benchmarks",
 	"pallet-scheduler/runtime-benchmarks",
 	"pallet-session-benchmarking/runtime-benchmarks",
+	"pallet-sudo/runtime-benchmarks",
 	"pallet-staking/runtime-benchmarks",
 	"pallet-state-trie-migration/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
@@ -287,6 +291,7 @@ try-runtime = [
 	"pallet-referenda/try-runtime",
 	"pallet-scheduler/try-runtime",
 	"pallet-session/try-runtime",
+	"pallet-sudo/try-runtime",
 	"pallet-staking/try-runtime",
 	"pallet-state-trie-migration/try-runtime",
 	"pallet-timestamp/try-runtime",
