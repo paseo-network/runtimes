@@ -2,8 +2,6 @@ name: Test apply runtime patch
 
 on:
   pull_request:
-    paths:
-      - 'patches/paseo_specific_changes.patch'
 
 jobs:
   apply-patch:
@@ -13,16 +11,6 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
 
-    - name: Check if patch file has changed
-      id: check_patch
-      run: |
-        if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q 'patches/paseo_specific_changes.patch'; then
-          echo "patch_changed=true" >> $GITHUB_ENV
-        else
-          echo "patch_changed=false" >> $GITHUB_ENV
-        fi
-
     - name: Apply patch
-      if: env.patch_changed == 'true'
       run: |
         ./scripts/apply_runtime_patch.sh --check ./patches/paseo_specific_changes.patch
