@@ -1,7 +1,7 @@
 name: Test apply runtime patch
 
 on:
-  push:
+  pull_request:
     paths:
       - 'patches/paseo_specific_changes.patch'
 
