@@ -69,7 +69,10 @@ print_message "----- Creating patch file for paseo specific modifications -----"
 mkdir -p ../../patches
 git diff ${LATEST_COMMIT} HEAD > ../../patches/paseo_specific_changes.patch
 
-print_message "--------------------" "${RED}"
-print_message "----- Patch file created: patches/paseo_specific_changes.patch -----" "${RED}"
-print_message "----- Apply this patch file to integrate paseo specific changes -----" "${RED}"
-print_message "--------------------" "${RED}"
+# Preprocess the patch file to replace "polkadot" with "paseo"
+#sed -i '' 's/polkadot/paseo/g' ../../patches/paseo_specific_changes.patch
+
+print_message "--------------------" "${BLUE}"
+print_message "----- Patch file created: patches/paseo_specific_changes.patch -----" "${WHITE}"
+print_message "----- Apply this patch file to integrate paseo specific changes -----" "${WHITE}"
+print_message "--------------------" "${BLUE}"
