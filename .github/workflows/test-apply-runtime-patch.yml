@@ -1,0 +1,28 @@
+name: Test apply runtime patch
+
+on:
+  push:
+    paths:
+      - 'patches/paseo_specific_changes.patch'
+
+jobs:
+  apply-patch:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Check if patch file has changed
+      id: check_patch
+      run: |
+        if git diff --name-only HEAD^ HEAD | grep -q 'patches/paseo_specific_changes.patch'; then
+          echo "patch_changed=true" >> $GITHUB_ENV
+        else
+          echo "patch_changed=false" >> $GITHUB_ENV
+        fi
+
+    - name: Apply patch
+      if: steps.check_patch.outputs.patch_changed == 'true'
+      run: |
+        ./scripts/apply_runtime_patch.sh --check ./patches/paseo_specific_changes.patch
