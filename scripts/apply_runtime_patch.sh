@@ -1,13 +1,32 @@
 #!/bin/bash
 set -e
 
-# Check if the correct number of arguments is provided
-if [ "$#" -ne 1 ]; then
-    echo "Usage: $0 <patch_file_path>"
+# Function to display usage
+usage() {
+    echo "Usage: $0 [--check] <patch_file_path>"
     exit 1
+}
+
+# Check if the correct number of arguments is provided
+if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
+    usage
 fi
 
-PATCH_FILE=$1
+# Initialize variables
+CHECK_FLAG=""
+PATCH_FILE=""
+
+# Parse arguments
+if [ "$#" -eq 2 ]; then
+    if [ "$1" == "--check" ]; then
+        CHECK_FLAG="--check"
+        PATCH_FILE=$2
+    else
+        usage
+    fi
+else
+    PATCH_FILE=$1
+fi
 
 # Check if the patch file exists
 if [ ! -f "$PATCH_FILE" ]; then
@@ -16,7 +35,7 @@ if [ ! -f "$PATCH_FILE" ]; then
 fi
 
 # Print success message only if the patch was applied correctly
-if git apply --3way $PATCH_FILE; then
+if git apply --3way $CHECK_FLAG $PATCH_FILE; then
     echo "Patch applied successfully!"
 else
     echo "Failed to apply patch."
