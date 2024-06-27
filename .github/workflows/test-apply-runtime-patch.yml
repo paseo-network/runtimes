@@ -16,13 +16,13 @@ jobs:
     - name: Check if patch file has changed
       id: check_patch
       run: |
-        if git diff --name-only HEAD^ HEAD | grep -q 'patches/paseo_specific_changes.patch'; then
+        if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q 'patches/paseo_specific_changes.patch'; then
           echo "patch_changed=true" >> $GITHUB_ENV
         else
           echo "patch_changed=false" >> $GITHUB_ENV
         fi
 
     - name: Apply patch
-      if: steps.check_patch.outputs.patch_changed == 'true'
+      if: env.patch_changed == 'true'
       run: |
         ./scripts/apply_runtime_patch.sh --check ./patches/paseo_specific_changes.patch
