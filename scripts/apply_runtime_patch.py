@@ -1,10 +1,30 @@
 import sys
 import os
 import subprocess
+import re
 
 def usage():
     print("Usage: {} [--check] <patch_file_path>".format(sys.argv[0]))
     sys.exit(1)
+
+def preprocessPatch(patch_file):
+    try:
+        with open(patch_file, 'r') as file:
+            content = file.read()
+
+        # Replace "Polkadot" with "Paseo" and "polkadot" with "paseo"
+        modified_content = re.sub(r'Polkadot', 'Paseo', content)
+        modified_content = re.sub(r'polkadot', 'paseo', modified_content)
+
+        if modified_content != content:
+            with open(patch_file, 'w') as file:
+                file.write(modified_content)
+            print("Patch preprocessed successfully!")
+        else:
+            print("No changes were necessary in the patch file.")
+    except Exception as e:
+        print(f"Failed to preprocess patch: {e}")
+        sys.exit(1)
 
 def main():
     # Check if the correct number of arguments is provided
@@ -30,9 +50,12 @@ def main():
         print(f"Error: Patch file '{patch_file}' does not exist.")
         sys.exit(1)
 
+    # Preprocess the patch
+    preprocessPatch(patch_file)
+
     # Apply the patch
     try:
-        command = ["git", "apply", "--3way"]
+        command = ["git", "apply", "--reject"]
         if check_flag:
             command.append(check_flag)
         command.append(patch_file)
