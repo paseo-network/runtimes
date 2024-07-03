@@ -4,27 +4,15 @@ import re
 
 def paseo_to_polkadot_filter(file_path, hunk):
     """
-    Filter to skip hunks that replace "Paseo" with "Polkadot".
+    Filter to skip hunks where the removed line contains 'Paseo' or 'paseo'
+    and the added line contains 'Polkadot' or 'polkadot'.
     """
     for line in hunk:
-        if line.is_removed:
-            removed_line = line.value
+        if line.is_removed and re.search(r'[Pp]aseo', line.value):
             for added_line in hunk:
-                if added_line.is_added:
-                    if re.search(r'[Pp]aseo', removed_line) and re.search(r'[Pp]olkadot', added_line.value):
-                        if re.sub(r'[Pp]aseo', 'Polkadot', removed_line).strip() == added_line.value.strip():
-                            print(f"  Skipping hunk in {file_path}: Contains Paseo to Polkadot replacement")
-                            return False
-                    # Check for case-sensitive replacements
-                    if 'Paseo' in removed_line and 'Polkadot' in added_line.value:
-                        if removed_line.replace('Paseo', 'Polkadot') == added_line.value:
-                            print(f"  Skipping hunk in {file_path}: Contains Paseo to Polkadot replacement")
-                            return False
-                    # Check for case-insensitive replacements
-                    elif 'paseo' in removed_line.lower() and 'polkadot' in added_line.value.lower():
-                        if re.sub(r'(?i)paseo', lambda m: 'Polkadot' if m.group(0)[0].isupper() else 'polkadot', removed_line) == added_line.value:
-                            print(f"  Skipping hunk in {file_path}: Contains paseo to polkadot replacement")
-                            return False
+                if added_line.is_added and re.search(r'[Pp]olkadot', added_line.value):
+                    print(f"  Skipping hunk in {file_path}: Contains Paseo to Polkadot replacement")
+                    return False
     return True
 
 def keep_sudo_filter(file_path, hunk):
@@ -52,8 +40,8 @@ def filter_hunk(file_path, hunk):
     """    
     # List of filters to apply
     filters = [
-        paseo_to_polkadot_filter,
-        keep_sudo_filter,
+        #paseo_to_polkadot_filter,
+        #keep_sudo_filter,
         # Add more filters here
     ]
     
