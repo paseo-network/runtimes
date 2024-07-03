@@ -1,6 +1,12 @@
 import sys
-from unidiff import PatchSet
+import os
+import subprocess
+import tempfile
 import re
+from unidiff import PatchSet
+
+# Global variable for the log file name
+LOG_FILE = "out.txt"
 
 def paseo_to_polkadot_filter(file_path, hunk):
     """
@@ -11,7 +17,7 @@ def paseo_to_polkadot_filter(file_path, hunk):
         if line.is_removed and re.search(r'[Pp]aseo', line.value):
             for added_line in hunk:
                 if added_line.is_added and re.search(r'[Pp]olkadot', added_line.value):
-                    print(f"  Skipping hunk in {file_path}: Contains Paseo to Polkadot replacement")
+                    log(f"  Skipping hunk in {file_path}: Contains Paseo to Polkadot replacement")
                     return False
     return True
 
@@ -21,36 +27,55 @@ def keep_sudo_filter(file_path, hunk):
     - Ignores deletion of files with 'sudo' in their name.
     - Prevents deletion of lines containing 'sudo'.
     """
-    # Check if the file is being deleted and contains 'sudo' in its name
     if hunk.source_start == 0 and hunk.source_length == 0 and 'sudo' in file_path.lower():
-        print(f"  Keeping file {file_path}: Contains 'sudo' in filename")
+        log(f"  Keeping file {file_path}: Contains 'sudo' in filename")
         return False
 
-    # Check for lines containing 'sudo'
     for line in hunk:
         if line.is_removed and 'sudo' in line.value.lower():
-            print(f"  Keeping line in {file_path}: Contains 'sudo'")
+            log(f"  Keeping line in {file_path}: Contains 'sudo'")
             return False
 
     return True
 
+def log(message):
+    """Log a message to both console and the log file."""
+    print(message)
+    with open(LOG_FILE, "a") as log_file:
+        log_file.write(message + "\n")
+
 def filter_hunk(file_path, hunk):
-    """
-    Main filter function that applies all individual filters.
-    """    
-    # List of filters to apply
+    """Main filter function that applies all individual filters."""
     filters = [
-        #paseo_to_polkadot_filter,
-        #keep_sudo_filter,
-        # Add more filters here
+        paseo_to_polkadot_filter,
+        keep_sudo_filter
     ]
     
-    # Apply all filters
     for filter_func in filters:
         if not filter_func(file_path, hunk):
             return False
-    
     return True
+
+def apply_hunk_with_git(file_path, hunk_content):
+    """Apply a single hunk using git apply."""
+    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.patch') as temp_file:
+        # Format the hunk content as a proper patch file
+        patch_content = f"diff --git a/{file_path} b/{file_path}\n"
+        patch_content += "--- a/{}\n+++ b/{}\n".format(file_path, file_path)
+        patch_content += hunk_content
+        temp_file.write(patch_content)
+        temp_file_path = temp_file.name
+
+    try:
+        result = subprocess.run(['git', 'apply', '--3way', temp_file_path], 
+                                capture_output=True, text=True, check=True)
+        log(f"Successfully applied hunk to {file_path}")
+        return True
+    except subprocess.CalledProcessError as e:
+        log(f"Failed to apply hunk to {file_path}: {e.stderr}")
+        return False
+    finally:
+        os.unlink(temp_file_path)
 
 def apply_patch_line_by_line(patch_file, check_only=False, hunk_filter=filter_hunk):
     try:
@@ -59,68 +84,46 @@ def apply_patch_line_by_line(patch_file, check_only=False, hunk_filter=filter_hu
 
         for patched_file in patch:
             file_path = patched_file.path
-            try:
-                with open(file_path, 'r') as tf:
-                    target_lines = tf.readlines()
-            except FileNotFoundError:
-                print(f"Warning: File {file_path} not found. Skipping.")
-                continue
-
-            modified = False
             for hunk in patched_file:
-                try:
-                    # Apply the hunk filter
-                    if not hunk_filter(file_path, hunk):
-                        print(f"Skipping hunk in {file_path} due to filter")
-                        continue
+                if not hunk_filter(file_path, hunk):
+                    log(f"Skipping hunk in {file_path} due to filter")
+                    continue
 
-                    for line in hunk:
-                        try:
-                            if line.is_added:
-                                target_lines.insert(line.target_line_no - 1, line.value)
-                                modified = True
-                            elif line.is_removed:
-                                if line.source_line_no <= len(target_lines) and target_lines[line.source_line_no - 1] == line.value:
-                                    target_lines.pop(line.source_line_no - 1)
-                                    modified = True
-                                else:
-                                    print(f"Warning: Line to remove not found or mismatch in {file_path} at line {line.source_line_no}")
-                        except IndexError:
-                            print(f"Error: Index out of range in {file_path} at line {line.source_line_no or line.target_line_no}")
-                            if not check_only:
-                                return False
-                except Exception as e:
-                    print(f"Error processing hunk in {file_path}: {e}")
-                    if not check_only:
+                hunk_content = str(hunk)
+                if not check_only:
+                    success = apply_hunk_with_git(file_path, hunk_content)
+                    if not success:
+                        log(f"Failed to apply hunk to {file_path}")
                         return False
-
-            if modified and not check_only:
-                with open(file_path, 'w') as tf:
-                    tf.writelines(target_lines)
+                else:
+                    log(f"Hunk for {file_path} can be applied")
 
         if not check_only:
-            print("Patch applied successfully!")
+            log("Patch applied successfully!")
         else:
-            print("Patch can be applied successfully.")
+            log("Patch can be applied successfully.")
         return True
     except Exception as e:
-        print(f"Failed to apply patch: {e}")
+        log(f"Failed to apply patch: {e}")
         return False
 
 def main():
     if len(sys.argv) < 2 or len(sys.argv) > 3:
-        print("Usage: python apply_runtime_patch.py [--check] <patch_file>")
+        log("Usage: python apply_runtime_patch.py [--check] <patch_file>")
         sys.exit(1)
 
     check_flag = False
     if len(sys.argv) == 3:
         if sys.argv[1] != "--check":
-            print("Invalid argument. Use --check for check mode.")
+            log("Invalid argument. Use --check for check mode.")
             sys.exit(1)
         check_flag = True
         patch_file = sys.argv[2]
     else:
         patch_file = sys.argv[1]
+
+    # Clear the log file before starting
+    open(LOG_FILE, "w").close()
 
     success = apply_patch_line_by_line(patch_file, check_flag, hunk_filter=filter_hunk)
     sys.exit(0 if success else 1)
