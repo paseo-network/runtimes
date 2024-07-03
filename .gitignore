@@ -39,3 +39,4 @@ substrate.code-workspace
 target/
 **/tmp_runtime
 **/tmp_hub
+patch.log
