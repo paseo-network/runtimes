@@ -62,6 +62,8 @@ git switch -c release/${NEXT_TAG}-runtime
 print_message "----- Committing new polkadot runtime into paseo repo -----" "${BLUE}"
 rm -rf relay/paseo/*
 cp -rf ../polkadot_runtime/relay/polkadot/* relay/paseo/.
+print_message "----- Copying Cargo.toml to paseo folder -----" "${BLUE}"
+cp -f ../polkadot_runtime/Cargo.toml ./
 git add .
 git commit -m "initial polkadot ${NEXT_TAG} code"
 
