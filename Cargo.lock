@@ -421,6 +421,7 @@ version = "1.0.0"
 dependencies = [
  "asset-test-utils",
  "assets-common",
+ "bp-asset-hub-paseo",
  "bp-bridge-hub-paseo",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-parachain-system",
@@ -839,6 +840,16 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
+]
+
+[[package]]
+name = "bp-asset-hub-paseo"
+version = "1.0.0"
+dependencies = [
+ "frame-support",
+ "sp-std",
+ "staging-xcm",
+ "system-parachains-constants",
 ]
 
 [[package]]

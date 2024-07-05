@@ -248,7 +248,7 @@ impl pallet_balances::Config for Runtime {
 
 parameter_types! {
 	/// Relay Chain `TransactionByteFee` / 10
-	pub const TransactionByteFee: Balance = paseo_runtime_constants::fee::TRANSACTION_BYTE_FEE;
+	pub const TransactionByteFee: Balance = MILLICENTS;
 	pub StakingPot: AccountId = CollatorSelection::account_id();
 }
 
@@ -1641,7 +1641,7 @@ mod tests {
 
     #[test]
     fn test_transasction_byte_fee_is_one_tenth_of_relay() {
-        let relay_tbf = paseo_runtime_constants::fee::TRANSACTION_BYTE_FEE;
+        let relay_tbf = paseo_runtime_constants::fee::TRANSACTION_BYTE_FEE; //10 * super::currency::MILLICENTS
         let parachain_tbf = TransactionByteFee::get();
         assert_eq!(relay_tbf / 10, parachain_tbf);
     }

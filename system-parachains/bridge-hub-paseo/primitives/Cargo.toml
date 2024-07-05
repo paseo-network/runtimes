@@ -28,13 +28,15 @@ xcm = { workspace = true }
 [features]
 default = ["std"]
 std = [
-    "bp-bridge-hub-cumulus/std",
-    "bp-messages/std",
-    "bp-runtime/std",
-    "frame-support/std",
-    "snowbridge-core/std",
-    "sp-api/std",
-    "sp-runtime/std",
-    "sp-std/std",
-    "xcm/std",
+	"bp-bridge-hub-cumulus/std",
+	"bp-messages/std",
+	"bp-runtime/std",
+	"frame-support/std",
+	"snowbridge-core/std",
+	"sp-api/std",
+	"sp-runtime/std",
+	"sp-std/std",
+	"xcm/std",
+	"codec/std",
+	"scale-info/std"
 ]

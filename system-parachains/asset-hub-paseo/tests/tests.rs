@@ -17,43 +17,41 @@
 
 //! Tests for the Polkadot Asset Hub (previously known as Statemint) chain.
 
-use asset_hub_polkadot_runtime::{
+use asset_hub_paseo_runtime::{
 	xcm_config::{
-		bridging::{self, XcmBridgeHubRouterFeeAssetId},
-		AssetFeeAsExistentialDepositMultiplierFeeCharger, CheckingAccount, DotLocation,
-		ForeignCreatorsSovereignAccountOf, LocationToAccountId, TreasuryAccount,
+		CheckingAccount, DotLocation,
+		ForeignCreatorsSovereignAccountOf,
 		TrustBackedAssetsPalletLocation, XcmConfig,
 	},
 	AllPalletsWithoutSystem, AssetDeposit, Assets, Balances, ExistentialDeposit, ForeignAssets,
-	ForeignAssets, ForeignAssetsInstance, MetadataDepositBase, MetadataDepositPerByte, ParachainSystem, Runtime,
-	RuntimeCall, RuntimeEvent, SessionKeys, ToKusamaXcmRouterInstance, TrustBackedAssetsInstance,
-	XcmpQueue,
+	ForeignAssetsInstance, MetadataDepositBase, MetadataDepositPerByte, ParachainSystem, Runtime,
+	RuntimeCall, RuntimeEvent, SessionKeys, TrustBackedAssetsInstance,
 };
-use asset_test_utils::{
-	test_cases_over_bridge::TestBridgingConfig, CollatorSessionKey, CollatorSessionKeys, ExtBuilder,
-};
-use codec::{Decode, Encode};
-use cumulus_primitives_utility::ChargeWeightInFungibles;
+use frame_support::traits::fungibles::InspectEnumerable;
+use system_parachains_constants::paseo::consensus::RELAY_CHAIN_SLOT_DURATION_MILLIS;
+use codec::{Decode};
 use frame_support::{
-	assert_noop, assert_ok,
-	traits::fungibles::InspectEnumerable,
-	weights::{Weight, WeightToFee as WeightToFeeT},
+	assert_ok,
 };
+use xcm::latest::prelude::Assets as XcmAssets;
+use frame_support::sp_runtime::traits::MaybeEquivalence;
+use codec::Encode;
 use parachains_common::{
 	AccountId, AssetHubPolkadotAuraId as AuraId, AssetIdForTrustBackedAssets, Balance,
 };
 use parachains_runtimes_test_utils::SlotDurations;
 use sp_consensus_aura::SlotDuration;
-use sp_runtime::traits::MaybeEquivalence;
-use system_parachains_constants::polkadot::fee::WeightToFee;
-use xcm::latest::prelude::*;
-use xcm_executor::traits::{Identity, JustTry, WeightTrader};
+use system_parachains_constants::paseo::fee::WeightToFee;
+use xcm_executor::traits::JustTry;
+use xcm_builder::V4V3LocationConverter;
+use system_parachains_constants::SLOT_DURATION;
+use asset_test_utils::{CollatorSessionKeys, ExtBuilder, CollatorSessionKey};
 
 const ALICE: [u8; 32] = [1u8; 32];
 const SOME_ASSET_ADMIN: [u8; 32] = [5u8; 32];
 
-type AssetIdForTrustBackedAssetsConvert =
-	assets_common::AssetIdForTrustBackedAssetsConvert<TrustBackedAssetsPalletLocation>;
+type AssetIdForTrustBackedAssetsConvertLatest =
+assets_common::AssetIdForTrustBackedAssetsConvertLatest<TrustBackedAssetsPalletLocation>;
 
 type RuntimeHelper = asset_test_utils::RuntimeHelper<Runtime, AllPalletsWithoutSystem>;
 
@@ -192,7 +190,7 @@ fn test_assets_balances_api_works() {
 			)));
 			// check trusted asset
 			assert!(result.inner().iter().any(|asset| asset.eq(&(
-				AssetIdForTrustBackedAssetsConvert::convert_back(&local_asset_id).unwrap(),
+				AssetIdForTrustBackedAssetsConvertLatest::convert_back(&local_asset_id).unwrap(),
 				minimum_asset_balance
 			)
 				.into())));

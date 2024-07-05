@@ -15,6 +15,7 @@ log = { version = "0.4.20", default-features = false }
 scale-info = { version = "2.10.0", default-features = false, features = ["derive"] }
 
 # Local
+bp-asset-hub-paseo = { path = "../asset-hub-paseo/primitives", default-features = false}
 bp-bridge-hub-paseo = { path = "../bridge-hub-paseo/primitives", default-features = false}
 paseo-runtime-constants = { path = "../../relay/paseo/constants", default-features = false}
 
@@ -139,6 +140,8 @@ runtime-benchmarks = [
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
 	"xcm-executor/runtime-benchmarks",
+	"pallet-asset-conversion/runtime-benchmarks",
+	"pallet-xcm-bridge-hub-router/runtime-benchmarks"
 ]
 try-runtime = [
 	"cumulus-pallet-aura-ext/try-runtime",
@@ -169,6 +172,7 @@ try-runtime = [
 	"parachain-info/try-runtime",
 	"polkadot-runtime-common/try-runtime",
 	"sp-runtime/try-runtime",
+	"pallet-xcm-bridge-hub-router/try-runtime"
 ]
 std = [
 	"assets-common/std",
@@ -239,6 +243,8 @@ std = [
 	"xcm-builder/std",
 	"xcm-executor/std",
 	"xcm/std",
+	"bp-bridge-hub-paseo/std",
+	"pallet-xcm-bridge-hub-router/std"
 ]
 
 # Enable metadata hash generation at compile time for the `CheckMetadataHash` extension.

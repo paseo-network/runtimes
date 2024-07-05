@@ -198,6 +198,7 @@ members = [
 	"relay/paseo",
 	"relay/paseo/constants",
 	"system-parachains/asset-hub-paseo",
+	"system-parachains/asset-hub-paseo/primitives",
 	"system-parachains/bridge-hub-paseo/primitives",
 	"system-parachains/constants"
 ]

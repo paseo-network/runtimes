@@ -26,7 +26,7 @@ use assets_common::{
 use frame_support::{
     parameter_types,
     traits::{
-        tokens::imbalance::{ResolveAssetTo, ResolveTo},
+        tokens::imbalance::{ResolveAssetTo},
         ConstU32, Contains, Equals, Everything, Nothing, PalletInfoAccess,
     },
 };
@@ -348,7 +348,7 @@ impl xcm_executor::Config for XcmConfig {
 			DotLocation,
 			AccountId,
 			Balances,
-			ResolveTo<StakingPot, Balances>,
+			parachains_common::impls::ToStakingPot<Runtime>,
 		>,
 		// This trader allows to pay with any assets exchangeable to DOT with
 		// [`AssetConversion`].
