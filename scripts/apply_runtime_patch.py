@@ -6,20 +6,7 @@ import re
 from unidiff import PatchSet
 
 # Global variable for the log file name
-LOG_FILE = "out.txt"
-
-def paseo_to_polkadot_filter(file_path, hunk):
-    """
-    Filter to skip hunks where the removed line contains 'Paseo' or 'paseo'
-    and the added line contains 'Polkadot' or 'polkadot'.
-    """
-    for line in hunk:
-        if line.is_removed and re.search(r'[Pp]aseo', line.value):
-            for added_line in hunk:
-                if added_line.is_added and re.search(r'[Pp]olkadot', added_line.value):
-                    log(f"  Skipping hunk in {file_path}: Contains Paseo to Polkadot replacement")
-                    return False
-    return True
+LOG_FILE = "apply_patch.log"
 
 def keep_sudo_filter(file_path, hunk):
     """
@@ -47,7 +34,6 @@ def log(message):
 def filter_hunk(file_path, hunk):
     """Main filter function that applies all individual filters."""
     filters = [
-        paseo_to_polkadot_filter,
         keep_sudo_filter
     ]
     
