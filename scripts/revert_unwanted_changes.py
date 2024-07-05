@@ -12,10 +12,12 @@ def log(message):
     with open(LOG_FILE, "a") as log_file:
         log_file.write(message + "\n")
 
-def get_changed_files():
-    """Get the list of changed files using git."""
-    result = subprocess.run(['git', 'diff', '--name-only'], capture_output=True, text=True, check=True)
-    return result.stdout.strip().split('\n')
+def get_changed_rs_files():
+    """Get the list of changed *.rs files using git."""
+    result = subprocess.run(['git', 'diff', '--name-only', '*.rs'], capture_output=True, text=True, check=True)
+    files = result.stdout.strip().split('\n')
+    log(f"Changed .rs files: {files}")
+    return [f for f in files if f.strip()]  # Remove empty strings
 
 def get_file_diff(file_path):
     """Get the diff for a specific file."""
@@ -25,7 +27,7 @@ def get_file_diff(file_path):
 def apply_filters(line):
     """Apply filters to determine if a line should be reverted."""
     filters = [
-        (r'\b(?:Polkadot|polkadot)\b', 'Paseo'),  # Revert "Polkadot" to "Paseo"
+        (r'(Polkadot|polkadot)', lambda m: 'Paseo' if m.group(1) == 'Polkadot' else 'paseo'),  # Revert "Polkadot" to "Paseo" and "polkadot" to "paseo" anywhere in the line
         # Add more filters here as needed
     ]
     
@@ -36,14 +38,18 @@ def apply_filters(line):
 
 def revert_changes(file_path, diff):
     """Revert unwanted changes in a file based on its diff."""
+    if not os.path.exists(file_path):
+        log(f"File {file_path} does not exist, skipping.")
+        return
+
     with open(file_path, 'r') as f:
         content = f.readlines()
 
     changes_made = False
     lines_to_revert = []
-
     for line in diff.split('\n'):
         if line.startswith('+') and not line.startswith('+++'):
+            # This is an added line
             revert_line = apply_filters(line[1:])
             if revert_line:
                 lines_to_revert.append((line[1:], revert_line))
@@ -69,16 +75,17 @@ def main():
     log("Starting revert_unwanted_changes.py")
 
     try:
-        changed_files = get_changed_files()
-        for file_path in changed_files:
-            if os.path.exists(file_path):
-                log(f"Processing {file_path}")
-                diff = get_file_diff(file_path)
-                revert_changes(file_path, diff)
-            else:
-                log(f"File {file_path} does not exist, skipping.")
+        changed_files = get_changed_rs_files()
+        if not changed_files:
+            log("No changed .rs files found. Make sure you have uncommitted changes in .rs files.")
+            return
 
-        log("Finished processing all changed files.")
+        for file_path in changed_files:
+            log(f"Processing {file_path}")
+            diff = get_file_diff(file_path)
+            revert_changes(file_path, diff)
+
+        log("Finished processing all changed .rs files.")
     except Exception as e:
         log(f"An error occurred: {str(e)}")
         sys.exit(1)
