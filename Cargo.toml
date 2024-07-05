@@ -41,6 +41,7 @@ emulated-integration-tests-common = { version = "4.0.0" }
 enumflags2 = { version = "0.7.7" }
 frame-benchmarking = { version = "29.0.0", default-features = false }
 frame-election-provider-support = { version = "29.0.0", default-features = false }
+frame-metadata-hash-extension = { version = "0.1.0", default-features = false }
 frame-executive = { version = "29.0.0", default-features = false }
 frame-support = { version = "29.0.2", default-features = false }
 frame-system = { version = "29.0.0", default-features = false }
@@ -141,6 +142,18 @@ separator = { version = "0.4.1" }
 serde = { version = "1.0.196" }
 serde_json = { version = "1.0.113" }
 smallvec = { version = "1.13.1" }
+snowbridge-beacon-primitives = { version = "0.1.0", default-features = false }
+snowbridge-core = { version = "0.1.1", default-features = false }
+snowbridge-outbound-queue-runtime-api = { version = "0.1.1", default-features = false }
+snowbridge-pallet-ethereum-client = { version = "0.1.2", default-features = false }
+snowbridge-pallet-inbound-queue = { version = "0.1.1", default-features = false }
+snowbridge-pallet-inbound-queue-fixtures = { version = "0.9.0" }
+snowbridge-pallet-outbound-queue = { version = "0.1.1", default-features = false }
+snowbridge-pallet-system = { version = "0.1.1", default-features = false }
+snowbridge-router-primitives = { version = "0.1.0", default-features = false }
+snowbridge-runtime-common = { version = "0.1.0", default-features = false }
+snowbridge-runtime-test-common = { version = "0.1.0" }
+snowbridge-system-runtime-api = { version = "0.1.0", default-features = false }
 sp-api = { version = "27.0.0", default-features = false }
 sp-application-crypto = { version = "31.0.0", default-features = false }
 sp-arithmetic = { version = "24.0.0", default-features = false }
@@ -183,7 +196,10 @@ resolver = "2"
 members = [
 	"chain-spec-generator",
 	"relay/paseo",
-	"relay/paseo/constants"
+	"relay/paseo/constants",
+	"system-parachains/asset-hub-paseo",
+	"system-parachains/bridge-hub-paseo/primitives",
+	"system-parachains/constants"
 ]
 
 [profile.release]
