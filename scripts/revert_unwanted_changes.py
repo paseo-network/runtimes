@@ -2,6 +2,7 @@ import subprocess
 import re
 import os
 import sys
+import json
 
 # Global variable for the log file name
 LOG_FILE = "revert_unwanted_changes.log"
@@ -12,11 +13,11 @@ def log(message):
     with open(LOG_FILE, "a") as log_file:
         log_file.write(message + "\n")
 
-def get_changed_rs_files():
-    """Get the list of changed *.rs files using git."""
-    result = subprocess.run(['git', 'diff', '--name-only', '*.rs'], capture_output=True, text=True, check=True)
+def get_changed_files():
+    """Get the list of changed *.rs and *.toml files using git."""
+    result = subprocess.run(['git', 'diff', '--name-only', '*.rs', '*.toml'], capture_output=True, text=True, check=True)
     files = result.stdout.strip().split('\n')
-    log(f"Changed .rs files: {files}")
+    log(f"Changed .rs and .toml files: {files}")
     return [f for f in files if f.strip()]  # Remove empty strings
 
 def get_file_diff(file_path):
@@ -24,19 +25,20 @@ def get_file_diff(file_path):
     result = subprocess.run(['git', 'diff', file_path], capture_output=True, text=True, check=True)
     return result.stdout
 
-def apply_filters(line):
-    """Apply filters to determine if a line should be reverted."""
-    filters = [
-        (r'(Polkadot|polkadot)', lambda m: 'Paseo' if m.group(1) == 'Polkadot' else 'paseo'),  # Revert "Polkadot" to "Paseo" and "polkadot" to "paseo" anywhere in the line
-        # Add more filters here as needed
-    ]
-    
-    for pattern, replacement in filters:
-        if re.search(pattern, line):
-            return re.sub(pattern, replacement, line)
-    return None
+def load_replacements(replacements_file):
+    """Load replacements from the JSON configuration file."""
+    with open(replacements_file, 'r') as f:
+        config = json.load(f)
+    return config.get("replacements", {})
 
-def revert_changes(file_path, diff):
+def apply_filters(line, replacements):
+    """Apply filters to determine if a line should be reverted."""
+    for pattern, replacement in replacements.items():
+        # Use word boundaries to match exact words
+        line = re.sub(rf'\b{re.escape(pattern)}\b', replacement, line)
+    return line
+
+def revert_changes(file_path, diff, replacements):
     """Revert unwanted changes in a file based on its diff."""
     if not os.path.exists(file_path):
         log(f"File {file_path} does not exist, skipping.")
@@ -50,8 +52,8 @@ def revert_changes(file_path, diff):
     for line in diff.split('\n'):
         if line.startswith('+') and not line.startswith('+++'):
             # This is an added line
-            revert_line = apply_filters(line[1:])
-            if revert_line:
+            revert_line = apply_filters(line[1:], replacements)
+            if revert_line != line[1:]:
                 lines_to_revert.append((line[1:], revert_line))
 
     for i, line in enumerate(content):
@@ -69,23 +71,30 @@ def revert_changes(file_path, diff):
         log(f"No changes to revert in {file_path}")
 
 def main():
+    if len(sys.argv) != 2:
+        print("Usage: python revert_unwanted_changes.py <path_to_replacements_config.json>")
+        sys.exit(1)
+
+    replacements_file = sys.argv[1]
+
     # Clear the log file before starting
     open(LOG_FILE, "w").close()
 
     log("Starting revert_unwanted_changes.py")
 
     try:
-        changed_files = get_changed_rs_files()
+        replacements = load_replacements(replacements_file)
+        changed_files = get_changed_files()
         if not changed_files:
-            log("No changed .rs files found. Make sure you have uncommitted changes in .rs files.")
+            log("No changed .rs or .toml files found. Make sure you have uncommitted changes in .rs or .toml files.")
             return
 
         for file_path in changed_files:
             log(f"Processing {file_path}")
             diff = get_file_diff(file_path)
-            revert_changes(file_path, diff)
+            revert_changes(file_path, diff, replacements)
 
-        log("Finished processing all changed .rs files.")
+        log("Finished processing all changed .rs and .toml files.")
     except Exception as e:
         log(f"An error occurred: {str(e)}")
         sys.exit(1)
