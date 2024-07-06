@@ -26,10 +26,10 @@ def get_file_diff(file_path):
     return result.stdout
 
 def load_replacements(replacements_file):
-    """Load replacements from the JSON configuration file."""
+    """Load replacements and other configurations from the JSON configuration file."""
     with open(replacements_file, 'r') as f:
         config = json.load(f)
-    return config.get("replacements", {})
+    return config.get("replacements", {}), config.get("remove_block_pattern", ""), config.get("files_to_revert", [])
 
 def apply_filters(line, replacements):
     """Apply filters to determine if a line should be reverted."""
@@ -37,6 +37,15 @@ def apply_filters(line, replacements):
         # Use word boundaries to match exact words
         line = re.sub(rf'\b{re.escape(pattern)}\b', replacement, line)
     return line
+
+def remove_text_block(file_path, pattern):
+    """Remove text blocks matching the pattern from the file."""
+    with open(file_path, 'r') as file:
+        content = file.read()
+    content = re.sub(pattern, "", content, flags=re.DOTALL)
+    with open(file_path, 'w') as file:
+        file.write(content)
+    log(f"Removed text blocks matching pattern from {file_path}")
 
 def revert_changes(file_path, diff, replacements):
     """Revert unwanted changes in a file based on its diff."""
@@ -70,6 +79,17 @@ def revert_changes(file_path, diff, replacements):
     else:
         log(f"No changes to revert in {file_path}")
 
+def revert_removed_files(files_to_revert):
+    """Revert the removal of specified files."""
+    result = subprocess.run(['git', 'ls-files', '--deleted'], capture_output=True, text=True, check=True)
+    deleted_files = result.stdout.strip().split('\n')
+    for file_path in deleted_files:
+        if not file_path.strip():
+            continue
+        if file_path in files_to_revert:
+            subprocess.run(['git', 'checkout', '--', file_path], check=True)
+            log(f"Reverted removal of file: {file_path}")
+
 def main():
     if len(sys.argv) != 2:
         print("Usage: python revert_unwanted_changes.py <path_to_replacements_config.json>")
@@ -83,18 +103,21 @@ def main():
     log("Starting revert_unwanted_changes.py")
 
     try:
-        replacements = load_replacements(replacements_file)
-        changed_files = get_changed_files()
-        if not changed_files:
-            log("No changed .rs or .toml files found. Make sure you have uncommitted changes in .rs or .toml files.")
+        replacements, remove_block_pattern, files_to_revert = load_replacements(replacements_file)
+        if not files_to_revert:
+            log("No files to revert found in the configuration.")
             return
 
-        for file_path in changed_files:
+        for file_path in files_to_revert:
             log(f"Processing {file_path}")
             diff = get_file_diff(file_path)
             revert_changes(file_path, diff, replacements)
+            if remove_block_pattern:
+                remove_text_block(file_path, remove_block_pattern)
 
-        log("Finished processing all changed .rs and .toml files.")
+        revert_removed_files(files_to_revert)
+
+        log("Finished processing all specified files.")
     except Exception as e:
         log(f"An error occurred: {str(e)}")
         sys.exit(1)

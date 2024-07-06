@@ -16,5 +16,8 @@
       "Polkadot": "Paseo",
       "polkadot": "paseo"
     },
-    "remove_block_pattern": "\\s*// Polkadot Genesis was on May 26, 2020\\..*?DOT_LEASE_OFFSET\\\"\\);"
+    "remove_block_pattern": "\\s*// Polkadot Genesis was on May 26, 2020\\..*?DOT_LEASE_OFFSET\\\"\\);",
+    "files_to_revert": [
+      "sudo.rs"
+    ]
   }
