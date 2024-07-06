@@ -43,7 +43,7 @@ def filter_hunk(file_path, hunk):
     return True
 
 def apply_hunk_with_git(file_path, hunk_content):
-    """Apply a single hunk using git apply and reset the file."""
+    """Apply a single hunk using git apply."""
     with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.patch') as temp_file:
         # Format the hunk content as a proper patch file
         patch_content = f"diff --git a/{file_path} b/{file_path}\n"
@@ -53,19 +53,12 @@ def apply_hunk_with_git(file_path, hunk_content):
         temp_file_path = temp_file.name
 
     try:
-        # Apply the hunk
         result = subprocess.run(['git', 'apply', '--3way', temp_file_path], 
                                 capture_output=True, text=True, check=True)
         log(f"Successfully applied hunk to {file_path}")
-
-        # Reset the file to unstage changes
-        reset_result = subprocess.run(['git', 'reset', file_path],
-                                      capture_output=True, text=True, check=True)
-        log(f"Reset {file_path} to unstage changes")
-
         return True
     except subprocess.CalledProcessError as e:
-        log(f"Failed to apply hunk or reset {file_path}: {e.stderr}")
+        log(f"Failed to apply hunk to {file_path}: {e.stderr}")
         return False
     finally:
         os.unlink(temp_file_path)
@@ -74,6 +67,8 @@ def apply_patch_line_by_line(patch_file, check_only=False, hunk_filter=filter_hu
     try:
         with open(patch_file, 'r') as pf:
             patch = PatchSet(pf)
+
+        modified_files = set()
 
         for patched_file in patch:
             file_path = patched_file.path
@@ -88,10 +83,21 @@ def apply_patch_line_by_line(patch_file, check_only=False, hunk_filter=filter_hu
                     if not success:
                         log(f"Failed to apply hunk to {file_path}")
                         return False
+                    modified_files.add(file_path)
                 else:
                     log(f"Hunk for {file_path} can be applied")
 
         if not check_only:
+            # Reset all modified files
+            for file_path in modified_files:
+                try:
+                    reset_result = subprocess.run(['git', 'reset', file_path],
+                                                  capture_output=True, text=True, check=True)
+                    log(f"Reset {file_path} to unstage changes")
+                except subprocess.CalledProcessError as e:
+                    log(f"Failed to reset {file_path}: {e.stderr}")
+                    return False
+
             log("Patch applied successfully!")
         else:
             log("Patch can be applied successfully.")
