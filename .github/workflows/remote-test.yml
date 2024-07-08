@@ -20,7 +20,7 @@ jobs:
             -d '{
               "ref": "main",
               "inputs": {
-                "target_repo": "https://github.com/paseo-network/runtimes",
+                "target_repo": "https://github.com/${{ github.repository }}",
                 "target_branch": "${{ github.head_ref }}"
               }
             }'
