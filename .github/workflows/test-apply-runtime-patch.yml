@@ -1,0 +1,16 @@
+name: Test apply runtime patch
+
+on:
+  pull_request:
+
+jobs:
+  apply-patch:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Apply patch
+      run: |
+        ./scripts/apply_runtime_patch.sh --check ./patches/paseo_specific_changes.patch
