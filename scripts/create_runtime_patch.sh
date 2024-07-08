@@ -75,6 +75,17 @@ cp -rf ../polkadot_runtime_next/relay/polkadot/* relay/paseo/.
 cp -f ../polkadot_runtime_next/Cargo.toml ./
 
 if [ "$PROCESS_PARACHAINS" = "true" ]; then
+    print_message "----- Copying system-parachains files -----" "${BLUE}"
+    cp ../polkadot_runtime_next/system-parachains/constants/Cargo.toml system-parachains/constants
+    cp ../polkadot_runtime_next/system-parachains/constants/src/polkadot.rs system-parachains/constants/src/paseo.rs
+    cp ../polkadot_runtime_next/system-parachains/constants/src/lib.rs system-parachains/constants/src/
+
+    print_message "Copied system-parachains files:" "${WHITE}"
+    print_message "- Cargo.toml" "${WHITE}"
+    print_message "- constants/src/paseo.rs (renamed from polkadot.rs)" "${WHITE}"
+    print_message "- constants/src/lib.rs" "${WHITE}"
+
+
     print_message "----- Copying specified parachains -----" "${BLUE}"
     for parachain in "${PARACHAINS[@]}"; do
         read -r parachain_name source_dir dest_dir <<< "$parachain"
@@ -114,6 +125,10 @@ if [ "$PROCESS_PARACHAINS" = "true" ]; then
             print_message "Warning: ${dest_dir} not found for ${parachain_name}, skipping patch creation" "${RED}"
         fi
     done
+
+     # Create patch for system-parachains/constants and system-parachains/Cargo.toml
+    git diff ${LATEST_COMMIT} HEAD -- system-parachains/constants system-parachains/constants/Cargo.toml > "../../patches/system_parachains_common.patch"
+    print_message "Created patch for system-parachains/constants"
 fi
 
 print_message "--------------------" "${BLUE}"
