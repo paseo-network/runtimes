@@ -15,15 +15,33 @@ print_message() {
 }
 
 # Check if the correct number of arguments is provided
-if [ "$#" -ne 2 ]; then
-    echo "Usage: $0 <current_paseo_runtime_version> <new_polkadot_runtime_version>"
+if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
+    echo "Usage: $0 <current_paseo_runtime_version> <new_polkadot_runtime_version> [process_parachains]"
+    echo "process_parachains: Optional. Set to 'true' to process parachains. Defaults to 'false'."
     exit 1
 fi
 
+# Define list of parachains to copy
+# Format: "parachain_name origin_dir dest_dir"
+# parachain_name: name of the parachain
+# origin_dir: relative path in polkadot_runtime_next/system-parachains/
+# dest_dir: relative path in paseo_runtime/system-parachains/
+PARACHAINS=(
+    "asset_hub asset-hubs/asset-hub-polkadot asset-hub-paseo"
+)
+
+
 CURRENT_TAG=$1
 NEXT_TAG=$2
+PROCESS_PARACHAINS=${3:-false}
 POLKADOT_CURRENT_TAG=v${CURRENT_TAG}
 POLKADOT_NEXT_TAG=v${NEXT_TAG}
+
+
+print_message "========================================" "${GREEN}"
+print_message "Creating patches from tag ${POLKADOT_CURRENT_TAG} to ${POLKADOT_NEXT_TAG}" "${GREEN}"
+print_message "Parachains processing: ${PROCESS_PARACHAINS}" "${GREEN}"
+print_message "========================================" "${GREEN}"
 
 rm -rf tmp_runtime
 mkdir tmp_runtime
@@ -55,14 +73,50 @@ print_message "----- Copying new Polkadot runtime to Paseo -----" "${BLUE}"
 rm -rf relay/paseo/*
 cp -rf ../polkadot_runtime_next/relay/polkadot/* relay/paseo/.
 cp -f ../polkadot_runtime_next/Cargo.toml ./
+
+if [ "$PROCESS_PARACHAINS" = "true" ]; then
+    print_message "----- Copying specified parachains -----" "${BLUE}"
+    for parachain in "${PARACHAINS[@]}"; do
+        read -r parachain_name source_dir dest_dir <<< "$parachain"
+        source_dir="../polkadot_runtime_next/system-parachains/${source_dir}"
+        dest_dir="system-parachains/${dest_dir}"
+        if [ -d "$source_dir" ]; then
+            mkdir -p "$dest_dir"
+            cp -rf "$source_dir"/* "$dest_dir/"
+            print_message "Copied ${parachain_name} from ${source_dir} to ${dest_dir}" "${WHITE}"
+        else
+            print_message "Warning: ${source_dir} not found for ${parachain_name}" "${RED}"
+        fi
+    done
+fi
+
 git add .
 git commit -m "Update to Polkadot ${NEXT_TAG} runtime"
+if [ "$PROCESS_PARACHAINS" = "true" ]; then
+    git commit --amend -m "Update to Polkadot ${NEXT_TAG} runtime and copy specified parachains"
+fi
 
-print_message "----- Creating patch file for Paseo-specific modifications -----" "${WHITE}"
+print_message "----- Creating patch files for Paseo-specific modifications -----" "${WHITE}"
 mkdir -p ../../patches
-git diff ${LATEST_COMMIT} HEAD > ../../patches/paseo_specific_changes.patch
+
+# Create patch for relay/paseo and Cargo.toml
+git diff ${LATEST_COMMIT} HEAD -- relay/paseo Cargo.toml > ../../patches/relay_polkadot.patch
+
+if [ "$PROCESS_PARACHAINS" = "true" ]; then
+    # Create patches for each parachain
+    for parachain in "${PARACHAINS[@]}"; do
+        read -r parachain_name _ dest_dir <<< "$parachain"
+        parachain_dir="system-parachains/${dest_dir}"
+        if [ -d "$parachain_dir" ]; then
+            git diff ${LATEST_COMMIT} HEAD -- "$parachain_dir" > "../../patches/parachain_${parachain_name}.patch"
+            print_message "Created patch for ${parachain_name}" "${WHITE}"
+        else
+            print_message "Warning: ${dest_dir} not found for ${parachain_name}, skipping patch creation" "${RED}"
+        fi
+    done
+fi
 
 print_message "--------------------" "${BLUE}"
-print_message "----- Patch file created: patches/paseo_specific_changes.patch -----" "${WHITE}"
-print_message "----- Apply this patch file to integrate Paseo-specific changes -----" "${WHITE}"
+print_message "----- Patch files created in patches/ directory -----" "${WHITE}"
+print_message "----- Apply these patch files to integrate Paseo-specific changes -----" "${WHITE}"
 print_message "--------------------" "${BLUE}"
