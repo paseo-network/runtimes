@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 set -e
 
 # Define colors
@@ -22,59 +22,47 @@ fi
 
 CURRENT_TAG=$1
 NEXT_TAG=$2
+POLKADOT_CURRENT_TAG=v${CURRENT_TAG}
+POLKADOT_NEXT_TAG=v${NEXT_TAG}
 
 rm -rf tmp_runtime
 mkdir tmp_runtime
 cd tmp_runtime
 
-print_message "----- Cloning paseo runtime repo -----" "${BLUE}"
-git clone https://github.com/paseo-network/runtimes.git paseo_runtime
+print_message "----- Cloning repositories -----" "${BLUE}"
+git clone --depth 1 https://github.com/paseo-network/runtimes.git paseo_runtime
+git clone --depth 1 --branch ${POLKADOT_CURRENT_TAG} https://github.com/polkadot-fellows/runtimes.git polkadot_runtime_current
+git clone --depth 1 --branch ${POLKADOT_NEXT_TAG} https://github.com/polkadot-fellows/runtimes.git polkadot_runtime_next
 
-print_message "----- Cloning polkadot runtime repo -----" "${BLUE}"
-git clone https://github.com/polkadot-fellows/runtimes.git polkadot_runtime
+print_message "----- Copying current Polkadot runtime to Paseo -----" "${BLUE}"
+cp -fr polkadot_runtime_current/relay/polkadot/* paseo_runtime/relay/paseo/.
 
-cd polkadot_runtime
-POLKADOT_CURRENT_TAG=v${CURRENT_TAG}
-print_message "----- Checking out tag ${POLKADOT_CURRENT_TAG} -----" "${WHITE}"
-git checkout tags/${POLKADOT_CURRENT_TAG}
-
-print_message "----- Copying runtime files to paseo folder -----" "${BLUE}"
-cp -fr relay/polkadot/* ../paseo_runtime/relay/paseo/.
-
-POLKADOT_NEXT_TAG=v${NEXT_TAG}
-print_message "----- Checking out tag ${POLKADOT_NEXT_TAG} -----" "${WHITE}"
-git checkout tags/${POLKADOT_NEXT_TAG}
-
-print_message "----- Committing current polkadot runtime on paseo repo -----" "${BLUE}"
-cd ../paseo_runtime
+print_message "----- Creating temporary branch in Paseo repo -----" "${BLUE}"
+cd paseo_runtime
 git switch -c tmp/${CURRENT_TAG}-runtime
 git add .
-git commit -m "go back from paseo to polkadot"
+git commit -m "Revert to Polkadot ${CURRENT_TAG} runtime"
 
-print_message "----- Revert and commit changes, leaving paseo specific changes -----" "${RED}"
+print_message "----- Reverting changes to keep Paseo-specific modifications -----" "${RED}"
 git revert --no-edit HEAD
 LATEST_COMMIT=$(git rev-parse HEAD)
 
-print_message "----- Creating new branch from main on paseo repo -----" "${BLUE}"
+print_message "----- Creating new branch for updated runtime -----" "${BLUE}"
 git switch main
 git switch -c release/${NEXT_TAG}-runtime
 
-print_message "----- Committing new polkadot runtime into paseo repo -----" "${BLUE}"
+print_message "----- Copying new Polkadot runtime to Paseo -----" "${BLUE}"
 rm -rf relay/paseo/*
-cp -rf ../polkadot_runtime/relay/polkadot/* relay/paseo/.
-print_message "----- Copying Cargo.toml to paseo folder -----" "${BLUE}"
-cp -f ../polkadot_runtime/Cargo.toml ./
+cp -rf ../polkadot_runtime_next/relay/polkadot/* relay/paseo/.
+cp -f ../polkadot_runtime_next/Cargo.toml ./
 git add .
-git commit -m "initial polkadot ${NEXT_TAG} code"
+git commit -m "Update to Polkadot ${NEXT_TAG} runtime"
 
-print_message "----- Creating patch file for paseo specific modifications -----" "${WHITE}"
+print_message "----- Creating patch file for Paseo-specific modifications -----" "${WHITE}"
 mkdir -p ../../patches
 git diff ${LATEST_COMMIT} HEAD > ../../patches/paseo_specific_changes.patch
 
-# Preprocess the patch file to replace "polkadot" with "paseo"
-#sed -i '' 's/polkadot/paseo/g' ../../patches/paseo_specific_changes.patch
-
 print_message "--------------------" "${BLUE}"
 print_message "----- Patch file created: patches/paseo_specific_changes.patch -----" "${WHITE}"
-print_message "----- Apply this patch file to integrate paseo specific changes -----" "${WHITE}"
+print_message "----- Apply this patch file to integrate Paseo-specific changes -----" "${WHITE}"
 print_message "--------------------" "${BLUE}"
