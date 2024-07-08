@@ -2,25 +2,41 @@
 
 This directory contains scripts for managing runtime patches:
 
-1. `create_runtime_patch.sh`: Creates a patch file with the new code from polkadot repo.
+1. `create_runtime_patch.sh`: Creates patch files with the new code from the Polkadot repo.
 2. `apply_runtime_patch.py`: Applies patches while preserving specific content.
 3. `revert_unwanted_changes.py`: Reverts specific changes in files.
 
-## Creating the runtime patch file
+## Creating the runtime patch files
 
-Creates a patch file for Paseo-specific modifications based on the differences between Polkadot runtime versions.
+Creates patch files for Paseo-specific modifications based on the differences between Polkadot runtime versions.
 
-   ```bash
-   ./scripts/create_runtime_patch.sh <current_version> <new_version>
-   ```
+Usage:
+
+```bash
+./scripts/create_runtime_patch.sh <current_version> <new_version> [process_parachains]
+```
+
+Parameters:
+
+- `current_version`: The current Paseo runtime version
+- `new_version`: The new Polkadot runtime version to update to
+- `process_parachains`: Optional. Set to 'true' to process parachains. Defaults to 'false'.
 
 Example:
 
-   ```bash
-   ./scripts/create_runtime_patch.sh 1.2.3 1.2.4
-   ```
+```bash
+# Without processing parachains
+./scripts/create_runtime_patch.sh 1.2.3 1.2.4
 
-This script will create a patch file named `paseo_specific_changes.patch` in the `patches` directory.
+# With processing parachains
+./scripts/create_runtime_patch.sh 1.2.3 1.2.4 true
+```
+
+This script will create the following patch files in the `patches` directory:
+
+- `relay_polkadot.patch`: Contains changes for the relay chain and Cargo.toml
+- `parachain_<name>.patch`: Created for each specified parachain if `process_parachains` is set to true
+- `system_parachains_common.patch`: Contains changes for the `system-parachains/constants` directory and `system-parachains/Cargo.toml` file
 
 ## Apply the patch
 
@@ -36,10 +52,10 @@ Examples:
 
 ```bash
 # Apply a patch
-python apply_runtime_patch.py ../patches/paseo_specific_changes
+python apply_runtime_patch.py ../patches/relay_polkadot.patch
 
 # Check if a patch can be applied
-python apply_runtime_patch.py --check ../patches/paseo_specific_changes
+python apply_runtime_patch.py --check ../patches/relay_polkadot.patch
 ```
 
 ## Revert unwanted changes
