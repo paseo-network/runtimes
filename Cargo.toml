@@ -13,6 +13,7 @@ authority-discovery-primitives = { version = "27.0.0", default-features = false,
 babe-primitives = { version = "0.33.0", default-features = false, package = "sp-consensus-babe" }
 beefy-primitives = { version = "14.0.0", default-features = false, package = "sp-consensus-beefy" }
 binary-merkle-tree = { version = "14.0.0", default-features = false }
+bp-bridge-hub-cumulus = { version = "0.8.0", default-features = false }
 bp-header-chain = { version = "0.8.1", default-features = false }
 bp-kusama = { version = "0.6.0", default-features = false }
 bp-messages = { version = "0.8.0", default-features = false }
@@ -199,7 +200,11 @@ resolver = "2"
 members = [
 	"chain-spec-generator",
 	"relay/paseo",
-	"relay/paseo/constants"
+	"relay/paseo/constants",
+	"system-parachains/asset-hub-paseo",
+	"system-parachains/asset-hub-paseo/primitives",
+	"system-parachains/bridge-hub-paseo/primitives",
+	"system-parachains/constants"
 ]
 
 [profile.release]
