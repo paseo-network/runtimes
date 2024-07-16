@@ -15,15 +15,17 @@
 // You should have received a copy of the GNU General Public License
 // along with Polkadot.  If not, see <http://www.gnu.org/licenses/>.
 
-use pallet_staking::Forcing;
-use paseo_runtime_constants::currency::UNITS as DOT;
-use polkadot_primitives::{AccountId, AccountPublic, AssignmentId, ValidatorId};
-use runtime_parachains::configuration::HostConfiguration;
-use sc_chain_spec::{ChainSpec, ChainType, NoExtension};
-use grandpa::AuthorityId as GrandpaId;
 use authority_discovery_primitives::AuthorityId as AuthorityDiscoveryId;
 use babe_primitives::AuthorityId as BabeId;
 use beefy_primitives::ecdsa_crypto::AuthorityId as BeefyId;
+use grandpa::AuthorityId as GrandpaId;
+use pallet_staking::Forcing;
+use paseo_runtime_constants::currency::UNITS as DOT;
+use polkadot_primitives::{
+	AccountId, AccountPublic, AssignmentId, AsyncBackingParams, ValidatorId,
+};
+use runtime_parachains::configuration::HostConfiguration;
+use sc_chain_spec::{ChainSpec, ChainType, NoExtension};
 use sp_core::{sr25519, Pair, Public};
 use sp_runtime::{traits::IdentifyAccount, Perbill};
 
@@ -73,6 +75,10 @@ fn default_parachains_host_configuration() -> HostConfiguration<polkadot_primiti
 		relay_vrf_modulo_samples: 2,
 		zeroth_delay_tranche_width: 0,
 		minimum_validation_upgrade_delay: 5,
+		async_backing_params: AsyncBackingParams {
+			max_candidate_depth: 3,
+			allowed_ancestry_len: 2,
+		},
 		..Default::default()
 	}
 }
