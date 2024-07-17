@@ -7,6 +7,10 @@ WHITE=$(tput setaf 7)
 BLUE=$(tput setaf 4)
 RESET=$(tput sgr0)
 
+# Define patch directory and file names
+PATCH_DIR="../../patches"
+RELAY_PATCH_FILE="${PATCH_DIR}/relay_polkadot.patch"
+
 # Function to print messages with colors
 print_message() {
     local message=$1
@@ -107,11 +111,15 @@ if [ "$PROCESS_PARACHAINS" = "true" ]; then
     git commit --amend -m "Update to Polkadot ${NEXT_TAG} runtime and copy specified parachains"
 fi
 
-print_message "----- Creating patch files for Paseo-specific modifications -----" "${WHITE}"
-mkdir -p ../../patches
+print_message "----- Creating patch files for Polkadot ${NEXT_TAG} runtime -----" "${WHITE}"
+mkdir -p ${PATCH_DIR}
 
 # Create patch for relay/paseo and Cargo.toml
-git diff ${LATEST_COMMIT} HEAD -- relay/paseo Cargo.toml > ../../patches/relay_polkadot.patch
+if git diff ${LATEST_COMMIT} HEAD -- relay/paseo Cargo.toml > ${RELAY_PATCH_FILE}; then
+    print_message "Successfully created relay patch file: ${RELAY_PATCH_FILE}" "${WHITE}"
+else
+    print_message "Failed to create relay patch file" "${RED}"
+fi
 
 if [ "$PROCESS_PARACHAINS" = "true" ]; then
     # Create patches for each parachain
@@ -119,16 +127,22 @@ if [ "$PROCESS_PARACHAINS" = "true" ]; then
         read -r parachain_name _ dest_dir <<< "$parachain"
         parachain_dir="system-parachains/${dest_dir}"
         if [ -d "$parachain_dir" ]; then
-            git diff ${LATEST_COMMIT} HEAD -- "$parachain_dir" > "../../patches/parachain_${parachain_name}.patch"
-            print_message "Created patch for ${parachain_name}" "${WHITE}"
+            if git diff ${LATEST_COMMIT} HEAD -- "$parachain_dir" > "${PATCH_DIR}/parachain_${parachain_name}.patch"; then
+                print_message "Created patch for ${parachain_name}" "${WHITE}"
+            else
+                print_message "Failed to create patch for ${parachain_name}" "${RED}"
+            fi
         else
             print_message "Warning: ${dest_dir} not found for ${parachain_name}, skipping patch creation" "${RED}"
         fi
     done
 
      # Create patch for system-parachains/constants and system-parachains/Cargo.toml
-    git diff ${LATEST_COMMIT} HEAD -- system-parachains/constants system-parachains/constants/Cargo.toml > "../../patches/system_parachains_common.patch"
-    print_message "Created patch for system-parachains/constants"
+    if git diff ${LATEST_COMMIT} HEAD -- system-parachains/constants system-parachains/constants/Cargo.toml > "${PATCH_DIR}/system_parachains_common.patch"; then
+        print_message "Created patch for system-parachains/constants" "${WHITE}"
+    else
+        print_message "Failed to create patch for system-parachains/constants" "${RED}"
+    fi
 fi
 
 print_message "--------------------" "${BLUE}"
