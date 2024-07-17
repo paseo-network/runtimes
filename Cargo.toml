@@ -6,6 +6,17 @@ repository = "https://github.com/paseo-network/runtimes.git"
 license = "GPL-3.0-only"
 
 [workspace.dependencies]
+asset-hub-paseo-runtime = { path = "system-parachains/asset-hub-paseo", default-features = false }
+bridge-hub-paseo-runtime = { path = "system-parachains/bridge-hub-paseo", default-features = false }
+bp-bridge-hub-paseo = { path = "system-parachains/bridge-hub-paseo/primitives", default-features = false}
+bp-asset-hub-paseo = { path = "system-parachains/asset-hub-paseo/primitives", default-features = false}
+paseo-runtime = { path = "relay/paseo", default-features = false}
+integration-tests-helpers = { path = "integration-tests/emulated/helpers"}
+paseo-system-emulated-network = { path = "integration-tests/emulated/networks/paseo-system"}
+asset-hub-paseo-emulated-chain = { path = "integration-tests/emulated/chains/parachains/assets/asset-hub-paseo"}
+bridge-hub-paseo-emulated-chain = { path = "integration-tests/emulated/chains/parachains/bridges/bridge-hub-paseo"}
+penpal-emulated-chain = { path = "integration-tests/emulated/chains/parachains/testing/penpal"}
+paseo-emulated-chain = { path = "integration-tests/emulated/chains/relays/paseo"}
 assert_matches = { version = "1.5.0" }
 asset-test-utils = { version = "8.0.1" }
 assets-common = { version = "0.8.0", default-features = false }
@@ -129,6 +140,7 @@ parachain-info = { version = "0.8.0", default-features = false, package = "stagi
 parachains-common = { version = "8.0.0", default-features = false }
 parachains-runtimes-test-utils = { version = "8.0.0" }
 paste = { version = "1.0.14" }
+penpal-runtime = { version = "0.15.1", default-features = false }
 polkadot-core-primitives = { version = "8.0.0", default-features = false }
 polkadot-parachain-primitives = { version = "7.0.0", default-features = false }
 polkadot-primitives = { version = "8.0.1", default-features = false }
@@ -199,6 +211,11 @@ resolver = "2"
 
 members = [
 	"chain-spec-generator",
+	"integration-tests/emulated/chains/parachains/assets/asset-hub-paseo",
+	"integration-tests/emulated/chains/parachains/bridges/bridge-hub-paseo",
+	"integration-tests/emulated/chains/parachains/testing/penpal",
+	"integration-tests/emulated/chains/relays/paseo",
+	"integration-tests/emulated/tests/bridges/bridge-hub-paseo",
 	"relay/paseo",
 	"relay/paseo/constants",
 	"system-parachains/asset-hub-paseo",

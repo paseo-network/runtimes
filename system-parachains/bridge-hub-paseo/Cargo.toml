@@ -19,9 +19,9 @@ scale-info = { features = ["derive"], workspace = true }
 serde = { optional = true, features = ["derive"], workspace = true }
 
 # Local
-bp-asset-hub-paseo = { path = "../asset-hub-paseo/primitives", default-features = false}
-bp-bridge-hub-paseo = { path = "primitives", default-features = false}
-paseo-runtime-constants = { path = "../../relay/paseo/constants", default-features = false}
+bp-asset-hub-paseo = { workspace = true }
+bp-bridge-hub-paseo = { workspace = true }
+paseo-runtime-constants = { workspace = true }
 
 # Substrate
 frame-benchmarking = { optional = true, workspace = true }

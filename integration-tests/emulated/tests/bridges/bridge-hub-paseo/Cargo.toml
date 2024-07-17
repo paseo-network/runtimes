@@ -1,0 +1,52 @@
+[package]
+name = "bridge-hub-paseo-integration-tests"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license = "Apache-2.0"
+description = "Bridge Hub Polkadot Paseo integration tests with xcm-emulator"
+publish = false
+
+[dependencies]
+codec = { workspace = true, default-features = true }
+scale-info = { features = ["derive"], workspace = true }
+hex-literal = { workspace = true }
+
+# Substrate
+sp-core = { workspace = true, default-features = true }
+sp-runtime = { workspace = true, default-features = true }
+frame-support = { workspace = true, default-features = true }
+pallet-balances = { workspace = true, default-features = true }
+pallet-asset-conversion = { workspace = true, default-features = true }
+pallet-assets = { workspace = true, default-features = true }
+pallet-message-queue = { workspace = true, default-features = true }
+
+# Polkadot
+xcm = { workspace = true, default-features = true }
+pallet-xcm = { workspace = true, default-features = true }
+xcm-executor = { workspace = true, default-features = true }
+
+# Cumulus
+emulated-integration-tests-common = { workspace = true }
+parachains-common = { workspace = true, default-features = true }
+cumulus-pallet-xcmp-queue = { workspace = true, default-features = true }
+
+# Bridges
+bp-messages = { workspace = true, default-features = true }
+pallet-bridge-messages = { workspace = true, default-features = true }
+
+# Local
+bp-bridge-hub-paseo = { workspace = true, default-features = true }
+bridge-hub-paseo-runtime = { workspace = true }
+asset-hub-paseo-runtime = { workspace = true }
+integration-tests-helpers = { workspace = true }
+paseo-system-emulated-network = { workspace = true }
+system-parachains-constants = { workspace = true, default-features = true }
+
+# Snowbridge
+snowbridge-beacon-primitives = { workspace = true, default-features = true }
+snowbridge-core = { workspace = true, default-features = true }
+snowbridge-router-primitives = { workspace = true, default-features = true }
+snowbridge-pallet-system = { workspace = true, default-features = true }
+snowbridge-pallet-outbound-queue = { workspace = true, default-features = true }
+snowbridge-pallet-inbound-queue-fixtures = { workspace = true }
