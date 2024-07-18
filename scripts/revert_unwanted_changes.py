@@ -29,13 +29,35 @@ def load_replacements(replacements_file):
     """Load replacements and other configurations from the JSON configuration file."""
     with open(replacements_file, 'r') as f:
         config = json.load(f)
-    return config.get("replacements", {}), config.get("remove_block_pattern", "")
+    
+    regex_replacements = []
+    literal_replacements = []
+    for key, value in config.get("replacements", {}).items():
+        if key.startswith("re:"):
+            # Compile as regex pattern
+            try:
+                pattern = re.compile(key[3:])
+            except re.error as e:
+                log(f"Error compiling regex pattern '{key[3:]}': {str(e)}")
+                sys.exit(1)
+            regex_replacements.append((pattern, value))
+        else:
+            # Escape and compile as literal string pattern
+            pattern = re.compile(re.escape(key))
+            literal_replacements.append((pattern, value))
+    
+    return regex_replacements, literal_replacements, config.get("remove_block_pattern", "")
 
-def apply_filters(line, replacements):
+def apply_filters(line, regex_replacements, literal_replacements):
     """Apply filters to determine if a line should be reverted."""
-    for pattern, replacement in replacements.items():
-        # Use word boundaries to match exact words
-        line = re.sub(rf'\b{re.escape(pattern)}\b', replacement, line)
+    # Apply regex replacements first
+    for pattern, replacement in regex_replacements:
+        line = pattern.sub(replacement, line)
+    
+    # Then apply literal replacements
+    for pattern, replacement in literal_replacements:
+        line = pattern.sub(replacement, line)
+    
     return line
 
 def remove_text_block(file_path, pattern):
@@ -47,7 +69,7 @@ def remove_text_block(file_path, pattern):
         file.write(content)
     log(f"Removed text blocks matching pattern from {file_path}")
 
-def revert_changes(file_path, diff, replacements):
+def revert_changes(file_path, diff, regex_replacements, literal_replacements):
     """Revert unwanted changes in a file based on its diff."""
     if not os.path.exists(file_path):
         log(f"File {file_path} does not exist, skipping.")
@@ -61,7 +83,7 @@ def revert_changes(file_path, diff, replacements):
     for line in diff.split('\n'):
         if line.startswith('+') and not line.startswith('+++'):
             # This is an added line
-            revert_line = apply_filters(line[1:], replacements)
+            revert_line = apply_filters(line[1:], regex_replacements, literal_replacements)
             if revert_line != line[1:]:
                 lines_to_revert.append((line[1:], revert_line))
 
@@ -92,13 +114,13 @@ def main():
     log("Starting revert_unwanted_changes.py")
 
     try:
-        replacements, remove_block_pattern = load_replacements(replacements_file)
+        regex_replacements, literal_replacements, remove_block_pattern = load_replacements(replacements_file)
         changed_files = get_changed_files()
 
         for file_path in changed_files:
             log(f"Processing {file_path}")
             diff = get_file_diff(file_path)
-            revert_changes(file_path, diff, replacements)
+            revert_changes(file_path, diff, regex_replacements, literal_replacements)
             if remove_block_pattern:
                 remove_text_block(file_path, remove_block_pattern)
 

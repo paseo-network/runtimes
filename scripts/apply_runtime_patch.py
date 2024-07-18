@@ -32,7 +32,7 @@ def log(message):
         log_file.write(message + "\n")
 
 def filter_hunk(file_path, hunk):
-    """Main filter function that applies all individual filters."""
+    """Main filter function that applies all individual filters at the hunk level."""
     filters = [
         keep_sudo_filter
     ]

@@ -1,6 +1,7 @@
 {
     "replacements": {
-      "[\"Polkadot Fellowship\"]": "[\"Paseo Core Team\"]",
+      "re:\\bPolkadot Fellowship\\b": "Paseo Core Team",
+      "re:impl<T: frame_system::Config> \\S+::WeightInfo<T> for WeightInfo<T> \\{\\s*": "impl<T: frame_system::Config> WeightInfo<T> {",
       "https://github.com/polkadot-fellows/runtimes.git": "https://github.com/paseo-network/runtimes.git",
       "polkadot_runtime_constants": "paseo_runtime_constants",
       "polkadot-runtime-constants": "paseo-runtime-constants",
