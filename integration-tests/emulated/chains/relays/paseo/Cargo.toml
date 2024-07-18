@@ -1,0 +1,30 @@
+[package]
+name = "paseo-emulated-chain"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license = "Apache-2.0"
+description = "Paseo emulated chain used for integration tests"
+publish = false
+
+[dependencies]
+
+# Substrate
+sp-core = { workspace = true, default-features = true }
+sp-runtime = { workspace = true, default-features = true }
+authority-discovery-primitives = { workspace = true, default-features = true }
+babe-primitives = { workspace = true, default-features = true }
+beefy-primitives = { workspace = true, default-features = true }
+grandpa = { workspace = true }
+pallet-staking = { workspace = true, default-features = true }
+
+# Polkadot
+polkadot-primitives = { workspace = true, default-features = true }
+
+# Cumulus
+parachains-common = { workspace = true, default-features = true }
+emulated-integration-tests-common = { workspace = true }
+
+# Runtimes
+paseo-runtime-constants = { workspace = true, default-features = true }
+paseo-runtime = { workspace = true, default-features = true }
