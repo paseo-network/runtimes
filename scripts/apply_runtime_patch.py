@@ -42,26 +42,35 @@ def filter_hunk(file_path, hunk):
             return False
     return True
 
-def apply_hunk_with_git(file_path, hunk_content):
-    """Apply a single hunk using git apply."""
+def apply_hunk_with_git_am(file_path, hunk_content):
+    """Apply a single hunk using git am."""
     with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.patch') as temp_file:
         # Format the hunk content as a proper patch file
-        patch_content = f"diff --git a/{file_path} b/{file_path}\n"
+        patch_content = f"From: Patch <patch@example.com>\n"
+        patch_content += f"Subject: [PATCH] Apply changes to {file_path}\n\n"
+        patch_content += f"diff --git a/{file_path} b/{file_path}\n"
         patch_content += "--- a/{}\n+++ b/{}\n".format(file_path, file_path)
         patch_content += hunk_content
         temp_file.write(patch_content)
         temp_file_path = temp_file.name
 
     try:
-        result = subprocess.run(['git', 'apply', '--3way', temp_file_path], 
+        result = subprocess.run(['git', 'am', '--3way', temp_file_path], 
                                 capture_output=True, text=True, check=True)
         log(f"Successfully applied hunk to {file_path}")
         return True
     except subprocess.CalledProcessError as e:
         log(f"Failed to apply hunk to {file_path}: {e.stderr}")
+        subprocess.run(['git', 'am', '--abort'], capture_output=True)
         return False
     finally:
         os.unlink(temp_file_path)
+
+def detect_file_rename(patched_file):
+    """Detect if the patched_file represents a rename operation."""
+    if patched_file.is_rename:
+        return patched_file.source_file, patched_file.target_file
+    return None
 
 def apply_patch_line_by_line(patch_file, check_only=False, hunk_filter=filter_hunk):
     try:
@@ -69,38 +78,54 @@ def apply_patch_line_by_line(patch_file, check_only=False, hunk_filter=filter_hu
             patch = PatchSet(pf)
 
         modified_files = set()
+        new_files = set()
+        renamed_files = {}
 
         for patched_file in patch:
-            file_path = patched_file.path
+            # Check if this is a file rename
+            rename_info = detect_file_rename(patched_file)
+            if rename_info:
+                old_path, new_path = rename_info
+                log(f"File rename detected: {old_path} => {new_path}")
+                renamed_files[old_path] = new_path
+                if not check_only:
+                    try:
+                        os.rename(old_path, new_path)
+                        subprocess.run(['git', 'mv', old_path, new_path], check=True)
+                        log(f"Renamed file: {old_path} => {new_path}")
+                    except Exception as e:
+                        log(f"Failed to rename file: {old_path} => {new_path}. Error: {str(e)}")
+                        return False
+                continue
+
             for hunk in patched_file:
-                if not hunk_filter(file_path, hunk):
-                    log(f"Skipping hunk in {file_path} due to filter")
+                if not hunk_filter(patched_file.path, hunk):
+                    log(f"Skipping hunk in {patched_file.path} due to filter")
                     continue
 
                 hunk_content = str(hunk)
                 if not check_only:
-                    success = apply_hunk_with_git(file_path, hunk_content)
+                    success = apply_hunk_with_git_am(patched_file.path, hunk_content)
                     if not success:
-                        log(f"Failed to apply hunk to {file_path}")
+                        log(f"Failed to apply hunk to {patched_file.path}")
                         return False
-                    modified_files.add(file_path)
+                    modified_files.add(patched_file.path)
                 else:
-                    log(f"Hunk for {file_path} can be applied")
+                    log(f"Hunk for {patched_file.path} can be applied")
 
         if not check_only:
-            # Reset all modified files
-            for file_path in modified_files:
-                try:
-                    reset_result = subprocess.run(['git', 'reset', file_path],
-                                                  capture_output=True, text=True, check=True)
-                    log(f"Reset {file_path} to unstage changes")
-                except subprocess.CalledProcessError as e:
-                    log(f"Failed to reset {file_path}: {e.stderr}")
-                    return False
-
             log("Patch applied successfully!")
         else:
             log("Patch can be applied successfully.")
+            if new_files:
+                log("The following new files would be created:")
+                for new_file in new_files:
+                    log(f"  - {new_file}")
+            if renamed_files:
+                log("The following files would be renamed:")
+                for old_path, new_path in renamed_files.items():
+                    log(f"  - {old_path} => {new_path}")
+        
         return True
     except Exception as e:
         log(f"Failed to apply patch: {e}")

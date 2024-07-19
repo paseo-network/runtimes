@@ -121,7 +121,7 @@ print_message "----- Creating patch files for Polkadot ${NEXT_TAG} runtime -----
 mkdir -p ${PATCH_DIR}
 
 # Create patch for relay/paseo and Cargo.toml
-if git diff ${LATEST_COMMIT} HEAD -- relay/paseo Cargo.toml > ${RELAY_PATCH_FILE}; then
+if git format-patch -1 ${LATEST_COMMIT} --stdout -- relay/paseo Cargo.toml > ${RELAY_PATCH_FILE}; then
     print_message "Successfully created relay patch file: ${RELAY_PATCH_FILE}" "${WHITE}"
 else
     print_message "Failed to create relay patch file" "${RED}"
@@ -133,7 +133,7 @@ if [ "$PROCESS_PARACHAINS" = "true" ]; then
         read -r parachain_name _ dest_dir <<< "$parachain"
         parachain_dir="system-parachains/${dest_dir}"
         if [ -d "$parachain_dir" ]; then
-            if git diff ${LATEST_COMMIT} HEAD -- "$parachain_dir" > "${PATCH_DIR}/parachain_${parachain_name}.patch"; then
+            if git format-patch -1 ${LATEST_COMMIT} --stdout -- "$parachain_dir" > "${PATCH_DIR}/parachain_${parachain_name}.patch"; then
                 print_message "Created patch for ${parachain_name}" "${WHITE}"
             else
                 print_message "Failed to create patch for ${parachain_name}" "${RED}"
@@ -143,8 +143,8 @@ if [ "$PROCESS_PARACHAINS" = "true" ]; then
         fi
     done
 
-     # Create patch for system-parachains/constants and system-parachains/Cargo.toml
-    if git diff ${LATEST_COMMIT} HEAD -- system-parachains/constants system-parachains/constants/Cargo.toml > "${PATCH_DIR}/system_parachains_common.patch"; then
+    # Create patch for system-parachains/constants and system-parachains/Cargo.toml
+    if git format-patch -1 ${LATEST_COMMIT} --stdout -- system-parachains/constants system-parachains/constants/Cargo.toml > "${PATCH_DIR}/system_parachains_common.patch"; then
         print_message "Created patch for system-parachains/constants" "${WHITE}"
     else
         print_message "Failed to create patch for system-parachains/constants" "${RED}"
