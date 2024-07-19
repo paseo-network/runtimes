@@ -19,8 +19,9 @@ print_message() {
 }
 
 # Check if the correct number of arguments is provided
-if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
-    echo "Usage: $0 <current_paseo_runtime_version> <new_polkadot_runtime_version> [process_parachains]"
+if [ "$#" -lt 2 ] || [ "$#" -gt 4 ]; then
+    echo "Usage: $0 <current_paseo_runtime_version> <new_polkadot_runtime_version> [paseo_branch] [process_parachains]"
+    echo "paseo_branch: Optional. Specify the branch to clone for Paseo runtime. Defaults to 'main'."
     echo "process_parachains: Optional. Set to 'true' to process parachains. Defaults to 'false'."
     exit 1
 fi
@@ -37,7 +38,8 @@ PARACHAINS=(
 
 CURRENT_TAG=$1
 NEXT_TAG=$2
-PROCESS_PARACHAINS=${3:-false}
+PASEO_BRANCH=${3:-main}
+PROCESS_PARACHAINS=${4:-false}
 POLKADOT_CURRENT_TAG=v${CURRENT_TAG}
 POLKADOT_NEXT_TAG=v${NEXT_TAG}
 
@@ -52,16 +54,21 @@ mkdir tmp_runtime
 cd tmp_runtime
 
 print_message "----- Cloning repositories -----" "${BLUE}"
-git clone --depth 1 https://github.com/paseo-network/runtimes.git paseo_runtime
-git clone --depth 1 --branch ${POLKADOT_CURRENT_TAG} https://github.com/polkadot-fellows/runtimes.git polkadot_runtime_current
-git clone --depth 1 --branch ${POLKADOT_NEXT_TAG} https://github.com/polkadot-fellows/runtimes.git polkadot_runtime_next
+print_message "Cloning paseo-network/runtimes branch: ${PASEO_BRANCH}" "${BLUE}"
+git clone -q --depth 1 --branch ${PASEO_BRANCH} https://github.com/paseo-network/runtimes.git paseo_runtime
+
+print_message "Cloning polkadot-fellows/runtimes branch: ${POLKADOT_CURRENT_TAG}" "${BLUE}"
+git clone -q --depth 1 --branch ${POLKADOT_CURRENT_TAG} https://github.com/polkadot-fellows/runtimes.git polkadot_runtime_current
+
+print_message "Cloning polkadot-fellows/runtimes branch: ${POLKADOT_NEXT_TAG}" "${BLUE}"
+git clone -q --depth 1 --branch ${POLKADOT_NEXT_TAG} https://github.com/polkadot-fellows/runtimes.git polkadot_runtime_next
 
 print_message "----- Copying current Polkadot runtime to Paseo -----" "${BLUE}"
 cp -fr polkadot_runtime_current/relay/polkadot/* paseo_runtime/relay/paseo/.
 
 print_message "----- Creating temporary branch in Paseo repo -----" "${BLUE}"
 cd paseo_runtime
-git switch -c tmp/${CURRENT_TAG}-runtime
+git switch -q -c tmp/${CURRENT_TAG}-runtime
 git add .
 git commit -m "Revert to Polkadot ${CURRENT_TAG} runtime"
 
@@ -70,8 +77,7 @@ git revert --no-edit HEAD
 LATEST_COMMIT=$(git rev-parse HEAD)
 
 print_message "----- Creating new branch for updated runtime -----" "${BLUE}"
-git switch main
-git switch -c release/${NEXT_TAG}-runtime
+git switch -q -c release/${NEXT_TAG}-runtime
 
 print_message "----- Copying new Polkadot runtime to Paseo -----" "${BLUE}"
 rm -rf relay/paseo/*
