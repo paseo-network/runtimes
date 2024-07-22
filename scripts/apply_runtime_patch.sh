@@ -41,3 +41,12 @@ else
     echo "Failed to apply patch."
     exit 1
 fi
+
+# Unstage all files
+echo "Unstaging all files..."
+if git reset; then
+    echo "All files unstaged successfully."
+else
+    echo "Failed to unstage files."
+    exit 1
+fi
