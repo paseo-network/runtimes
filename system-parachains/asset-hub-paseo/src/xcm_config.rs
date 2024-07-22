@@ -560,6 +560,11 @@ pub mod to_ethereum {
 
         impl Contains<(Location, Junction)> for UniversalAliases {
             fn contains(alias: &(Location, Junction)) -> bool {
+				log::trace!(
+					target: "xcm::contains",
+					"Contains: {:?}",
+					alias,
+				);
                 UniversalAliases::get().contains(alias)
             }
         }

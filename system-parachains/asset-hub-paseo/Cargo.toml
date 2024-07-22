@@ -15,9 +15,9 @@ log = { version = "0.4.20", default-features = false }
 scale-info = { version = "2.10.0", default-features = false, features = ["derive"] }
 
 # Local
-bp-asset-hub-paseo = { path = "../asset-hub-paseo/primitives", default-features = false}
-bp-bridge-hub-paseo = { path = "../bridge-hub-paseo/primitives", default-features = false}
-paseo-runtime-constants = { path = "../../relay/paseo/constants", default-features = false}
+bp-asset-hub-paseo = { workspace = true }
+bp-bridge-hub-paseo = { workspace = true }
+paseo-runtime-constants = { workspace = true }
 
 # Substrate
 frame-benchmarking = { optional = true, workspace = true }
@@ -244,7 +244,8 @@ std = [
 	"xcm-executor/std",
 	"xcm/std",
 	"bp-bridge-hub-paseo/std",
-	"pallet-xcm-bridge-hub-router/std"
+	"pallet-xcm-bridge-hub-router/std",
+	"bp-asset-hub-paseo/std"
 ]
 
 # Enable metadata hash generation at compile time for the `CheckMetadataHash` extension.

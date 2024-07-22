@@ -21,7 +21,7 @@
 
 pub use bp_bridge_hub_cumulus::*;
 
-pub const BRIDGE_HUB_PASEO_PARACHAIN_ID: u32 = 1013;
+pub const BRIDGE_HUB_PASEO_PARACHAIN_ID: u32 = 1002;
 pub mod snowbridge {
     use crate::Balance;
     use frame_support::parameter_types;
