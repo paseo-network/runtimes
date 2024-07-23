@@ -14,8 +14,8 @@ jobs:
       matrix:
         runtime:
           - name: "paseo"
-            path: "runtime/paseo"
-          - name: "asset-hub"
+            path: "relay/paseo"
+          - name: "asset-hub-paseo"
             path: "system-parachains/asset-hub-paseo"
     steps:
       - name: Checkout sources
