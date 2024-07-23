@@ -7,13 +7,16 @@ license = "GPL-3.0-only"
 
 [workspace.dependencies]
 assert_matches = { version = "1.5.0" }
+asset-hub-paseo-runtime = { path = "system-parachains/asset-hub-paseo" }
 asset-test-utils = { version = "8.0.1" }
 assets-common = { version = "0.8.0", default-features = false }
 authority-discovery-primitives = { version = "27.0.0", default-features = false, package = "sp-authority-discovery" }
 babe-primitives = { version = "0.33.0", default-features = false, package = "sp-consensus-babe" }
 beefy-primitives = { version = "14.0.0", default-features = false, package = "sp-consensus-beefy" }
 binary-merkle-tree = { version = "14.0.0", default-features = false }
+bp-asset-hub-paseo = { path = "system-parachains/asset-hub-paseo/primitives", default-features = false }
 bp-bridge-hub-cumulus = { version = "0.8.0", default-features = false }
+bp-bridge-hub-paseo = { path = "system-parachains/bridge-hub-paseo/primitives", default-features = false }
 bp-header-chain = { version = "0.8.1", default-features = false }
 bp-kusama = { version = "0.6.0", default-features = false }
 bp-messages = { version = "0.8.0", default-features = false }
@@ -24,6 +27,7 @@ bp-relayers = { version = "0.8.0", default-features = false }
 bp-runtime = { version = "0.8.0", default-features = false }
 bp-xcm-bridge-hub-router = { version = "0.7.0", default-features = false }
 bridge-hub-common = { version = "0.1.0", default-features = false }
+bridge-hub-paseo-runtime = { path = "system-parachains/bridge-hub-paseo" }
 bridge-hub-test-utils = { version = "0.8.0" }
 bridge-runtime-common = { version = "0.8.0", default-features = false }
 clap = { version = "4.5.0" }
@@ -38,6 +42,9 @@ cumulus-primitives-aura = { version = "0.8.0", default-features = false }
 cumulus-primitives-core = { version = "0.8.0", default-features = false }
 cumulus-primitives-utility = { version = "0.8.1", default-features = false }
 emulated-integration-tests-common = { version = "4.0.0" }
+encointer-balances-tx-payment = { version = "~6.1.0", default-features = false }
+encointer-balances-tx-payment-rpc-runtime-api = { version = "~6.1.0", default-features = false }
+encointer-primitives = { version = "~6.1.0", default-features = false }
 enumflags2 = { version = "0.7.7" }
 frame-benchmarking = { version = "29.0.0", default-features = false }
 frame-election-provider-support = { version = "29.0.0", default-features = false }
@@ -78,6 +85,16 @@ pallet-conviction-voting = { version = "29.0.0", default-features = false }
 pallet-core-fellowship = { version = "13.0.0", default-features = false }
 pallet-election-provider-multi-phase = { version = "28.0.0", default-features = false }
 pallet-election-provider-support-benchmarking = { version = "28.0.0", default-features = false }
+pallet-encointer-balances = { version = "~6.1.0", default-features = false }
+pallet-encointer-bazaar = { version = "~6.1.0", default-features = false }
+pallet-encointer-bazaar-rpc-runtime-api = { version = "~6.1.0", default-features = false }
+pallet-encointer-ceremonies = { version = "~6.1.0", default-features = false }
+pallet-encointer-ceremonies-rpc-runtime-api = { version = "~6.1.0", default-features = false }
+pallet-encointer-communities = { version = "~6.1.0", default-features = false }
+pallet-encointer-communities-rpc-runtime-api = { version = "~6.1.0", default-features = false }
+pallet-encointer-faucet = { version = "~6.2.0", default-features = false }
+pallet-encointer-reputation-commitments = { version = "~6.1.0", default-features = false }
+pallet-encointer-scheduler = { version = "~6.1.0", default-features = false }
 pallet-fast-unstake = { version = "28.0.0", default-features = false }
 pallet-glutton = { version = "15.0.0", default-features = false }
 pallet-grandpa = { version = "29.0.0", default-features = false }
@@ -132,6 +149,7 @@ paste = { version = "1.0.14" }
 polkadot-core-primitives = { version = "8.0.0", default-features = false }
 polkadot-parachain-primitives = { version = "7.0.0", default-features = false }
 polkadot-primitives = { version = "8.0.1", default-features = false }
+paseo-runtime = { path = "relay/paseo" }
 polkadot-runtime-common = { version = "8.0.2", default-features = false }
 primitive-types = { version = "0.12.2", default-features = false }
 remote-externalities = { version = "0.36.0", package = "frame-remote-externalities" }

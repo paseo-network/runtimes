@@ -2,7 +2,7 @@
 name = "paseo-runtime"
 build = "build.rs"
 repository.workspace = true
-version = "1.2.5"
+version = "1.2.6"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -183,6 +183,7 @@ std = [
 	"paseo-runtime-constants/std",
 	"polkadot-primitives/std",
 	"polkadot-runtime-common/std",
+	"paseo-runtime-constants/std",
 	"runtime-parachains/std",
 	"scale-info/std",
 	"substrate-wasm-builder",

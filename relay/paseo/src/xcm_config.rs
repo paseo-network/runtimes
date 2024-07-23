@@ -52,7 +52,7 @@ parameter_types! {
 	/// chain, we make it synonymous with it and thus it is the `Here` location, which means "equivalent to
 	/// the context".
 	pub const TokenLocation: Location = Here.into_location();
-	/// The Polkadot network ID. This is named. TODO To rename to Paseo.
+	/// The Paseo network ID. This is named.
 	pub const ThisNetwork: NetworkId = NetworkId::Polkadot;
 	/// Our location in the universe of consensus systems.
 	pub UniversalLocation: InteriorLocation = [GlobalConsensus(ThisNetwork::get())].into();
@@ -139,6 +139,8 @@ parameter_types! {
 	pub DotForCollectives: (AssetFilter, Location) = (Dot::get(), CollectivesLocation::get());
 	pub BridgeHubLocation: Location = Parachain(BRIDGE_HUB_ID).into_location();
 	pub DotForBridgeHub: (AssetFilter, Location) = (Dot::get(), BridgeHubLocation::get());
+	pub People: Location = Parachain(PEOPLE_ID).into_location();
+	pub DotForPeople: (AssetFilter, Location) = (Dot::get(), People::get());
 	pub const MaxAssetsIntoHolding: u32 = 64;
 }
 
@@ -147,6 +149,7 @@ pub type TrustedTeleporters = (
 	xcm_builder::Case<DotForAssetHub>,
 	xcm_builder::Case<DotForCollectives>,
 	xcm_builder::Case<DotForBridgeHub>,
+	xcm_builder::Case<DotForPeople>,
 );
 
 pub struct CollectivesOrFellows;
@@ -154,8 +157,8 @@ impl Contains<Location> for CollectivesOrFellows {
 	fn contains(loc: &Location) -> bool {
 		matches!(
 			loc.unpack(),
-			(0, [Parachain(COLLECTIVES_ID)])
-				| (0, [Parachain(COLLECTIVES_ID), Plurality { id: BodyId::Technical, .. }])
+			(0, [Parachain(COLLECTIVES_ID)]) |
+				(0, [Parachain(COLLECTIVES_ID), Plurality { id: BodyId::Technical, .. }])
 		)
 	}
 }
