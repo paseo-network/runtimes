@@ -33,6 +33,7 @@ pub mod pallet_session;
 pub mod pallet_timestamp;
 pub mod pallet_uniques;
 pub mod pallet_utility;
+pub mod pallet_vesting;
 pub mod pallet_xcm;
 pub mod paritydb_weights;
 pub mod rocksdb_weights;
