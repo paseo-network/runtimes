@@ -79,6 +79,7 @@ fn default_parachains_host_configuration() -> HostConfiguration<polkadot_primiti
 			max_candidate_depth: 3,
 			allowed_ancestry_len: 2,
 		},
+		scheduling_lookahead: 2,
 		..Default::default()
 	}
 }
