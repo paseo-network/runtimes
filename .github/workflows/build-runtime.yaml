@@ -16,9 +16,9 @@ jobs:
           - name: "paseo"
             path: "relay/paseo"
           - name: "asset-hub-paseo"
-            path: "system-parachains/asset-hub-paseo-runtime"
+            path: "system-parachains/asset-hub-paseo"
           - name: "bridge-hub-paseo"
-            path: "system-parachains/bp-bridge-hub-paseo"
+            path: "system-parachains/bridge-hub-paseo"
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
