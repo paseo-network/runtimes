@@ -1,6 +1,6 @@
 [package]
 name = "bp-bridge-hub-paseo"
-description = "Primitives of BridgeHubPaseo parachain runtime."
+description = "Primitives of BridgeHub Paseo parachain runtime."
 repository.workspace = true
 version.workspace = true
 authors.workspace = true

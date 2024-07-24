@@ -1,7 +1,7 @@
 [package]
 authors.workspace = true
 build = "build.rs"
-description = "Polkadot's BridgeHub parachain runtime"
+description = "Paseo's BridgeHub parachain runtime"
 edition.workspace = true
 license.workspace = true
 name = "bridge-hub-paseo-runtime"
