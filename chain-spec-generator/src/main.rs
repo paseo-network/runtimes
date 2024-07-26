@@ -40,11 +40,22 @@ fn main() -> Result<(), String> {
 		HashMap::<_, Box<dyn Fn() -> Result<Box<dyn ChainSpec>, String>>>::from([
 			("paseo-dev", Box::new(|| relay_chain_specs::paseo_development_config()) as Box<_>),
 			("paseo-local", Box::new(|| relay_chain_specs::paseo_local_testnet_config()) as Box<_>),
-			/* 			(
+			(
+				"asset-hub-paseo",
+				Box::new(|| system_parachains_specs::asset_hub_paseo_config()) as Box<_>,
+			),
+			(
 				"asset-hub-paseo-local",
-				Box::new(|| system_parachains_specs::asset_hub_paseo_local_testnet_config())
-					as Box<_>,
-			) */
+				Box::new(|| system_parachains_specs::asset_hub_paseo_local_config()) as Box<_>,
+			),
+			(
+				"bridge-hub-paseo",
+				Box::new(|| system_parachains_specs::bridge_hub_paseo_config()) as Box<_>,
+			),
+			(
+				"bridge-hub-paseo-local",
+				Box::new(|| system_parachains_specs::bridge_hub_paseo_local_config()) as Box<_>,
+			),
 		]);
 
 	if let Some(function) = supported_chains.get(&*cli.chain) {
