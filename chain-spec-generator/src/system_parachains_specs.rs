@@ -142,10 +142,10 @@ pub fn asset_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, Stri
 	Ok(Box::new(
 		AssetHubPaseoChainSpec::builder(
 			asset_hub_paseo_runtime::WASM_BINARY.expect("AssetHubPaseo wasm not available!"),
-			Extensions { relay_chain: "-local".into(), para_id: 1000 },
+			Extensions { relay_chain: "pasep-local".into(), para_id: 1000 },
 		)
-		.with_name(" Asset Hub Local")
-		.with_id("asset-hub-local")
+		.with_name("Asset Hub Paseo Local")
+		.with_id("asset-hub-paseo-local")
 		.with_chain_type(ChainType::Local)
 		.with_genesis_config_patch(asset_hub_paseo_local_genesis(1000.into()))
 		.with_properties(properties)
@@ -221,8 +221,8 @@ pub fn bridge_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, Str
 			bridge_hub_paseo_runtime::WASM_BINARY.expect("BridgeHubPaseo wasm not available!"),
 			Extensions { relay_chain: "-local".into(), para_id: 1002 },
 		)
-		.with_name(" Bridge Hub Local")
-		.with_id("bridge-hub-local")
+		.with_name("Paseo Bridge Hub Local")
+		.with_id("bridge-hub-paseo-local")
 		.with_chain_type(ChainType::Local)
 		.with_genesis_config_patch(bridge_hub_paseo_local_genesis(1002.into()))
 		.with_properties(properties)

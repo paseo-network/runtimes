@@ -1714,6 +1714,8 @@ dependencies = [
 name = "chain-spec-generator"
 version = "1.0.0"
 dependencies = [
+ "asset-hub-paseo-runtime",
+ "bridge-hub-paseo-runtime",
  "clap",
  "cumulus-primitives-core",
  "pallet-staking",
@@ -1732,6 +1734,7 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "staging-xcm",
+ "system-parachains-constants",
 ]
 
 [[package]]
