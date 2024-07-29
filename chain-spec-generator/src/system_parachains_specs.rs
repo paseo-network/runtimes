@@ -142,7 +142,7 @@ pub fn asset_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, Stri
 	Ok(Box::new(
 		AssetHubPaseoChainSpec::builder(
 			asset_hub_paseo_runtime::WASM_BINARY.expect("AssetHubPaseo wasm not available!"),
-			Extensions { relay_chain: "pasep-local".into(), para_id: 1000 },
+			Extensions { relay_chain: "paseo-local".into(), para_id: 1000 },
 		)
 		.with_name("Asset Hub Paseo Local")
 		.with_id("asset-hub-paseo-local")
@@ -210,16 +210,36 @@ fn bridge_hub_paseo_local_genesis(para_id: ParaId) -> serde_json::Value {
 	)
 }
 
-pub fn bridge_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, String> {
+pub fn bridge_hub_paseo_config() -> Result<Box<dyn ChainSpec>, String> {
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("ss58Format".into(), 0.into());
-	properties.insert("tokenSymbol".into(), "DOT".into());
+	properties.insert("tokenSymbol".into(), "PAS".into());
 	properties.insert("tokenDecimals".into(), 10.into());
 
 	Ok(Box::new(
 		BridgeHubPaseoChainSpec::builder(
 			bridge_hub_paseo_runtime::WASM_BINARY.expect("BridgeHubPaseo wasm not available!"),
-			Extensions { relay_chain: "-local".into(), para_id: 1002 },
+			Extensions { relay_chain: "paseo".into(), para_id: 1002 },
+		)
+		.with_name("Paseo Bridge Hub")
+		.with_id("bridge-hub-paseo")
+		.with_chain_type(ChainType::Live)
+		.with_genesis_config_patch(bridge_hub_paseo_local_genesis(1002.into()))
+		.with_properties(properties)
+		.build(),
+	))
+}
+
+pub fn bridge_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, String> {
+	let mut properties = sc_chain_spec::Properties::new();
+	properties.insert("ss58Format".into(), 0.into());
+	properties.insert("tokenSymbol".into(), "PAS".into());
+	properties.insert("tokenDecimals".into(), 10.into());
+
+	Ok(Box::new(
+		BridgeHubPaseoChainSpec::builder(
+			bridge_hub_paseo_runtime::WASM_BINARY.expect("BridgeHubPaseo wasm not available!"),
+			Extensions { relay_chain: "paseo-local".into(), para_id: 1002 },
 		)
 		.with_name("Paseo Bridge Hub Local")
 		.with_id("bridge-hub-paseo-local")

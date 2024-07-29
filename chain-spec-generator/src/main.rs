@@ -46,6 +46,10 @@ fn main() -> Result<(), String> {
 					as Box<_>,
 			),
 			(
+				"bridge-hub-paseo",
+				Box::new(|| system_parachains_specs::bridge_hub_paseo_config()) as Box<_>,
+			),
+			(
 				"bridge-hub-paseo-local",
 				Box::new(|| system_parachains_specs::bridge_hub_paseo_local_testnet_config())
 					as Box<_>,
