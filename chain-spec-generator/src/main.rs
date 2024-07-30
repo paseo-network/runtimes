@@ -61,8 +61,8 @@ fn main() -> Result<(), String> {
 		print!("{chain_spec}");
 		Ok(())
 	} else {
-		let supported = supported_chains.keys().enumerate().fold(String::new(), |c, (n, k)| {
-			let extra = (n + 1 < supported_chains.len()).then(|| ", ").unwrap_or("");
+        let supported = supported_chains.keys().enumerate().fold(String::new(), |c, (n, k)| {
+			let extra = if n + 1 < supported_chains.len() { ", " } else { "" };
 			format!("{c}{k}{extra}")
 		});
 		if cli.chain.ends_with(".json") {

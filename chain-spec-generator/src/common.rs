@@ -17,7 +17,7 @@
 
 use crate::{
 	relay_chain_specs::PaseoChainSpec,
-	//system_parachains_specs::{AssetHubPaseoChainSpec},
+	system_parachains_specs::{AssetHubPaseoChainSpec, BridgeHubPaseoChainSpec},
 	ChainSpec,
 };
 use polkadot_primitives::{AccountId, AccountPublic};
@@ -71,8 +71,12 @@ pub fn from_json_file(filepath: &str, supported: String) -> Result<Box<dyn Chain
 		x if x.starts_with("paseo") | x.starts_with("dot") => {
 			Ok(Box::new(PaseoChainSpec::from_json_file(path)?))
 		},
-		/* 		x if x.starts_with("asset-hub-paseo") =>
-		Ok(Box::new(AssetHubPolkadotChainSpec::from_json_file(path)?)), */
+		x if x.starts_with("asset-hub-paseo") => {
+			Ok(Box::new(AssetHubPaseoChainSpec::from_json_file(path)?))
+		},
+		x if x.starts_with("bridge-hub-paseo") => {
+			Ok(Box::new(BridgeHubPaseoChainSpec::from_json_file(path)?))
+		},
 		_ => Err(format!("Unknown chain 'id' in json file. Only supported: {supported}'")),
 	}
 }
