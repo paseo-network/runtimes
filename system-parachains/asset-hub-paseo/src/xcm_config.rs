@@ -253,9 +253,9 @@ impl Contains<Location> for FellowshipEntities {
 
 pub struct ParentOrParentsPlurality;
 impl Contains<Location> for ParentOrParentsPlurality {
-    fn contains(location: &Location) -> bool {
-        matches!(location.unpack(), (1, []) | (1, [Plurality { .. }]))
-    }
+	fn contains(location: &Location) -> bool {
+		matches!(location.unpack(), (1, []) | (1, [Plurality { .. }]))
+	}
 }
 
 pub type Barrier = TrailingSetTopicAsId<
@@ -560,6 +560,11 @@ pub mod to_ethereum {
 
         impl Contains<(Location, Junction)> for UniversalAliases {
             fn contains(alias: &(Location, Junction)) -> bool {
+				log::trace!(
+					target: "xcm::contains",
+					"Contains: {:?}",
+					alias,
+				);
                 UniversalAliases::get().contains(alias)
             }
         }
