@@ -21,7 +21,7 @@ use std::collections::HashMap;
 
 mod common;
 mod relay_chain_specs;
-//mod system_parachains_specs;
+mod system_parachains_specs;
 
 #[derive(Parser)]
 struct Cli {
@@ -40,11 +40,20 @@ fn main() -> Result<(), String> {
 		HashMap::<_, Box<dyn Fn() -> Result<Box<dyn ChainSpec>, String>>>::from([
 			("paseo-dev", Box::new(|| relay_chain_specs::paseo_development_config()) as Box<_>),
 			("paseo-local", Box::new(|| relay_chain_specs::paseo_local_testnet_config()) as Box<_>),
-			/* 			(
+			(
 				"asset-hub-paseo-local",
 				Box::new(|| system_parachains_specs::asset_hub_paseo_local_testnet_config())
 					as Box<_>,
-			) */
+			),
+			(
+				"bridge-hub-paseo",
+				Box::new(|| system_parachains_specs::bridge_hub_paseo_config()) as Box<_>,
+			),
+			(
+				"bridge-hub-paseo-local",
+				Box::new(|| system_parachains_specs::bridge_hub_paseo_local_testnet_config())
+					as Box<_>,
+			),
 		]);
 
 	if let Some(function) = supported_chains.get(&*cli.chain) {
@@ -52,8 +61,8 @@ fn main() -> Result<(), String> {
 		print!("{chain_spec}");
 		Ok(())
 	} else {
-		let supported = supported_chains.keys().enumerate().fold(String::new(), |c, (n, k)| {
-			let extra = (n + 1 < supported_chains.len()).then(|| ", ").unwrap_or("");
+        let supported = supported_chains.keys().enumerate().fold(String::new(), |c, (n, k)| {
+			let extra = if n + 1 < supported_chains.len() { ", " } else { "" };
 			format!("{c}{k}{extra}")
 		});
 		if cli.chain.ends_with(".json") {
