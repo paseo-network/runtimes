@@ -1,12 +1,12 @@
 {
   "name": "Paseo Bridge Hub",
-  "id": "bridge-hub-paseo",
+  "id": "paseo-bridge-hub",
   "chainType": "Live",
   "bootNodes": [],
   "telemetryEndpoints": null,
-  "protocolId": "bridge-hub-paseo",
+  "protocolId": "bh-pas",
   "properties": {
-    "ss58Format": 0,
+    "ss58Format": 42,
     "tokenDecimals": 10,
     "tokenSymbol": "PAS"
   },
@@ -24,11 +24,11 @@
               16777216000000000
             ],
             [
-              "5EhCFEY8Whb1czRDDbMurfrz1wfM6QAbFf4NwnMWEqhJwxMZ",
+              "5ECmPXn7K9Pe5MA1YoNSbfaBaRtDhTdYym4bgSipbW8XwByJ",
               16777216000000000
             ],
             [
-              "5C5e1jVFYvpURw53MWrB7AppmshZmmj1MTHPw6nHyjbfgP7j",
+              "5HKgozQHPG5K5XCFGEs1FKPEXKqZrQrymqBNncKbtBfGHPgT",
               16777216000000000
             ]
           ]
@@ -37,8 +37,8 @@
           "candidacyBond": 16000000000,
           "desiredCandidates": 0,
           "invulnerables": [
-            "5EhCFEY8Whb1czRDDbMurfrz1wfM6QAbFf4NwnMWEqhJwxMZ",
-            "5C5e1jVFYvpURw53MWrB7AppmshZmmj1MTHPw6nHyjbfgP7j"
+            "5ECmPXn7K9Pe5MA1YoNSbfaBaRtDhTdYym4bgSipbW8XwByJ",
+            "5HKgozQHPG5K5XCFGEs1FKPEXKqZrQrymqBNncKbtBfGHPgT"
           ]
         },
         "ethereumSystem": {
@@ -54,17 +54,17 @@
         "session": {
           "keys": [
             [
-              "5C5e1jVFYvpURw53MWrB7AppmshZmmj1MTHPw6nHyjbfgP7j",
-              "5C5e1jVFYvpURw53MWrB7AppmshZmmj1MTHPw6nHyjbfgP7j",
+              "5HKgozQHPG5K5XCFGEs1FKPEXKqZrQrymqBNncKbtBfGHPgT",
+              "5HKgozQHPG5K5XCFGEs1FKPEXKqZrQrymqBNncKbtBfGHPgT",
               {
-                "aura": "5C5e1jVFYvpURw53MWrB7AppmshZmmj1MTHPw6nHyjbfgP7j"
+                "aura": "5DWrXy8b93QUsd2NzLSFcAH3hVxE3bX3W9V6CZhzyf52JDBd"
               }
             ],
             [
-              "5EhCFEY8Whb1czRDDbMurfrz1wfM6QAbFf4NwnMWEqhJwxMZ",
-              "5EhCFEY8Whb1czRDDbMurfrz1wfM6QAbFf4NwnMWEqhJwxMZ",
+              "5ECmPXn7K9Pe5MA1YoNSbfaBaRtDhTdYym4bgSipbW8XwByJ",
+              "5ECmPXn7K9Pe5MA1YoNSbfaBaRtDhTdYym4bgSipbW8XwByJ",
               {
-                "aura": "5EhCFEY8Whb1czRDDbMurfrz1wfM6QAbFf4NwnMWEqhJwxMZ"
+                "aura": "5EyfoszzhQnYpS4jqPDUm14XgqGtEWcRX5EBsGGbN3wQAcTd"
               }
             ]
           ]
