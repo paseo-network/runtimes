@@ -18,7 +18,6 @@ mod pallet_xcm_benchmarks_fungible;
 mod pallet_xcm_benchmarks_generic;
 
 use crate::{xcm_config::MaxAssetsIntoHolding, Runtime};
-use codec::Encode;
 use pallet_xcm_benchmarks_fungible::WeightInfo as XcmFungibleWeight;
 use pallet_xcm_benchmarks_generic::WeightInfo as XcmGeneric;
 use sp_std::prelude::*;
@@ -197,11 +196,10 @@ impl<Call> XcmWeightInfo<Call> for BridgeHubPolkadotXcmWeight<Call> {
 		XcmGeneric::<Runtime>::clear_transact_status()
 	}
 	fn universal_origin(_: &Junction) -> Weight {
-		Weight::MAX
+		XcmGeneric::<Runtime>::universal_origin()
 	}
-	fn export_message(_: &NetworkId, _: &Junctions, inner: &Xcm<()>) -> Weight {
-		let inner_encoded_len = inner.encode().len() as u32;
-		XcmGeneric::<Runtime>::export_message(inner_encoded_len)
+	fn export_message(_: &NetworkId, _: &Junctions, _: &Xcm<()>) -> Weight {
+		Weight::MAX
 	}
 	fn lock_asset(_: &Asset, _: &Location) -> Weight {
 		Weight::MAX

@@ -135,7 +135,7 @@ fn asset_hub_paseo_local_genesis(para_id: ParaId) -> serde_json::Value {
 
 pub fn asset_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, String> {
 	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("ss58Format".into(), 0.into());
+	properties.insert("ss58Format".into(), 42.into());
 	properties.insert("tokenSymbol".into(), "DOT".into());
 	properties.insert("tokenDecimals".into(), 10.into());
 
@@ -147,6 +147,7 @@ pub fn asset_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, Stri
 		.with_name("Asset Hub Paseo Local")
 		.with_id("asset-hub-paseo-local")
 		.with_chain_type(ChainType::Local)
+		.with_protocol_id("ah-pas")
 		.with_genesis_config_patch(asset_hub_paseo_local_genesis(1000.into()))
 		.with_properties(properties)
 		.build(),
@@ -212,7 +213,7 @@ fn bridge_hub_paseo_local_genesis(para_id: ParaId) -> serde_json::Value {
 
 pub fn bridge_hub_paseo_config() -> Result<Box<dyn ChainSpec>, String> {
 	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("ss58Format".into(), 0.into());
+	properties.insert("ss58Format".into(), 42.into());
 	properties.insert("tokenSymbol".into(), "PAS".into());
 	properties.insert("tokenDecimals".into(), 10.into());
 
@@ -222,8 +223,9 @@ pub fn bridge_hub_paseo_config() -> Result<Box<dyn ChainSpec>, String> {
 			Extensions { relay_chain: "paseo".into(), para_id: 1002 },
 		)
 		.with_name("Paseo Bridge Hub")
-		.with_id("bridge-hub-paseo")
+		.with_id("paseo-bridge-hub")
 		.with_chain_type(ChainType::Live)
+		.with_protocol_id("bh-pas")
 		.with_genesis_config_patch(bridge_hub_paseo_local_genesis(1002.into()))
 		.with_properties(properties)
 		.build(),
@@ -232,7 +234,7 @@ pub fn bridge_hub_paseo_config() -> Result<Box<dyn ChainSpec>, String> {
 
 pub fn bridge_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, String> {
 	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("ss58Format".into(), 0.into());
+	properties.insert("ss58Format".into(), 42.into());
 	properties.insert("tokenSymbol".into(), "PAS".into());
 	properties.insert("tokenDecimals".into(), 10.into());
 
@@ -242,8 +244,9 @@ pub fn bridge_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, Str
 			Extensions { relay_chain: "paseo-local".into(), para_id: 1002 },
 		)
 		.with_name("Paseo Bridge Hub Local")
-		.with_id("bridge-hub-paseo-local")
+		.with_id("paseo-bridge-hub-local")
 		.with_chain_type(ChainType::Local)
+		.with_protocol_id("bh-pas")
 		.with_genesis_config_patch(bridge_hub_paseo_local_genesis(1002.into()))
 		.with_properties(properties)
 		.build(),
