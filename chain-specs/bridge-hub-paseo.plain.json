@@ -4,7 +4,7 @@
   "chainType": "Live",
   "bootNodes": [],
   "telemetryEndpoints": null,
-  "protocolId": "bh-paseo",
+  "protocolId": "bh-pas",
   "properties": {
     "ss58Format": 42,
     "tokenDecimals": 10,

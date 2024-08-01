@@ -147,7 +147,7 @@ pub fn asset_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, Stri
 		.with_name("Asset Hub Paseo Local")
 		.with_id("asset-hub-paseo-local")
 		.with_chain_type(ChainType::Local)
-		.with_protocol_id("ah-paseo")
+		.with_protocol_id("ah-pas")
 		.with_genesis_config_patch(asset_hub_paseo_local_genesis(1000.into()))
 		.with_properties(properties)
 		.build(),
@@ -225,7 +225,7 @@ pub fn bridge_hub_paseo_config() -> Result<Box<dyn ChainSpec>, String> {
 		.with_name("Paseo Bridge Hub")
 		.with_id("paseo-bridge-hub")
 		.with_chain_type(ChainType::Live)
-		.with_protocol_id("bh-paseo")
+		.with_protocol_id("bh-pas")
 		.with_genesis_config_patch(bridge_hub_paseo_local_genesis(1002.into()))
 		.with_properties(properties)
 		.build(),
@@ -246,7 +246,7 @@ pub fn bridge_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, Str
 		.with_name("Paseo Bridge Hub Local")
 		.with_id("paseo-bridge-hub-local")
 		.with_chain_type(ChainType::Local)
-		.with_protocol_id("bh-paseo")
+		.with_protocol_id("bh-pas")
 		.with_genesis_config_patch(bridge_hub_paseo_local_genesis(1002.into()))
 		.with_properties(properties)
 		.build(),
