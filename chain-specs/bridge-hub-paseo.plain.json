@@ -24,11 +24,11 @@
               16777216000000000
             ],
             [
-              "5EyfoszzhQnYpS4jqPDUm14XgqGtEWcRX5EBsGGbN3wQAcTd",
+              "5ECmPXn7K9Pe5MA1YoNSbfaBaRtDhTdYym4bgSipbW8XwByJ",
               16777216000000000
             ],
             [
-              "5DWrXy8b93QUsd2NzLSFcAH3hVxE3bX3W9V6CZhzyf52JDBd",
+              "5HKgozQHPG5K5XCFGEs1FKPEXKqZrQrymqBNncKbtBfGHPgT",
               16777216000000000
             ]
           ]
@@ -37,8 +37,8 @@
           "candidacyBond": 16000000000,
           "desiredCandidates": 0,
           "invulnerables": [
-            "5EyfoszzhQnYpS4jqPDUm14XgqGtEWcRX5EBsGGbN3wQAcTd",
-            "5DWrXy8b93QUsd2NzLSFcAH3hVxE3bX3W9V6CZhzyf52JDBd"
+            "5ECmPXn7K9Pe5MA1YoNSbfaBaRtDhTdYym4bgSipbW8XwByJ",
+            "5HKgozQHPG5K5XCFGEs1FKPEXKqZrQrymqBNncKbtBfGHPgT"
           ]
         },
         "ethereumSystem": {
@@ -54,15 +54,15 @@
         "session": {
           "keys": [
             [
-              "5DWrXy8b93QUsd2NzLSFcAH3hVxE3bX3W9V6CZhzyf52JDBd",
-              "5DWrXy8b93QUsd2NzLSFcAH3hVxE3bX3W9V6CZhzyf52JDBd",
+              "5HKgozQHPG5K5XCFGEs1FKPEXKqZrQrymqBNncKbtBfGHPgT",
+              "5HKgozQHPG5K5XCFGEs1FKPEXKqZrQrymqBNncKbtBfGHPgT",
               {
                 "aura": "5DWrXy8b93QUsd2NzLSFcAH3hVxE3bX3W9V6CZhzyf52JDBd"
               }
             ],
             [
-              "5EyfoszzhQnYpS4jqPDUm14XgqGtEWcRX5EBsGGbN3wQAcTd",
-              "5EyfoszzhQnYpS4jqPDUm14XgqGtEWcRX5EBsGGbN3wQAcTd",
+              "5ECmPXn7K9Pe5MA1YoNSbfaBaRtDhTdYym4bgSipbW8XwByJ",
+              "5ECmPXn7K9Pe5MA1YoNSbfaBaRtDhTdYym4bgSipbW8XwByJ",
               {
                 "aura": "5EyfoszzhQnYpS4jqPDUm14XgqGtEWcRX5EBsGGbN3wQAcTd"
               }
