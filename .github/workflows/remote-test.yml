@@ -2,6 +2,7 @@ name: Remote Test Trigger
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened]
 
 jobs:
   trigger-remote-test:
