@@ -11,7 +11,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PASEO_RUNTIME_CI_PAT }}
         run: |
-          curl -L \
+          response=$(curl -L \
             -X POST \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer $GH_TOKEN" \
@@ -21,6 +21,11 @@ jobs:
               "ref": "main",
               "inputs": {
                 "target_repo": "https://github.com/${{ github.repository }}",
-                "target_branch": "${{ github.head_ref }}"
+                "target_branch": "${{ github.head_ref }}",
+                "pr_number": "${{ github.event.pull_request.number }}"
               }
-            }'
+            }' -w "%{http_code}" -o /dev/null)
+          if [ "$response" != "204" ]; then
+            echo "Failed to trigger remote test. HTTP status code: $response"
+            exit 1
+          fi
