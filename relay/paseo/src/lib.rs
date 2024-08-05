@@ -277,11 +277,7 @@ impl pallet_preimage::Config for Runtime {
 }
 
 parameter_types! {
-	pub EpochDuration: u64 = prod_or_fast!(
-		EPOCH_DURATION_IN_SLOTS as u64,
-		2 * MINUTES as u64,
-		"PAS_EPOCH_DURATION"
-	);
+	pub EpochDuration: u64 = EPOCH_DURATION_IN_SLOTS as u64;
 	pub const ExpectedBlockTime: Moment = MILLISECS_PER_BLOCK;
 	pub ReportLongevity: u64 =
 		BondingDuration::get() as u64 * SessionsPerEra::get() as u64 * EpochDuration::get();
@@ -1471,9 +1467,7 @@ impl paras_registrar::Config for Runtime {
 }
 
 parameter_types! {
-	// 12 weeks = 3 months per lease period -> 8 lease periods ~ 2 years
-	pub LeasePeriod: BlockNumber = prod_or_fast!(1 * WEEKS, 1 * WEEKS, "PAS_LEASE_PERIOD");
-	pub LeaseOffset: BlockNumber = prod_or_fast!(1 * DAYS, 0, "PAS_LEASE_OFFSET");
+	pub LeasePeriod: BlockNumber = prod_or_fast!(1 * WEEKS, 1 * DAYS, "PAS_LEASE_PERIOD");
 }
 
 impl slots::Config for Runtime {
