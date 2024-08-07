@@ -19,9 +19,9 @@ print_message() {
 }
 
 # Define list of parachains to copy
-# Format: "parachain_name origin_dir dest_dir"
+# Format: "parachain_name source_dir dest_dir"
 # parachain_name: name of the parachain
-# origin_dir: relative path in polkadot_runtime_next/system-parachains/
+# source_dir: relative path in polkadot_runtime_next/system-parachains/
 # dest_dir: relative path in paseo_runtime/system-parachains/
 PARACHAINS=(
     "asset_hub  asset-hubs/asset-hub-polkadot   asset-hub-paseo"
@@ -123,7 +123,7 @@ if [ "$PROCESS_PARACHAINS" = "true" ]; then
 
     print_message "----- Copying specified parachains -----" "${BLUE}"
     for parachain in "${PARACHAINS[@]}"; do
-        read -r parachain_name _ dest_dir <<< "$parachain"
+        read -r parachain_name source_dir dest_dir <<< "$parachain"
         source_dir="../polkadot_runtime_next/system-parachains/${source_dir}"
         dest_dir="system-parachains/${dest_dir}"
         if [ -d "$source_dir" ]; then
