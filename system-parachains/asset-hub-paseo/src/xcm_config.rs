@@ -14,27 +14,28 @@
 // limitations under the License.
 
 use super::{
-	AccountId, AllPalletsWithSystem, Assets, Authorship, Balance, Balances, ForeignAssets,
-	PoolAssets, ParachainInfo, ParachainSystem, PolkadotXcm, NativeAndAssets,PriceForParentDelivery, Runtime, RuntimeCall,
-	RuntimeEvent, RuntimeOrigin, TrustBackedAssetsInstance, WeightToFee, XcmpQueue, CollatorSelection, AssetConversion
+	AccountId, AllPalletsWithSystem, AssetConversion, Assets, Authorship, Balance, Balances,
+	CollatorSelection, ForeignAssets, NativeAndAssets, ParachainInfo, ParachainSystem, PolkadotXcm,
+	PoolAssets, PriceForParentDelivery, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin,
+	TrustBackedAssetsInstance, WeightToFee, XcmpQueue,
 };
 use crate::ForeignAssetsInstance;
 use assets_common::{
-    matching::{FromNetwork, FromSiblingParachain, IsForeignConcreteAsset},
-    TrustBackedAssetsAsLocation,
+	matching::{FromNetwork, FromSiblingParachain, IsForeignConcreteAsset},
+	TrustBackedAssetsAsLocation,
 };
 use frame_support::{
-    parameter_types,
-    traits::{
-        tokens::imbalance::{ResolveAssetTo, ResolveTo},
-        ConstU32, Contains, Equals, Everything, Nothing, PalletInfoAccess,
-    },
+	parameter_types,
+	traits::{
+		tokens::imbalance::{ResolveAssetTo, ResolveTo},
+		ConstU32, Contains, Equals, Everything, Nothing, PalletInfoAccess,
+	},
 };
 use frame_system::EnsureRoot;
 use pallet_xcm::XcmPassthrough;
 use parachains_common::xcm_config::{
-    AllSiblingSystemParachains, AssetFeeAsExistentialDepositMultiplier, ConcreteAssetFromSystem,
-    ParentRelayOrSiblingParachains, RelayOrOtherSystemParachains,
+	AllSiblingSystemParachains, AssetFeeAsExistentialDepositMultiplier, ConcreteAssetFromSystem,
+	ParentRelayOrSiblingParachains, RelayOrOtherSystemParachains,
 };
 use polkadot_parachain_primitives::primitives::Sibling;
 use paseo_runtime_constants::system_parachain;
@@ -44,14 +45,14 @@ use system_parachains_constants::TREASURY_PALLET_ID;
 use xcm::latest::prelude::*;
 use xcm_builder::{
 	AccountId32Aliases, AllowExplicitUnpaidExecutionFrom, AllowKnownQueryResponses,
-	AllowSubscriptionsFrom, AllowTopLevelPaidExecutionFrom,
-	DenyReserveTransferToRelayChain, DenyThenTry, DescribeAllTerminal, DescribeFamily,
-	EnsureXcmOrigin, FrameTransactionalProcessor, FungiblesAdapter, GlobalConsensusParachainConvertsFor, HashedDescription, IsConcrete,
-	LocalMint, NoChecking, ParentAsSuperuser, ParentIsPreset, RelayChainAsNative, FungibleAdapter,
-	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative, SovereignPaidRemoteExporter,
-	SignedToAccountId32, SovereignSignedViaLocation, StartsWith, StartsWithExplicitGlobalConsensus,
-	TakeWeightCredit, TrailingSetTopicAsId, UsingComponents, WeightInfoBounds, WithComputedOrigin,
-	WithUniqueTopic,  XcmFeeManagerFromComponents,
+	AllowSubscriptionsFrom, AllowTopLevelPaidExecutionFrom, DenyReserveTransferToRelayChain,
+	DenyThenTry, DescribeAllTerminal, DescribeFamily, EnsureXcmOrigin, FrameTransactionalProcessor,
+	FungibleAdapter, FungiblesAdapter, GlobalConsensusParachainConvertsFor, HashedDescription,
+	IsConcrete, LocalMint, NoChecking, ParentAsSuperuser, ParentIsPreset, RelayChainAsNative,
+	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
+	SignedToAccountId32, SovereignPaidRemoteExporter, SovereignSignedViaLocation, StartsWith,
+	StartsWithExplicitGlobalConsensus, TakeWeightCredit, TrailingSetTopicAsId, UsingComponents,
+	WeightInfoBounds, WithComputedOrigin, WithUniqueTopic, XcmFeeManagerFromComponents,
 	XcmFeeToAccount,
 };
 use xcm_executor::{traits::ConvertLocation, XcmExecutor};
@@ -70,13 +71,15 @@ parameter_types! {
 	pub TrustBackedAssetsPalletLocationV3: xcm::v3::Location =
 		xcm::v3::Junction::PalletInstance(TrustBackedAssetsPalletIndex::get()).into();
 	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
-	pub FellowshipLocation: Location = Location::new(1, Parachain(1001));
+	pub FellowshipLocation: Location = Location::new(1, Parachain(system_parachain::COLLECTIVES_ID));
 	pub const GovernanceLocation: Location = Location::parent();
 	pub RelayTreasuryLocation: Location = (Parent, PalletInstance(paseo_runtime_constants::TREASURY_PALLET_ID)).into();
+	pub TreasuryAccount: AccountId = TREASURY_PALLET_ID.into_account_truncating();
 	pub PoolAssetsPalletLocation: Location =
 		PalletInstance(<PoolAssets as PalletInfoAccess>::index() as u8).into();
-	pub TreasuryAccount: AccountId = TREASURY_PALLET_ID.into_account_truncating();
 	pub StakingPot: AccountId = CollatorSelection::account_id();
+	// Test [`crate::tests::treasury_pallet_account_not_none`] ensures that the result of location
+	// conversion is not `None`.
 	pub RelayTreasuryPalletAccount: AccountId =
 		LocationToAccountId::convert_location(&RelayTreasuryLocation::get())
 			.unwrap_or(TreasuryAccount::get());
@@ -122,76 +125,76 @@ pub type TrustBackedAssetsConvertedConcreteId =
 
 /// Means for transacting assets besides the native currency on this chain.
 pub type FungiblesTransactor = FungiblesAdapter<
-    // Use this fungibles implementation:
-    Assets,
-    // Use this currency when it is a fungible asset matching the given location or name:
-    TrustBackedAssetsConvertedConcreteId,
-    // Convert an XCM `Location` into a local account ID:
-    LocationToAccountId,
-    // Our chain's account ID type (we can't get away without mentioning it explicitly):
-    AccountId,
-    // We only want to allow teleports of known assets. We use non-zero issuance as an indication
-    // that this asset is known.
-    LocalMint<parachains_common::impls::NonZeroIssuance<AccountId, Assets>>,
-    // The account to use for tracking teleports.
-    CheckingAccount,
+	// Use this fungibles implementation:
+	Assets,
+	// Use this currency when it is a fungible asset matching the given location or name:
+	TrustBackedAssetsConvertedConcreteId,
+	// Convert an XCM `Location` into a local account ID:
+	LocationToAccountId,
+	// Our chain's account ID type (we can't get away without mentioning it explicitly):
+	AccountId,
+	// We only want to allow teleports of known assets. We use non-zero issuance as an indication
+	// that this asset is known.
+	LocalMint<parachains_common::impls::NonZeroIssuance<AccountId, Assets>>,
+	// The account to use for tracking teleports.
+	CheckingAccount,
 >;
 
 /// `AssetId`/`Balance` converter for `ForeignAssets`
 pub type ForeignAssetsConvertedConcreteId = assets_common::ForeignAssetsConvertedConcreteId<
-    (
-        // Ignore `TrustBackedAssets` explicitly
-        StartsWith<TrustBackedAssetsPalletLocation>,
-        // Ignore assets that start explicitly with our `GlobalConsensus(NetworkId)`, means:
-        // - foreign assets from our consensus should be: `Location {parents: 1, X*(Parachain(xyz),
-        //   ..)}`
-        // - foreign assets outside our consensus with the same `GlobalConsensus(NetworkId)` won't
-        //   be accepted here
-        StartsWithExplicitGlobalConsensus<UniversalLocationNetworkId>,
-    ),
-    Balance,
+	(
+		// Ignore `TrustBackedAssets` explicitly
+		StartsWith<TrustBackedAssetsPalletLocation>,
+		// Ignore assets that start explicitly with our `GlobalConsensus(NetworkId)`, means:
+		// - foreign assets from our consensus should be: `Location {parents: 1, X*(Parachain(xyz),
+		//   ..)}`
+		// - foreign assets outside our consensus with the same `GlobalConsensus(NetworkId)` won't
+		//   be accepted here
+		StartsWithExplicitGlobalConsensus<UniversalLocationNetworkId>,
+	),
+	Balance,
 >;
 
 /// Means for transacting foreign assets from different global consensus.
 pub type ForeignFungiblesTransactor = FungiblesAdapter<
-    // Use this fungibles implementation:
-    ForeignAssets,
-    // Use this currency when it is a fungible asset matching the given location or name:
-    ForeignAssetsConvertedConcreteId,
-    // Convert an XCM `Location` into a local account ID:
-    LocationToAccountId,
-    // Our chain's account ID type (we can't get away without mentioning it explicitly):
-    AccountId,
-    // We dont need to check teleports here.
-    NoChecking,
-    // The account to use for tracking teleports.
-    CheckingAccount,
+	// Use this fungibles implementation:
+	ForeignAssets,
+	// Use this currency when it is a fungible asset matching the given location or name:
+	ForeignAssetsConvertedConcreteId,
+	// Convert an XCM `Location` into a local account ID:
+	LocationToAccountId,
+	// Our chain's account ID type (we can't get away without mentioning it explicitly):
+	AccountId,
+	// We dont need to check teleports here.
+	NoChecking,
+	// The account to use for tracking teleports.
+	CheckingAccount,
 >;
 
 /// `AssetId`/`Balance` converter for `PoolAssets`.
 pub type PoolAssetsConvertedConcreteId =
-assets_common::PoolAssetsConvertedConcreteId<PoolAssetsPalletLocation, Balance>;
+	assets_common::PoolAssetsConvertedConcreteId<PoolAssetsPalletLocation, Balance>;
 
 /// Means for transacting asset conversion pool assets on this chain.
 pub type PoolFungiblesTransactor = FungiblesAdapter<
-    // Use this fungibles implementation:
-    PoolAssets,
-    // Use this currency when it is a fungible asset matching the given location or name:
-    PoolAssetsConvertedConcreteId,
-    // Convert an XCM `Location` into a local account ID:
-    LocationToAccountId,
-    // Our chain's account ID type (we can't get away without mentioning it explicitly):
-    AccountId,
-    // We only want to allow teleports of known assets. We use non-zero issuance as an indication
-    // that this asset is known.
-    LocalMint<parachains_common::impls::NonZeroIssuance<AccountId, PoolAssets>>,
-    // The account to use for tracking teleports.
-    CheckingAccount,
+	// Use this fungibles implementation:
+	PoolAssets,
+	// Use this currency when it is a fungible asset matching the given location or name:
+	PoolAssetsConvertedConcreteId,
+	// Convert an XCM `Location` into a local account ID:
+	LocationToAccountId,
+	// Our chain's account ID type (we can't get away without mentioning it explicitly):
+	AccountId,
+	// We only want to allow teleports of known assets. We use non-zero issuance as an indication
+	// that this asset is known.
+	LocalMint<parachains_common::impls::NonZeroIssuance<AccountId, PoolAssets>>,
+	// The account to use for tracking teleports.
+	CheckingAccount,
 >;
 
 /// Means for transacting assets on this chain.
 pub type AssetTransactors =
-(FungibleTransactor, FungiblesTransactor, ForeignFungiblesTransactor, PoolFungiblesTransactor);
+	(FungibleTransactor, FungiblesTransactor, ForeignFungiblesTransactor, PoolFungiblesTransactor);
 
 /// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
 /// ready for dispatching a transaction with Xcm's `Transact`. There is an `OriginKind` which can
@@ -225,8 +228,8 @@ parameter_types! {
 
 pub struct FellowshipEntities;
 impl Contains<Location> for FellowshipEntities {
-    fn contains(location: &Location) -> bool {
-        matches!(
+	fn contains(location: &Location) -> bool {
+		matches!(
 			location.unpack(),
 			(
 				1,
@@ -248,7 +251,7 @@ impl Contains<Location> for FellowshipEntities {
 				]
 			)
 		)
-    }
+	}
 }
 
 pub struct ParentOrParentsPlurality;
@@ -438,11 +441,6 @@ pub type XcmRouter = WithUniqueTopic<(
 	>,
 )>;
 
-#[cfg(feature = "runtime-benchmarks")]
-parameter_types! {
-	pub ReachableDest: Option<Location> = Some(Parent.into());
-}
-
 impl pallet_xcm::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	// We want to disallow users sending (arbitrary) XCMs from this chain.
@@ -472,8 +470,6 @@ impl pallet_xcm::Config for Runtime {
 	type SovereignAccountOf = LocationToAccountId;
 	type MaxLockers = ConstU32<8>;
 	type WeightInfo = crate::weights::pallet_xcm::WeightInfo<Runtime>;
-	#[cfg(feature = "runtime-benchmarks")]
-	type ReachableDest = ReachableDest;
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type MaxRemoteLockConsumers = ConstU32<0>;
 	type RemoteLockConsumerIdentifier = ();
@@ -502,10 +498,10 @@ impl pallet_assets::BenchmarkHelper<xcm::v3::Location> for XcmBenchmarkHelper {
 
 /// All configuration related to bridging
 pub mod bridging {
-    use super::*;
-    use assets_common::matching;
-    use sp_std::collections::btree_set::BTreeSet;
-    use xcm_builder::NetworkExportTableItem;
+	use super::*;
+	use assets_common::matching;
+	use sp_std::collections::btree_set::BTreeSet;
+	use xcm_builder::NetworkExportTableItem;
 
 	parameter_types! {
 		pub SiblingBridgeHubParaId: u32 = bp_bridge_hub_paseo::BRIDGE_HUB_PASEO_PARACHAIN_ID;
@@ -514,15 +510,16 @@ pub mod bridging {
 		/// (`AssetId` has to be aligned with `BridgeTable`)
 		pub XcmBridgeHubRouterFeeAssetId: AssetId = DotLocation::get().into();
 	}
-pub mod to_ethereum {
-        use super::*;
-        pub use bp_bridge_hub_paseo::snowbridge::EthereumNetwork;
-        use bp_bridge_hub_paseo::snowbridge::InboundQueuePalletInstance;
 
-        parameter_types! {
+	pub mod to_ethereum {
+		use super::*;
+		pub use bp_bridge_hub_paseo::snowbridge::EthereumNetwork;
+		use bp_bridge_hub_paseo::snowbridge::InboundQueuePalletInstance;
+
+		parameter_types! {
 			/// User fee for transfers from Polkadot to Ethereum.
-            /// The fee is set to max Balance to disable the bridge until a fee is set by
-            /// governance.
+			/// The fee is set to max Balance to disable the bridge until a fee is set by
+			/// governance.
 			pub const DefaultBridgeHubEthereumBaseFee: Balance = Balance::MAX;
 			pub storage BridgeHubEthereumBaseFee: Balance = DefaultBridgeHubEthereumBaseFee::get();
 			pub SiblingBridgeHubWithEthereumInboundQueueInstance: Location = Location::new(
@@ -534,7 +531,7 @@ pub mod to_ethereum {
 			);
 
 			/// Set up exporters configuration.
-            /// `Option<MultiAsset>` represents static "base fee" which is used for total delivery fee calculation.
+			/// `Option<MultiAsset>` represents static "base fee" which is used for total delivery fee calculation.
 			pub BridgeTable: sp_std::vec::Vec<NetworkExportTableItem> = sp_std::vec![
 				NetworkExportTableItem::new(
 					EthereumNetwork::get(),
@@ -555,40 +552,40 @@ pub mod to_ethereum {
 			);
 		}
 
-        pub type IsTrustedBridgedReserveLocationForForeignAsset =
-        matching::IsForeignConcreteAsset<FromNetwork<UniversalLocation, EthereumNetwork>>;
+		pub type IsTrustedBridgedReserveLocationForForeignAsset =
+			matching::IsForeignConcreteAsset<FromNetwork<UniversalLocation, EthereumNetwork>>;
 
-        impl Contains<(Location, Junction)> for UniversalAliases {
-            fn contains(alias: &(Location, Junction)) -> bool {
+		impl Contains<(Location, Junction)> for UniversalAliases {
+			fn contains(alias: &(Location, Junction)) -> bool {
 				log::trace!(
 					target: "xcm::contains",
 					"Contains: {:?}",
 					alias,
 				);
-                UniversalAliases::get().contains(alias)
-            }
-        }
-    }
+				UniversalAliases::get().contains(alias)
+			}
+		}
+	}
 
-    /// Benchmarks helper for bridging configuration.
-    #[cfg(feature = "runtime-benchmarks")]
-    pub struct BridgingBenchmarksHelper;
+	/// Benchmarks helper for bridging configuration.
+	#[cfg(feature = "runtime-benchmarks")]
+	pub struct BridgingBenchmarksHelper;
 
-    #[cfg(feature = "runtime-benchmarks")]
-    impl BridgingBenchmarksHelper {
-        pub fn prepare_universal_alias() -> Option<(Location, Junction)> {
-            let alias =
-                to_kusama::UniversalAliases::get().into_iter().find_map(|(location, junction)| {
-                    match to_kusama::SiblingBridgeHubWithBridgeHubKusamaInstance::get()
-                        .eq(&location)
-                    {
-                        true => Some((location, junction)),
-                        false => None,
-                    }
-                });
-            Some(alias.expect("we expect here BridgeHubPolkadot to Kusama mapping at least"))
-        }
-    }
+	#[cfg(feature = "runtime-benchmarks")]
+	impl BridgingBenchmarksHelper {
+		pub fn prepare_universal_alias() -> Option<(Location, Junction)> {
+			let alias =
+				to_kusama::UniversalAliases::get().into_iter().find_map(|(location, junction)| {
+					match to_kusama::SiblingBridgeHubWithBridgeHubKusamaInstance::get()
+						.eq(&location)
+					{
+						true => Some((location, junction)),
+						false => None,
+					}
+				});
+			Some(alias.expect("we expect here BridgeHubPaseo to Kusama mapping at least"))
+		}
+	}
 }
 
 #[test]

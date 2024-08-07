@@ -1,21 +1,25 @@
 {
-    "replacements": {
-      "re:\\bPolkadot Fellowship\\b": "Paseo Core Team",
-      "re:impl<T: frame_system::Config> \\S+::WeightInfo<T> for WeightInfo<T> \\{\\s*": "impl<T: frame_system::Config> WeightInfo<T> {",
-      "https://github.com/polkadot-fellows/runtimes.git": "https://github.com/paseo-network/runtimes.git",
-      "polkadot_runtime_constants": "paseo_runtime_constants",
-      "polkadot-runtime-constants": "paseo-runtime-constants",
-      "runtime::polkadot": "runtime::paseo",
-      "polkadot-runtime\"":"paseo-runtime\"",
-      "spec_name: create_runtime_str!(\"polkadot\"),": "spec_name: create_runtime_str!(\"paseo\"),",
-      "impl_name: create_runtime_str!(\"parity-polkadot\"),": "impl_name: create_runtime_str!(\"paseo-testnet\"),",
-      "type LeaseOffset = LeaseOffset;": "type LeaseOffset = ();",
-      "// Polkadot version identifier;": "// Portico version identifier;",
-      "/// Runtime version (Polkadot).": "/// Runtime version (Paseo).",
-      "//! XCM configuration for Polkadot.": "//! XCM configuration for Paseo.",
-      "pub const EPOCH_DURATION_IN_SLOTS: BlockNumber = prod_or_fast!(4 * HOURS, 1 * MINUTES);":"pub const EPOCH_DURATION_IN_SLOTS: BlockNumber = prod_or_fast!(1 * HOURS, 1 * MINUTES);",
-      "Polkadot": "Paseo",
-      "polkadot": "paseo"
-    },
-    "remove_block_pattern": "\\s*// Polkadot Genesis was on May 26, 2020\\..*?DOT_LEASE_OFFSET\\\"\\);"
-  }
+  "replacements": {
+    "re:\\bPolkadot Fellowship\\b": "Paseo Core Team",
+    "re:impl<T: frame_system::Config> \\S+::WeightInfo<T> for WeightInfo<T> \\{\\s*": "impl<T: frame_system::Config> WeightInfo<T> {",
+    "https://github.com/polkadot-fellows/runtimes.git": "https://github.com/paseo-network/runtimes.git",
+    "polkadot_runtime_constants": "paseo_runtime_constants",
+    "polkadot-runtime-constants": "paseo-runtime-constants",
+    "runtime::polkadot": "runtime::paseo",
+    "polkadot-runtime\"":"paseo-runtime\"",
+    "spec_name: create_runtime_str!(\"polkadot\"),": "spec_name: create_runtime_str!(\"paseo\"),",
+    "impl_name: create_runtime_str!(\"parity-polkadot\"),": "impl_name: create_runtime_str!(\"paseo-testnet\"),",
+    "type LeaseOffset = LeaseOffset;": "type LeaseOffset = ();",
+    "// Polkadot version identifier;": "// Portico version identifier;",
+    "/// Runtime version (Polkadot).": "/// Runtime version (Paseo).",
+    "//! XCM configuration for Polkadot.": "//! XCM configuration for Paseo.",
+    "pub const EPOCH_DURATION_IN_SLOTS: BlockNumber = prod_or_fast!(4 * HOURS, 1 * MINUTES);":"pub const EPOCH_DURATION_IN_SLOTS: BlockNumber = prod_or_fast!(1 * HOURS, 1 * MINUTES);",
+    "Polkadot": "Paseo",
+    "polkadot": "paseo",
+    "DOT": "PAS"
+  },
+  "remove_block_pattern": "\\s*// Polkadot Genesis was on May 26, 2020\\..*?DOT_LEASE_OFFSET\\\"\\);",
+  "revert_if_deleted": [
+    "relay/paseo/src/weights/pallet_sudo.rs"
+  ]
+}

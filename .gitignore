@@ -39,3 +39,4 @@ target/
 **/tmp_runtime
 **/tmp_hub
 *.log
+*.patch

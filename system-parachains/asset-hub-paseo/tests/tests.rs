@@ -19,39 +19,40 @@
 
 use asset_hub_paseo_runtime::{
 	xcm_config::{
-		CheckingAccount, DotLocation,
-		ForeignCreatorsSovereignAccountOf,
+		bridging::{self, XcmBridgeHubRouterFeeAssetId},
+		CheckingAccount, DotLocation, ForeignCreatorsSovereignAccountOf, LocationToAccountId,
+		RelayTreasuryLocation, RelayTreasuryPalletAccount, StakingPot,
 		TrustBackedAssetsPalletLocation, XcmConfig,
 	},
-	AllPalletsWithoutSystem, AssetDeposit, Assets, Balances, ExistentialDeposit, ForeignAssets,
-	ForeignAssetsInstance, MetadataDepositBase, MetadataDepositPerByte, ParachainSystem, Runtime,
-	RuntimeCall, RuntimeEvent, SessionKeys, TrustBackedAssetsInstance,
+	AllPalletsWithoutSystem, AssetConversion, AssetDeposit, Assets, Balances, ExistentialDeposit,
+	ForeignAssets, ForeignAssetsInstance, MetadataDepositBase, MetadataDepositPerByte,
+	ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, SessionKeys,
+	TrustBackedAssetsInstance, XcmpQueue,
 };
-use frame_support::traits::fungibles::InspectEnumerable;
-use system_parachains_constants::paseo::consensus::RELAY_CHAIN_SLOT_DURATION_MILLIS;
-use codec::{Decode};
-use frame_support::{
-	assert_ok,
+use asset_test_utils::{
+	test_cases_over_bridge::TestBridgingConfig, CollatorSessionKey, CollatorSessionKeys, ExtBuilder,
 };
-use xcm::latest::prelude::Assets as XcmAssets;
-use frame_support::sp_runtime::traits::MaybeEquivalence;
-use codec::Encode;
+use codec::{Decode, Encode};
+use frame_support::{assert_ok, traits::fungibles::InspectEnumerable};
 use parachains_common::{
 	AccountId, AssetHubPolkadotAuraId as AuraId, AssetIdForTrustBackedAssets, Balance,
 };
 use parachains_runtimes_test_utils::SlotDurations;
 use sp_consensus_aura::SlotDuration;
-use system_parachains_constants::paseo::fee::WeightToFee;
-use xcm_executor::traits::JustTry;
-use xcm_builder::V4V3LocationConverter;
+use sp_runtime::traits::MaybeEquivalence;
+use sp_std::ops::Mul;
 use system_parachains_constants::SLOT_DURATION;
-use asset_test_utils::{CollatorSessionKeys, ExtBuilder, CollatorSessionKey};
+use system_parachains_constants::paseo::fee::WeightToFee;
+use xcm::latest::prelude::{Assets as XcmAssets, *};
+use xcm_builder::V4V3LocationConverter;
+use xcm_executor::traits::{ConvertLocation, JustTry};
+use system_parachains_constants::paseo::consensus::RELAY_CHAIN_SLOT_DURATION_MILLIS;
 
 const ALICE: [u8; 32] = [1u8; 32];
 const SOME_ASSET_ADMIN: [u8; 32] = [5u8; 32];
 
 type AssetIdForTrustBackedAssetsConvertLatest =
-assets_common::AssetIdForTrustBackedAssetsConvertLatest<TrustBackedAssetsPalletLocation>;
+	assets_common::AssetIdForTrustBackedAssetsConvertLatest<TrustBackedAssetsPalletLocation>;
 
 type RuntimeHelper = asset_test_utils::RuntimeHelper<Runtime, AllPalletsWithoutSystem>;
 
@@ -72,6 +73,52 @@ fn slot_durations() -> SlotDurations {
 		relay: SlotDuration::from_millis(RELAY_CHAIN_SLOT_DURATION_MILLIS.into()),
 		para: SlotDuration::from_millis(SLOT_DURATION),
 	}
+}
+
+fn setup_pool_for_paying_fees_with_foreign_assets(
+	(foreign_asset_owner, foreign_asset_id_location, foreign_asset_id_minimum_balance): (
+		AccountId,
+		xcm::v3::Location,
+		Balance,
+	),
+) {
+	let existential_deposit = ExistentialDeposit::get();
+
+	// setup a pool to pay fees with `foreign_asset_id_location` tokens
+	let pool_owner: AccountId = [14u8; 32].into();
+	let native_asset = xcm::v3::Location::parent();
+	let pool_liquidity: Balance =
+		existential_deposit.max(foreign_asset_id_minimum_balance).mul(100_000);
+
+	let _ = Balances::force_set_balance(
+		RuntimeOrigin::root(),
+		pool_owner.clone().into(),
+		(existential_deposit + pool_liquidity).mul(2),
+	);
+
+	assert_ok!(ForeignAssets::mint(
+		RuntimeOrigin::signed(foreign_asset_owner),
+		foreign_asset_id_location,
+		pool_owner.clone().into(),
+		(foreign_asset_id_minimum_balance + pool_liquidity).mul(2),
+	));
+
+	assert_ok!(AssetConversion::create_pool(
+		RuntimeOrigin::signed(pool_owner.clone()),
+		Box::new(native_asset),
+		Box::new(foreign_asset_id_location)
+	));
+
+	assert_ok!(AssetConversion::add_liquidity(
+		RuntimeOrigin::signed(pool_owner.clone()),
+		Box::new(native_asset),
+		Box::new(foreign_asset_id_location),
+		pool_liquidity,
+		pool_liquidity,
+		1,
+		1,
+		pool_owner,
+	));
 }
 
 #[test]
@@ -331,3 +378,67 @@ asset_test_utils::include_create_and_manage_foreign_assets_for_local_consensus_p
 		assert_eq!(ForeignAssets::asset_ids().collect::<Vec<_>>().len(), 1);
 	})
 );
+
+#[test]
+fn reserve_transfer_native_asset_to_non_teleport_para_works() {
+	asset_test_utils::test_cases::reserve_transfer_native_asset_to_non_teleport_para_works::<
+		Runtime,
+		AllPalletsWithoutSystem,
+		XcmConfig,
+		ParachainSystem,
+		XcmpQueue,
+		LocationToAccountId,
+	>(
+		collator_session_keys(),
+		slot_durations(),
+		ExistentialDeposit::get(),
+		AccountId::from(ALICE),
+		Box::new(|runtime_event_encoded: Vec<u8>| {
+			match RuntimeEvent::decode(&mut &runtime_event_encoded[..]) {
+				Ok(RuntimeEvent::PolkadotXcm(event)) => Some(event),
+				_ => None,
+			}
+		}),
+		Box::new(|runtime_event_encoded: Vec<u8>| {
+			match RuntimeEvent::decode(&mut &runtime_event_encoded[..]) {
+				Ok(RuntimeEvent::XcmpQueue(event)) => Some(event),
+				_ => None,
+			}
+		}),
+		WeightLimit::Unlimited,
+	);
+}
+
+#[test]
+fn treasury_pallet_account_not_none() {
+	assert_eq!(
+		RelayTreasuryPalletAccount::get(),
+		LocationToAccountId::convert_location(&RelayTreasuryLocation::get()).unwrap()
+	)
+}
+
+#[test]
+fn change_xcm_bridge_hub_ethereum_base_fee_by_governance_works() {
+	asset_test_utils::test_cases::change_storage_constant_by_governance_works::<
+		Runtime,
+		bridging::to_ethereum::BridgeHubEthereumBaseFee,
+		Balance,
+	>(
+		collator_session_keys(),
+		1000,
+		Box::new(|call| RuntimeCall::System(call).encode()),
+		|| {
+			(
+				bridging::to_ethereum::BridgeHubEthereumBaseFee::key().to_vec(),
+				bridging::to_ethereum::BridgeHubEthereumBaseFee::get(),
+			)
+		},
+		|old_value| {
+			if let Some(new_value) = old_value.checked_add(1) {
+				new_value
+			} else {
+				old_value.checked_sub(1).unwrap()
+			}
+		},
+	)
+}

@@ -8,17 +8,17 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
-smallvec = "1.8.0"
+smallvec = { workspace = true }
 
 frame-support = { workspace = true }
 parachains-common = { workspace = true }
 polkadot-core-primitives = { workspace = true }
-polkadot-primitives ={ workspace = true }
+polkadot-primitives = { workspace = true }
 paseo-runtime-constants = { path = "../../relay/paseo/constants", default-features = false}
 sp-runtime = { workspace = true }
 
 [features]
-default = [ "std" ]
+default = ["std"]
 std = [
 	"frame-support/std",
 	"parachains-common/std",
