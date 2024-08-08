@@ -192,7 +192,8 @@ resolver = "2"
 members = [
 	"chain-spec-generator",
 	"relay/paseo",
-	"relay/paseo/constants"
+	"relay/paseo/constants",
+	"system-parachains/asset-hub-paseo"
 ]
 
 [profile.release]
