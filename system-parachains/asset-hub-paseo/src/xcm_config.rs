@@ -106,9 +106,6 @@ pub type LocationToAccountId = (
 	// Different global consensus parachain sovereign account.
 	// (Used for over-bridge transfers and reserve processing)
 	GlobalConsensusParachainConvertsFor<UniversalLocation, AccountId>,
-	// Ethereum contract sovereign account.
-	// (Used to get convert ethereum contract locations to sovereign account)
-	GlobalConsensusEthereumConvertsFor<AccountId>,
 );
 
 /// Means for transacting the native currency on this chain.
@@ -242,22 +239,6 @@ impl Contains<Location> for FellowshipEntities {
 				[
 					Parachain(system_parachain::COLLECTIVES_ID),
 					Plurality { id: BodyId::Technical, .. }
-				]
-			) | (
-				1,
-				[
-					Parachain(system_parachain::COLLECTIVES_ID),
-					PalletInstance(
-						collectives_polkadot_runtime_constants::FELLOWSHIP_SALARY_PALLET_INDEX
-					)
-				]
-			) | (
-				1,
-				[
-					Parachain(system_parachain::COLLECTIVES_ID),
-					PalletInstance(
-						collectives_polkadot_runtime_constants::FELLOWSHIP_TREASURY_PALLET_INDEX
-					)
 				]
 			)
 		)
@@ -637,8 +618,7 @@ impl cumulus_pallet_xcm::Config for Runtime {
 pub type ForeignCreatorsSovereignAccountOf = (
 	SiblingParachainConvertsVia<Sibling, AccountId>,
 	AccountId32Aliases<RelayNetwork, AccountId>,
-	ParentIsPreset<AccountId>,
-	GlobalConsensusEthereumConvertsFor<AccountId>,
+	ParentIsPreset<AccountId>
 );
 
 /// Simple conversion of `u32` into an `AssetId` for use in benchmarking.

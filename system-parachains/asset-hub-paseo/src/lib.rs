@@ -570,6 +570,13 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type WeightInfo = weights::cumulus_pallet_parachain_system::WeightInfo<Runtime>;
 }
 
+type ConsensusHook = cumulus_pallet_aura_ext::FixedVelocityConsensusHook<
+	Runtime,
+	RELAY_CHAIN_SLOT_DURATION_MILLIS,
+	BLOCK_PROCESSING_VELOCITY,
+	UNINCLUDED_SEGMENT_CAPACITY,
+>;
+
 impl parachain_info::Config for Runtime {}
 
 
@@ -948,14 +955,6 @@ pub type Migrations = (
 	pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
 );
 
-/// Migration for Uniques to V1
-pub struct UniquesMigration;
-
-impl OnRuntimeUpgrade for UniquesMigration {
-	fn on_runtime_upgrade() -> Weight {
-		pallet_uniques::migration::migrate_to_v1::<Runtime, (), pallet_uniques::Pallet<Runtime>>()
-	}
-}
 
 /// Executive: handles dispatch to the various modules.
 pub type Executive = frame_executive::Executive<

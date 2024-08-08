@@ -32,6 +32,14 @@ pub mod pallet_utility;
 pub mod pallet_xcm;
 pub mod paritydb_weights;
 pub mod rocksdb_weights;
+pub mod cumulus_pallet_parachain_system;
+pub mod pallet_message_queue;
+pub mod cumulus_pallet_dmp_queue;
+pub mod pallet_assets_pool;
+pub mod pallet_asset_conversion;
+
+
+
 pub mod xcm;
 
 pub use block_weights::constants::BlockExecutionWeight;

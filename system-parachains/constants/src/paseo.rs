@@ -145,4 +145,5 @@ pub mod fee {
 			}]
 		}
 	}
+	pub const TRANSACTION_BYTE_FEE: Balance = super::currency::MILLICENTS;
 }
