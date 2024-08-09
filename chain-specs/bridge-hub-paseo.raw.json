@@ -2,7 +2,10 @@
   "name": "Paseo Bridge Hub",
   "id": "paseo-bridge-hub",
   "chainType": "Live",
-  "bootNodes": [],
+  "bootNodes": [
+ 	"/dns/bridge-hub-paseo-boot-ng.dwellir.com/tcp/443/wss/p2p/12D3KooWC85x6r1m2TBByZncN6HWH1yALBHwvrYgMA3o78GphCCv",
+        "/dns/bridge-hub-paseo-boot-ng.dwellir.com/tcp/30360/p2p/12D3KooWC85x6r1m2TBByZncN6HWH1yALBHwvrYgMA3o78GphCCv"	
+  ],
   "telemetryEndpoints": null,
   "protocolId": "bh-pas",
   "properties": {
