@@ -36,9 +36,14 @@ pub type AssetHubPaseoChainSpec = sc_chain_spec::GenericChainSpec<(), Extensions
 
 pub type BridgeHubPaseoChainSpec = sc_chain_spec::GenericChainSpec<(), Extensions>;
 
+pub type PeoplePaseoChainSpec = sc_chain_spec::GenericChainSpec<(), Extensions>;
+
+
 const ASSET_HUB_PASEO_ED: Balance = asset_hub_paseo_runtime::ExistentialDeposit::get();
 
 const BRIDGE_HUB_PASEO_ED: Balance = bridge_hub_paseo_runtime::ExistentialDeposit::get();
+
+const PEOPLE_PASEO_ED: Balance = people_paseo_runtime::ExistentialDeposit::get();
 
 /// The default XCM version to set in genesis config.
 const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
@@ -79,6 +84,13 @@ pub fn asset_hub_paseo_session_keys(
 /// The input must be a tuple of individual keys (a single arg for now since we have just one key).
 pub fn bridge_hub_paseo_session_keys(keys: AuraId) -> bridge_hub_paseo_runtime::SessionKeys {
 	bridge_hub_paseo_runtime::SessionKeys { aura: keys }
+}
+
+/// Generate the session keys from individual elements.
+///
+/// The input must be a tuple of individual keys (a single arg for now since we have just one key).
+pub fn people_paseo_session_keys(keys: AuraId) -> people_paseo_runtime::SessionKeys {
+	people_paseo_runtime::SessionKeys { aura: keys }
 }
 
 // AssetHubPaseo
@@ -248,6 +260,102 @@ pub fn bridge_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, Str
 		.with_chain_type(ChainType::Local)
 		.with_protocol_id("bh-pas")
 		.with_genesis_config_patch(bridge_hub_paseo_local_genesis(1002.into()))
+		.with_properties(properties)
+		.build(),
+	))
+}
+
+// PeoplePolkadot
+pub fn people_paseo_genesis(
+	invulnerables: Vec<(AccountId, AuraId)>,
+	endowed_accounts: Vec<AccountId>,
+	id: ParaId,
+) -> serde_json::Value {
+	serde_json::json!({
+		"balances": people_paseo_runtime::BalancesConfig {
+			balances: endowed_accounts
+				.iter()
+				.cloned()
+				.map(|k| (k, PEOPLE_PASEO_ED * 4096 * 4096))
+				.collect(),
+		},
+		"parachainInfo": people_paseo_runtime::ParachainInfoConfig {
+			parachain_id: id,
+			..Default::default()
+		},
+		"collatorSelection": people_paseo_runtime::CollatorSelectionConfig {
+			invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),
+			candidacy_bond: PEOPLE_PASEO_ED * 16,
+			..Default::default()
+		},
+		"session": people_paseo_runtime::SessionConfig {
+			keys: invulnerables
+				.into_iter()
+				.map(|(acc, aura)| {
+					(
+						acc.clone(),                         // account id
+						acc,                                 // validator id
+						people_paseo_session_keys(aura), // session keys
+					)
+				})
+				.collect(),
+		},
+		"polkadotXcm": {
+			"safeXcmVersion": Some(SAFE_XCM_VERSION),
+		},
+		// no need to pass anything to aura, in fact it will panic if we do. Session will take care
+		// of this. `aura: Default::default()`
+	})
+}
+
+fn people_paseo_local_genesis(para_id: ParaId) -> serde_json::Value {
+	crate::system_parachains_specs::people_paseo_genesis(
+		// initial collators.
+		invulnerables(),
+		testnet_accounts(),
+		para_id,
+	)
+}
+
+pub fn people_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, String> {
+	let mut properties = sc_chain_spec::Properties::new();
+	properties.insert("ss58Format".into(), 0.into());
+	properties.insert("tokenSymbol".into(), "PAS".into());
+	properties.insert("tokenDecimals".into(), 10.into());
+
+	Ok(Box::new(
+		PeoplePaseoChainSpec::builder(
+			people_paseo_runtime::WASM_BINARY.expect("PeoplePaseo wasm not available!"),
+			Extensions { relay_chain: "paseo-local".into(), para_id: 1004 },
+		)
+		.with_name("Paseo People Local")
+		.with_id("people-paseo-local")
+		.with_chain_type(ChainType::Local)
+		.with_genesis_config_patch(crate::system_parachains_specs::people_paseo_local_genesis(
+			1004.into(),
+		))
+		.with_properties(properties)
+		.build(),
+	))
+}
+
+pub fn people_paseo_testnet_config() -> Result<Box<dyn ChainSpec>, String> {
+	let mut properties = sc_chain_spec::Properties::new();
+	properties.insert("ss58Format".into(), 0.into());
+	properties.insert("tokenSymbol".into(), "PAS".into());
+	properties.insert("tokenDecimals".into(), 10.into());
+
+	Ok(Box::new(
+		PeoplePaseoChainSpec::builder(
+			people_paseo_runtime::WASM_BINARY.expect("PeoplePaseo wasm not available!"),
+			Extensions { relay_chain: "paseo".into(), para_id: 1004 },
+		)
+		.with_name("Paseo People")
+		.with_id("people-paseo")
+		.with_chain_type(ChainType::Live)
+		.with_genesis_config_patch(crate::system_parachains_specs::people_paseo_local_genesis(
+			1004.into(),
+		))
 		.with_properties(properties)
 		.build(),
 	))

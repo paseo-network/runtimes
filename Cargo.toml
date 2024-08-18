@@ -234,6 +234,7 @@ members = [
 	"system-parachains/asset-hub-paseo/primitives",
 	"system-parachains/bridge-hub-paseo",
 	"system-parachains/bridge-hub-paseo/primitives",
+	"system-parachains/people-paseo",
 	"system-parachains/constants"
 ]
 
