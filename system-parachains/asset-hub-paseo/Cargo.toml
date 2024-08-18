@@ -99,6 +99,8 @@ assets-common = { workspace = true }
 pallet-xcm-bridge-hub-router = { workspace = true }
 snowbridge-router-primitives = { workspace = true }
 
+sp-debug-derive = { workspace = true }
+
 [dev-dependencies]
 hex-literal = { workspace = true }
 asset-test-utils = { workspace = true }
@@ -258,3 +260,5 @@ metadata-hash = ["substrate-wasm-builder?/metadata-hash"]
 # deployment. This will disable stuff that shouldn't be part of the on-chain wasm
 # to make it smaller, like logging for example.
 on-chain-release-build = ["sp-api/disable-logging", "metadata-hash"]
+fast-runtime = ["paseo-runtime-constants/fast-runtime"]
+force-debug = ["sp-debug-derive/force-debug"]
