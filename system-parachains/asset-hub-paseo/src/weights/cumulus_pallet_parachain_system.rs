@@ -60,13 +60,13 @@ impl<T: frame_system::Config> cumulus_pallet_parachain_system::WeightInfo for We
 	/// The range of component `n` is `[0, 1000]`.
 	fn enqueue_inbound_downward_messages(n: u32, ) -> Weight {
 		// Proof Size summary in bytes:
-		//  Measured:  `84`
+		//  Measured:  `12`
 		//  Estimated: `3517`
-		// Minimum execution time: 2_453_000 picoseconds.
-		Weight::from_parts(2_553_000, 0)
+		// Minimum execution time: 1_633_000 picoseconds.
+		Weight::from_parts(1_694_000, 0)
 			.saturating_add(Weight::from_parts(0, 3517))
-			// Standard Error: 349_908
-			.saturating_add(Weight::from_parts(207_948_706, 0).saturating_mul(n.into()))
+			// Standard Error: 39_295
+			.saturating_add(Weight::from_parts(195_057_429, 0).saturating_mul(n.into()))
 			.saturating_add(T::DbWeight::get().reads(3))
 			.saturating_add(T::DbWeight::get().writes(4))
 			.saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(n.into())))

@@ -94,8 +94,8 @@ use frame_support::{
 	parameter_types,
 	traits::{
 		fungible, fungibles, tokens::imbalance::ResolveAssetTo, AsEnsureOriginWithArg, ConstBool,
-		ConstU32, ConstU64, ConstU8, EitherOfDiverse, InstanceFilter, NeverEnsureOrigin,
-		TransformOrigin, WithdrawReasons,
+		ConstU32, ConstU64, ConstU8, EitherOfDiverse, EnsureOrigin, EnsureOriginWithArg, Equals,
+		InstanceFilter, NeverEnsureOrigin, TransformOrigin, WithdrawReasons,
 	},
 	weights::{ConstantMultiplier, Weight},
 	PalletId,
@@ -143,7 +143,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("asset-hub-paseo"),
 	impl_name: create_runtime_str!("asset-hub-paseo"),
 	authoring_version: 1,
-	spec_version: 1_002_005,
+	spec_version: 1_002_006,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 15,
@@ -268,7 +268,7 @@ impl pallet_vesting::Config for Runtime {
 
 parameter_types! {
 	/// Relay Chain `TransactionByteFee` / 10
-	pub const TransactionByteFee: Balance = MILLICENTS;
+	pub const TransactionByteFee: Balance = system_parachains_constants::paseo::fee::TRANSACTION_BYTE_FEE;
 	pub StakingPot: AccountId = CollatorSelection::account_id();
 }
 
@@ -298,6 +298,27 @@ parameter_types! {
 /// We allow root to execute privileged asset operations.
 pub type AssetsForceOrigin = EnsureRoot<AccountId>;
 
+/// Ensure that the proposed asset id is less than `50_000_000` and origin is signed.
+pub struct EnsureLessThanAutoIncrement;
+impl EnsureOriginWithArg<RuntimeOrigin, AssetIdForTrustBackedAssets>
+	for EnsureLessThanAutoIncrement
+{
+	type Success = AccountId;
+	fn try_origin(
+		o: RuntimeOrigin,
+		a: &AssetIdForTrustBackedAssets,
+	) -> Result<Self::Success, RuntimeOrigin> {
+		if *a >= 50_000_000 {
+			return Err(o);
+		}
+		<EnsureSigned<AccountId> as EnsureOrigin<RuntimeOrigin>>::try_origin(o)
+	}
+	#[cfg(feature = "runtime-benchmarks")]
+	fn try_successful_origin(_a: &AssetIdForTrustBackedAssets) -> Result<RuntimeOrigin, ()> {
+		<EnsureSigned<AccountId> as EnsureOrigin<RuntimeOrigin>>::try_successful_origin()
+	}
+}
+
 // Called "Trust Backed" assets because these are generally registered by some account, and users of
 // the asset assume it has some claimed backing. The pallet is called `Assets` in
 // `construct_runtime` to avoid breaking changes on storage reads.
@@ -309,7 +330,7 @@ impl pallet_assets::Config<TrustBackedAssetsInstance> for Runtime {
 	type AssetId = AssetIdForTrustBackedAssets;
 	type AssetIdParameter = codec::Compact<AssetIdForTrustBackedAssets>;
 	type Currency = Balances;
-	type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
+	type CreateOrigin = EnsureLessThanAutoIncrement;
 	type ForceOrigin = AssetsForceOrigin;
 	type AssetDeposit = AssetDeposit;
 	type MetadataDepositBase = MetadataDepositBase;
@@ -665,7 +686,7 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type ChannelInfo = ParachainSystem;
 	type VersionWrapper = PolkadotXcm;
 	type XcmpQueue = TransformOrigin<MessageQueue, AggregateMessageOrigin, ParaId, ParaIdToSibling>;
-	type MaxInboundSuspended = ConstU32<1_000>;
+	type MaxInboundSuspended = sp_core::ConstU32<1_000>;
 	type ControllerOrigin = EitherOfDiverse<
 		EnsureRoot<AccountId>,
 		EnsureXcm<IsVoiceOfBody<FellowshipLocation, FellowsBodyId>>,
@@ -988,15 +1009,12 @@ pub type Executive = frame_executive::Executive<
 >;
 
 #[cfg(feature = "runtime-benchmarks")]
-#[macro_use]
-extern crate frame_benchmarking;
-
-#[cfg(feature = "runtime-benchmarks")]
 mod benches {
 	frame_benchmarking::define_benchmarks!(
 		[frame_system, SystemBench::<Runtime>]
 		[pallet_assets, Local]
 		[pallet_assets, Foreign]
+		[pallet_assets, Pool]
 		[pallet_asset_conversion, AssetConversion]
 		[pallet_balances, Balances]
 		[pallet_message_queue, MessageQueue]
@@ -1305,7 +1323,7 @@ impl_runtime_apis! {
 			type Foreign = pallet_assets::Pallet::<Runtime, ForeignAssetsInstance>;
 			type Pool = pallet_assets::Pallet::<Runtime, PoolAssetsInstance>;
 
-			type ToKusama = XcmBridgeHubRouterBench<Runtime, ToKusamaXcmRouterInstance>;
+			type ToKusama = XcmBridgeHubRouterBench<Runtime>;
 
 			let mut list = Vec::<BenchmarkList>::new();
 			list_benchmarks!(list, extra);
@@ -1495,12 +1513,7 @@ impl_runtime_apis! {
 				));
 				pub const CheckedAccount: Option<(AccountId, xcm_builder::MintLocation)> = None;
 				// AssetHubPolkadot trusts AssetHubKusama as reserve for KSMs
-				pub TrustedReserve: Option<(Location, Asset)> = Some(
-					(
-						xcm_config::bridging::to_kusama::AssetHubKusama::get(),
-						Asset::from((xcm_config::bridging::to_kusama::KsmLocation::get(), 1000000000000 as u128))
-					)
-				);
+				pub TrustedReserve: Option<(Location, Asset)> = None;
 			}
 
 			impl pallet_xcm_benchmarks::fungible::Config for Runtime {
@@ -1570,6 +1583,11 @@ impl_runtime_apis! {
 					Err(BenchmarkError::Skip)
 				}
 			}
+
+			use pallet_xcm_bridge_hub_router::benchmarking::{
+				Pallet as XcmBridgeHubRouterBench,
+				Config as XcmBridgeHubRouterConfig,
+			};
 
 			type XcmBalances = pallet_xcm_benchmarks::fungible::Pallet::<Runtime>;
 			type XcmGeneric = pallet_xcm_benchmarks::generic::Pallet::<Runtime>;
@@ -1668,7 +1686,7 @@ mod tests {
 
 	#[test]
 	fn test_transasction_byte_fee_is_one_tenth_of_relay() {
-		let relay_tbf = paseo_runtime_constants::fee::TRANSACTION_BYTE_FEE; //10 * super::currency::MILLICENTS
+		let relay_tbf = paseo_runtime_constants::fee::TRANSACTION_BYTE_FEE;
 		let parachain_tbf = TransactionByteFee::get();
 		assert_eq!(relay_tbf / 10, parachain_tbf);
 	}
