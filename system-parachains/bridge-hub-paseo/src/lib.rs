@@ -162,7 +162,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("bridge-hub-polkadot"),
     impl_name: create_runtime_str!("bridge-hub-polkadot"),
     authoring_version: 1,
-    spec_version: 1_001_002,
+    spec_version: 1_001_006,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 4,
@@ -913,6 +913,10 @@ impl_runtime_apis! {
 					(0u64, Response::Version(Default::default()))
 				}
 
+				fn export_message_origin_and_destination() -> Result<(Location, NetworkId, InteriorLocation), BenchmarkError> {
+					Err(BenchmarkError::Skip)
+				}
+				
 				fn worst_case_asset_exchange() -> Result<(Assets, Assets), BenchmarkError> {
 					Err(BenchmarkError::Skip)
 				}
