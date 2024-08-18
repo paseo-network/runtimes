@@ -37,8 +37,8 @@ use parachains_common::xcm_config::{
 	AllSiblingSystemParachains, AssetFeeAsExistentialDepositMultiplier, ConcreteAssetFromSystem,
 	ParentRelayOrSiblingParachains, RelayOrOtherSystemParachains,
 };
-use polkadot_parachain_primitives::primitives::Sibling;
 use paseo_runtime_constants::system_parachain;
+use polkadot_parachain_primitives::primitives::Sibling;
 use snowbridge_router_primitives::inbound::GlobalConsensusEthereumConvertsFor;
 use sp_runtime::traits::{AccountIdConversion, ConvertInto};
 use system_parachains_constants::TREASURY_PALLET_ID;
@@ -237,19 +237,8 @@ impl Contains<Location> for FellowshipEntities {
 					Parachain(system_parachain::COLLECTIVES_ID),
 					Plurality { id: BodyId::Technical, .. }
 				]
-			) | (
-				1,
-				[
-					Parachain(system_parachain::COLLECTIVES_ID),
-					PalletInstance(64)
-				]
-			) | (
-				1,
-				[
-					Parachain(system_parachain::COLLECTIVES_ID),
-					PalletInstance(65)
-				]
-			)
+			) | (1, [Parachain(system_parachain::COLLECTIVES_ID), PalletInstance(64)])
+				| (1, [Parachain(system_parachain::COLLECTIVES_ID), PalletInstance(65)])
 		)
 	}
 }
@@ -334,9 +323,7 @@ impl xcm_executor::Config for XcmConfig {
 	type AssetTransactor = AssetTransactors;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
 	// Until we can bridge to westend, no reserves from now.
-	type IsReserve = (
-		bridging::to_ethereum::IsTrustedBridgedReserveLocationForForeignAsset,
-	);
+	type IsReserve = (bridging::to_ethereum::IsTrustedBridgedReserveLocationForForeignAsset,);
 	type IsTeleporter = TrustedTeleporters;
 	type UniversalLocation = UniversalLocation;
 	type Barrier = Barrier;
@@ -574,16 +561,7 @@ pub mod bridging {
 	#[cfg(feature = "runtime-benchmarks")]
 	impl BridgingBenchmarksHelper {
 		pub fn prepare_universal_alias() -> Option<(Location, Junction)> {
-			let alias =
-				to_kusama::UniversalAliases::get().into_iter().find_map(|(location, junction)| {
-					match to_kusama::SiblingBridgeHubWithBridgeHubKusamaInstance::get()
-						.eq(&location)
-					{
-						true => Some((location, junction)),
-						false => None,
-					}
-				});
-			Some(alias.expect("we expect here BridgeHubPaseo to Kusama mapping at least"))
+			None
 		}
 	}
 }
