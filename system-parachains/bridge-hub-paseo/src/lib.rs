@@ -925,10 +925,6 @@ impl_runtime_apis! {
 					Err(BenchmarkError::Skip)
 				}
 
-				export_message_origin_and_destination() -> Result<(Location, Junction), BenchmarkError> {
-					Err(BenchmarkError::Skip)
-				}
-
 				fn transact_origin_and_runtime_call() -> Result<(Location, RuntimeCall), BenchmarkError> {
 					Ok((DotRelayLocation::get(), frame_system::Call::remark_with_event { remark: vec![] }.into()))
 				}
