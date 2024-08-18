@@ -61,7 +61,7 @@ impl<T: frame_system::Config> snowbridge_pallet_system::WeightInfo for WeightInf
 		//  Measured:  `219`
 		//  Estimated: `3601`
 		// Minimum execution time: 32_064_000 picoseconds.
-		Weight::from_parts(42_308_500, 0)
+		Weight::from_parts(32_545_000, 0)
 			.saturating_add(Weight::from_parts(0, 3601))
 			.saturating_add(T::DbWeight::get().reads(4))
 			.saturating_add(T::DbWeight::get().writes(3))
@@ -81,7 +81,7 @@ impl<T: frame_system::Config> snowbridge_pallet_system::WeightInfo for WeightInf
 		//  Measured:  `219`
 		//  Estimated: `3601`
 		// Minimum execution time: 24_339_000 picoseconds.
-		Weight::from_parts(32_693_700, 0)
+		Weight::from_parts(25_149_000, 0)
 			.saturating_add(Weight::from_parts(0, 3601))
 			.saturating_add(T::DbWeight::get().reads(4))
 			.saturating_add(T::DbWeight::get().writes(3))
@@ -101,7 +101,7 @@ impl<T: frame_system::Config> snowbridge_pallet_system::WeightInfo for WeightInf
 		//  Measured:  `219`
 		//  Estimated: `3601`
 		// Minimum execution time: 29_237_000 picoseconds.
-		Weight::from_parts(38_771_200, 0)
+		Weight::from_parts(29_824_000, 0)
 			.saturating_add(Weight::from_parts(0, 3601))
 			.saturating_add(T::DbWeight::get().reads(3))
 			.saturating_add(T::DbWeight::get().writes(4))
@@ -127,7 +127,7 @@ impl<T: frame_system::Config> snowbridge_pallet_system::WeightInfo for WeightInf
 		//  Measured:  `485`
 		//  Estimated: `6196`
 		// Minimum execution time: 61_956_000 picoseconds.
-		Weight::from_parts(83_129_800, 0)
+		Weight::from_parts(63_946_000, 0)
 			.saturating_add(Weight::from_parts(0, 6196))
 			.saturating_add(T::DbWeight::get().reads(8))
 			.saturating_add(T::DbWeight::get().writes(6))
@@ -151,7 +151,7 @@ impl<T: frame_system::Config> snowbridge_pallet_system::WeightInfo for WeightInf
 		//  Measured:  `930`
 		//  Estimated: `69078`
 		// Minimum execution time: 73_087_000 picoseconds.
-		Weight::from_parts(97_900_400, 0)
+		Weight::from_parts(75_308_000, 0)
 			.saturating_add(Weight::from_parts(0, 69078))
 			.saturating_add(T::DbWeight::get().reads(9))
 			.saturating_add(T::DbWeight::get().writes(5))
@@ -175,7 +175,7 @@ impl<T: frame_system::Config> snowbridge_pallet_system::WeightInfo for WeightInf
 		//  Measured:  `716`
 		//  Estimated: `6212`
 		// Minimum execution time: 70_147_000 picoseconds.
-		Weight::from_parts(92_814_800, 0)
+		Weight::from_parts(71_396_000, 0)
 			.saturating_add(Weight::from_parts(0, 6212))
 			.saturating_add(T::DbWeight::get().reads(8))
 			.saturating_add(T::DbWeight::get().writes(5))
@@ -195,7 +195,7 @@ impl<T: frame_system::Config> snowbridge_pallet_system::WeightInfo for WeightInf
 		//  Measured:  `548`
 		//  Estimated: `6212`
 		// Minimum execution time: 36_346_000 picoseconds.
-		Weight::from_parts(48_492_600, 0)
+		Weight::from_parts(37_302_000, 0)
 			.saturating_add(Weight::from_parts(0, 6212))
 			.saturating_add(T::DbWeight::get().reads(6))
 			.saturating_add(T::DbWeight::get().writes(3))
@@ -221,7 +221,7 @@ impl<T: frame_system::Config> snowbridge_pallet_system::WeightInfo for WeightInf
 		//  Measured:  `815`
 		//  Estimated: `6212`
 		// Minimum execution time: 73_833_000 picoseconds.
-		Weight::from_parts(98_029_100, 0)
+		Weight::from_parts(75_407_000, 0)
 			.saturating_add(Weight::from_parts(0, 6212))
 			.saturating_add(T::DbWeight::get().reads(9))
 			.saturating_add(T::DbWeight::get().writes(5))
@@ -243,7 +243,7 @@ impl<T: frame_system::Config> snowbridge_pallet_system::WeightInfo for WeightInf
 		//  Measured:  `570`
 		//  Estimated: `6212`
 		// Minimum execution time: 40_908_000 picoseconds.
-		Weight::from_parts(54_454_400, 0)
+		Weight::from_parts(41_888_000, 0)
 			.saturating_add(Weight::from_parts(0, 6212))
 			.saturating_add(T::DbWeight::get().reads(6))
 			.saturating_add(T::DbWeight::get().writes(3))
@@ -263,7 +263,7 @@ impl<T: frame_system::Config> snowbridge_pallet_system::WeightInfo for WeightInf
 		//  Measured:  `219`
 		//  Estimated: `3601`
 		// Minimum execution time: 26_585_000 picoseconds.
-		Weight::from_parts(35_380_800, 0)
+		Weight::from_parts(27_216_000, 0)
 			.saturating_add(Weight::from_parts(0, 3601))
 			.saturating_add(T::DbWeight::get().reads(4))
 			.saturating_add(T::DbWeight::get().writes(3))

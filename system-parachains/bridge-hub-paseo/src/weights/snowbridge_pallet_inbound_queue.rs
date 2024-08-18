@@ -65,7 +65,7 @@ impl<T: frame_system::Config> snowbridge_pallet_inbound_queue::WeightInfo for We
 		//  Measured:  `815`
 		//  Estimated: `4280`
 		// Minimum execution time: 104_849_000 picoseconds.
-		Weight::from_parts(140_211_500, 0)
+		Weight::from_parts(107_855_000, 0)
 			.saturating_add(Weight::from_parts(0, 4280))
 			.saturating_add(T::DbWeight::get().reads(7))
 			.saturating_add(T::DbWeight::get().writes(2))
