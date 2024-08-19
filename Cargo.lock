@@ -7548,7 +7548,7 @@ dependencies = [
 
 [[package]]
 name = "paseo-runtime"
-version = "1.2.6"
+version = "1.2.7"
 dependencies = [
  "binary-merkle-tree",
  "frame-benchmarking",
