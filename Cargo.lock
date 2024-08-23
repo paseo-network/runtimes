@@ -1123,20 +1123,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bp-kusama"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c37ed284f7648ca888de72da69873ead9672b56436b08eae2e196c11d0847626"
-dependencies = [
- "bp-header-chain",
- "bp-polkadot-core",
- "bp-runtime",
- "frame-support",
- "sp-api",
- "sp-std",
-]
-
-[[package]]
 name = "bp-messages"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1357,7 +1343,6 @@ dependencies = [
  "bp-asset-hub-paseo",
  "bp-bridge-hub-paseo",
  "bp-header-chain",
- "bp-kusama",
  "bp-messages",
  "bp-parachains",
  "bp-polkadot",
