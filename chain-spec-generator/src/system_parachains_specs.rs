@@ -367,7 +367,7 @@ pub fn people_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, String>
 			Extensions { relay_chain: "paseo-local".into(), para_id: 1004 },
 		)
 		.with_name("Paseo People Local")
-		.with_id("people-paseo-local")
+		.with_id("paseo-people-local")
 		.with_chain_type(ChainType::Local)
 		.with_protocol_id("pc-pas")
 		.with_genesis_config_patch(crate::system_parachains_specs::people_paseo_local_genesis(
@@ -390,7 +390,7 @@ pub fn people_paseo_testnet_config() -> Result<Box<dyn ChainSpec>, String> {
 			Extensions { relay_chain: "paseo".into(), para_id: 1004 },
 		)
 		.with_name("Paseo People")
-		.with_id("people-paseo")
+		.with_id("paseo-people")
 		.with_chain_type(ChainType::Live)
 		.with_protocol_id("pc-pas")
 		.with_genesis_config_patch(crate::system_parachains_specs::people_paseo_testnet_genesis(

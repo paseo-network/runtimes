@@ -1,6 +1,6 @@
 {
   "name": "Paseo People",
-  "id": "people-paseo",
+  "id": "paseo-people",
   "chainType": "Live",
   "bootNodes": [],
   "telemetryEndpoints": null,
