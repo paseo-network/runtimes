@@ -20,7 +20,7 @@ use cumulus_primitives_core::ParaId;
 use parachains_common::{AccountId, AssetHubPolkadotAuraId, AuraId, Balance};
 use sc_chain_spec::{ChainSpec, ChainSpecExtension, ChainSpecGroup, ChainType};
 use serde::{Deserialize, Serialize};
-use sp_core::sr25519;
+use sp_core::{crypto::UncheckedInto, sr25519};
 
 /// Generic extensions for Parachain ChainSpecs.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ChainSpecGroup, ChainSpecExtension)]
@@ -37,7 +37,6 @@ pub type AssetHubPaseoChainSpec = sc_chain_spec::GenericChainSpec<(), Extensions
 pub type BridgeHubPaseoChainSpec = sc_chain_spec::GenericChainSpec<(), Extensions>;
 
 pub type PeoplePaseoChainSpec = sc_chain_spec::GenericChainSpec<(), Extensions>;
-
 
 const ASSET_HUB_PASEO_ED: Balance = asset_hub_paseo_runtime::ExistentialDeposit::get();
 
@@ -66,6 +65,28 @@ pub fn invulnerables_asset_hub_paseo() -> Vec<(AccountId, AssetHubPolkadotAuraId
 		(
 			get_account_id_from_seed::<sr25519::Public>("Bob"),
 			get_from_seed::<AssetHubPolkadotAuraId>("Bob"),
+		),
+	]
+}
+
+/// Invulnerable Collators for People Chain
+pub fn invulnerables_people_chain() -> Vec<(AccountId, AuraId)> {
+	vec![
+		// Stash: 5FRmC9wUZjr2VRh1q5z1Beksh62nfPzpLuhyCkHRKWXjWv9u
+		// AuraId: 0xe83c370b0200bfd0c723516b2541396a404a9669ec5310b839a4c87ddba9e217
+		(
+			hex_literal::hex!("94c4156ed6a101ae478a3de3ba70a05fce8a3d67be6fb85f33bfcf2777ab6b10")
+				.into(),
+			hex_literal::hex!("e83c370b0200bfd0c723516b2541396a404a9669ec5310b839a4c87ddba9e217")
+				.unchecked_into(),
+		),
+		// Stash: 5DvoL2BNoSm7wRt2tfZ6WW5QFrxm68GLv5SCrPQ4JBLjbvpL
+		// AuraId: 0xa0f18557714e374091ee5b56180aba063f62281a7c734aed62d7f4cae3b42f0f
+		(
+			hex_literal::hex!("5270ec35ba01254d8bff046a1a58f16d3ae615c235efd6e99a35f233b2d9df2c")
+				.into(),
+			hex_literal::hex!("a0f18557714e374091ee5b56180aba063f62281a7c734aed62d7f4cae3b42f0f")
+				.unchecked_into(),
 		),
 	]
 }
@@ -317,6 +338,23 @@ fn people_paseo_local_genesis(para_id: ParaId) -> serde_json::Value {
 	)
 }
 
+fn people_paseo_testnet_genesis(para_id: ParaId) -> serde_json::Value {
+	crate::system_parachains_specs::people_paseo_genesis(
+		// Initial collators.
+		invulnerables_people_chain(),
+		// Endow collator stashes + sudo.
+		vec![
+			hex_literal::hex!("94c4156ed6a101ae478a3de3ba70a05fce8a3d67be6fb85f33bfcf2777ab6b10")
+				.into(),
+			hex_literal::hex!("5270ec35ba01254d8bff046a1a58f16d3ae615c235efd6e99a35f233b2d9df2c")
+				.into(),
+			hex_literal::hex!("7e939ef17e229e9a29210d95cb0b607e0030d54899c05f791a62d5c6f4557659")
+				.into(),
+		],
+		para_id,
+	)
+}
+
 pub fn people_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, String> {
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("ss58Format".into(), 0.into());
@@ -331,6 +369,7 @@ pub fn people_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, String>
 		.with_name("Paseo People Local")
 		.with_id("people-paseo-local")
 		.with_chain_type(ChainType::Local)
+		.with_protocol_id("pc-pas")
 		.with_genesis_config_patch(crate::system_parachains_specs::people_paseo_local_genesis(
 			1004.into(),
 		))
@@ -353,7 +392,8 @@ pub fn people_paseo_testnet_config() -> Result<Box<dyn ChainSpec>, String> {
 		.with_name("Paseo People")
 		.with_id("people-paseo")
 		.with_chain_type(ChainType::Live)
-		.with_genesis_config_patch(crate::system_parachains_specs::people_paseo_local_genesis(
+		.with_protocol_id("pc-pas")
+		.with_genesis_config_patch(crate::system_parachains_specs::people_paseo_testnet_genesis(
 			1004.into(),
 		))
 		.with_properties(properties)
