@@ -1705,6 +1705,7 @@ dependencies = [
  "bridge-hub-paseo-runtime",
  "clap",
  "cumulus-primitives-core",
+ "hex-literal",
  "pallet-staking",
  "parachains-common",
  "paseo-runtime",
