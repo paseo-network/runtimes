@@ -90,7 +90,6 @@ bp-parachains = { workspace = true }
 bp-polkadot-core = { workspace = true }
 bp-relayers = { workspace = true }
 bp-runtime = { workspace = true }
-bp-kusama = { workspace = true }
 bp-polkadot = { workspace = true }
 bridge-hub-common = { workspace = true }
 bridge-runtime-common = { workspace = true }
@@ -112,6 +111,8 @@ snowbridge-outbound-queue-runtime-api = { workspace = true }
 snowbridge-router-primitives = { workspace = true }
 snowbridge-runtime-common = { workspace = true }
 
+sp-debug-derive = { workspace = true }
+
 [dev-dependencies]
 bridge-hub-test-utils = { workspace = true }
 bridge-runtime-common = { features = [
@@ -128,7 +129,6 @@ std = [
     "bp-asset-hub-paseo/std",
     "bp-bridge-hub-paseo/std",
     "bp-header-chain/std",
-    "bp-kusama/std",
     "bp-messages/std",
     "bp-parachains/std",
     "bp-polkadot-core/std",
@@ -194,6 +194,7 @@ std = [
     "sp-api/std",
     "sp-block-builder/std",
     "sp-consensus-aura/std",
+    "sp-debug-derive/std",
     "sp-core/std",
     "sp-genesis-builder/std",
     "sp-inherents/std",
@@ -294,3 +295,4 @@ metadata-hash = ["substrate-wasm-builder?/metadata-hash"]
 # deployment. This will disable stuff that shouldn't be part of the on-chain wasm
 # to make it smaller, like logging for example.
 on-chain-release-build = ["sp-api/disable-logging", "metadata-hash"]
+force-debug = ["sp-debug-derive/force-debug"]

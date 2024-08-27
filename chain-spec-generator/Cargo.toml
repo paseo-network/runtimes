@@ -16,6 +16,7 @@ paseo-runtime = { path = "../relay/paseo" }
 paseo-runtime-constants = { path = "../relay/paseo/constants", default-features = true }
 asset-hub-paseo-runtime = { path = "../system-parachains/asset-hub-paseo", default-features = true }
 bridge-hub-paseo-runtime = { path = "../system-parachains/bridge-hub-paseo", default-features = true }
+people-paseo-runtime = { path = "../system-parachains/people-paseo", default-features = true }
 system-parachains-constants = { path = "../system-parachains/constants", default-features = true }
 
 # External dependencies
@@ -27,6 +28,7 @@ authority-discovery-primitives = { workspace = true, default-features = true }
 sp-core = { workspace = true, default-features = true }
 pallet-staking = { workspace = true, default-features = true }
 grandpa = { workspace = true }
+hex-literal = { workspace = true }
 sp-runtime = { workspace = true, default-features = true }
 beefy-primitives = { workspace = true, default-features = true }
 xcm = { package = "staging-xcm", version = "8.0.1" }
@@ -36,6 +38,9 @@ cumulus-primitives-core = { workspace = true, default-features = true }
 [features]
 fast-runtime = ["paseo-runtime/fast-runtime"]
 runtime-benchmarks = [
+    "people-paseo-runtime/runtime-benchmarks",
+    "asset-hub-paseo-runtime/runtime-benchmarks",
+    "bridge-hub-paseo-runtime/runtime-benchmarks",
     "paseo-runtime/runtime-benchmarks",
     "cumulus-primitives-core/runtime-benchmarks",
     "pallet-staking/runtime-benchmarks",
@@ -43,4 +48,9 @@ runtime-benchmarks = [
     "polkadot-primitives/runtime-benchmarks",
     "runtime-parachains/runtime-benchmarks",
     "sp-runtime/runtime-benchmarks",
+]
+force-debug = [
+    "paseo-runtime/force-debug",
+    "asset-hub-paseo-runtime/force-debug",
+    "bridge-hub-paseo-runtime/force-debug",
 ]

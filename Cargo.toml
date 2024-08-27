@@ -26,7 +26,6 @@ beefy-primitives = { version = "14.0.0", default-features = false, package = "sp
 binary-merkle-tree = { version = "14.0.0", default-features = false }
 bp-bridge-hub-cumulus = { version = "0.8.0", default-features = false }
 bp-header-chain = { version = "0.8.1", default-features = false }
-bp-kusama = { version = "0.6.0", default-features = false }
 bp-messages = { version = "0.8.0", default-features = false }
 bp-parachains = { version = "0.8.0", default-features = false }
 bp-polkadot = { version = "0.6.0", default-features = false }
@@ -215,6 +214,8 @@ members = [
 	"integration-tests/emulated/chains/parachains/bridges/bridge-hub-paseo",
 	"integration-tests/emulated/chains/parachains/testing/penpal",
 	"integration-tests/emulated/chains/relays/paseo",
+	"integration-tests/emulated/helpers",
+	"integration-tests/emulated/networks/paseo-system",
 	"integration-tests/emulated/tests/bridges/bridge-hub-paseo",
 	"relay/paseo",
 	"relay/paseo/constants",
@@ -222,6 +223,7 @@ members = [
 	"system-parachains/asset-hub-paseo/primitives",
 	"system-parachains/bridge-hub-paseo",
 	"system-parachains/bridge-hub-paseo/primitives",
+	"system-parachains/people-paseo",
 	"system-parachains/constants"
 ]
 

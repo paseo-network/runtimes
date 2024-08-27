@@ -33,6 +33,8 @@ pub mod account {
 	pub const IDENTITY_PALLET_ID: PalletId = PalletId(*b"py/ident");
 	/// Fellowship treasury pallet ID
 	pub const FELLOWSHIP_TREASURY_PALLET_ID: PalletId = PalletId(*b"py/feltr");
+	/// Ambassador treasury pallet ID
+	pub const AMBASSADOR_TREASURY_PALLET_ID: PalletId = PalletId(*b"py/ambtr");
 }
 
 /// Consensus-related.
@@ -85,6 +87,11 @@ pub mod fee {
 
 	/// The block saturation level. Fees will be updates based on this value.
 	pub const TARGET_BLOCK_FULLNESS: Perbill = Perbill::from_percent(25);
+
+	/// Cost of every transaction byte at Polkadot system parachains.
+	///
+	/// It is the Relay Chain (Polkadot) `TransactionByteFee` / 10.
+	pub const TRANSACTION_BYTE_FEE: Balance = super::currency::MILLICENTS;
 
 	/// Handles converting a weight scalar to a fee value, based on the scale and granularity of the
 	/// node's balance type.
