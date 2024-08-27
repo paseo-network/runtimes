@@ -90,7 +90,6 @@ bp-parachains = { workspace = true }
 bp-polkadot-core = { workspace = true }
 bp-relayers = { workspace = true }
 bp-runtime = { workspace = true }
-bp-kusama = { workspace = true }
 bp-polkadot = { workspace = true }
 bridge-hub-common = { workspace = true }
 bridge-runtime-common = { workspace = true }
@@ -130,7 +129,6 @@ std = [
     "bp-asset-hub-paseo/std",
     "bp-bridge-hub-paseo/std",
     "bp-header-chain/std",
-    "bp-kusama/std",
     "bp-messages/std",
     "bp-parachains/std",
     "bp-polkadot-core/std",
