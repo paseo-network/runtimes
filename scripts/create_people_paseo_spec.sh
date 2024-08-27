@@ -8,7 +8,7 @@ set -euo pipefail
 ## Configure
 para_id=1004
 version="v1.2.6"
-release_wasm="people-polkadot_runtime-v1002006.compact.compressed.wasm"
+release_wasm="people-paseo_runtime-v1002006.compact.compressed.wasm"
 build_level="release"
 
 ## Download
