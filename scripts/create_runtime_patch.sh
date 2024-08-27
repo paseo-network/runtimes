@@ -26,6 +26,7 @@ print_message() {
 PARACHAINS=(
     "asset_hub  asset-hubs/asset-hub-polkadot   asset-hub-paseo"
     "bridge_hub bridge-hubs/bridge-hub-polkadot bridge-hub-paseo"
+    "people     people/people-polkadot          people-paseo"
 )
 
 # Initialize default values
