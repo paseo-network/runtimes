@@ -20,22 +20,16 @@ use sp_core::storage::Storage;
 use emulated_integration_tests_common::{
 	accounts, build_genesis_storage, get_account_id_from_seed, get_from_seed, SAFE_XCM_VERSION,
 };
-use parachains_common::{AccountId, AssetHubPolkadotAuraId, Balance};
+use parachains_common::{AccountId, AuraId, Balance};
 use sp_core::sr25519;
 
 pub const PARA_ID: u32 = 1000;
 pub const ED: Balance = asset_hub_paseo_runtime::ExistentialDeposit::get();
 
-fn invulnerables_asset_hub_paseo() -> Vec<(AccountId, AssetHubPolkadotAuraId)> {
+fn invulnerables_asset_hub_paseo() -> Vec<(AccountId, AuraId)> {
 	vec![
-		(
-			get_account_id_from_seed::<sr25519::Public>("Alice"),
-			get_from_seed::<AssetHubPolkadotAuraId>("Alice"),
-		),
-		(
-			get_account_id_from_seed::<sr25519::Public>("Bob"),
-			get_from_seed::<AssetHubPolkadotAuraId>("Bob"),
-		),
+		(get_account_id_from_seed::<sr25519::Public>("Alice"), get_from_seed::<AuraId>("Alice")),
+		(get_account_id_from_seed::<sr25519::Public>("Bob"), get_from_seed::<AuraId>("Bob")),
 	]
 }
 
@@ -63,8 +57,8 @@ pub fn genesis() -> Storage {
 				.into_iter()
 				.map(|(acc, aura)| {
 					(
-						acc.clone(),                                      // account id
-						acc,                                              // validator id
+						acc.clone(),                                   // account id
+						acc,                                           // validator id
 						asset_hub_paseo_runtime::SessionKeys { aura }, // session keys
 					)
 				})
@@ -79,7 +73,6 @@ pub fn genesis() -> Storage {
 
 	build_genesis_storage(
 		&genesis_config,
-		asset_hub_paseo_runtime::WASM_BINARY
-			.expect("WASM binary was not built, please build it!"),
+		asset_hub_paseo_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
 	)
 }

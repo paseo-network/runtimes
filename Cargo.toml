@@ -26,7 +26,6 @@ beefy-primitives = { version = "14.0.0", default-features = false, package = "sp
 binary-merkle-tree = { version = "14.0.0", default-features = false }
 bp-bridge-hub-cumulus = { version = "0.8.0", default-features = false }
 bp-header-chain = { version = "0.8.1", default-features = false }
-bp-kusama = { version = "0.6.0", default-features = false }
 bp-messages = { version = "0.8.0", default-features = false }
 bp-parachains = { version = "0.8.0", default-features = false }
 bp-polkadot = { version = "0.6.0", default-features = false }
@@ -89,16 +88,6 @@ pallet-conviction-voting = { version = "29.0.0", default-features = false }
 pallet-core-fellowship = { version = "13.0.0", default-features = false }
 pallet-election-provider-multi-phase = { version = "28.0.0", default-features = false }
 pallet-election-provider-support-benchmarking = { version = "28.0.0", default-features = false }
-pallet-encointer-balances = { version = "~6.1.0", default-features = false }
-pallet-encointer-bazaar = { version = "~6.1.0", default-features = false }
-pallet-encointer-bazaar-rpc-runtime-api = { version = "~6.1.0", default-features = false }
-pallet-encointer-ceremonies = { version = "~6.1.0", default-features = false }
-pallet-encointer-ceremonies-rpc-runtime-api = { version = "~6.1.0", default-features = false }
-pallet-encointer-communities = { version = "~6.1.0", default-features = false }
-pallet-encointer-communities-rpc-runtime-api = { version = "~6.1.0", default-features = false }
-pallet-encointer-faucet = { version = "~6.2.0", default-features = false }
-pallet-encointer-reputation-commitments = { version = "~6.1.0", default-features = false }
-pallet-encointer-scheduler = { version = "~6.1.0", default-features = false }
 pallet-fast-unstake = { version = "28.0.0", default-features = false }
 pallet-glutton = { version = "15.0.0", default-features = false }
 pallet-grandpa = { version = "29.0.0", default-features = false }

@@ -17,7 +17,7 @@
 
 use crate::common::{get_account_id_from_seed, get_from_seed, testnet_accounts};
 use cumulus_primitives_core::ParaId;
-use parachains_common::{AccountId, AssetHubPolkadotAuraId, AuraId, Balance};
+use parachains_common::{AccountId, AuraId, Balance};
 use sc_chain_spec::{ChainSpec, ChainSpecExtension, ChainSpecGroup, ChainType};
 use serde::{Deserialize, Serialize};
 use sp_core::{crypto::UncheckedInto, sr25519};
@@ -56,16 +56,10 @@ pub fn invulnerables() -> Vec<(AccountId, AuraId)> {
 }
 
 /// Invulnerable Collators for the particular case of AssetHubPolkadot
-pub fn invulnerables_asset_hub_paseo() -> Vec<(AccountId, AssetHubPolkadotAuraId)> {
+pub fn invulnerables_asset_hub_paseo() -> Vec<(AccountId, AuraId)> {
 	vec![
-		(
-			get_account_id_from_seed::<sr25519::Public>("Alice"),
-			get_from_seed::<AssetHubPolkadotAuraId>("Alice"),
-		),
-		(
-			get_account_id_from_seed::<sr25519::Public>("Bob"),
-			get_from_seed::<AssetHubPolkadotAuraId>("Bob"),
-		),
+		(get_account_id_from_seed::<sr25519::Public>("Alice"), get_from_seed::<AuraId>("Alice")),
+		(get_account_id_from_seed::<sr25519::Public>("Bob"), get_from_seed::<AuraId>("Bob")),
 	]
 }
 
@@ -94,9 +88,7 @@ pub fn invulnerables_people_chain() -> Vec<(AccountId, AuraId)> {
 /// Generate the session keys from individual elements.
 ///
 /// The input must be a tuple of individual keys (a single arg for now since we have just one key).
-pub fn asset_hub_paseo_session_keys(
-	keys: AssetHubPolkadotAuraId,
-) -> asset_hub_paseo_runtime::SessionKeys {
+pub fn asset_hub_paseo_session_keys(keys: AuraId) -> asset_hub_paseo_runtime::SessionKeys {
 	asset_hub_paseo_runtime::SessionKeys { aura: keys }
 }
 
@@ -116,7 +108,7 @@ pub fn people_paseo_session_keys(keys: AuraId) -> people_paseo_runtime::SessionK
 
 // AssetHubPaseo
 fn asset_hub_paseo_genesis(
-	invulnerables: Vec<(AccountId, AssetHubPolkadotAuraId)>,
+	invulnerables: Vec<(AccountId, AuraId)>,
 	endowed_accounts: Vec<AccountId>,
 	id: ParaId,
 ) -> serde_json::Value {
