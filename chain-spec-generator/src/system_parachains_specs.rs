@@ -66,12 +66,12 @@ pub fn invulnerables_asset_hub_paseo() -> Vec<(AccountId, AuraId)> {
 /// Invulnerable Collators for People Chain
 pub fn invulnerables_people_chain() -> Vec<(AccountId, AuraId)> {
 	vec![
-		// Stash: 5FRmC9wUZjr2VRh1q5z1Beksh62nfPzpLuhyCkHRKWXjWv9u
-		// AuraId: 0xe83c370b0200bfd0c723516b2541396a404a9669ec5310b839a4c87ddba9e217
+		// Stash: 13R4RzMu23PzK5o2BBhD19t5xV6PCpfoLjHjRUBrpdSJ4AAz / 0x6ad1e7e694a29ebf362928a0ba41d0d6d2af848f6d44511195e5f69820f36f44
+		// AuraId: 0x9cd774e5f1a124e75b5973f767c88fff510a21c20eed72c8b592923561662e35
 		(
-			hex_literal::hex!("94c4156ed6a101ae478a3de3ba70a05fce8a3d67be6fb85f33bfcf2777ab6b10")
+			hex_literal::hex!("6ad1e7e694a29ebf362928a0ba41d0d6d2af848f6d44511195e5f69820f36f44")
 				.into(),
-			hex_literal::hex!("e83c370b0200bfd0c723516b2541396a404a9669ec5310b839a4c87ddba9e217")
+			hex_literal::hex!("9cd774e5f1a124e75b5973f767c88fff510a21c20eed72c8b592923561662e35")
 				.unchecked_into(),
 		),
 		// Stash: 5DvoL2BNoSm7wRt2tfZ6WW5QFrxm68GLv5SCrPQ4JBLjbvpL
@@ -336,7 +336,7 @@ fn people_paseo_testnet_genesis(para_id: ParaId) -> serde_json::Value {
 		invulnerables_people_chain(),
 		// Endow collator stashes + sudo.
 		vec![
-			hex_literal::hex!("94c4156ed6a101ae478a3de3ba70a05fce8a3d67be6fb85f33bfcf2777ab6b10")
+			hex_literal::hex!("6ad1e7e694a29ebf362928a0ba41d0d6d2af848f6d44511195e5f69820f36f44")
 				.into(),
 			hex_literal::hex!("5270ec35ba01254d8bff046a1a58f16d3ae615c235efd6e99a35f233b2d9df2c")
 				.into(),
