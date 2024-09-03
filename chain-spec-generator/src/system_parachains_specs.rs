@@ -161,7 +161,7 @@ fn asset_hub_paseo_local_genesis(para_id: ParaId) -> serde_json::Value {
 pub fn asset_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, String> {
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("ss58Format".into(), 42.into());
-	properties.insert("tokenSymbol".into(), "DOT".into());
+	properties.insert("tokenSymbol".into(), "PAS".into());
 	properties.insert("tokenDecimals".into(), 10.into());
 
 	Ok(Box::new(
