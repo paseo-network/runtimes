@@ -120,7 +120,7 @@ pub type SignedExtra = (
 );
 
 bridge_runtime_common::generate_bridge_reject_obsolete_headers_and_messages! {
-	RuntimeCall, AccountId
+	RuntimeCall, AccountId,
 }
 
 /// Unchecked extrinsic type as expected by this runtime.
