@@ -20,24 +20,102 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use bp_bridge_hub_cumulus::*;
+use bp_messages::*;
+use bp_runtime::{
+	decl_bridge_finality_runtime_apis, decl_bridge_messages_runtime_apis, Chain, ChainId, Parachain,
+};
+use frame_support::dispatch::DispatchClass;
+use sp_runtime::{FixedPointNumber, FixedU128, RuntimeDebug, Saturating};
 
-pub const BRIDGE_HUB_PASEO_PARACHAIN_ID: u32 = 1002;
+/// BridgeHubPaseo parachain.
+#[derive(RuntimeDebug)]
+pub struct BridgeHubPaseo;
+
+impl Chain for BridgeHubPaseo {
+	const ID: ChainId = *b"bhpd";
+
+	type BlockNumber = BlockNumber;
+	type Hash = Hash;
+	type Hasher = Hasher;
+	type Header = Header;
+
+	type AccountId = AccountId;
+	type Balance = Balance;
+	type Nonce = Nonce;
+	type Signature = Signature;
+
+	fn max_extrinsic_size() -> u32 {
+		*BlockLength::get().max.get(DispatchClass::Normal)
+	}
+
+	fn max_extrinsic_weight() -> Weight {
+		BlockWeights::get()
+			.get(DispatchClass::Normal)
+			.max_extrinsic
+			.unwrap_or(Weight::MAX)
+	}
+}
+
+impl Parachain for BridgeHubPaseo {
+	const PARACHAIN_ID: u32 = BRIDGE_HUB_POLKAPAS_PARACHAIN_ID;
+}
+
+impl ChainWithMessages for BridgeHubPaseo {
+	const WITH_CHAIN_MESSAGES_PALLET_NAME: &'static str =
+		WITH_BRIDGE_HUB_POLKAPAS_MESSAGES_PALLET_NAME;
+	const MAX_UNREWARDED_RELAYERS_IN_CONFIRMATION_TX: MessageNonce =
+		MAX_UNREWARDED_RELAYERS_IN_CONFIRMATION_TX;
+	const MAX_UNCONFIRMED_MESSAGES_IN_CONFIRMATION_TX: MessageNonce =
+		MAX_UNCONFIRMED_MESSAGES_IN_CONFIRMATION_TX;
+}
+
+/// Identifier of BridgeHubPaseo in the Paseo relay chain.
+pub const BRIDGE_HUB_POLKAPAS_PARACHAIN_ID: u32 = 1002;
+
+/// Name of the With-BridgeHubPaseo messages pallet instance that is deployed at bridged chains.
+pub const WITH_BRIDGE_HUB_POLKAPAS_MESSAGES_PALLET_NAME: &str = "BridgePaseoMessages";
+
+/// Name of the With-BridgeHubPaseo bridge-relayers pallet instance that is deployed at bridged
+/// chains.
+pub const WITH_BRIDGE_HUB_POLKAPAS_RELAYERS_PALLET_NAME: &str = "BridgeRelayers";
+
+/// Pallet index of `BridgeKusamaMessages: pallet_bridge_messages::<Instance1>`.
+pub const WITH_BRIDGE_POLKAPAS_TO_KUSAMA_MESSAGES_PALLET_INDEX: u8 = 53;
+
+decl_bridge_finality_runtime_apis!(bridge_hub_paseo);
+decl_bridge_messages_runtime_apis!(bridge_hub_paseo);
+
+frame_support::parameter_types! {
+	/// The XCM fee that is paid for executing XCM program (with `ExportMessage` instruction) at the Paseo
+	/// BridgeHub.
+	/// (initially was calculated by test `BridgeHubPaseo::can_calculate_weight_for_paid_export_message_with_reserve_transfer` + `33%`)
+	pub const BridgeHubPaseoBaseXcmFeeInDots: Balance = 177_594_900;
+
+	/// Transaction fee that is paid at the Paseo BridgeHub for delivering single inbound message.
+	/// (initially was calculated by test `BridgeHubPaseo::can_calculate_fee_for_complex_message_delivery_transaction` + `33%`)
+	pub const BridgeHubPaseoBaseDeliveryFeeInDots: Balance = 16_912_645_364;
+
+	/// Transaction fee that is paid at the Paseo BridgeHub for delivering single outbound message confirmation.
+	/// (initially was calculated by test `BridgeHubPaseo::can_calculate_fee_for_complex_message_confirmation_transaction` + `33%`)
+	pub const BridgeHubPaseoBaseConfirmationFeeInDots: Balance = 16_142_774_864;
+}
+
 pub mod snowbridge {
-    use crate::Balance;
-    use frame_support::parameter_types;
-    use snowbridge_core::{PricingParameters, Rewards, U256};
-    use sp_runtime::FixedU128;
-    use xcm::latest::NetworkId;
+	use crate::Balance;
+	use frame_support::parameter_types;
+	use snowbridge_core::{PricingParameters, Rewards, U256};
+	use sp_runtime::FixedU128;
+	use xcm::latest::NetworkId;
 
-    parameter_types! {
+	parameter_types! {
 		/// Should match the `ForeignAssets::create` index on Asset Hub.
 		pub const CreateAssetCall: [u8;2] = [53, 0];
 		/// The pallet index of the Ethereum inbound queue pallet in the Bridge Hub runtime.
 		pub const InboundQueuePalletInstance: u8 = 80;
 		/// Default pricing parameters used to calculate bridging fees. Initialized to unit values,
-        /// as it is intended that these parameters should be updated with more
-        /// accurate values prior to bridge activation. This can be performed
-        /// using the `EthereumSystem::set_pricing_parameters` governance extrinsic.
+		/// as it is intended that these parameters should be updated with more
+		/// accurate values prior to bridge activation. This can be performed
+		/// using the `EthereumSystem::set_pricing_parameters` governance extrinsic.
 		pub Parameters: PricingParameters<Balance> = PricingParameters {
 			// ETH/DOT exchange rate
 			exchange_rate: FixedU128::from_rational(1, 1),
@@ -54,9 +132,9 @@ pub mod snowbridge {
 			multiplier: FixedU128::from_rational(1, 1),
 		};
 		/// Network and location for the Ethereum chain. On Polkadot, the Ethereum chain bridged
-        /// to is the Ethereum Main network, with chain ID 1.
-        /// <https://chainlist.org/chain/1>
-        /// <https://ethereum.org/en/developers/docs/apis/json-rpc/#net_version>
-		pub EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 11155111 };
+		/// to is the Ethereum Main network, with chain ID 1.
+		/// <https://chainlist.org/chain/1>
+		/// <https://ethereum.org/en/developers/docs/apis/json-rpc/#net_version>
+		pub EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 1 };
 	}
 }

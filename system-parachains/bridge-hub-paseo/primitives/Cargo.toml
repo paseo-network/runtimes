@@ -1,6 +1,6 @@
 [package]
 name = "bp-bridge-hub-paseo"
-description = "Primitives of BridgeHub Paseo parachain runtime."
+description = "Primitives of BridgeHubPaseo parachain runtime."
 repository.workspace = true
 version.workspace = true
 authors.workspace = true
@@ -8,9 +8,12 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+
+# Local
+paseo-runtime-constants = { workspace = true }
+system-parachains-constants = { workspace = true }
+
 # Bridge Dependencies
-codec = { package = "parity-scale-codec", version = "3.6.12", default-features = false }
-scale-info = { version = "2.11.1", default-features = false, features = ["derive"] }
 bp-bridge-hub-cumulus = { workspace = true }
 bp-runtime = { workspace = true }
 bp-messages = { workspace = true }
@@ -32,11 +35,11 @@ std = [
 	"bp-messages/std",
 	"bp-runtime/std",
 	"frame-support/std",
+	"paseo-runtime-constants/std",
 	"snowbridge-core/std",
 	"sp-api/std",
 	"sp-runtime/std",
 	"sp-std/std",
+	"system-parachains-constants/std",
 	"xcm/std",
-	"codec/std",
-	"scale-info/std"
 ]

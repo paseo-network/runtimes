@@ -1095,13 +1095,13 @@ dependencies = [
  "bp-messages",
  "bp-runtime",
  "frame-support",
- "parity-scale-codec",
- "scale-info",
+ "paseo-runtime-constants",
  "snowbridge-core",
  "sp-api",
  "sp-runtime",
  "sp-std",
  "staging-xcm",
+ "system-parachains-constants",
 ]
 
 [[package]]
