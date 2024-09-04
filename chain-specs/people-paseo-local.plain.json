@@ -1,7 +1,7 @@
 {
-  "name": "Paseo People",
-  "id": "paseo-people",
-  "chainType": "Live",
+  "name": "Paseo People Local",
+  "id": "paseo-people-local",
+  "chainType": "Local",
   "bootNodes": [],
   "telemetryEndpoints": null,
   "protocolId": "pc-pas",
@@ -10,7 +10,7 @@
     "tokenDecimals": 10,
     "tokenSymbol": "PAS"
   },
-  "relay_chain": "paseo",
+  "relay_chain": "paseo-local",
   "para_id": 1004,
   "codeSubstitutes": {},
   "genesis": {
@@ -20,15 +20,51 @@
         "balances": {
           "balances": [
             [
-              "5FRmC9wUZjr2VRh1q5z1Beksh62nfPzpLuhyCkHRKWXjWv9u",
+              "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
               16777216000000000
             ],
             [
-              "5DvoL2BNoSm7wRt2tfZ6WW5QFrxm68GLv5SCrPQ4JBLjbvpL",
+              "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
               16777216000000000
             ],
             [
-              "5Evfk4MMJ1bgvTKoMEg6LW6CZXULaURHjCa1X777YE1SUWtX",
+              "5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y",
+              16777216000000000
+            ],
+            [
+              "5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy",
+              16777216000000000
+            ],
+            [
+              "5HGjWAeFDfFCWPsjFQdVV2Msvz2XtMktvgocEZcCj68kUMaw",
+              16777216000000000
+            ],
+            [
+              "5CiPPseXPECbkjWCa6MnjNokrgYjMqmKndv2rSnekmSK2DjL",
+              16777216000000000
+            ],
+            [
+              "5GNJqTPyNqANBkUVMN1LPPrxXnFouWXoe2wNSmmEoLctxiZY",
+              16777216000000000
+            ],
+            [
+              "5HpG9w8EBLe5XCrbczpwq5TSXvedjrBGCwqxK1iQ7qUsSWFc",
+              16777216000000000
+            ],
+            [
+              "5Ck5SLSHYac6WFt5UZRSsdJjwmpSZq85fd5TRNAdZQVzEAPT",
+              16777216000000000
+            ],
+            [
+              "5HKPmK9GYtE1PSLsS1qiYU9xQ9Si1NcEhdeCq9sw5bqu4ns8",
+              16777216000000000
+            ],
+            [
+              "5FCfAonRZgTFrTd9HREEyeJjDpT397KMzizE6T3DvebLFE7n",
+              16777216000000000
+            ],
+            [
+              "5CRmqmsiNFExV6VbdmPJViVxrWmkaXXvBrSX8oqBT8R9vmWk",
               16777216000000000
             ]
           ]
@@ -37,8 +73,8 @@
           "candidacyBond": 16000000000,
           "desiredCandidates": 0,
           "invulnerables": [
-            "5FRmC9wUZjr2VRh1q5z1Beksh62nfPzpLuhyCkHRKWXjWv9u",
-            "5DvoL2BNoSm7wRt2tfZ6WW5QFrxm68GLv5SCrPQ4JBLjbvpL"
+            "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+            "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
           ]
         },
         "parachainInfo": {
@@ -50,17 +86,17 @@
         "session": {
           "keys": [
             [
-              "5FRmC9wUZjr2VRh1q5z1Beksh62nfPzpLuhyCkHRKWXjWv9u",
-              "5FRmC9wUZjr2VRh1q5z1Beksh62nfPzpLuhyCkHRKWXjWv9u",
+              "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+              "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
               {
-                "aura": "5HKCrV8btMaep8EYv4oXccB32kKLBkwhtLXZgypFzPjoAnJS"
+                "aura": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
               }
             ],
             [
-              "5DvoL2BNoSm7wRt2tfZ6WW5QFrxm68GLv5SCrPQ4JBLjbvpL",
-              "5DvoL2BNoSm7wRt2tfZ6WW5QFrxm68GLv5SCrPQ4JBLjbvpL",
+              "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+              "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
               {
-                "aura": "5FhjGM3h2Eji24f84UhSP8aSzG8BdcDJYiWvRdSFDY9X8nNc"
+                "aura": "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
               }
             ]
           ]
