@@ -19,6 +19,8 @@ jobs:
             path: "system-parachains/asset-hub-paseo"
           - name: "bridge-hub-paseo"
             path: "system-parachains/bridge-hub-paseo"
+          - name: "people-paseo"
+            path: "system-parachains/people-paseo"
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
