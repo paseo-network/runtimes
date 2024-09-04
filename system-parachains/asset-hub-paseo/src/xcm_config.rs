@@ -37,8 +37,8 @@ use parachains_common::xcm_config::{
 	AllSiblingSystemParachains, AssetFeeAsExistentialDepositMultiplier, ConcreteAssetFromSystem,
 	ParentRelayOrSiblingParachains, RelayOrOtherSystemParachains,
 };
-use paseo_runtime_constants::system_parachain;
 use polkadot_parachain_primitives::primitives::Sibling;
+use paseo_runtime_constants::system_parachain;
 use snowbridge_router_primitives::inbound::GlobalConsensusEthereumConvertsFor;
 use sp_runtime::traits::{AccountIdConversion, ConvertInto};
 use system_parachains_constants::TREASURY_PALLET_ID;
@@ -237,8 +237,49 @@ impl Contains<Location> for FellowshipEntities {
 					Parachain(system_parachain::COLLECTIVES_ID),
 					Plurality { id: BodyId::Technical, .. }
 				]
-			) | (1, [Parachain(system_parachain::COLLECTIVES_ID), PalletInstance(64)])
-				| (1, [Parachain(system_parachain::COLLECTIVES_ID), PalletInstance(65)])
+			) | (
+				1,
+				[
+					Parachain(system_parachain::COLLECTIVES_ID),
+					PalletInstance(
+						collectives_paseo_runtime_constants::FELLOWSHIP_SALARY_PALLET_INDEX
+					)
+				]
+			) | (
+				1,
+				[
+					Parachain(system_parachain::COLLECTIVES_ID),
+					PalletInstance(
+						collectives_paseo_runtime_constants::FELLOWSHIP_TREASURY_PALLET_INDEX
+					)
+				]
+			)
+		)
+	}
+}
+
+pub struct AmbassadorEntities;
+impl Contains<Location> for AmbassadorEntities {
+	fn contains(location: &Location) -> bool {
+		matches!(
+			location.unpack(),
+			(
+				1,
+				[
+					Parachain(system_parachain::COLLECTIVES_ID),
+					PalletInstance(
+						collectives_paseo_runtime_constants::AMBASSADOR_SALARY_PALLET_INDEX
+					)
+				]
+			) | (
+				1,
+				[
+					Parachain(system_parachain::COLLECTIVES_ID),
+					PalletInstance(
+						collectives_paseo_runtime_constants::AMBASSADOR_TREASURY_PALLET_INDEX
+					)
+				]
+			)
 		)
 	}
 }
@@ -271,6 +312,7 @@ pub type Barrier = TrailingSetTopicAsId<
 						FellowshipEntities,
 						Equals<RelayTreasuryLocation>,
 						Equals<bridging::SiblingBridgeHub>,
+						AmbassadorEntities,
 					)>,
 					// Subscriptions for version tracking are OK.
 					AllowSubscriptionsFrom<ParentRelayOrSiblingParachains>,
@@ -296,6 +338,7 @@ pub type WaivedLocations = (
 	RelayOrOtherSystemParachains<AllSiblingSystemParachains, Runtime>,
 	Equals<RelayTreasuryLocation>,
 	FellowshipEntities,
+	AmbassadorEntities,
 );
 
 /// Cases where a remote origin is accepted as trusted Teleporter for a given asset:
@@ -322,8 +365,13 @@ impl xcm_executor::Config for XcmConfig {
 	type XcmSender = XcmRouter;
 	type AssetTransactor = AssetTransactors;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
-	// Until we can bridge to westend, no reserves from now.
-	type IsReserve = (bridging::to_ethereum::IsTrustedBridgedReserveLocationForForeignAsset,);
+	// Asset Hub trusts only particular, pre-configured bridged locations from a different consensus
+	// as reserve locations (we trust the Bridge Hub to relay the message that a reserve is being
+	// held). Asset Hub may _act_ as a reserve location for PAS and assets created
+	// under `pallet-assets`. Users must use teleport where allowed (e.g. PAS with the Relay Chain).
+	type IsReserve = (
+		bridging::to_ethereum::IsTrustedBridgedReserveLocationForForeignAsset,
+	);
 	type IsTeleporter = TrustedTeleporters;
 	type UniversalLocation = UniversalLocation;
 	type Barrier = Barrier;
@@ -433,11 +481,9 @@ impl pallet_xcm::Config for Runtime {
 	// We want to disallow users sending (arbitrary) XCMs from this chain.
 	type SendXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, ()>;
 	type XcmRouter = XcmRouter;
-	// We support local origins dispatching XCM executions in principle...
+	// Anyone can execute XCM messages locally.
 	type ExecuteXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
-	// ... but disallow generic XCM execution. As a result only teleports and reserve transfers are
-	// allowed.
-	type XcmExecuteFilter = Nothing;
+	type XcmExecuteFilter = Everything;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type XcmTeleportFilter = Everything;
 	type XcmReserveTransferFilter = Everything;
@@ -491,7 +537,7 @@ pub mod bridging {
 	use xcm_builder::NetworkExportTableItem;
 
 	parameter_types! {
-		pub SiblingBridgeHubParaId: u32 = bp_bridge_hub_paseo::BRIDGE_HUB_PASEO_PARACHAIN_ID;
+		pub SiblingBridgeHubParaId: u32 = bp_bridge_hub_paseo::BRIDGE_HUB_POLKAPAS_PARACHAIN_ID;
 		pub SiblingBridgeHub: Location = Location::new(1, Parachain(SiblingBridgeHubParaId::get()));
 		/// Router expects payment with this `AssetId`.
 		/// (`AssetId` has to be aligned with `BridgeTable`)

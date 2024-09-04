@@ -1065,7 +1065,10 @@ dependencies = [
 name = "bp-asset-hub-paseo"
 version = "1.0.0"
 dependencies = [
+ "bp-xcm-bridge-hub-router",
  "frame-support",
+ "parity-scale-codec",
+ "scale-info",
  "sp-std",
  "staging-xcm",
  "system-parachains-constants",
