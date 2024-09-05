@@ -16,7 +16,7 @@
 
 use super::{
 	bridge_to_ethereum_config::EthereumNetwork,
-    AccountId, AllPalletsWithSystem,
+	bridge_to_kusama_config::ToBridgeHubKusamaHaulBlobExporter, AccountId, AllPalletsWithSystem,
 	Balances, CollatorSelection, ParachainInfo, ParachainSystem, PolkadotXcm,
 	PriceForParentDelivery, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, WeightToFee,
 	XcmpQueue,
@@ -237,7 +237,8 @@ impl xcm_executor::Config for XcmConfig {
 			XcmFeeToAccount<Self::AssetTransactor, AccountId, RelayTreasuryPalletAccount>,
 		),
 	>;
-	type MessageExporter = crate::bridge_to_ethereum_config::SnowbridgeExporter;
+	type MessageExporter =
+		(ToBridgeHubKusamaHaulBlobExporter, crate::bridge_to_ethereum_config::SnowbridgeExporter);
 	type UniversalAliases = Nothing;
 	type CallDispatcher = RuntimeCall;
 	type SafeCallFilter = Everything;

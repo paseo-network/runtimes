@@ -644,7 +644,7 @@ dependencies = [
  "staging-xcm-builder",
  "staging-xcm-executor",
  "substrate-wasm-builder",
- "system-parachains-constants",
+ "system-parachains-constants 1.0.0",
 ]
 
 [[package]]
@@ -1062,6 +1062,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "bp-asset-hub-kusama"
+version = "1.0.0"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.2.8#40f849df87a8a1b79aba4cfb7ce762d868243dca"
+dependencies = [
+ "bp-xcm-bridge-hub-router",
+ "frame-support",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-std",
+ "staging-xcm",
+ "system-parachains-constants 1.0.0 (git+https://github.com/polkadot-fellows/runtimes?tag=v1.2.8)",
+]
+
+[[package]]
 name = "bp-asset-hub-paseo"
 version = "1.0.0"
 dependencies = [
@@ -1071,7 +1085,7 @@ dependencies = [
  "scale-info",
  "sp-std",
  "staging-xcm",
- "system-parachains-constants",
+ "system-parachains-constants 1.0.0",
 ]
 
 [[package]]
@@ -1091,6 +1105,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "bp-bridge-hub-kusama"
+version = "1.0.0"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.2.8#40f849df87a8a1b79aba4cfb7ce762d868243dca"
+dependencies = [
+ "bp-bridge-hub-cumulus",
+ "bp-messages",
+ "bp-runtime",
+ "frame-support",
+ "kusama-runtime-constants",
+ "polkadot-runtime-constants",
+ "snowbridge-core",
+ "sp-api",
+ "sp-runtime",
+ "sp-std",
+ "staging-xcm",
+ "system-parachains-constants 1.0.0 (git+https://github.com/polkadot-fellows/runtimes?tag=v1.2.8)",
+]
+
+[[package]]
 name = "bp-bridge-hub-paseo"
 version = "1.0.0"
 dependencies = [
@@ -1098,13 +1131,14 @@ dependencies = [
  "bp-messages",
  "bp-runtime",
  "frame-support",
+ "kusama-runtime-constants",
  "paseo-runtime-constants",
  "snowbridge-core",
  "sp-api",
  "sp-runtime",
  "sp-std",
  "staging-xcm",
- "system-parachains-constants",
+ "system-parachains-constants 1.0.0",
 ]
 
 [[package]]
@@ -1122,6 +1156,20 @@ dependencies = [
  "sp-consensus-grandpa",
  "sp-core",
  "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "bp-kusama"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c37ed284f7648ca888de72da69873ead9672b56436b08eae2e196c11d0847626"
+dependencies = [
+ "bp-header-chain",
+ "bp-polkadot-core",
+ "bp-runtime",
+ "frame-support",
+ "sp-api",
  "sp-std",
 ]
 
@@ -1336,16 +1384,19 @@ dependencies = [
  "sp-runtime",
  "staging-xcm",
  "staging-xcm-executor",
- "system-parachains-constants",
+ "system-parachains-constants 1.0.0",
 ]
 
 [[package]]
 name = "bridge-hub-paseo-runtime"
 version = "1.0.0"
 dependencies = [
+ "bp-asset-hub-kusama",
  "bp-asset-hub-paseo",
+ "bp-bridge-hub-kusama",
  "bp-bridge-hub-paseo",
  "bp-header-chain",
+ "bp-kusama",
  "bp-messages",
  "bp-parachains",
  "bp-polkadot",
@@ -1372,6 +1423,7 @@ dependencies = [
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
  "hex-literal",
+ "kusama-runtime-constants",
  "log",
  "pallet-aura",
  "pallet-authorship",
@@ -1433,7 +1485,7 @@ dependencies = [
  "staging-xcm-executor",
  "static_assertions",
  "substrate-wasm-builder",
- "system-parachains-constants",
+ "system-parachains-constants 1.0.0",
 ]
 
 [[package]]
@@ -1726,7 +1778,7 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "staging-xcm",
- "system-parachains-constants",
+ "system-parachains-constants 1.0.0",
 ]
 
 [[package]]
@@ -4628,6 +4680,21 @@ name = "keystream"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c33070833c9ee02266356de0c43f723152bd38bd96ddf52c82b3af10c9138b28"
+
+[[package]]
+name = "kusama-runtime-constants"
+version = "1.0.0"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.2.8#40f849df87a8a1b79aba4cfb7ce762d868243dca"
+dependencies = [
+ "frame-support",
+ "polkadot-primitives",
+ "polkadot-runtime-common",
+ "smallvec",
+ "sp-core",
+ "sp-runtime",
+ "sp-weights",
+ "staging-xcm-builder",
+]
 
 [[package]]
 name = "kvdb"
@@ -7830,7 +7897,7 @@ dependencies = [
  "staging-xcm-builder",
  "staging-xcm-executor",
  "substrate-wasm-builder",
- "system-parachains-constants",
+ "system-parachains-constants 1.0.0",
 ]
 
 [[package]]
@@ -8818,6 +8885,21 @@ dependencies = [
  "staging-xcm-builder",
  "staging-xcm-executor",
  "static_assertions",
+]
+
+[[package]]
+name = "polkadot-runtime-constants"
+version = "1.0.0"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.2.8#40f849df87a8a1b79aba4cfb7ce762d868243dca"
+dependencies = [
+ "frame-support",
+ "polkadot-primitives",
+ "polkadot-runtime-common",
+ "smallvec",
+ "sp-core",
+ "sp-runtime",
+ "sp-weights",
+ "staging-xcm-builder",
 ]
 
 [[package]]
@@ -13368,6 +13450,21 @@ dependencies = [
  "paseo-runtime-constants",
  "polkadot-core-primitives",
  "polkadot-primitives",
+ "smallvec",
+ "sp-runtime",
+]
+
+[[package]]
+name = "system-parachains-constants"
+version = "1.0.0"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.2.8#40f849df87a8a1b79aba4cfb7ce762d868243dca"
+dependencies = [
+ "frame-support",
+ "kusama-runtime-constants",
+ "parachains-common",
+ "polkadot-core-primitives",
+ "polkadot-primitives",
+ "polkadot-runtime-constants",
  "smallvec",
  "sp-runtime",
 ]

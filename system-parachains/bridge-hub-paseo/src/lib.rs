@@ -23,6 +23,7 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 pub mod bridge_to_ethereum_config;
+pub mod bridge_to_kusama_config;
 mod weights;
 pub mod xcm_config;
 
@@ -116,11 +117,18 @@ pub type SignedExtra = (
 	frame_system::CheckWeight<Runtime>,
 	pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
 	BridgeRejectObsoleteHeadersAndMessages,
+	bridge_to_kusama_config::RefundBridgeHubKusamaMessages,
 	frame_metadata_hash_extension::CheckMetadataHash<Runtime>,
 );
 
 bridge_runtime_common::generate_bridge_reject_obsolete_headers_and_messages! {
 	RuntimeCall, AccountId,
+	// Grandpa
+	BridgeKusamaGrandpa,
+	// Parachains
+	BridgeKusamaParachains,
+	// Messages
+	BridgeKusamaMessages
 }
 
 /// Unchecked extrinsic type as expected by this runtime.
@@ -526,6 +534,12 @@ construct_runtime!(
 		// Pallets that may be used by all bridges.
 		BridgeRelayers: pallet_bridge_relayers = 50,
 
+		// Kusama bridge pallets.
+		BridgeKusamaGrandpa: pallet_bridge_grandpa::<Instance1> = 51,
+		BridgeKusamaParachains: pallet_bridge_parachains::<Instance1> = 52,
+		BridgeKusamaMessages: pallet_bridge_messages::<Instance1> = 53,
+		XcmOverBridgeHubKusama: pallet_xcm_bridge_hub::<Instance1> = 54,
+
 		// Ethereum bridge pallets.
 		EthereumInboundQueue: snowbridge_pallet_inbound_queue = 80,
 		EthereumOutboundQueue: snowbridge_pallet_outbound_queue = 81,
@@ -558,6 +572,10 @@ mod benches {
 		[pallet_xcm_benchmarks::generic, XcmGeneric]
 		// Shared bridge pallets
 		[pallet_bridge_relayers, BridgeRelayersBench::<Runtime>]
+		// Paseo bridge pallets.
+		[pallet_bridge_grandpa, KusamaFinality]
+		[pallet_bridge_parachains, KusamaParachains]
+		[pallet_bridge_messages, KusamaMessages]
 		// Ethereum Bridge
 		[snowbridge_pallet_inbound_queue, EthereumInboundQueue]
 		[snowbridge_pallet_outbound_queue, EthereumOutboundQueue]
@@ -729,6 +747,50 @@ impl_runtime_apis! {
 		}
 	}
 
+	impl bp_kusama::KusamaFinalityApi<Block> for Runtime {
+		fn best_finalized() -> Option<bp_runtime::HeaderId<bp_kusama::Hash, bp_kusama::BlockNumber>> {
+			BridgeKusamaGrandpa::best_finalized()
+		}
+
+		fn synced_headers_grandpa_info(
+		) -> Vec<bp_header_chain::StoredHeaderGrandpaInfo<bp_kusama::Header>> {
+			BridgeKusamaGrandpa::synced_headers_grandpa_info()
+		}
+	}
+
+	impl bp_bridge_hub_kusama::BridgeHubKusamaFinalityApi<Block> for Runtime {
+		fn best_finalized() -> Option<bp_runtime::HeaderId<bp_bridge_hub_kusama::Hash, bp_bridge_hub_kusama::BlockNumber>> {
+			BridgeKusamaParachains::best_parachain_head_id::<
+				bp_bridge_hub_kusama::BridgeHubKusama
+			>().unwrap_or(None)
+		}
+	}
+
+	impl bp_bridge_hub_kusama::FromBridgeHubKusamaInboundLaneApi<Block> for Runtime {
+		fn message_details(
+			lane: bp_messages::LaneId,
+			messages: Vec<(bp_messages::MessagePayload, bp_messages::OutboundMessageDetails)>,
+		) -> Vec<bp_messages::InboundMessageDetails> {
+			bridge_runtime_common::messages_api::inbound_message_details::<
+				Runtime,
+				bridge_to_kusama_config::WithBridgeHubKusamaMessagesInstance,
+			>(lane, messages)
+		}
+	}
+
+	impl bp_bridge_hub_kusama::ToBridgeHubKusamaOutboundLaneApi<Block> for Runtime {
+		fn message_details(
+			lane: bp_messages::LaneId,
+			begin: bp_messages::MessageNonce,
+			end: bp_messages::MessageNonce,
+		) -> Vec<bp_messages::OutboundMessageDetails> {
+			bridge_runtime_common::messages_api::outbound_message_details::<
+				Runtime,
+				bridge_to_kusama_config::WithBridgeHubKusamaMessagesInstance,
+			>(lane, begin, end)
+		}
+	}
+
 	impl snowbridge_outbound_queue_runtime_api::OutboundQueueApi<Block, Balance> for Runtime {
 		fn prove_message(leaf_index: u64) -> Option<snowbridge_pallet_outbound_queue::MerkleProof> {
 			snowbridge_pallet_outbound_queue::api::prove_message::<Runtime>(leaf_index)
@@ -783,6 +845,9 @@ impl_runtime_apis! {
 			type XcmGeneric = pallet_xcm_benchmarks::generic::Pallet::<Runtime>;
 
 			use pallet_bridge_relayers::benchmarking::Pallet as BridgeRelayersBench;
+			type KusamaFinality = BridgeKusamaGrandpa;
+			type KusamaParachains = pallet_bridge_parachains::benchmarking::Pallet::<Runtime, bridge_to_kusama_config::BridgeParachainKusamaInstance>;
+			type KusamaMessages = pallet_bridge_messages::benchmarking::Pallet::<Runtime, bridge_to_kusama_config::WithBridgeHubKusamaMessagesInstance>;
 
 			let mut list = Vec::<BenchmarkList>::new();
 			list_benchmarks!(list, extra);
@@ -992,6 +1057,10 @@ impl_runtime_apis! {
 
 			type XcmBalances = pallet_xcm_benchmarks::fungible::Pallet::<Runtime>;
 			type XcmGeneric = pallet_xcm_benchmarks::generic::Pallet::<Runtime>;
+
+			type KusamaFinality = BridgeKusamaGrandpa;
+			type KusamaParachains = pallet_bridge_parachains::benchmarking::Pallet::<Runtime, bridge_to_kusama_config::BridgeParachainKusamaInstance>;
+			type KusamaMessages = pallet_bridge_messages::benchmarking::Pallet::<Runtime, bridge_to_kusama_config::WithBridgeHubKusamaMessagesInstance>;
 
 			use pallet_bridge_relayers::benchmarking::{
 				Pallet as BridgeRelayersBench,

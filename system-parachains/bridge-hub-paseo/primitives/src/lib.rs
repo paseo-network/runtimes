@@ -100,6 +100,55 @@ frame_support::parameter_types! {
 	pub const BridgeHubPaseoBaseConfirmationFeeInDots: Balance = 16_142_774_864;
 }
 
+/// Compute the total estimated fee that needs to be paid in PASs by the sender when sending
+/// message from Paseo Bridge Hub to Kusama Bridge Hub.
+pub fn estimate_paseo_to_kusama_message_fee(
+	bridge_hub_kusama_base_delivery_fee_in_uksms: Balance,
+) -> Balance {
+	// Sender must pay:
+	//
+	// 1) an approximate cost of XCM execution (`ExportMessage` and surroundings) at Paseo bridge
+	//    Hub;
+	//
+	// 2) the approximate cost of Paseo -> Kusama message delivery transaction on Kusama Bridge
+	//    Hub, converted into KSMs using 1:5 conversion rate;
+	//
+	// 3) the approximate cost of Paseo -> Kusama message confirmation transaction on Paseo
+	//    Bridge Hub.
+	BridgeHubPaseoBaseXcmFeeInDots::get()
+		.saturating_add(convert_from_uksm_to_udot(bridge_hub_kusama_base_delivery_fee_in_uksms))
+		.saturating_add(BridgeHubPaseoBaseConfirmationFeeInDots::get())
+}
+
+/// Compute the per-byte fee that needs to be paid in PASs by the sender when sending
+/// message from Paseo Bridge Hub to Kusama Bridge Hub.
+pub fn estimate_paseo_to_kusama_byte_fee() -> Balance {
+	// the sender pays for the same byte twice:
+	// 1) the first part comes from the HRMP, when message travels from Paseo Asset Hub to
+	//    Paseo Bridge Hub;
+	// 2) the second part is the payment for bytes of the message delivery transaction, which is
+	//    "mined" at Kusama Bridge Hub. Hence, we need to use byte fees from that chain and convert
+	//    it to PASs here.
+	convert_from_uksm_to_udot(paseo_runtime_constants::fee::TRANSACTION_BYTE_FEE)
+}
+
+/// Convert from uKSMs to uPASs.
+fn convert_from_uksm_to_udot(price_in_uksm: Balance) -> Balance {
+	// assuming exchange rate is 5 PASs for 1 KSM
+	let dot_to_ksm_economic_rate = FixedU128::from_rational(5, 1);
+	// tokens have different nominals and we need to take that into account
+	let nominal_ratio = FixedU128::from_rational(
+			paseo_runtime_constants::currency::UNITS,
+		kusama_runtime_constants::currency::UNITS,
+	);
+
+	dot_to_ksm_economic_rate
+		.saturating_mul(nominal_ratio)
+		.saturating_mul(FixedU128::saturating_from_integer(price_in_uksm))
+		.into_inner() /
+		FixedU128::DIV
+}
+
 pub mod snowbridge {
 	use crate::Balance;
 	use frame_support::parameter_types;
@@ -136,5 +185,24 @@ pub mod snowbridge {
 		/// <https://chainlist.org/chain/1>
 		/// <https://ethereum.org/en/developers/docs/apis/json-rpc/#net_version>
 		pub EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 1 };
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn convert_from_uksm_to_udot_works() {
+		let price_in_uksm = 77 * kusama_runtime_constants::currency::UNITS;
+		let same_price_in_udot = convert_from_uksm_to_udot(price_in_uksm);
+
+		let price_in_ksm =
+			FixedU128::from_rational(price_in_uksm, kusama_runtime_constants::currency::UNITS);
+		let price_in_dot = FixedU128::from_rational(
+			same_price_in_udot,
+			paseo_runtime_constants::currency::UNITS,
+		);
+		assert_eq!(price_in_dot / FixedU128::saturating_from_integer(5), price_in_ksm);
 	}
 }

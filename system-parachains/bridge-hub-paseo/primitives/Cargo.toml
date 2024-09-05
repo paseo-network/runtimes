@@ -10,6 +10,7 @@ license.workspace = true
 [dependencies]
 
 # Local
+kusama-runtime-constants = { workspace = true }
 paseo-runtime-constants = { workspace = true }
 system-parachains-constants = { workspace = true }
 
@@ -35,6 +36,7 @@ std = [
 	"bp-messages/std",
 	"bp-runtime/std",
 	"frame-support/std",
+	"kusama-runtime-constants/std",
 	"paseo-runtime-constants/std",
 	"snowbridge-core/std",
 	"sp-api/std",

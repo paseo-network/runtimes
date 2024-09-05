@@ -19,6 +19,7 @@
 use bp_polkadot_core::Signature;
 use bridge_hub_paseo_runtime::{
 	bridge_to_ethereum_config::{EthereumGatewayAddress, EthereumNetwork},
+	bridge_to_kusama_config::RefundBridgeHubKusamaMessages,
 	xcm_config::{XcmConfig, XcmFeeManagerFromComponentsBridgeHub},
 	BridgeRejectObsoleteHeadersAndMessages, Executive, MessageQueueServiceWeight, Runtime,
 	RuntimeCall, RuntimeEvent, SessionKeys, SignedExtra, UncheckedExtrinsic,
@@ -134,7 +135,7 @@ pub fn transfer_token_to_ethereum_insufficient_fund() {
 fn change_ethereum_gateway_by_governance_works() {
 	change_storage_constant_by_governance_works::<Runtime, EthereumGatewayAddress, H160>(
 		collator_session_keys(),
-		bp_bridge_hub_paseo::BRIDGE_HUB_PASEO_PARACHAIN_ID,
+		bp_bridge_hub_paseo::BRIDGE_HUB_POLKAPAS_PARACHAIN_ID,
 		Box::new(|call| RuntimeCall::System(call).encode()),
 		|| (EthereumGatewayAddress::key().to_vec(), EthereumGatewayAddress::get()),
 		|_| [1; 20].into(),
@@ -326,6 +327,7 @@ fn construct_extrinsic(
 		frame_system::CheckWeight::<Runtime>::new(),
 		pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(0),
 		BridgeRejectObsoleteHeadersAndMessages,
+		(RefundBridgeHubKusamaMessages::default()),
 		frame_metadata_hash_extension::CheckMetadataHash::<Runtime>::new(false),
 	);
 	let payload = SignedPayload::new(call.clone(), extra.clone()).unwrap();

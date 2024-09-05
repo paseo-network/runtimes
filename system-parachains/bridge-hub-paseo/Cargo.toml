@@ -18,6 +18,14 @@ log = { workspace = true }
 scale-info = { features = ["derive"], workspace = true }
 serde = { optional = true, features = ["derive"], workspace = true }
 
+#kusama-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.2.8", package = "kusama-runtime-constants", default-features = false  }
+#bp-bridge-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.2.8", package = "bp-bridge-hub-kusama", default-features = false  }
+#bp-asset-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.2.8", package = "bp-asset-hub-kusama", default-features = false  }
+
+
+kusama-runtime-constants = {  workspace = true, default-features = false  }
+bp-bridge-hub-kusama = {  workspace = true, default-features = false   }
+bp-asset-hub-kusama = {  workspace = true, default-features = false  }
 # Local
 bp-asset-hub-paseo = { workspace = true }
 bp-bridge-hub-paseo = { workspace = true }
@@ -90,6 +98,7 @@ bp-parachains = { workspace = true }
 bp-polkadot-core = { workspace = true }
 bp-relayers = { workspace = true }
 bp-runtime = { workspace = true }
+bp-kusama = { workspace = true }
 bp-polkadot = { workspace = true }
 bridge-hub-common = { workspace = true }
 bridge-runtime-common = { workspace = true }
@@ -126,9 +135,13 @@ parachains-runtimes-test-utils = { workspace = true }
 [features]
 default = ["std"]
 std = [
+	"kusama-runtime-constants/std",
+	"bp-asset-hub-kusama/std",
 	"bp-asset-hub-paseo/std",
+	"bp-bridge-hub-kusama/std",
 	"bp-bridge-hub-paseo/std",
 	"bp-header-chain/std",
+	"bp-kusama/std",
 	"bp-messages/std",
 	"bp-parachains/std",
 	"bp-polkadot-core/std",
