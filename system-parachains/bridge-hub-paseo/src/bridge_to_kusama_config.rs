@@ -22,11 +22,14 @@ use crate::{
 	AccountId, Balance, Balances, BlockNumber, BridgeKusamaMessages, PolkadotXcm, Runtime,
 	RuntimeEvent, RuntimeOrigin, XcmOverBridgeHubKusama,
 };
-
 use bp_messages::LaneId;
 use bp_parachains::SingleParaStoredHeaderDataBuilder;
 use bp_runtime::Chain;
 use bridge_runtime_common::{
+	extensions::refund_relayer_extension::{
+		ActualFeeRefund, RefundBridgedParachainMessages, RefundSignedExtensionAdapter,
+		RefundableMessagesLane, RefundableParachain,
+	},
 	messages,
 	messages::{
 		source::{FromBridgedChainMessagesDeliveryProof, TargetHeaderChainAdapter},
@@ -37,14 +40,9 @@ use bridge_runtime_common::{
 		SenderAndLane, XcmAsPlainPayload, XcmBlobHauler, XcmBlobHaulerAdapter,
 		XcmBlobMessageDispatch, XcmVersionOfDestAndRemoteBridge,
 	},
-	refund_relayer_extension::{
-		ActualFeeRefund, RefundBridgedParachainMessages, RefundSignedExtensionAdapter,
-		RefundableMessagesLane, RefundableParachain,
-	},
 };
 use frame_support::{parameter_types, traits::PalletInfoAccess};
 use paseo_runtime_constants as constants;
-
 use sp_runtime::{traits::ConstU32, RuntimeDebug};
 use xcm::latest::prelude::*;
 use xcm_builder::BridgeBlobDispatcher;
@@ -83,7 +81,7 @@ parameter_types! {
 	pub BridgePolkadotToKusamaMessagesPalletInstance: InteriorLocation = PalletInstance(<BridgeKusamaMessages as PalletInfoAccess>::index() as u8).into();
 
 	/// Identifier of the sibling Polkadot Asset Hub parachain.
-	pub AssetHubPolkadotParaId: cumulus_primitives_core::ParaId = paseo_runtime_constants::system_parachain::ASSET_HUB_ID.into();
+	pub AssetHubPaseoParaId: cumulus_primitives_core::ParaId = paseo_runtime_constants::system_parachain::ASSET_HUB_ID.into();
 	/// Identifier of the bridged Kusama Asset Hub parachain.
 	pub AssetHubKusamaParaId: cumulus_primitives_core::ParaId = kusama_runtime_constants::system_parachain::ASSET_HUB_ID.into();
 	/// Location of the bridged Kusama Bridge Hub parachain.
@@ -152,11 +150,12 @@ parameter_types! {
 	pub const RelayerStakeReserveId: [u8; 8] = *b"brdgrlrs";
 	/// Minimal period of relayer registration. Roughly, it is the 1 hour of real time.
 	pub const RelayerStakeLease: u32 = 300;
-	/// Priority boost that the registered relayer receives for every additional message in the message
-	/// delivery transaction.
-	///
-	/// It is determined semi-automatically - see `FEE_BOOST_PER_MESSAGE` constant to get the
-	/// meaning of this value
+
+	// see the `FEE_BOOST_PER_RELAY_HEADER` constant get the meaning of this value
+	pub PriorityBoostPerRelayHeader: u64 = 220_053_724_053;
+	// see the `FEE_BOOST_PER_PARACHAIN_HEADER` constant get the meaning of this value
+	pub PriorityBoostPerParachainHeader: u64 = 9_182_241_758_241;
+	// see the `FEE_BOOST_PER_MESSAGE` constant to get the meaning of this value
 	pub PriorityBoostPerMessage: u64 = 1_820_444_444_444;
 }
 
@@ -165,8 +164,9 @@ pub type BridgeGrandpaKusamaInstance = pallet_bridge_grandpa::Instance1;
 impl pallet_bridge_grandpa::Config<BridgeGrandpaKusamaInstance> for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type BridgedChain = bp_kusama::Kusama;
-	type MaxFreeMandatoryHeadersPerBlock = ConstU32<4>;
 	type HeadersToKeep = RelayChainHeadersToKeep;
+	type MaxFreeHeadersPerBlock = ConstU32<4>;
+	type FreeHeadersInterval = ConstU32<5>;
 	type WeightInfo = weights::pallet_bridge_grandpa::WeightInfo<Runtime>;
 }
 
@@ -359,6 +359,10 @@ mod tests {
 	/// We want this tip to be large enough (delivery transactions with more messages = less
 	/// operational costs and a faster bridge), so this value should be significant.
 	const FEE_BOOST_PER_MESSAGE: Balance = 2 * constants::currency::UNITS;
+	// see `FEE_BOOST_PER_MESSAGE` comment
+	const FEE_BOOST_PER_RELAY_HEADER: Balance = 2 * constants::currency::UNITS;
+	// see `FEE_BOOST_PER_MESSAGE` comment
+	const FEE_BOOST_PER_PARACHAIN_HEADER: Balance = 2 * constants::currency::UNITS;
 
 	#[test]
 	fn ensure_bridge_hub_polkadot_message_lane_weights_are_correct() {
@@ -411,7 +415,19 @@ mod tests {
 			},
 		});
 
-		bridge_runtime_common::priority_calculator::ensure_priority_boost_is_sane::<
+		bridge_runtime_common::extensions::priority_calculator::per_relay_header::ensure_priority_boost_is_sane::<
+			Runtime,
+			BridgeGrandpaKusamaInstance,
+			PriorityBoostPerRelayHeader,
+		>(FEE_BOOST_PER_RELAY_HEADER);
+
+		bridge_runtime_common::extensions::priority_calculator::per_parachain_header::ensure_priority_boost_is_sane::<
+			Runtime,
+			RefundableParachain<WithBridgeHubKusamaMessagesInstance, BridgeHubKusama>,
+			PriorityBoostPerParachainHeader,
+		>(FEE_BOOST_PER_PARACHAIN_HEADER);
+
+		bridge_runtime_common::extensions::priority_calculator::per_message::ensure_priority_boost_is_sane::<
 			Runtime,
 			WithBridgeHubKusamaMessagesInstance,
 			PriorityBoostPerMessage,

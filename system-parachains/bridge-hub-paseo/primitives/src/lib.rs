@@ -58,6 +58,7 @@ impl Chain for BridgeHubPaseo {
 
 impl Parachain for BridgeHubPaseo {
 	const PARACHAIN_ID: u32 = BRIDGE_HUB_POLKAPAS_PARACHAIN_ID;
+	const MAX_HEADER_SIZE: u32 = MAX_BRIDGE_HUB_HEADER_SIZE;
 }
 
 impl ChainWithMessages for BridgeHubPaseo {
@@ -89,15 +90,15 @@ frame_support::parameter_types! {
 	/// The XCM fee that is paid for executing XCM program (with `ExportMessage` instruction) at the Paseo
 	/// BridgeHub.
 	/// (initially was calculated by test `BridgeHubPaseo::can_calculate_weight_for_paid_export_message_with_reserve_transfer` + `33%`)
-	pub const BridgeHubPaseoBaseXcmFeeInDots: Balance = 177_594_900;
+	pub const BridgeHubPaseoBaseXcmFeeInDots: Balance = 88_797_450;
 
 	/// Transaction fee that is paid at the Paseo BridgeHub for delivering single inbound message.
-	/// (initially was calculated by test `BridgeHubPaseo::can_calculate_fee_for_complex_message_delivery_transaction` + `33%`)
-	pub const BridgeHubPaseoBaseDeliveryFeeInDots: Balance = 16_912_645_364;
+	/// (initially was calculated by test `BridgeHubPaseo::can_calculate_fee_for_standalone_message_delivery_transaction` + `33%`)
+	pub const BridgeHubPaseoBaseDeliveryFeeInDots: Balance = 471_124_182;
 
 	/// Transaction fee that is paid at the Paseo BridgeHub for delivering single outbound message confirmation.
-	/// (initially was calculated by test `BridgeHubPaseo::can_calculate_fee_for_complex_message_confirmation_transaction` + `33%`)
-	pub const BridgeHubPaseoBaseConfirmationFeeInDots: Balance = 16_142_774_864;
+	/// (initially was calculated by test `BridgeHubPaseo::can_calculate_fee_for_standalone_message_confirmation_transaction` + `33%`)
+	pub const BridgeHubPaseoBaseConfirmationFeeInDots: Balance = 86_188_932;
 }
 
 /// Compute the total estimated fee that needs to be paid in PASs by the sender when sending
@@ -129,7 +130,7 @@ pub fn estimate_paseo_to_kusama_byte_fee() -> Balance {
 	// 2) the second part is the payment for bytes of the message delivery transaction, which is
 	//    "mined" at Kusama Bridge Hub. Hence, we need to use byte fees from that chain and convert
 	//    it to PASs here.
-	convert_from_uksm_to_udot(paseo_runtime_constants::fee::TRANSACTION_BYTE_FEE)
+	convert_from_uksm_to_udot(system_parachains_constants::kusama::fee::TRANSACTION_BYTE_FEE)
 }
 
 /// Convert from uKSMs to uPASs.
