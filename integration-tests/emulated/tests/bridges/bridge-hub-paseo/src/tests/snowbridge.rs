@@ -30,7 +30,9 @@ use paseo_system_emulated_network::{
 	penpal_emulated_chain::CustomizableAssetFromSystemAssetHub,
 	BridgeHubPaseoParaSender as BridgeHubPaseoSender,
 };
-use snowbridge_beacon_primitives::CompactExecutionHeader;
+use snowbridge_beacon_primitives::{
+	types::deneb, AncestryProof, BeaconHeader, ExecutionProof, VersionedExecutionPayloadHeader,
+};
 use snowbridge_core::{
 	gwei,
 	inbound::{Log, Message, Proof},
@@ -39,14 +41,14 @@ use snowbridge_core::{
 	Rewards,
 };
 use snowbridge_pallet_inbound_queue_fixtures::{
-	register_token_with_insufficient_fee::make_register_token_with_infufficient_fee_message,
-	InboundQueueFixture,
+	register_token::make_register_token_message, send_token::make_send_token_message,
+	send_token_to_penpal::make_send_token_to_penpal_message,
 };
 use snowbridge_pallet_system::PricingParametersOf;
 use snowbridge_router_primitives::inbound::{
 	Command, Destination, GlobalConsensusEthereumConvertsFor, MessageV1, VersionedMessage,
 };
-use sp_core::{H160, H256};
+use sp_core::{H160, H256, U256};
 use sp_runtime::{DispatchError::Token, FixedU128, TokenError::FundsUnavailable};
 use system_parachains_constants::paseo::currency::UNITS;
 
@@ -55,6 +57,9 @@ const CHAIN_ID: u64 = 11155111;
 const WETH: [u8; 20] = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
 const ETHEREUM_DESTINATION_ADDRESS: [u8; 20] = hex!("44a57ee2f2FCcb85FDa2B0B18EBD0D8D2333700e");
 const GATEWAY_ADDRESS: [u8; 20] = hex!("EDa338E4dC46038493b885327842fD3E301CaB39");
+const INSUFFICIENT_XCM_FEE: u128 = 1000;
+const XCM_FEE: u128 = 4_000_000_000;
+const WETH_AMOUNT: u128 = 1_000_000_000;
 
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, TypeInfo)]
 pub enum ControlCall {
@@ -88,12 +93,13 @@ pub fn send_inbound_message(fixture: InboundQueueFixture) -> DispatchResult {
 /// Create an agent on Ethereum. An agent is a representation of an entity in the Paseo
 /// ecosystem (like a parachain) on Ethereum.
 #[test]
-#[ignore]
 fn create_agent() {
 	let origin_para: u32 = 1001;
 	// Fund the origin parachain sovereign account so that it can pay execution fees.
 	BridgeHubPaseo::fund_para_sovereign(origin_para.into(), INITIAL_FUND);
-
+	// Fund Treasury account with ED so that when create agent fees are paid to treasury,
+	// the treasury account may exist.
+	BridgeHubPaseo::fund_accounts(vec![(RelayTreasuryPalletAccount::get(), INITIAL_FUND)]);
 	let sudo_origin = <Paseo as Chain>::RuntimeOrigin::root();
 	let destination = Paseo::child_location_of(BridgeHubPaseo::para_id()).into();
 
@@ -145,15 +151,15 @@ fn create_agent() {
 /// Create a channel for a consensus system. A channel is a bidirectional messaging channel
 /// between BridgeHub and Ethereum.
 #[test]
-#[ignore]
 fn create_channel() {
 	let origin_para: u32 = 1001;
 	// Fund AssetHub sovereign account so that it can pay execution fees.
 	BridgeHubPaseo::fund_para_sovereign(origin_para.into(), INITIAL_FUND);
-
+	// Fund Treasury account with ED so that when create agent fees are paid to treasury,
+	// the treasury account may exist.
+	BridgeHubPaseo::fund_accounts(vec![(RelayTreasuryPalletAccount::get(), INITIAL_FUND)]);
 	let sudo_origin = <Paseo as Chain>::RuntimeOrigin::root();
-	let destination: VersionedLocation =
-		Paseo::child_location_of(BridgeHubPaseo::para_id()).into();
+	let destination: VersionedLocation = Paseo::child_location_of(BridgeHubPaseo::para_id()).into();
 
 	let create_agent_call = SnowbridgeControl::Control(ControlCall::CreateAgent {});
 	// Construct XCM to create an agent for para 1001
@@ -236,8 +242,15 @@ fn register_weth_token_from_ethereum_to_asset_hub() {
 			vec![(EthereumGatewayAddress::key().to_vec(), H160(GATEWAY_ADDRESS).encode())],
 		));
 		// Construct RegisterToken message and sent to inbound queue
-		let register_token_message = make_register_token_message();
-		assert_ok!(send_inbound_message(register_token_message.clone()));
+		let message_id: H256 = [1; 32].into();
+		let message = VersionedMessage::V1(MessageV1 {
+			chain_id: CHAIN_ID,
+			command: Command::RegisterToken { token: WETH.into(), fee: XCM_FEE },
+		});
+		// Convert the message to XCM
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
+		// Send the XCM
+		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubPaseo::para_id()).unwrap();
 
 		assert_expected_events!(
 			BridgeHubPaseo,
@@ -307,9 +320,7 @@ fn send_token_from_ethereum_to_penpal() {
 			1000,
 		));
 
-		assert!(<AssetHubPaseo as AssetHubPaseoPallet>::ForeignAssets::asset_exists(
-			weth_asset_id
-		));
+		assert!(<AssetHubPaseo as AssetHubPaseoPallet>::ForeignAssets::asset_exists(weth_asset_id));
 	});
 
 	BridgeHubPaseo::execute_with(|| {
@@ -392,10 +403,37 @@ fn send_token_from_ethereum_to_asset_hub() {
 		));
 
 		// Construct RegisterToken message and sent to inbound queue
-		assert_ok!(send_inbound_message(make_register_token_message()));
+		let message_id: H256 = [1; 32].into();
+		let message = VersionedMessage::V1(MessageV1 {
+			chain_id: CHAIN_ID,
+			command: Command::RegisterToken { token: WETH.into(), fee: XCM_FEE },
+		});
+		// Convert the message to XCM
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
+		// Send the XCM
+		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubKusama::para_id()).unwrap();
+
+		assert_expected_events!(
+			BridgeHubKusama,
+			vec![
+				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},
+			]
+		);
 
 		// Construct SendToken message and sent to inbound queue
-		assert_ok!(send_inbound_message(make_send_token_message()));
+		let message = VersionedMessage::V1(MessageV1 {
+			chain_id: CHAIN_ID,
+			command: Command::SendToken {
+				token: WETH.into(),
+				destination: Destination::AccountId32 { id: AssetHubKusamaReceiver::get().into() },
+				amount: WETH_AMOUNT,
+				fee: XCM_FEE,
+			},
+		});
+		// Convert the message to XCM
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
+		// Send the XCM
+		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubKusama::para_id()).unwrap();
 
 		// Check that the message was sent
 		assert_expected_events!(
@@ -480,7 +518,15 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 		));
 
 		// Construct RegisterToken message and sent to inbound queue
-		assert_ok!(send_inbound_message(make_register_token_message()));
+		let message_id: H256 = [1; 32].into();
+		let message = VersionedMessage::V1(MessageV1 {
+			chain_id: CHAIN_ID,
+			command: Command::RegisterToken { token: WETH.into(), fee: XCM_FEE },
+		});
+		// Convert the message to XCM
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
+		// Send the XCM
+		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubKusama::para_id()).unwrap();
 
 		// Check that the register token message was sent using xcm
 		assert_expected_events!(
@@ -491,7 +537,19 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 		);
 
 		// Construct SendToken message and sent to inbound queue
-		assert_ok!(send_inbound_message(make_send_token_message()));
+		let message = VersionedMessage::V1(MessageV1 {
+			chain_id: CHAIN_ID,
+			command: Command::SendToken {
+				token: WETH.into(),
+				destination: Destination::AccountId32 { id: AssetHubKusamaReceiver::get().into() },
+				amount: WETH_AMOUNT,
+				fee: XCM_FEE,
+			},
+		});
+		// Convert the message to XCM
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
+		// Send the XCM
+		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubKusama::para_id()).unwrap();
 
 		// Check that the send token message was sent using xcm
 		assert_expected_events!(
@@ -540,25 +598,22 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 			[AccountKey20 { network: None, key: ETHEREUM_DESTINATION_ADDRESS }],
 		));
 
-		let free_balance_before =
-			<AssetHubPaseo as AssetHubPaseoPallet>::Balances::free_balance(
-				AssetHubPaseoReceiver::get(),
-			);
-		// Send the Weth back to Ethereum
-		assert_ok!(
-			<AssetHubPaseo as AssetHubPaseoPallet>::PolkadotXcm::reserve_transfer_assets(
-				RuntimeOrigin::signed(AssetHubPaseoReceiver::get()),
-				Box::new(destination),
-				Box::new(beneficiary),
-				Box::new(multi_assets),
-				0,
-			)
+		let free_balance_before = <AssetHubPaseo as AssetHubPaseoPallet>::Balances::free_balance(
+			AssetHubPaseoReceiver::get(),
 		);
+		// Send the Weth back to Ethereum
+		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::PolkadotXcm::limited_reserve_transfer_assets(
+			RuntimeOrigin::signed(AssetHubPaseoReceiver::get()),
+			Box::new(destination),
+			Box::new(beneficiary),
+			Box::new(multi_assets),
+			0,
+			Unlimited,
+		));
 
-		let free_balance_after =
-			<AssetHubPaseo as AssetHubPaseoPallet>::Balances::free_balance(
-				AssetHubPaseoReceiver::get(),
-			);
+		let free_balance_after = <AssetHubPaseo as AssetHubPaseoPallet>::Balances::free_balance(
+			AssetHubPaseoReceiver::get(),
+		);
 		// Assert at least DefaultBridgeHubEthereumBaseFee charged from the sender
 		let free_balance_diff = free_balance_before - free_balance_after;
 		assert!(free_balance_diff > base_fee);
@@ -614,8 +669,15 @@ fn register_weth_token_in_asset_hub_fail_for_insufficient_fee() {
 		));
 
 		// Construct RegisterToken message and sent to inbound queue
-		let message = make_register_token_with_infufficient_fee_message();
-		assert_ok!(send_inbound_message(message));
+		let message_id: H256 = [1; 32].into();
+		let message = VersionedMessage::V1(MessageV1 {
+			chain_id: CHAIN_ID,
+			command: Command::RegisterToken { token: WETH.into(), fee: INSUFFICIENT_XCM_FEE },
+		});
+		// Convert the message to XCM
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
+		// Send the XCM
+		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubKusama::para_id()).unwrap();
 
 		assert_expected_events!(
 			BridgeHubPaseo,
@@ -682,66 +744,4 @@ fn asset_hub_foreign_assets_pallet_is_configured_correctly_in_bridge_hub() {
 fn ethereum_sovereign_account() -> AccountId {
 	let origin_location = (Parent, Parent, EthereumNetwork::get()).into();
 	GlobalConsensusEthereumConvertsFor::<AccountId>::convert_location(&origin_location).unwrap()
-}
-
-fn make_register_token_message() -> InboundQueueFixture {
-	InboundQueueFixture {
-		execution_header: CompactExecutionHeader{
-			parent_hash: hex!("d5de3dd02c96dbdc8aaa4db70a1e9fdab5ded5f4d52f18798acd56a3d37d1ad6").into(),
-			block_number: 772,
-			state_root: hex!("49cba2a79b23ad74cefe80c3a96699825d1cda0f75bfceb587c5549211c86245").into(),
-			receipts_root: hex!("7b1f61b9714c080ef0be014e01657a15f45f0304b477beebc7ca5596c8033095").into(),
-		},
-		message: Message {
-			event_log: 	Log {
-				address: hex!("eda338e4dc46038493b885327842fd3e301cab39").into(),
-				topics: vec![
-					hex!("7153f9357c8ea496bba60bf82e67143e27b64462b49041f8e689e1b05728f84f").into(),
-					hex!("c173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539").into(),
-					hex!("5f7060e971b0dc81e63f0aa41831091847d97c1a4693ac450cc128c7214e65e0").into(),
-				],
-				data: hex!("00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000002e00a736aa00000000000087d1f7fdfee7f651fabc8bfcb6e086c278b77a7d00e40b54020000000000000000000000000000000000000000000000000000000000").into(),
-			},
-			proof: Proof {
-				block_hash: hex!("392182a385b3a417e8ddea8b252953ee81e6ec0fb09d9056c96c89fbeb703a3f").into(),
-				tx_index: 0,
-				data: (vec![
-					hex!("7b1f61b9714c080ef0be014e01657a15f45f0304b477beebc7ca5596c8033095").to_vec(),
-				], vec![
-					hex!("f9028e822080b9028802f90284018301d205b9010000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000080000000000000000000000000000004000000000080000000000000000000000000000000000010100000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000040004000000000000002000002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000200000000000010f90179f85894eda338e4dc46038493b885327842fd3e301cab39e1a0f78bb28d4b1d7da699e5c0bc2be29c2b04b5aab6aacf6298fe5304f9db9c6d7ea000000000000000000000000087d1f7fdfee7f651fabc8bfcb6e086c278b77a7df9011c94eda338e4dc46038493b885327842fd3e301cab39f863a07153f9357c8ea496bba60bf82e67143e27b64462b49041f8e689e1b05728f84fa0c173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539a05f7060e971b0dc81e63f0aa41831091847d97c1a4693ac450cc128c7214e65e0b8a000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000002e00a736aa00000000000087d1f7fdfee7f651fabc8bfcb6e086c278b77a7d00e40b54020000000000000000000000000000000000000000000000000000000000").to_vec(),
-				]),
-			},
-		},
-	}
-}
-
-fn make_send_token_message() -> InboundQueueFixture {
-	InboundQueueFixture {
-		execution_header: CompactExecutionHeader{
-			parent_hash: hex!("920cecde45d428e3a77590b70f8533cf4c2c36917b8a7b74c915e7fa3dae7075").into(),
-			block_number: 1148,
-			state_root: hex!("bbc6ba0e9940d641afecbbaf3f97abd2b9ffaf2f6bd4879c4a71e659eca89978").into(),
-			receipts_root: hex!("9f3340b57eddc1f86de30776db57faeca80269a3dd459031741988dec240ce34").into(),
-		},
-		message: Message {
-			event_log: 	Log {
-				address: hex!("eda338e4dc46038493b885327842fd3e301cab39").into(),
-				topics: vec![
-					hex!("7153f9357c8ea496bba60bf82e67143e27b64462b49041f8e689e1b05728f84f").into(),
-					hex!("c173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539").into(),
-					hex!("c8eaf22f2cb07bac4679df0a660e7115ed87fcfd4e32ac269f6540265bbbd26f").into(),
-				],
-				data: hex!("00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000005f00a736aa00000000000187d1f7fdfee7f651fabc8bfcb6e086c278b77a7d008eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48000064a7b3b6e00d000000000000000000e40b5402000000000000000000000000").into(),
-			},
-			proof: Proof {
-				block_hash: hex!("d3c155f123c3cbff22f3d7869283e02179edea9ffa7a5e9a4d8414c2a6b8991f").into(),
-				tx_index: 0,
-				data: (vec![
-					hex!("9f3340b57eddc1f86de30776db57faeca80269a3dd459031741988dec240ce34").to_vec(),
-				], vec![
-					hex!("f90451822080b9044b02f90447018301bcb9b9010000800000000000000000000020000000000000000000004000000000000000000400000000000000000000001000000010000000000000000000000008000000200000000000000001000008000000000000000000000000000000008000080000000000200000000000000000000000000100000000000000000011000000000000020200000000000000000000000000003000000040080008000000000000000000040044000021000000002000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000200800000000000f9033cf89b9487d1f7fdfee7f651fabc8bfcb6e086c278b77a7df863a0ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3efa000000000000000000000000090a987b944cb1dcce5564e5fdecd7a54d3de27fea000000000000000000000000057a2d4ff0c3866d96556884bf09fecdd7ccd530ca00000000000000000000000000000000000000000000000000de0b6b3a7640000f9015d94eda338e4dc46038493b885327842fd3e301cab39f884a024c5d2de620c6e25186ae16f6919eba93b6e2c1a33857cc419d9f3a00d6967e9a000000000000000000000000090a987b944cb1dcce5564e5fdecd7a54d3de27fea000000000000000000000000087d1f7fdfee7f651fabc8bfcb6e086c278b77a7da000000000000000000000000000000000000000000000000000000000000003e8b8c000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000de0b6b3a76400000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000208eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48f9013c94eda338e4dc46038493b885327842fd3e301cab39f863a07153f9357c8ea496bba60bf82e67143e27b64462b49041f8e689e1b05728f84fa0c173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539a0c8eaf22f2cb07bac4679df0a660e7115ed87fcfd4e32ac269f6540265bbbd26fb8c000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000005f00a736aa00000000000187d1f7fdfee7f651fabc8bfcb6e086c278b77a7d008eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48000064a7b3b6e00d000000000000000000e40b5402000000000000000000000000").to_vec(),
-				]),
-			},
-		},
-	}
 }
