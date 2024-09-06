@@ -15,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use asset_hub_polkadot_runtime::xcm_config::bridging::{
+use asset_hub_paseo_runtime::xcm_config::bridging::{
 	to_ethereum::{BridgeHubEthereumBaseFee, BridgeTable, EthereumNetwork},
 	SiblingBridgeHub, XcmBridgeHubRouterFeeAssetId,
 };
@@ -54,8 +54,8 @@ fn network_export_table_works() {
 				.into(),
 				None,
 			),
-			// From Ethereum with the Sepolia chain ID instead of Mainnet, not matched.
-			(NetworkId::Ethereum { chain_id: 11155111 }, Junctions::Here, None),
+			// From Ethereum with the Mainnet chain ID instead of Sepolia, not matched.
+			(NetworkId::Ethereum { chain_id: 1 }, Junctions::Here, None),
 		];
 
 		for (network, remote_location, expected_result) in test_data {

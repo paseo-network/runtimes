@@ -80,6 +80,7 @@ use xcm_config::{
 pub use sp_runtime::BuildStorage;
 
 // Polkadot imports
+use paseo_runtime_constants::system_parachain::{ASSET_HUB_ID, BRIDGE_HUB_ID};
 use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};

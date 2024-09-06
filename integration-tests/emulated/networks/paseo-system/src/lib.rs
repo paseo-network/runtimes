@@ -15,13 +15,13 @@
 
 pub use asset_hub_paseo_emulated_chain;
 pub use bridge_hub_paseo_emulated_chain;
-pub use penpal_emulated_chain;
 pub use paseo_emulated_chain;
+pub use penpal_emulated_chain;
 
 use asset_hub_paseo_emulated_chain::AssetHubPaseo;
 use bridge_hub_paseo_emulated_chain::BridgeHubPaseo;
-use penpal_emulated_chain::PenpalB;
 use paseo_emulated_chain::Paseo;
+use penpal_emulated_chain::PenpalB;
 
 // Cumulus
 use emulated_integration_tests_common::{
