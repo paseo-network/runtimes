@@ -27,7 +27,7 @@ use polkadot_runtime_common::{
 		ContainsParts as ContainsLocationParts, DealWithFees, LocatableAssetConverter,
 		VersionedLocatableAsset, VersionedLocationConverter,
 	},
-	paras_registrar, prod_or_fast, slots,
+	paras_registrar, paras_sudo_wrapper, prod_or_fast, slots,
 	traits::OnSwap,
 	BlockHashCount, BlockLength, CurrencyToVote, SlowAdjustingFeeUpdate,
 };
@@ -1998,8 +1998,8 @@ pub mod migrations {
 				log::debug!(target: "runtime", "Cancelling scheduled auctions failed: {:?}", err);
 			}
 			use pallet_scheduler::WeightInfo as _;
-			use paseo_runtime_common::auctions::WeightInfo as _;
-			weights::paseo_runtime_common_auctions::WeightInfo::<Runtime>::cancel_auction()
+			use polkadot_runtime_common::auctions::WeightInfo as _;
+			weights::polkadot_runtime_common_auctions::WeightInfo::<Runtime>::cancel_auction()
 				.saturating_add(weights::pallet_scheduler::WeightInfo::<Runtime>::cancel_named(
 					<Runtime as pallet_scheduler::Config>::MaxScheduledPerBlock::get(),
 				))
