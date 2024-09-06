@@ -16,7 +16,7 @@
 
 use bp_bridge_hub_kusama::Perbill;
 use bp_polkadot_core::Signature;
-use bridge_hub_polkadot_runtime::{
+use bridge_hub_paseo_runtime::{
 	bridge_to_kusama_config::{
 		AssetHubKusamaParaId, BridgeGrandpaKusamaInstance, BridgeHubKusamaChainId,
 		BridgeHubKusamaLocation, BridgeParachainKusamaInstance, DeliveryRewardInBalance,
@@ -42,7 +42,7 @@ use sp_runtime::{
 	generic::{Era, SignedPayload},
 	AccountId32,
 };
-use system_parachains_constants::polkadot::{
+use system_parachains_constants::paseo::{
 	consensus::RELAY_CHAIN_SLOT_DURATION_MILLIS, fee::WeightToFee,
 };
 use xcm::latest::prelude::*;
@@ -147,7 +147,7 @@ bridge_hub_test_utils::test_cases::include_teleports_for_native_asset_works!(
 
 #[test]
 fn test_ed_is_one_tenth_of_relay() {
-	let relay_ed = polkadot_runtime_constants::currency::EXISTENTIAL_DEPOSIT;
+	let relay_ed = paseo_runtime_constants::currency::EXISTENTIAL_DEPOSIT;
 	let bridge_hub_ed = ExistentialDeposit::get();
 	assert_eq!(relay_ed / 10, bridge_hub_ed);
 }
