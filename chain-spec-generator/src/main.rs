@@ -60,8 +60,7 @@ fn main() -> Result<(), String> {
 			),
 			(
 				"people-paseo-local",
-				Box::new(|| system_parachains_specs::people_paseo_local_testnet_config())
-					as Box<_>,
+				Box::new(|| system_parachains_specs::people_paseo_local_testnet_config()) as Box<_>,
 			),
 		]);
 
@@ -70,7 +69,7 @@ fn main() -> Result<(), String> {
 		print!("{chain_spec}");
 		Ok(())
 	} else {
-        let supported = supported_chains.keys().enumerate().fold(String::new(), |c, (n, k)| {
+		let supported = supported_chains.keys().enumerate().fold(String::new(), |c, (n, k)| {
 			let extra = if n + 1 < supported_chains.len() { ", " } else { "" };
 			format!("{c}{k}{extra}")
 		});
