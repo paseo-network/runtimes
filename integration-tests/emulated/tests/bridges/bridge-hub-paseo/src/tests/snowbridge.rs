@@ -30,25 +30,13 @@ use paseo_system_emulated_network::{
 	penpal_emulated_chain::CustomizableAssetFromSystemAssetHub,
 	BridgeHubPaseoParaSender as BridgeHubPaseoSender,
 };
-use snowbridge_beacon_primitives::{
-	types::deneb, AncestryProof, BeaconHeader, ExecutionProof, VersionedExecutionPayloadHeader,
-};
-use snowbridge_core::{
-	gwei,
-	inbound::{Log, Message, Proof},
-	meth,
-	outbound::OperatingMode,
-	Rewards,
-};
-use snowbridge_pallet_inbound_queue_fixtures::{
-	register_token::make_register_token_message, send_token::make_send_token_message,
-	send_token_to_penpal::make_send_token_to_penpal_message,
-};
+use snowbridge_core::{gwei, inbound::InboundQueueFixture, meth, outbound::OperatingMode, Rewards};
+use snowbridge_pallet_inbound_queue_fixtures::register_token::make_register_token_message;
 use snowbridge_pallet_system::PricingParametersOf;
 use snowbridge_router_primitives::inbound::{
 	Command, Destination, GlobalConsensusEthereumConvertsFor, MessageV1, VersionedMessage,
 };
-use sp_core::{H160, H256, U256};
+use sp_core::{H160, H256};
 use sp_runtime::{DispatchError::Token, FixedU128, TokenError::FundsUnavailable};
 use system_parachains_constants::paseo::currency::UNITS;
 
@@ -77,13 +65,11 @@ pub enum SnowbridgeControl {
 }
 
 pub fn send_inbound_message(fixture: InboundQueueFixture) -> DispatchResult {
-	EthereumBeaconClient::store_execution_header(
-		fixture.message.proof.block_hash,
-		fixture.execution_header,
-		0,
-		H256::default(),
-	);
-
+	EthereumBeaconClient::store_finalized_header(
+		fixture.finalized_header,
+		fixture.block_roots_root,
+	)
+	.unwrap();
 	EthereumInboundQueue::submit(
 		RuntimeOrigin::signed(BridgeHubPaseoSender::get()),
 		fixture.message,
@@ -411,10 +397,10 @@ fn send_token_from_ethereum_to_asset_hub() {
 		// Convert the message to XCM
 		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
 		// Send the XCM
-		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubKusama::para_id()).unwrap();
+		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubPaseo::para_id()).unwrap();
 
 		assert_expected_events!(
-			BridgeHubKusama,
+			BridgeHubPaseo,
 			vec![
 				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},
 			]
@@ -425,7 +411,7 @@ fn send_token_from_ethereum_to_asset_hub() {
 			chain_id: CHAIN_ID,
 			command: Command::SendToken {
 				token: WETH.into(),
-				destination: Destination::AccountId32 { id: AssetHubKusamaReceiver::get().into() },
+				destination: Destination::AccountId32 { id: AssetHubPaseoReceiver::get().into() },
 				amount: WETH_AMOUNT,
 				fee: XCM_FEE,
 			},
@@ -433,7 +419,7 @@ fn send_token_from_ethereum_to_asset_hub() {
 		// Convert the message to XCM
 		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
 		// Send the XCM
-		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubKusama::para_id()).unwrap();
+		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubPaseo::para_id()).unwrap();
 
 		// Check that the message was sent
 		assert_expected_events!(
@@ -526,7 +512,7 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 		// Convert the message to XCM
 		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
 		// Send the XCM
-		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubKusama::para_id()).unwrap();
+		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubPaseo::para_id()).unwrap();
 
 		// Check that the register token message was sent using xcm
 		assert_expected_events!(
@@ -541,7 +527,7 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 			chain_id: CHAIN_ID,
 			command: Command::SendToken {
 				token: WETH.into(),
-				destination: Destination::AccountId32 { id: AssetHubKusamaReceiver::get().into() },
+				destination: Destination::AccountId32 { id: AssetHubPaseoReceiver::get().into() },
 				amount: WETH_AMOUNT,
 				fee: XCM_FEE,
 			},
@@ -549,7 +535,7 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 		// Convert the message to XCM
 		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
 		// Send the XCM
-		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubKusama::para_id()).unwrap();
+		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubPaseo::para_id()).unwrap();
 
 		// Check that the send token message was sent using xcm
 		assert_expected_events!(
@@ -602,14 +588,16 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 			AssetHubPaseoReceiver::get(),
 		);
 		// Send the Weth back to Ethereum
-		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::PolkadotXcm::limited_reserve_transfer_assets(
-			RuntimeOrigin::signed(AssetHubPaseoReceiver::get()),
-			Box::new(destination),
-			Box::new(beneficiary),
-			Box::new(multi_assets),
-			0,
-			Unlimited,
-		));
+		assert_ok!(
+			<AssetHubPaseo as AssetHubPaseoPallet>::PolkadotXcm::limited_reserve_transfer_assets(
+				RuntimeOrigin::signed(AssetHubPaseoReceiver::get()),
+				Box::new(destination),
+				Box::new(beneficiary),
+				Box::new(multi_assets),
+				0,
+				Unlimited,
+			)
+		);
 
 		let free_balance_after = <AssetHubPaseo as AssetHubPaseoPallet>::Balances::free_balance(
 			AssetHubPaseoReceiver::get(),
@@ -677,7 +665,7 @@ fn register_weth_token_in_asset_hub_fail_for_insufficient_fee() {
 		// Convert the message to XCM
 		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
 		// Send the XCM
-		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubKusama::para_id()).unwrap();
+		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubPaseo::para_id()).unwrap();
 
 		assert_expected_events!(
 			BridgeHubPaseo,

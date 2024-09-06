@@ -106,7 +106,7 @@ use frame_system::{
 };
 use pallet_nfts::PalletFeatures;
 use parachains_common::{
-	message_queue::*, AccountId, AssetHubPolkadotAuraId as AuraId, AssetIdForTrustBackedAssets,
+	message_queue::*, AccountId, AuraId, AssetIdForTrustBackedAssets,
 	Balance, BlockNumber, Hash, Header, Nonce, Signature,
 };
 
@@ -140,11 +140,8 @@ impl_opaque_keys! {
 
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	// Note: "statemint" is the legacy name for this chain. It has been renamed to
-	// "asset-hub-paseo". Many wallets/tools depend on the `spec_name`, so it remains "statemint"
-	// for the time being. Wallets/tools should update to treat "asset-hub-paseo" equally.
-	spec_name: create_runtime_str!("statemint"),
-	impl_name: create_runtime_str!("statemint"),
+	spec_name: create_runtime_str!("asset-hub-paseo"),
+	impl_name: create_runtime_str!("asset-hub-paseo"),
 	authoring_version: 1,
 	spec_version: 1_002_008,
 	impl_version: 0,
@@ -271,7 +268,7 @@ impl pallet_vesting::Config for Runtime {
 
 parameter_types! {
 	/// Relay Chain `TransactionByteFee` / 10
-	pub const TransactionByteFee: Balance = paseo_runtime_constants::fee::TRANSACTION_BYTE_FEE;
+	pub const TransactionByteFee: Balance = system_parachains_constants::paseo::fee::TRANSACTION_BYTE_FEE;
 	pub StakingPot: AccountId = CollatorSelection::account_id();
 }
 
@@ -830,6 +827,38 @@ impl pallet_nfts::Config for Runtime {
 	type Helper = ();
 }
 
+/// XCM router instance to BridgeHub with bridging capabilities for `Kusama` global
+/// consensus with dynamic fees and back-pressure.
+pub type ToKusamaXcmRouterInstance = pallet_xcm_bridge_hub_router::Instance1;
+impl pallet_xcm_bridge_hub_router::Config<ToKusamaXcmRouterInstance> for Runtime {
+	type WeightInfo = weights::pallet_xcm_bridge_hub_router::WeightInfo<Runtime>;
+
+	type UniversalLocation = xcm_config::UniversalLocation;
+	type BridgedNetworkId = xcm_config::bridging::to_kusama::KusamaNetwork;
+	type Bridges = xcm_config::bridging::NetworkExportTable;
+	type DestinationVersion = PolkadotXcm;
+
+	#[cfg(not(feature = "runtime-benchmarks"))]
+	type BridgeHubOrigin = EnsureXcm<Equals<xcm_config::bridging::SiblingBridgeHub>>;
+	#[cfg(feature = "runtime-benchmarks")]
+	type BridgeHubOrigin = frame_support::traits::EitherOfDiverse<
+		// for running benchmarks
+		EnsureRoot<AccountId>,
+		// for running tests with `--feature runtime-benchmarks`
+		EnsureXcm<Equals<xcm_config::bridging::SiblingBridgeHub>>,
+	>;
+
+	type ToBridgeHubSender = XcmpQueue;
+	type WithBridgeHubChannel =
+		cumulus_pallet_xcmp_queue::bridging::InAndOutXcmpChannelStatusProvider<
+			xcm_config::bridging::SiblingBridgeHubParaId,
+			Runtime,
+		>;
+
+	type ByteFee = xcm_config::bridging::XcmBridgeHubRouterByteFee;
+	type FeeAsset = xcm_config::bridging::XcmBridgeHubRouterFeeAssetId;
+}
+
 pub type PoolAssetsInstance = pallet_assets::Instance3;
 impl pallet_assets::Config<PoolAssetsInstance> for Runtime {
 	type RuntimeEvent = RuntimeEvent;
@@ -1329,6 +1358,8 @@ impl_runtime_apis! {
 			type Foreign = pallet_assets::Pallet::<Runtime, ForeignAssetsInstance>;
 			type Pool = pallet_assets::Pallet::<Runtime, PoolAssetsInstance>;
 
+			type ToKusama = XcmBridgeHubRouterBench<Runtime, ToKusamaXcmRouterInstance>;
+
 			let mut list = Vec::<BenchmarkList>::new();
 			list_benchmarks!(list, extra);
 
@@ -1517,7 +1548,12 @@ impl_runtime_apis! {
 				));
 				pub const CheckedAccount: Option<(AccountId, xcm_builder::MintLocation)> = None;
 				// AssetHubPolkadot trusts AssetHubKusama as reserve for KSMs
-				pub TrustedReserve: Option<(Location, Asset)> = None;
+				pub TrustedReserve: Option<(Location, Asset)> = Some(
+					(
+						xcm_config::bridging::to_kusama::AssetHubKusama::get(),
+						Asset::from((xcm_config::bridging::to_kusama::KsmLocation::get(), 1000000000000 as u128))
+					)
+				);
 			}
 
 			impl pallet_xcm_benchmarks::fungible::Config for Runtime {
@@ -1593,12 +1629,44 @@ impl_runtime_apis! {
 				Config as XcmBridgeHubRouterConfig,
 			};
 
+			impl XcmBridgeHubRouterConfig<ToKusamaXcmRouterInstance> for Runtime {
+				fn make_congested() {
+					cumulus_pallet_xcmp_queue::bridging::suspend_channel_for_benchmarks::<Runtime>(
+						xcm_config::bridging::SiblingBridgeHubParaId::get().into()
+					);
+				}
+
+				fn ensure_bridged_target_destination() -> Result<Location, BenchmarkError> {
+					ParachainSystem::open_outbound_hrmp_channel_for_benchmarks_or_tests(
+						xcm_config::bridging::SiblingBridgeHubParaId::get().into()
+					);
+					let bridged_asset_hub = xcm_config::bridging::to_kusama::AssetHubKusama::get();
+					let _ = PolkadotXcm::force_xcm_version(
+						RuntimeOrigin::root(),
+						Box::new(bridged_asset_hub.clone()),
+						XCM_VERSION,
+					).map_err(|e| {
+						log::error!(
+							"Failed to dispatch `force_xcm_version({:?}, {:?}, {:?})`, error: {:?}",
+							RuntimeOrigin::root(),
+							bridged_asset_hub,
+							XCM_VERSION,
+							e
+						);
+						BenchmarkError::Stop("XcmVersion was not stored!")
+					})?;
+					Ok(bridged_asset_hub)
+				}
+			}
+
 			type XcmBalances = pallet_xcm_benchmarks::fungible::Pallet::<Runtime>;
 			type XcmGeneric = pallet_xcm_benchmarks::generic::Pallet::<Runtime>;
 
 			type Local = pallet_assets::Pallet::<Runtime, TrustBackedAssetsInstance>;
 			type Foreign = pallet_assets::Pallet::<Runtime, ForeignAssetsInstance>;
 			type Pool = pallet_assets::Pallet::<Runtime, PoolAssetsInstance>;
+
+			type ToKusama = XcmBridgeHubRouterBench<Runtime, ToKusamaXcmRouterInstance>;
 
 			let whitelist: Vec<TrackedStorageKey> = vec![
 				// Block Number

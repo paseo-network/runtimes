@@ -21,10 +21,7 @@ pub use sp_runtime::DispatchError;
 pub use xcm::{
 	latest::ParentThen,
 	prelude::{AccountId32 as AccountId32Junction, *},
-	v3::{
-		self, Error,
-		NetworkId::{Polkadot as PolkadotId},
-	},
+	v3::{self, Error, NetworkId::Polkadot as PolkadotId},
 };
 
 // Bridges
@@ -42,25 +39,20 @@ pub use emulated_integration_tests_common::{
 	PROOF_SIZE_THRESHOLD, REF_TIME_THRESHOLD, XCM_V3,
 };
 pub use integration_tests_helpers::test_sibling_is_trusted_teleporter;
+pub use parachains_common::{AccountId, Balance};
 pub use paseo_system_emulated_network::{
 	asset_hub_paseo_emulated_chain::{
 		genesis::ED as ASSET_HUB_POLKADOT_ED, AssetHubPaseoParaPallet as AssetHubPaseoPallet,
 	},
 	bridge_hub_paseo_emulated_chain::{
-		genesis::ED as BRIDGE_HUB_POLKADOT_ED,
-		BridgeHubPaseoParaPallet as BridgeHubPaseoPallet,
+		genesis::ED as BRIDGE_HUB_POLKADOT_ED, BridgeHubPaseoParaPallet as BridgeHubPaseoPallet,
 	},
 	paseo_emulated_chain::{genesis::ED as POLKADOT_ED, PaseoRelayPallet as PaseoPallet},
-	AssetHubPaseoPara as AssetHubPaseo,
-	AssetHubPaseoParaReceiver as AssetHubPaseoReceiver,
-	AssetHubPaseoParaSender as AssetHubPaseoSender,
-	BridgeHubPaseoPara as BridgeHubPaseo,
-	BridgeHubPaseoParaSender as BridgeHubPaseoSender, PaseoRelay as Paseo,
-};
-pub use parachains_common::{AccountId, Balance};
-pub use paseo_system_emulated_network::{
 	penpal_emulated_chain::PenpalBParaPallet as PenpalBPallet,
-	BridgeHubPaseoParaReceiver as BridgeHubPaseoReceiver, PenpalBPara as PenpalB,
+	AssetHubPaseoPara as AssetHubPaseo, AssetHubPaseoParaReceiver as AssetHubPaseoReceiver,
+	AssetHubPaseoParaSender as AssetHubPaseoSender, BridgeHubPaseoPara as BridgeHubPaseo,
+	BridgeHubPaseoParaReceiver as BridgeHubPaseoReceiver,
+	BridgeHubPaseoParaSender as BridgeHubPaseoSender, PaseoRelay as Paseo, PenpalBPara as PenpalB,
 	PenpalBParaReceiver as PenpalBReceiver, PenpalBParaSender as PenpalBSender,
 };
 

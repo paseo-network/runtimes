@@ -96,16 +96,15 @@ impl<T: frame_system::Config> WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(10))
 			.saturating_add(T::DbWeight::get().writes(5))
 	}
-	/// Storage: `ParachainInfo::ParachainId` (r:1 w:0)
-	/// Proof: `ParachainInfo::ParachainId` (`max_values`: Some(1), `max_size`: Some(4), added: 499, mode: `MaxEncodedLen`)
+	/// Storage: `Benchmark::Override` (r:0 w:0)
+	/// Proof: `Benchmark::Override` (`max_values`: None, `max_size`: None, mode: `Measured`)
 	pub(crate) fn reserve_asset_deposited() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
-		//  Estimated: `1489`
-		// Minimum execution time: 3_658_000 picoseconds.
-		Weight::from_parts(3_739_000, 0)
-			.saturating_add(Weight::from_parts(0, 1489))
-			.saturating_add(T::DbWeight::get().reads(1))
+		//  Estimated: `0`
+		// Minimum execution time: 4_860_700 picoseconds.
+		Weight::from_parts(4_860_700, 0)
+			.saturating_add(Weight::from_parts(0, 0))
 	}
 	/// Storage: `ParachainInfo::ParachainId` (r:1 w:0)
 	/// Proof: `ParachainInfo::ParachainId` (`max_values`: Some(1), `max_size`: Some(4), added: 499, mode: `MaxEncodedLen`)
