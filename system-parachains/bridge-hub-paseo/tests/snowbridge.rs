@@ -168,8 +168,8 @@ fn test_xcm_fee_manager_from_components_bh_origin_in_waived_locations() {
 
 /// Fee is waived when origin is in waived location with Export message, but not to Ethereum.
 #[test]
-fn test_xcm_fee_manager_from_components_bh_origin_in_waived_locations_with_export_to_paseo_reason(
-) {
+fn test_xcm_fee_manager_from_components_bh_origin_in_waived_locations_with_export_to_paseo_reason()
+{
 	assert!(TestXcmFeeManager::is_waived(
 		Some(&Location::new(1, [Parachain(2)])),
 		FeeReason::Export { network: Polkadot, destination: Here }
@@ -398,7 +398,11 @@ where
 	let xcm = Xcm(vec![
 		WithdrawAsset(Assets::from(vec![fee.clone()])),
 		BuyExecution { fees: fee, weight_limit: Unlimited },
-		ExportMessage { network: Ethereum { chain_id: 11155111 }, destination: Here, xcm: inner_xcm },
+		ExportMessage {
+			network: Ethereum { chain_id: 11155111 },
+			destination: Here,
+			xcm: inner_xcm,
+		},
 	]);
 
 	// execute XCM
