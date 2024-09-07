@@ -1697,9 +1697,6 @@ construct_runtime! {
 		// Sudo.
 		ParaSudoWrapper: paras_sudo_wrapper = 250,
 		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 255,
-
-		// Pallet for migrating Identity to a parachain. To be removed post-migration.
-		IdentityMigrator: identity_migrator = 248,
 	}
 }
 

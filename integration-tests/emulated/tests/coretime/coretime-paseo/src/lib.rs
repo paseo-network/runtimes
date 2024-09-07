@@ -41,11 +41,11 @@ pub use emulated_integration_tests_common::{
 	PROOF_SIZE_THRESHOLD, REF_TIME_THRESHOLD, XCM_V3,
 };
 pub use parachains_common::{AccountId, Balance};
-pub use polkadot_system_emulated_network::{
+pub use paseo_system_emulated_network::{
 	coretime_polkadot_emulated_chain::{
 		genesis::ED as CORETIME_POLKADOT_ED, CoretimePolkadotParaPallet as CoretimePolkadotPallet,
 	},
-	polkadot_emulated_chain::{genesis::ED as POLKADOT_ED, PolkadotRelayPallet as PolkadotPallet},
+	paseo_emulated_chain::{genesis::ED as POLKADOT_ED, PolkadotRelayPallet as PolkadotPallet},
 	CoretimePolkadotPara as CoretimePolkadot,
 	CoretimePolkadotParaReceiver as CoretimePolkadotReceiver,
 	CoretimePolkadotParaSender as CoretimePolkadotSender, PenpalAPara as PenpalA,
