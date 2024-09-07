@@ -140,7 +140,6 @@ use pallet_xcm::{EnsureXcm, IsVoiceOfBody};
 use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
-use crate::OriginCaller::PolkadotXcm;
 
 impl_opaque_keys! {
 	pub struct SessionKeys {
