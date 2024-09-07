@@ -34,7 +34,7 @@ use frame_system::pallet_prelude::BlockNumberFor;
 use pallet_broker::{CoreAssignment, CoreMask, ScheduleItem};
 use polkadot_parachain_primitives::primitives::IsSystem;
 use polkadot_primitives::{Balance, BlockNumber, CoreIndex, Id as ParaId};
-use polkadot_runtime_constants::system_parachain::coretime::TIMESLICE_PERIOD;
+use paseo_runtime_constants::system_parachain::coretime::TIMESLICE_PERIOD;
 use runtime_parachains::configuration;
 #[cfg(feature = "try-runtime")]
 use runtime_parachains::scheduler::common::AssignmentProvider;
