@@ -31,8 +31,8 @@ use parachains_common::{
 	},
 	TREASURY_PALLET_ID,
 };
-use paseo_runtime_constants::system_parachain;
 use polkadot_parachain_primitives::primitives::Sibling;
+use paseo_runtime_constants::system_parachain;
 use sp_runtime::traits::AccountIdConversion;
 use xcm::latest::prelude::*;
 use xcm_builder::{
@@ -252,6 +252,10 @@ impl xcm_executor::Config for XcmConfig {
 	type SafeCallFilter = Everything;
 	type Aliasers = Nothing;
 	type TransactionalProcessor = FrameTransactionalProcessor;
+	type HrmpNewChannelOpenRequestHandler = ();
+	type HrmpChannelAcceptedHandler = ();
+	type HrmpChannelClosingHandler = ();
+	type XcmRecorder = ();
 }
 
 /// Converts a local signed origin into an XCM location. Forms the basis for local origins
@@ -262,7 +266,7 @@ pub type LocalOriginToLocation = SignedToAccountId32<RuntimeOrigin, AccountId, R
 /// queues.
 pub type XcmRouter = WithUniqueTopic<(
 	// Two routers - use UMP to communicate with the relay chain:
-	cumulus_primitives_utility::ParentAsUmp<ParachainSystem, PolkadotXcm, ()>,
+	cumulus_primitives_utility::ParentAsUmp<ParachainSystem, PolkadotXcm, PriceForParentDelivery>,
 	// ..and XCMP to communicate with the sibling chains.
 	XcmpQueue,
 )>;
