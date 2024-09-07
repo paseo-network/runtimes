@@ -6,11 +6,11 @@ repository = "https://github.com/paseo-network/runtimes.git"
 license = "GPL-3.0-only"
 
 [workspace.dependencies]
-kusama-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.2.8", package = "kusama-runtime-constants", default-features = false  }
-bp-bridge-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.2.8", package = "bp-bridge-hub-kusama", default-features = false  }
-bp-bridge-hub-polkadot = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.2.8", package = "bp-bridge-hub-polkadot", default-features = false  }
+kusama-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.3.1", package = "kusama-runtime-constants", default-features = false  }
+bp-bridge-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.3.1", package = "bp-bridge-hub-kusama", default-features = false  }
+bp-bridge-hub-polkadot = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.3.1", package = "bp-bridge-hub-polkadot", default-features = false  }
 
-bp-asset-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.2.8", package = "bp-asset-hub-kusama", default-features = false  }
+bp-asset-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.3.1", package = "bp-asset-hub-kusama", default-features = false  }
 
 asset-hub-paseo-runtime = { path = "system-parachains/asset-hub-paseo", default-features = false }
 bridge-hub-paseo-runtime = { path = "system-parachains/bridge-hub-paseo", default-features = false }
