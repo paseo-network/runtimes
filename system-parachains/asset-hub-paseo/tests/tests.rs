@@ -262,7 +262,7 @@ asset_test_utils::include_teleports_for_native_asset_works!(
 	ExistentialDeposit::get(),
 	Box::new(|runtime_event_encoded: Vec<u8>| {
 		match RuntimeEvent::decode(&mut &runtime_event_encoded[..]) {
-				Ok(RuntimeEvent::PaseoXcm(event)) => Some(event),
+				Ok(RuntimeEvent::PolkadotXcm(event)) => Some(event),
 			_ => None,
 		}
 	}),
@@ -283,7 +283,7 @@ asset_test_utils::include_teleports_for_foreign_assets_works!(
 	ExistentialDeposit::get(),
 	Box::new(|runtime_event_encoded: Vec<u8>| {
 		match RuntimeEvent::decode(&mut &runtime_event_encoded[..]) {
-				Ok(RuntimeEvent::PaseoXcm(event)) => Some(event),
+				Ok(RuntimeEvent::PolkadotXcm(event)) => Some(event),
 			_ => None,
 		}
 	}),
@@ -380,7 +380,7 @@ asset_test_utils::include_create_and_manage_foreign_assets_for_local_consensus_p
 );
 
 fn bridging_to_asset_hub_kusama() -> TestBridgingConfig {
-	PaseoXcm::force_xcm_version(
+	PolkadotXcm::force_xcm_version(
 		RuntimeOrigin::root(),
 		Box::new(bridging::to_kusama::AssetHubKusama::get()),
 		XCM_VERSION,
@@ -410,7 +410,7 @@ fn limited_reserve_transfer_assets_for_native_asset_to_asset_hub_kusama_works() 
 		AccountId::from(ALICE),
 		Box::new(|runtime_event_encoded: Vec<u8>| {
 			match RuntimeEvent::decode(&mut &runtime_event_encoded[..]) {
-				Ok(RuntimeEvent::PaseoXcm(event)) => Some(event),
+				Ok(RuntimeEvent::PolkadotXcm(event)) => Some(event),
 				_ => None,
 			}
 		}),
@@ -569,7 +569,7 @@ fn reserve_transfer_native_asset_to_non_teleport_para_works() {
 		AccountId::from(ALICE),
 		Box::new(|runtime_event_encoded: Vec<u8>| {
 			match RuntimeEvent::decode(&mut &runtime_event_encoded[..]) {
-				Ok(RuntimeEvent::PaseoXcm(event)) => Some(event),
+				Ok(RuntimeEvent::PolkadotXcm(event)) => Some(event),
 				_ => None,
 			}
 		}),

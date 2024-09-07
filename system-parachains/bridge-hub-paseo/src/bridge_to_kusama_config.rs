@@ -96,7 +96,7 @@ parameter_types! {
 	/// A route (XCM location and bridge lane) that the Polkadot Asset Hub -> Kusama Asset Hub
 	/// message is following.
 	pub FromAssetHubPolkadotToAssetHubKusamaRoute: SenderAndLane = SenderAndLane::new(
-		ParentThen(Parachain(AssetHubPolkadotParaId::get().into()).into()).into(),
+		ParentThen(Parachain(AssetHubPaseoParaId::get().into()).into()).into(),
 		XCM_LANE_FOR_ASSET_HUB_POLKADOT_TO_ASSET_HUB_KUSAMA,
 	);
 
@@ -229,7 +229,7 @@ impl pallet_bridge_messages::Config<WithBridgeHubKusamaMessagesInstance> for Run
 		FromKusamaMessageBlobDispatcher,
 		Self::WeightInfo,
 		cumulus_pallet_xcmp_queue::bridging::OutXcmpChannelStatusProvider<
-			AssetHubPolkadotParaId,
+			AssetHubPaseoParaId,
 			Runtime,
 		>,
 	>;

@@ -30,7 +30,7 @@ use frame_support::{
 use frame_system::Pallet as System;
 use pallet_broker::{CoreAssignment, CoreIndex, CoretimeInterface, PartsOf57600, RCBlockNumberOf};
 use parachains_common::{AccountId, Balance};
-use polkadot_runtime_constants::{system_parachain::coretime, time::DAYS as RELAY_DAYS};
+use paseo_runtime_constants::{system_parachain::coretime, time::DAYS as RELAY_DAYS};
 use sp_runtime::traits::AccountIdConversion;
 use xcm::latest::prelude::*;
 use xcm_executor::traits::TransactAsset;

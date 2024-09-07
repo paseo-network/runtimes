@@ -1948,7 +1948,7 @@ pub type Migrations = (migrations::Unreleased, migrations::Permanent);
 /// The runtime migrations per release.
 #[allow(deprecated, missing_docs)]
 pub mod migrations {
-	use paseo_runtime_common::traits::Leaser;
+	use polkadot_runtime_common::traits::Leaser;
 
 	use super::*;
 
