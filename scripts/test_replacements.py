@@ -51,7 +51,7 @@ def test_replacements(config_file):
         ),
         (
          "// Polkadot version identifier;",
-         "// Portico version identifier;"
+         "// Paseo version identifier;"
         ),
         (
          "/// Runtime version (Polkadot).",
