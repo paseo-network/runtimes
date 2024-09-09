@@ -17,7 +17,7 @@
 //! Genesis configs presets for the AssetHubPolkadot runtime
 
 use crate::*;
-use parachains_common::AssetHubPolkadotAuraId;
+use AuraId as AssetHubPolkadotAuraId;
 use sp_core::sr25519;
 use sp_std::vec::Vec;
 use system_parachains_constants::genesis_presets::*;
