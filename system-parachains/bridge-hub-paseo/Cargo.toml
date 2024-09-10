@@ -21,15 +21,11 @@ serde_json = { features = ["alloc"], workspace = true }
 tuplex = { workspace = true }
 
 
-#kusama-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.2.8", package = "kusama-runtime-constants", default-features = false  }
-#bp-bridge-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.2.8", package = "bp-bridge-hub-kusama", default-features = false  }
-#bp-asset-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.2.8", package = "bp-asset-hub-kusama", default-features = false  }
+kusama-runtime-constants = {  workspace = true  }
+bp-bridge-hub-kusama = {  workspace = true   }
+bp-bridge-hub-polkadot = { workspace = true }
+bp-asset-hub-kusama = {  workspace = true  }
 
-
-kusama-runtime-constants = {  workspace = true, default-features = false  }
-bp-bridge-hub-kusama = {  workspace = true, default-features = false   }
-bp-bridge-hub-polkadot = { workspace = true, default-features = false }
-bp-asset-hub-kusama = {  workspace = true, default-features = false  }
 # Local
 bp-asset-hub-paseo = { workspace = true }
 bp-bridge-hub-paseo = { workspace = true }

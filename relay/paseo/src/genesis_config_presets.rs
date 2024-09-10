@@ -135,7 +135,7 @@ fn default_parachains_host_configuration() -> HostConfiguration<polkadot_primiti
 }
 
 #[allow(clippy::type_complexity)]
-fn polkadot_testnet_genesis(
+fn paseo_testnet_genesis(
 	initial_authorities: Vec<(
 		AccountId,
 		AccountId,
@@ -165,7 +165,7 @@ fn polkadot_testnet_genesis(
 					(
 						x.0.clone(),
 						x.0.clone(),
-						polkadot_session_keys(
+						paseo_session_keys(
 							x.2.clone(),
 							x.3.clone(),
 							x.4.clone(),
@@ -197,7 +197,7 @@ fn polkadot_testnet_genesis(
 	})
 }
 
-fn polkadot_session_keys(
+fn paseo_session_keys(
 	babe: BabeId,
 	grandpa: GrandpaId,
 	para_validator: ValidatorId,
@@ -208,16 +208,16 @@ fn polkadot_session_keys(
 	SessionKeys { babe, grandpa, para_validator, para_assignment, authority_discovery, beefy }
 }
 
-pub fn polkadot_local_testnet_genesis() -> serde_json::Value {
-	polkadot_testnet_genesis(
+pub fn paseo_local_testnet_genesis() -> serde_json::Value {
+	paseo_testnet_genesis(
 		vec![get_authority_keys_from_seed("Alice"), get_authority_keys_from_seed("Bob")],
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		None,
 	)
 }
 
-pub fn polkadot_development_config_genesis() -> serde_json::Value {
-	polkadot_testnet_genesis(
+pub fn paseo_development_config_genesis() -> serde_json::Value {
+	paseo_testnet_genesis(
 		vec![get_authority_keys_from_seed("Alice")],
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		None,
@@ -227,8 +227,8 @@ pub fn polkadot_development_config_genesis() -> serde_json::Value {
 /// Provides the JSON representation of predefined genesis config for given `id`.
 pub fn get_preset(id: &sp_genesis_builder::PresetId) -> Option<sp_std::vec::Vec<u8>> {
 	let patch = match id.try_into() {
-		Ok("development") => polkadot_development_config_genesis(),
-		Ok("local_testnet") => polkadot_local_testnet_genesis(),
+		Ok("development") => paseo_development_config_genesis(),
+		Ok("local_testnet") => paseo_local_testnet_genesis(),
 		_ => return None,
 	};
 	Some(

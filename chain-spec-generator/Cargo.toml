@@ -11,46 +11,20 @@ clap = { features = ["derive"], workspace = true }
 serde_json = { workspace = true }
 serde = { features = ["derive"], workspace = true }
 
-# Local dependencies
-paseo-runtime = { path = "../relay/paseo" }
-paseo-runtime-constants = { path = "../relay/paseo/constants", default-features = true }
-asset-hub-paseo-runtime = { path = "../system-parachains/asset-hub-paseo", default-features = true }
-bridge-hub-paseo-runtime = { path = "../system-parachains/bridge-hub-paseo", default-features = true }
-people-paseo-runtime = { path = "../system-parachains/people-paseo", default-features = true }
-system-parachains-constants = { path = "../system-parachains/constants", default-features = true }
-
-# External dependencies
+paseo-runtime = { workspace = true }
 sc-chain-spec = { workspace = true }
-runtime-parachains = { workspace = true, default-features = true }
-polkadot-primitives = { workspace = true, default-features = true }
-babe-primitives = { workspace = true, default-features = true }
-authority-discovery-primitives = { workspace = true, default-features = true }
-sp-core = { workspace = true, default-features = true }
-pallet-staking = { workspace = true, default-features = true }
-grandpa = { workspace = true }
-hex-literal = { workspace = true }
-sp-runtime = { workspace = true, default-features = true }
-beefy-primitives = { workspace = true, default-features = true }
-xcm = { package = "staging-xcm", version = "8.0.1" }
-parachains-common = { workspace = true, default-features = true }
-cumulus-primitives-core = { workspace = true, default-features = true }
+sc-network = { workspace = true }
+asset-hub-paseo-runtime = { workspace = true }
+bridge-hub-paseo-runtime = { workspace = true }
+coretime-paseo-runtime = { workspace = true }
+people-paseo-runtime = { workspace = true }
 
 [features]
 fast-runtime = ["paseo-runtime/fast-runtime"]
 runtime-benchmarks = [
-    "people-paseo-runtime/runtime-benchmarks",
-    "asset-hub-paseo-runtime/runtime-benchmarks",
-    "bridge-hub-paseo-runtime/runtime-benchmarks",
-    "paseo-runtime/runtime-benchmarks",
-    "cumulus-primitives-core/runtime-benchmarks",
-    "pallet-staking/runtime-benchmarks",
-    "parachains-common/runtime-benchmarks",
-    "polkadot-primitives/runtime-benchmarks",
-    "runtime-parachains/runtime-benchmarks",
-    "sp-runtime/runtime-benchmarks",
-]
-force-debug = [
-    "paseo-runtime/force-debug",
-    "asset-hub-paseo-runtime/force-debug",
-    "bridge-hub-paseo-runtime/force-debug",
+	"asset-hub-paseo-runtime/runtime-benchmarks",
+	"bridge-hub-paseo-runtime/runtime-benchmarks",
+	"coretime-paseo-runtime/runtime-benchmarks",
+	"people-paseo-runtime/runtime-benchmarks",
+	"paseo-runtime/runtime-benchmarks",
 ]

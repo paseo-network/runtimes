@@ -17,29 +17,14 @@
 //! Genesis configs presets for the AssetHubPolkadot runtime
 
 use crate::*;
-use AuraId as AssetHubPolkadotAuraId;
-use sp_core::sr25519;
+use AuraId;
 use sp_std::vec::Vec;
 use system_parachains_constants::genesis_presets::*;
 
-const ASSET_HUB_POLKADOT_ED: Balance = ExistentialDeposit::get();
+const ASSET_HUB_PASEO_ED: Balance = ExistentialDeposit::get();
 
-/// Invulnerable Collators for the particular case of AssetHubPolkadot
-pub fn invulnerables_asset_hub_polkadot() -> Vec<(AccountId, AssetHubPolkadotAuraId)> {
-	vec![
-		(
-			get_account_id_from_seed::<sr25519::Public>("Alice"),
-			get_from_seed::<AssetHubPolkadotAuraId>("Alice"),
-		),
-		(
-			get_account_id_from_seed::<sr25519::Public>("Bob"),
-			get_from_seed::<AssetHubPolkadotAuraId>("Bob"),
-		),
-	]
-}
-
-fn asset_hub_polkadot_genesis(
-	invulnerables: Vec<(AccountId, AssetHubPolkadotAuraId)>,
+fn asset_hub_paseo_genesis(
+	invulnerables: Vec<(AccountId, AuraId)>,
 	endowed_accounts: Vec<AccountId>,
 	id: ParaId,
 ) -> serde_json::Value {
@@ -48,7 +33,7 @@ fn asset_hub_polkadot_genesis(
 			balances: endowed_accounts
 				.iter()
 				.cloned()
-				.map(|k| (k, ASSET_HUB_POLKADOT_ED * 4096 * 4096))
+				.map(|k| (k, ASSET_HUB_PASEO_ED * 4096 * 4096))
 				.collect(),
 		},
 		"parachainInfo": ParachainInfoConfig {
@@ -57,7 +42,7 @@ fn asset_hub_polkadot_genesis(
 		},
 		"collatorSelection": CollatorSelectionConfig {
 			invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),
-			candidacy_bond: ASSET_HUB_POLKADOT_ED * 16,
+			candidacy_bond: ASSET_HUB_PASEO_ED * 16,
 			..Default::default()
 		},
 		"session": SessionConfig {
@@ -80,19 +65,19 @@ fn asset_hub_polkadot_genesis(
 	})
 }
 
-pub fn asset_hub_polkadot_local_testnet_genesis(para_id: ParaId) -> serde_json::Value {
-	asset_hub_polkadot_genesis(invulnerables_asset_hub_polkadot(), testnet_accounts(), para_id)
+pub fn asset_hub_paseo_local_testnet_genesis(para_id: ParaId) -> serde_json::Value {
+	asset_hub_paseo_genesis(invulnerables(), testnet_accounts(), para_id)
 }
 
-fn asset_hub_polkadot_development_genesis(para_id: ParaId) -> serde_json::Value {
-	asset_hub_polkadot_local_testnet_genesis(para_id)
+fn asset_hub_paseo_development_genesis(para_id: ParaId) -> serde_json::Value {
+	asset_hub_paseo_genesis(invulnerables_tot(), testnet_accounts(), para_id)
 }
 
 /// Provides the JSON representation of predefined genesis config for given `id`.
 pub fn get_preset(id: &sp_genesis_builder::PresetId) -> Option<sp_std::vec::Vec<u8>> {
 	let patch = match id.try_into() {
-		Ok("development") => asset_hub_polkadot_development_genesis(1000.into()),
-		Ok("local_testnet") => asset_hub_polkadot_local_testnet_genesis(1000.into()),
+		Ok("development") => asset_hub_paseo_development_genesis(1000.into()),
+		Ok("local_testnet") => asset_hub_paseo_local_testnet_genesis(1000.into()),
 		_ => return None,
 	};
 	Some(
