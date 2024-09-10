@@ -29,7 +29,7 @@ struct EmptyChainSpecWithId {
 	id: String,
 }
 
-/* pub fn from_json_file(filepath: &str, supported: String) -> Result<Box<dyn ChainSpec>, String> {
+pub fn from_json_file(filepath: &str, supported: String) -> Result<Box<dyn ChainSpec>, String> {
 	let path = std::path::PathBuf::from(&filepath);
 	let file = std::fs::File::open(filepath).expect("Failed to open file");
 	let reader = std::io::BufReader::new(file);
@@ -48,4 +48,4 @@ struct EmptyChainSpecWithId {
 			Ok(Box::new(PeoplePaseoChainSpec::from_json_file(path)?)),
 		_ => Err(format!("Unknown chain 'id' in json file. Only supported: {supported}'")),
 	}
-} */
+} 

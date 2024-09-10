@@ -30,13 +30,15 @@ pub struct Extensions {
 	pub para_id: u32,
 }
 
-pub type AssetHubPaseoChainSpec = sc_chain_spec::GenericChainSpec<(), Extensions>;
+pub type AssetHubPaseoChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
 
-pub type BridgeHubPaseoChainSpec = sc_chain_spec::GenericChainSpec<(), Extensions>;
+pub type BridgeHubPaseoChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
 
-pub type PeoplePaseoChainSpec = sc_chain_spec::GenericChainSpec<(), Extensions>;
+pub type PeoplePaseoChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
 
 pub type CoretimePaseoChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
+
+
 
 pub fn asset_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, String> {
 	let mut properties = sc_chain_spec::Properties::new();

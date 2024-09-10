@@ -650,9 +650,9 @@ dependencies = [
  "sp-storage",
  "sp-transaction-pool",
  "sp-version",
- "sp-weights",
+ "sp-weights 31.0.0",
  "staging-parachain-info",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "staging-xcm-builder",
  "staging-xcm-executor",
  "substrate-wasm-builder",
@@ -685,7 +685,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "staging-parachain-info",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "staging-xcm-builder",
  "staging-xcm-executor",
  "substrate-wasm-builder",
@@ -709,7 +709,7 @@ dependencies = [
  "sp-api",
  "sp-runtime",
  "sp-std",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "staging-xcm-builder",
  "staging-xcm-executor",
  "substrate-wasm-builder",
@@ -1045,7 +1045,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-std",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "system-parachains-constants 1.0.0 (git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.1)",
 ]
 
@@ -1058,7 +1058,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-std",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "system-parachains-constants 1.0.0",
 ]
 
@@ -1110,7 +1110,7 @@ dependencies = [
  "sp-api",
  "sp-runtime",
  "sp-std",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "system-parachains-constants 1.0.0",
 ]
 
@@ -1130,7 +1130,7 @@ dependencies = [
  "sp-api",
  "sp-runtime",
  "sp-std",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "system-parachains-constants 1.0.0 (git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.1)",
 ]
 
@@ -1348,7 +1348,7 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std",
- "staging-xcm",
+ "staging-xcm 14.1.0",
 ]
 
 [[package]]
@@ -1394,7 +1394,7 @@ dependencies = [
  "snowbridge-router-primitives",
  "sp-core",
  "sp-runtime",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "staging-xcm-executor",
  "system-parachains-constants 1.0.0",
 ]
@@ -1494,7 +1494,7 @@ dependencies = [
  "sp-transaction-pool",
  "sp-version",
  "staging-parachain-info",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "staging-xcm-builder",
  "staging-xcm-executor",
  "static_assertions",
@@ -1540,7 +1540,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "sp-tracing",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "staging-xcm-builder",
  "staging-xcm-executor",
 ]
@@ -1577,7 +1577,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "sp-trie",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "staging-xcm-builder",
  "static_assertions",
  "tuplex",
@@ -1758,12 +1758,27 @@ dependencies = [
  "bridge-hub-paseo-runtime",
  "clap",
  "coretime-paseo-runtime",
+ "cumulus-primitives-core",
+ "hex-literal",
+ "pallet-staking",
+ "parachains-common",
  "paseo-runtime",
+ "paseo-runtime-constants",
  "people-paseo-runtime",
+ "polkadot-primitives",
+ "polkadot-runtime-parachains",
  "sc-chain-spec",
+ "sc-consensus-grandpa",
  "sc-network",
  "serde",
  "serde_json",
+ "sp-authority-discovery",
+ "sp-consensus-babe",
+ "sp-consensus-beefy",
+ "sp-core",
+ "sp-runtime",
+ "staging-xcm 8.0.1",
+ "system-parachains-constants 1.0.0",
 ]
 
 [[package]]
@@ -2036,7 +2051,7 @@ dependencies = [
  "polkadot-runtime-common",
  "polkadot-runtime-parachains",
  "sp-runtime",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "staging-xcm-executor",
  "xcm-runtime-apis",
 ]
@@ -2102,7 +2117,7 @@ dependencies = [
  "sp-transaction-pool",
  "sp-version",
  "staging-parachain-info",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "staging-xcm-builder",
  "staging-xcm-executor",
  "substrate-wasm-builder",
@@ -2384,7 +2399,7 @@ dependencies = [
  "sp-std",
  "sp-trie",
  "sp-version",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "staging-xcm-builder",
  "trie-db",
 ]
@@ -2430,7 +2445,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "staging-xcm",
+ "staging-xcm 14.1.0",
 ]
 
 [[package]]
@@ -2455,7 +2470,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "staging-xcm-builder",
  "staging-xcm-executor",
 ]
@@ -2490,7 +2505,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "sp-trie",
- "staging-xcm",
+ "staging-xcm 14.1.0",
 ]
 
 [[package]]
@@ -2538,7 +2553,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "staging-xcm-builder",
  "staging-xcm-executor",
 ]
@@ -2989,7 +3004,7 @@ dependencies = [
  "sp-consensus-beefy",
  "sp-core",
  "sp-runtime",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "xcm-emulator",
 ]
 
@@ -3374,7 +3389,7 @@ dependencies = [
  "frame-system",
  "parity-scale-codec",
  "scale-info",
- "sp-arithmetic",
+ "sp-arithmetic 26.0.0",
  "sp-core",
  "sp-npos-elections",
  "sp-runtime",
@@ -3476,7 +3491,7 @@ dependencies = [
  "serde_json",
  "smallvec",
  "sp-api",
- "sp-arithmetic",
+ "sp-arithmetic 26.0.0",
  "sp-core",
  "sp-crypto-hashing-proc-macro",
  "sp-debug-derive",
@@ -3489,7 +3504,7 @@ dependencies = [
  "sp-state-machine",
  "sp-std",
  "sp-tracing",
- "sp-weights",
+ "sp-weights 31.0.0",
  "static_assertions",
  "tt-call",
 ]
@@ -3556,7 +3571,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "sp-version",
- "sp-weights",
+ "sp-weights 31.0.0",
 ]
 
 [[package]]
@@ -4413,7 +4428,7 @@ dependencies = [
  "pallet-message-queue",
  "pallet-xcm",
  "paste",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "xcm-emulator",
 ]
 
@@ -4703,7 +4718,7 @@ dependencies = [
  "smallvec",
  "sp-core",
  "sp-runtime",
- "sp-weights",
+ "sp-weights 31.0.0",
  "staging-xcm-builder",
 ]
 
@@ -6114,7 +6129,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-api",
- "sp-arithmetic",
+ "sp-arithmetic 26.0.0",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -6450,7 +6465,7 @@ dependencies = [
  "pallet-bridge-messages",
  "parity-scale-codec",
  "scale-info",
- "sp-arithmetic",
+ "sp-arithmetic 26.0.0",
  "sp-runtime",
  "sp-std",
 ]
@@ -6469,7 +6484,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-api",
- "sp-arithmetic",
+ "sp-arithmetic 26.0.0",
  "sp-core",
  "sp-runtime",
  "sp-std",
@@ -6564,7 +6579,7 @@ dependencies = [
  "parity-scale-codec",
  "rand",
  "scale-info",
- "sp-arithmetic",
+ "sp-arithmetic 26.0.0",
  "sp-core",
  "sp-io",
  "sp-npos-elections",
@@ -6702,12 +6717,12 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "scale-info",
- "sp-arithmetic",
+ "sp-arithmetic 26.0.0",
  "sp-core",
  "sp-io",
  "sp-runtime",
  "sp-std",
- "sp-weights",
+ "sp-weights 31.0.0",
 ]
 
 [[package]]
@@ -6922,7 +6937,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
- "sp-arithmetic",
+ "sp-arithmetic 26.0.0",
  "sp-io",
  "sp-runtime",
  "sp-std",
@@ -6944,7 +6959,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "sp-weights",
+ "sp-weights 31.0.0",
 ]
 
 [[package]]
@@ -7031,7 +7046,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "988a7ebeacc84d4bdb0b12409681e956ffe35438447d8f8bc78db547cffb6ebc"
 dependencies = [
  "log",
- "sp-arithmetic",
+ "sp-arithmetic 26.0.0",
 ]
 
 [[package]]
@@ -7128,7 +7143,7 @@ dependencies = [
  "parity-scale-codec",
  "sp-api",
  "sp-runtime",
- "sp-weights",
+ "sp-weights 31.0.0",
 ]
 
 [[package]]
@@ -7235,7 +7250,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "staging-xcm-builder",
  "staging-xcm-executor",
  "xcm-runtime-apis",
@@ -7256,7 +7271,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "staging-xcm-builder",
  "staging-xcm-executor",
 ]
@@ -7280,7 +7295,7 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "staging-xcm-builder",
  "staging-xcm-executor",
 ]
@@ -7301,7 +7316,7 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "staging-xcm-builder",
 ]
 
@@ -7332,7 +7347,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "staging-parachain-info",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "staging-xcm-executor",
  "substrate-wasm-builder",
 ]
@@ -7364,7 +7379,7 @@ dependencies = [
  "sp-std",
  "sp-tracing",
  "staging-parachain-info",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "staging-xcm-executor",
  "substrate-wasm-builder",
 ]
@@ -7602,7 +7617,7 @@ dependencies = [
  "serde_json",
  "sp-api",
  "sp-application-crypto",
- "sp-arithmetic",
+ "sp-arithmetic 26.0.0",
  "sp-authority-discovery",
  "sp-block-builder",
  "sp-consensus-babe",
@@ -7624,7 +7639,7 @@ dependencies = [
  "sp-transaction-pool",
  "sp-trie",
  "sp-version",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "staging-xcm-builder",
  "staging-xcm-executor",
  "substrate-wasm-builder",
@@ -7642,7 +7657,7 @@ dependencies = [
  "smallvec",
  "sp-core",
  "sp-runtime",
- "sp-weights",
+ "sp-weights 31.0.0",
  "staging-xcm-builder",
 ]
 
@@ -7762,7 +7777,7 @@ dependencies = [
  "sp-transaction-pool",
  "sp-version",
  "staging-parachain-info",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "staging-xcm-builder",
  "staging-xcm-executor",
  "substrate-wasm-builder",
@@ -7829,7 +7844,7 @@ dependencies = [
  "sp-transaction-pool",
  "sp-version",
  "staging-parachain-info",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "staging-xcm-builder",
  "staging-xcm-executor",
  "substrate-wasm-builder",
@@ -7962,7 +7977,7 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std",
- "sp-weights",
+ "sp-weights 31.0.0",
 ]
 
 [[package]]
@@ -7981,7 +7996,7 @@ dependencies = [
  "serde",
  "sp-api",
  "sp-application-crypto",
- "sp-arithmetic",
+ "sp-arithmetic 26.0.0",
  "sp-authority-discovery",
  "sp-consensus-slots",
  "sp-core",
@@ -8039,7 +8054,7 @@ dependencies = [
  "sp-session",
  "sp-staking",
  "sp-std",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "staging-xcm-builder",
  "staging-xcm-executor",
  "static_assertions",
@@ -8056,7 +8071,7 @@ dependencies = [
  "smallvec",
  "sp-core",
  "sp-runtime",
- "sp-weights",
+ "sp-weights 31.0.0",
  "staging-xcm-builder",
 ]
 
@@ -8109,7 +8124,7 @@ dependencies = [
  "serde",
  "sp-api",
  "sp-application-crypto",
- "sp-arithmetic",
+ "sp-arithmetic 26.0.0",
  "sp-core",
  "sp-inherents",
  "sp-io",
@@ -8119,7 +8134,7 @@ dependencies = [
  "sp-staking",
  "sp-std",
  "sp-tracing",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "staging-xcm-executor",
  "static_assertions",
 ]
@@ -9459,7 +9474,7 @@ dependencies = [
  "serde_json",
  "sp-api",
  "sp-application-crypto",
- "sp-arithmetic",
+ "sp-arithmetic 26.0.0",
  "sp-blockchain",
  "sp-consensus",
  "sp-consensus-grandpa",
@@ -9608,7 +9623,7 @@ dependencies = [
  "serde",
  "serde_json",
  "smallvec",
- "sp-arithmetic",
+ "sp-arithmetic 26.0.0",
  "sp-blockchain",
  "sp-core",
  "sp-runtime",
@@ -9687,7 +9702,7 @@ dependencies = [
  "sc-utils",
  "schnellru",
  "smallvec",
- "sp-arithmetic",
+ "sp-arithmetic 26.0.0",
  "sp-blockchain",
  "sp-consensus",
  "sp-consensus-grandpa",
@@ -9789,7 +9804,7 @@ dependencies = [
  "log",
  "parking_lot 0.12.3",
  "prometheus",
- "sp-arithmetic",
+ "sp-arithmetic 26.0.0",
 ]
 
 [[package]]
@@ -10336,12 +10351,12 @@ dependencies = [
  "scale-info",
  "serde",
  "snowbridge-beacon-primitives",
- "sp-arithmetic",
+ "sp-arithmetic 26.0.0",
  "sp-core",
  "sp-io",
  "sp-runtime",
  "sp-std",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "staging-xcm-builder",
 ]
 
@@ -10471,7 +10486,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "staging-xcm-executor",
 ]
 
@@ -10504,7 +10519,7 @@ dependencies = [
  "serde",
  "snowbridge-core",
  "snowbridge-outbound-queue-merkle-tree",
- "sp-arithmetic",
+ "sp-arithmetic 26.0.0",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -10528,7 +10543,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "staging-xcm-executor",
 ]
 
@@ -10548,7 +10563,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "staging-xcm-executor",
 ]
 
@@ -10562,9 +10577,9 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "snowbridge-core",
- "sp-arithmetic",
+ "sp-arithmetic 26.0.0",
  "sp-std",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "staging-xcm-builder",
  "staging-xcm-executor",
 ]
@@ -10597,7 +10612,7 @@ dependencies = [
  "sp-keyring",
  "sp-runtime",
  "staging-parachain-info",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "staging-xcm-executor",
 ]
 
@@ -10611,7 +10626,7 @@ dependencies = [
  "snowbridge-core",
  "sp-api",
  "sp-std",
- "staging-xcm",
+ "staging-xcm 14.1.0",
 ]
 
 [[package]]
@@ -10714,6 +10729,21 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-std",
+]
+
+[[package]]
+name = "sp-arithmetic"
+version = "24.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "afa823ca5adc490d47dccb41d69ad482bc57a317bd341de275868378f48f131c"
+dependencies = [
+ "integer-sqrt",
+ "num-traits",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-std",
+ "static_assertions",
 ]
 
 [[package]]
@@ -11119,7 +11149,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
- "sp-arithmetic",
+ "sp-arithmetic 26.0.0",
  "sp-core",
  "sp-runtime",
 ]
@@ -11176,11 +11206,11 @@ dependencies = [
  "serde",
  "simple-mermaid",
  "sp-application-crypto",
- "sp-arithmetic",
+ "sp-arithmetic 26.0.0",
  "sp-core",
  "sp-io",
  "sp-std",
- "sp-weights",
+ "sp-weights 31.0.0",
 ]
 
 [[package]]
@@ -11415,6 +11445,22 @@ dependencies = [
 
 [[package]]
 name = "sp-weights"
+version = "28.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a3be30aec904994451dcacf841a9168cfbbaf817de6b24b6a1c1418cbf1af2fe"
+dependencies = [
+ "bounded-collections",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "smallvec",
+ "sp-arithmetic 24.0.0",
+ "sp-debug-derive",
+ "sp-std",
+]
+
+[[package]]
+name = "sp-weights"
 version = "31.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "93cdaf72a1dad537bbb130ba4d47307ebe5170405280ed1aa31fa712718a400e"
@@ -11424,7 +11470,7 @@ dependencies = [
  "scale-info",
  "serde",
  "smallvec",
- "sp-arithmetic",
+ "sp-arithmetic 26.0.0",
  "sp-debug-derive",
 ]
 
@@ -11522,6 +11568,25 @@ dependencies = [
 
 [[package]]
 name = "staging-xcm"
+version = "8.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "48fa328b87de3466bc38cc9a07244c42c647b7755b81115e1dfeb47cc13fc6e6"
+dependencies = [
+ "array-bytes",
+ "bounded-collections",
+ "derivative",
+ "environmental",
+ "impl-trait-for-tuples",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-weights 28.0.0",
+ "xcm-procedural 8.0.0",
+]
+
+[[package]]
+name = "staging-xcm"
 version = "14.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2b7b5f531c6bf9629514ef8e5fda0e9e80dd84516957f710940d0e01d3fb36c"
@@ -11535,8 +11600,8 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
- "sp-weights",
- "xcm-procedural",
+ "sp-weights 31.0.0",
+ "xcm-procedural 10.1.0",
 ]
 
 [[package]]
@@ -11553,12 +11618,12 @@ dependencies = [
  "parity-scale-codec",
  "polkadot-parachain-primitives",
  "scale-info",
- "sp-arithmetic",
+ "sp-arithmetic 26.0.0",
  "sp-io",
  "sp-runtime",
  "sp-std",
- "sp-weights",
- "staging-xcm",
+ "sp-weights 31.0.0",
+ "staging-xcm 14.1.0",
  "staging-xcm-executor",
 ]
 
@@ -11575,13 +11640,13 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "scale-info",
- "sp-arithmetic",
+ "sp-arithmetic 26.0.0",
  "sp-core",
  "sp-io",
  "sp-runtime",
  "sp-std",
- "sp-weights",
- "staging-xcm",
+ "sp-weights 31.0.0",
+ "staging-xcm 14.1.0",
 ]
 
 [[package]]
@@ -11832,7 +11897,7 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std",
- "staging-xcm",
+ "staging-xcm 14.1.0",
 ]
 
 [[package]]
@@ -11850,7 +11915,7 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std",
- "staging-xcm",
+ "staging-xcm 14.1.0",
 ]
 
 [[package]]
@@ -13369,15 +13434,27 @@ dependencies = [
  "polkadot-parachain-primitives",
  "polkadot-primitives",
  "polkadot-runtime-parachains",
- "sp-arithmetic",
+ "sp-arithmetic 26.0.0",
  "sp-core",
  "sp-crypto-hashing",
  "sp-io",
  "sp-runtime",
  "sp-std",
  "sp-tracing",
- "staging-xcm",
+ "staging-xcm 14.1.0",
  "staging-xcm-executor",
+]
+
+[[package]]
+name = "xcm-procedural"
+version = "8.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f4717a97970a9cda70d7db53cf50d2615c2f6f6b7c857445325b4a39ea7aa2cd"
+dependencies = [
+ "Inflector",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.65",
 ]
 
 [[package]]
@@ -13403,8 +13480,8 @@ dependencies = [
  "scale-info",
  "sp-api",
  "sp-std",
- "sp-weights",
- "staging-xcm",
+ "sp-weights 31.0.0",
+ "staging-xcm 14.1.0",
  "staging-xcm-executor",
 ]
 

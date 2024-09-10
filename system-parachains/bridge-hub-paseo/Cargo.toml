@@ -20,12 +20,10 @@ serde = { optional = true, features = ["derive"], workspace = true }
 serde_json = { features = ["alloc"], workspace = true }
 tuplex = { workspace = true }
 
-
-kusama-runtime-constants = {  workspace = true  }
-bp-bridge-hub-kusama = {  workspace = true   }
-bp-bridge-hub-polkadot = { workspace = true }
-bp-asset-hub-kusama = {  workspace = true  }
-
+kusama-runtime-constants = {  workspace = true, default-features = false  }
+bp-bridge-hub-kusama = {  workspace = true, default-features = false   }
+bp-bridge-hub-polkadot = { workspace = true, default-features = false }
+bp-asset-hub-kusama = {  workspace = true, default-features = false  }
 # Local
 bp-asset-hub-paseo = { workspace = true }
 bp-bridge-hub-paseo = { workspace = true }
