@@ -1175,20 +1175,20 @@ impl_runtime_apis! {
 			use pallet_bridge_parachains::benchmarking::Config as BridgeParachainsConfig;
 
 			impl BridgeParachainsConfig<bridge_to_kusama_config::BridgeParachainKusamaInstance> for Runtime {
-				fn parachains() -> Vec<bp_paseo_core::parachains::ParaId> {
+				fn parachains() -> Vec<bp_polkadot_core::parachains::ParaId> {
 					use bp_runtime::Parachain;
-					vec![bp_paseo_core::parachains::ParaId(bp_bridge_hub_kusama::BridgeHubKusama::PARACHAIN_ID)]
+					vec![bp_polkadot_core::parachains::ParaId(bp_bridge_hub_kusama::BridgeHubKusama::PARACHAIN_ID)]
 				}
 
 				fn prepare_parachain_heads_proof(
-					parachains: &[bp_paseo_core::parachains::ParaId],
+					parachains: &[bp_polkadot_core::parachains::ParaId],
 					parachain_head_size: u32,
 					proof_size: bp_runtime::StorageProofSize,
 				) -> (
 					pallet_bridge_parachains::RelayBlockNumber,
 					pallet_bridge_parachains::RelayBlockHash,
-					bp_paseo_core::parachains::ParaHeadsProof,
-					Vec<(bp_paseo_core::parachains::ParaId, bp_paseo_core::parachains::ParaHash)>,
+					bp_polkadot_core::parachains::ParaHeadsProof,
+					Vec<(bp_polkadot_core::parachains::ParaId, bp_polkadot_core::parachains::ParaHash)>,
 				) {
 					prepare_parachain_heads_proof::<Runtime, bridge_to_kusama_config::BridgeParachainKusamaInstance>(
 						parachains,
@@ -1233,7 +1233,7 @@ impl_runtime_apis! {
 						Runtime,
 						bridge_to_kusama_config::BridgeGrandpaKusamaInstance,
 						bridge_to_kusama_config::WithBridgeHubKusamaMessageBridge,
-					>(params, generate_xcm_builder_bridge_message_sample([GlobalConsensus(Paseo), Parachain(42)].into()))
+					>(params, generate_xcm_builder_bridge_message_sample([GlobalConsensus(Polkadot), Parachain(42)].into()))
 				}
 
 				fn prepare_message_delivery_proof(
