@@ -22,7 +22,7 @@ use system_parachains_constants::genesis_presets::*;
 
 const BRIDGE_HUB_POLKADOT_ED: Balance = ExistentialDeposit::get();
 
-fn bridge_hub_polkadot_genesis(
+fn bridge_hub_paseo_genesis(
 	invulnerables: Vec<(AccountId, AuraId)>,
 	endowed_accounts: Vec<AccountId>,
 	id: ParaId,
@@ -69,19 +69,19 @@ fn bridge_hub_polkadot_genesis(
 	})
 }
 
-pub fn bridge_hub_polkadot_local_testnet_genesis(para_id: ParaId) -> serde_json::Value {
-	bridge_hub_polkadot_genesis(invulnerables(), testnet_accounts(), para_id)
+pub fn bridge_hub_paseo_local_testnet_genesis(para_id: ParaId) -> serde_json::Value {
+	bridge_hub_paseo_genesis(invulnerables(), testnet_accounts(), para_id)
 }
 
-fn bridge_hub_polkadot_development_genesis(para_id: ParaId) -> serde_json::Value {
-	bridge_hub_polkadot_local_testnet_genesis(para_id)
+fn bridge_hub_paseo_development_genesis(para_id: ParaId) -> serde_json::Value {
+	bridge_hub_paseo_genesis(invulnerables_tot(), testnet_accounts(), para_id)
 }
 
 /// Provides the JSON representation of predefined genesis config for given `id`.
 pub fn get_preset(id: &sp_genesis_builder::PresetId) -> Option<sp_std::vec::Vec<u8>> {
 	let patch = match id.try_into() {
-		Ok("development") => bridge_hub_polkadot_development_genesis(1002.into()),
-		Ok("local_testnet") => bridge_hub_polkadot_local_testnet_genesis(1002.into()),
+		Ok("development") => bridge_hub_paseo_development_genesis(1002.into()),
+		Ok("local_testnet") => bridge_hub_paseo_local_testnet_genesis(1002.into()),
 		_ => return None,
 	};
 	Some(

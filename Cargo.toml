@@ -9,11 +9,17 @@ license = "GPL-3.0-only"
 kusama-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.3.1", package = "kusama-runtime-constants", default-features = false  }
 bp-bridge-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.3.1", package = "bp-bridge-hub-kusama", default-features = false  }
 bp-bridge-hub-polkadot = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.3.1", package = "bp-bridge-hub-polkadot", default-features = false  }
-
 bp-asset-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.3.1", package = "bp-asset-hub-kusama", default-features = false  }
 
+# Local dependencies
+
+paseo-runtime-constants = { package = "paseo-runtime-constants", path = "relay/paseo/constants", default-features = false }
 asset-hub-paseo-runtime = { path = "system-parachains/asset-hub-paseo", default-features = false }
 bridge-hub-paseo-runtime = { path = "system-parachains/bridge-hub-paseo", default-features = false }
+people-paseo-runtime = { path = "system-parachains/people-paseo", default-features = false }
+coretime-paseo-runtime = { path = "system-parachains/coretime-paseo", default-features = false }
+
+# Polkadot SDK
 bp-bridge-hub-paseo = { path = "system-parachains/bridge-hub-paseo/primitives", default-features = false}
 bp-asset-hub-paseo = { path = "system-parachains/asset-hub-paseo/primitives", default-features = false}
 paseo-runtime = { path = "relay/paseo", default-features = false}
@@ -47,7 +53,6 @@ bridge-runtime-common = { version = "0.15.0", default-features = false }
 clap = { version = "4.5.0" }
 codec = { package = "parity-scale-codec", version = "3.6.9", default-features = false }
 coretime-paseo-emulated-chain = { path = "integration-tests/emulated/chains/parachains/coretime/coretime-paseo" }
-coretime-paseo-runtime = { path = "system-parachains/coretime/coretime-paseo" }
 cumulus-pallet-aura-ext = { version = "0.15.0", default-features = false }
 cumulus-pallet-parachain-system = { version = "0.15.0", default-features = false }
 cumulus-pallet-session-benchmarking = { version = "17.0.0", default-features = false }
@@ -217,10 +222,6 @@ tuplex = { version = "0.1.0", default-features = false }
 relay-common = { path = "relay/common", default-features = false }
 ss58-registry = { version = "1.47.0" }
 
-# Local dependencies
-
-paseo-runtime-constants = { package = "paseo-runtime-constants", path = "relay/paseo/constants", default-features = false }
-
 [workspace]
 resolver = "2"
 
@@ -243,7 +244,7 @@ members = [
 	"system-parachains/bridge-hub-paseo/primitives",
 	"system-parachains/people-paseo",
 	"system-parachains/constants",
-	"system-parachains/coretime/coretime-paseo",
+	"system-parachains/coretime-paseo",
 ]
 
 [profile.release]
