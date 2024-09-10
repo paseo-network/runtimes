@@ -16,9 +16,7 @@
 // along with Polkadot.  If not, see <http://www.gnu.org/licenses/>.
 
 use sc_chain_spec::{ChainSpec, ChainSpecExtension, ChainSpecGroup, ChainType};
-use sc_network::config::MultiaddrWithPeerId;
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
 
 /// Generic extensions for Parachain ChainSpecs.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ChainSpecGroup, ChainSpecExtension)]
@@ -43,7 +41,7 @@ pub type CoretimePaseoChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
 pub fn asset_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, String> {
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("ss58Format".into(), 0.into());
-	properties.insert("tokenSymbol".into(), "DOT".into());
+	properties.insert("tokenSymbol".into(), "PAS".into());
 	properties.insert("tokenDecimals".into(), 10.into());
 
 	Ok(Box::new(
@@ -108,7 +106,7 @@ pub fn people_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, String>
 pub fn coretime_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, String> {
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("ss58Format".into(), 0.into());
-	properties.insert("tokenSymbol".into(), "DOT".into());
+	properties.insert("tokenSymbol".into(), "PAS".into());
 	properties.insert("tokenDecimals".into(), 10.into());
 
 	Ok(Box::new(
@@ -120,6 +118,26 @@ pub fn coretime_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, Strin
 		.with_id("coretime-paseo-local")
 		.with_chain_type(ChainType::Local)
 		.with_genesis_config_preset_name("local_testnet")
+		.with_properties(properties)
+		.build(),
+	))
+}
+
+pub fn coretime_paseo_tot_config() -> Result<Box<dyn ChainSpec>, String> {
+	let mut properties = sc_chain_spec::Properties::new();
+	properties.insert("ss58Format".into(), 0.into());
+	properties.insert("tokenSymbol".into(), "PAS".into());
+	properties.insert("tokenDecimals".into(), 10.into());
+
+	Ok(Box::new(
+		CoretimePaseoChainSpec::builder(
+			coretime_paseo_runtime::WASM_BINARY.expect("CoretimePaseo wasm not available!"),
+			Extensions { relay_chain: "paseo-local".into(), para_id: 1005 },
+		)
+		.with_name("Paseo Coretime Local")
+		.with_id("coretime-paseo-local")
+		.with_chain_type(ChainType::Local)
+		.with_genesis_config_preset_name("tot")
 		.with_properties(properties)
 		.build(),
 	))

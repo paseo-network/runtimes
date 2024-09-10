@@ -71,25 +71,25 @@ fn coretime_paseo_local_testnet_genesis(para_id: ParaId) -> serde_json::Value {
 	coretime_paseo_genesis(invulnerables(), testnet_accounts(), para_id)
 }
 
-fn coretime_paseo_development_genesis(para_id: ParaId) -> serde_json::Value {
+fn coretime_paseo_tot_genesis(para_id: ParaId) -> serde_json::Value {
 	coretime_paseo_genesis(invulnerables_tot(), testnet_accounts(), para_id)
 }
 
 fn coretime_paseo_live_genesis(para_id: ParaId) -> serde_json::Value {
 	coretime_paseo_genesis(
 		vec![
-			// Parity polkadot-coretime-collator-a-0
-			// 13umUoWwGb765EPzMUrMmYTcEjKfNJiNyCDwdqAvCMzteGzi
+			// Paradox
+			// 16WWmr2Xqgy5fna35GsNHXMU7vDBM12gzHCFGibQjSmKpAN
 			(
-				hex!("80b6f570f356fef7b891afa2e1c30fca89bc7a2cddd545fd8a173106fce3a11f").into(),
-				hex!("4a69b6ec0eda668471d806db625681a147efc35a4baeacf0bca95d12d13cd942")
+				hex!("043393e76c137dfdc403a6fd9a2d6129d470d51c5a67bd40517378030c87170d").into(),
+				hex!("0a2cee67864d1d4c9433bfd45324b8f72425f096e01041546be48c5d3bc9a746")
 					.unchecked_into(),
 			),
-			// Parity polkadot-coretime-collator-a-1
+			// Mile
 			// 13NAwtroa2efxgtih1oscJqjxcKpWJeQF8waWPTArBewi2CQ
 			(
-				hex!("689e1a66fa33b75f66415021aacc4fa23f49306a3c21407748b8b2d39b4abf63").into(),
-				hex!("f0d0e90c36f95605510f00a9f0821675bc0c7b70e5c8d113b0426c21d627773b")
+				hex!("0cf6762e28ed1505f5595a7845d153b1853b026d0b620a70a564378043c33b18").into(),
+				hex!("7e126fa970a75ae2cd371d01ee32e9387f0b256832e408ca8ea7b254e6bcde7d")
 					.unchecked_into(),
 			)
 		],
@@ -99,14 +99,14 @@ fn coretime_paseo_live_genesis(para_id: ParaId) -> serde_json::Value {
 }
 
 pub(super) fn preset_names() -> Vec<PresetId> {
-	vec![PresetId::from("live"), PresetId::from("development"), PresetId::from("local_testnet")]
+	vec![PresetId::from("live"), PresetId::from("tot"), PresetId::from("local_testnet")]
 }
 
 /// Provides the JSON representation of predefined genesis config for given `id`.
 pub fn get_preset(id: &sp_genesis_builder::PresetId) -> Option<sp_std::vec::Vec<u8>> {
 	let patch = match id.try_into() {
 		Ok("live") => coretime_paseo_live_genesis(1005.into()),
-		Ok("development") => coretime_paseo_development_genesis(1005.into()),
+		Ok("tot") => coretime_paseo_tot_genesis(1005.into()),
 		Ok("local_testnet") => coretime_paseo_local_testnet_genesis(1005.into()),
 		_ => return None,
 	};
