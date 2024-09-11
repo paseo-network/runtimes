@@ -3,9 +3,19 @@ name: Generate Chain Specs
 on:
   workflow_dispatch:
   push:
+    paths:
+      - 'chain-spec-generator/**'
+      - 'relay/**'
+      - 'system-parachains/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
 
 permissions:
   contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-and-generate:
