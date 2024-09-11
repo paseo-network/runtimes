@@ -63,5 +63,10 @@ jobs:
       - name: Commit changes
         run: |
           git add chain-specs/local/*.json
-          git commit -m "Update chain specs" || echo "No changes to commit"
-          git push
+          if git diff --staged --quiet; then
+            echo "No changes detected in chain specs. Skipping commit."
+          else
+            git commit -m "Update chain specs"
+            git push
+            echo "Changes committed and pushed successfully."
+          fi
