@@ -571,7 +571,10 @@ dependencies = [
  "frame-support",
  "parachains-common",
  "paseo-emulated-chain",
+ "penpal-emulated-chain",
+ "polkadot-parachain-primitives",
  "sp-core",
+ "staging-xcm 14.1.0",
 ]
 
 [[package]]
@@ -1397,6 +1400,7 @@ dependencies = [
  "staging-xcm 14.1.0",
  "staging-xcm-executor",
  "system-parachains-constants 1.0.0",
+ "xcm-runtime-apis",
 ]
 
 [[package]]
@@ -7667,9 +7671,11 @@ version = "1.0.0"
 dependencies = [
  "asset-hub-paseo-emulated-chain",
  "bridge-hub-paseo-emulated-chain",
+ "coretime-paseo-emulated-chain",
  "emulated-integration-tests-common",
  "paseo-emulated-chain",
  "penpal-emulated-chain",
+ "people-paseo-emulated-chain",
 ]
 
 [[package]]
@@ -7719,6 +7725,7 @@ dependencies = [
  "paseo-emulated-chain",
  "penpal-runtime",
  "sp-core",
+ "staging-xcm 14.1.0",
 ]
 
 [[package]]
@@ -7782,6 +7789,19 @@ dependencies = [
  "staging-xcm-executor",
  "substrate-wasm-builder",
  "xcm-runtime-apis",
+]
+
+[[package]]
+name = "people-paseo-emulated-chain"
+version = "1.0.0"
+dependencies = [
+ "cumulus-primitives-core",
+ "emulated-integration-tests-common",
+ "frame-support",
+ "parachains-common",
+ "paseo-emulated-chain",
+ "people-paseo-runtime",
+ "sp-core",
 ]
 
 [[package]]

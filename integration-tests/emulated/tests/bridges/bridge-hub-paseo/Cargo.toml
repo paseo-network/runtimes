@@ -4,7 +4,7 @@ version.workspace = true
 authors.workspace = true
 edition.workspace = true
 license = "Apache-2.0"
-description = "Bridge Hub Polkadot Paseo integration tests with xcm-emulator"
+description = "Bridge Hub Paseo runtime integration tests with xcm-emulator"
 publish = false
 
 [dependencies]
@@ -25,6 +25,7 @@ pallet-message-queue = { workspace = true, default-features = true }
 xcm = { workspace = true, default-features = true }
 pallet-xcm = { workspace = true, default-features = true }
 xcm-executor = { workspace = true, default-features = true }
+xcm-runtime-apis = { workspace = true, default-features = true }
 
 # Cumulus
 emulated-integration-tests-common = { workspace = true }
