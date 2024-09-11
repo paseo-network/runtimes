@@ -36,8 +36,6 @@ pub type PeoplePaseoChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
 
 pub type CoretimePaseoChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
 
-
-
 pub fn asset_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, String> {
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("ss58Format".into(), 0.into());
@@ -50,9 +48,14 @@ pub fn asset_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, Stri
 			Extensions { relay_chain: "paseo-local".into(), para_id: 1000 },
 		)
 		.with_name("Paseo Asset Hub Local")
-		.with_id("asset-hub-paseo-local")
+		.with_id("paseo-asset-hub-local")
 		.with_chain_type(ChainType::Local)
-		.with_genesis_config_patch(asset_hub_paseo_runtime::genesis_config_presets::asset_hub_paseo_local_testnet_genesis(1000.into()))
+		.with_protocol_id("ah-pas")
+		.with_genesis_config_patch(
+			asset_hub_paseo_runtime::genesis_config_presets::asset_hub_paseo_local_testnet_genesis(
+				1000.into(),
+			),
+		)
 		.with_properties(properties)
 		.build(),
 	))
@@ -71,9 +74,14 @@ pub fn bridge_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, Str
 			Extensions { relay_chain: "paseo-local".into(), para_id: 1002 },
 		)
 		.with_name("Paseo Bridge Hub Local")
-		.with_id("bridge-hub-paseo-local")
+		.with_id("paseo-bridge-hub-local")
 		.with_chain_type(ChainType::Local)
-		.with_genesis_config_patch(bridge_hub_paseo_runtime::genesis_config_presets::bridge_hub_paseo_local_testnet_genesis(1002.into()))
+		.with_protocol_id("bh-pas")
+		.with_genesis_config_patch(
+		    bridge_hub_paseo_runtime::genesis_config_presets::bridge_hub_paseo_local_testnet_genesis(
+				1002.into()
+			),
+		)
 		.with_properties(properties)
 		.build(),
 	))
@@ -81,9 +89,9 @@ pub fn bridge_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, Str
 
 pub fn people_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, String> {
 	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("ss58Format".into(), 2.into());
-	properties.insert("tokenSymbol".into(), "KSM".into());
-	properties.insert("tokenDecimals".into(), 12.into());
+	properties.insert("ss58Format".into(), 0.into());
+	properties.insert("tokenSymbol".into(), "PAS".into());
+	properties.insert("tokenDecimals".into(), 10.into());
 
 	Ok(Box::new(
 		PeoplePaseoChainSpec::builder(
@@ -91,8 +99,9 @@ pub fn people_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, String>
 			Extensions { relay_chain: "paseo-local".into(), para_id: 1004 },
 		)
 		.with_name("Paseo People Local")
-		.with_id("people-paseo-local")
+		.with_id("paseo-people-local")
 		.with_chain_type(ChainType::Local)
+		.with_protocol_id("pc-pas")
 		.with_genesis_config_patch(
 			people_paseo_runtime::genesis_config_presets::people_paseo_local_testnet_genesis(
 				1004.into(),
@@ -115,8 +124,9 @@ pub fn coretime_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, Strin
 			Extensions { relay_chain: "paseo-local".into(), para_id: 1005 },
 		)
 		.with_name("Paseo Coretime Local")
-		.with_id("coretime-paseo-local")
+		.with_id("paseo-coretime-local")
 		.with_chain_type(ChainType::Local)
+		.with_protocol_id("ct-pas")
 		.with_genesis_config_preset_name("local_testnet")
 		.with_properties(properties)
 		.build(),
@@ -132,11 +142,12 @@ pub fn coretime_paseo_tot_config() -> Result<Box<dyn ChainSpec>, String> {
 	Ok(Box::new(
 		CoretimePaseoChainSpec::builder(
 			coretime_paseo_runtime::WASM_BINARY.expect("CoretimePaseo wasm not available!"),
-			Extensions { relay_chain: "paseo-local".into(), para_id: 1005 },
+			Extensions { relay_chain: "paseo".into(), para_id: 1005 },
 		)
 		.with_name("Paseo Coretime Local")
-		.with_id("coretime-paseo-local")
-		.with_chain_type(ChainType::Local)
+		.with_id("paseo-coretime-local")
+		.with_chain_type(ChainType::Live)
+		.with_protocol_id("ct-pas")
 		.with_genesis_config_preset_name("tot")
 		.with_properties(properties)
 		.build(),
@@ -155,8 +166,9 @@ pub fn coretime_paseo_config() -> Result<Box<dyn ChainSpec>, String> {
 			Extensions { relay_chain: "paseo".into(), para_id: 1005 },
 		)
 		.with_name("Paseo Coretime")
-		.with_id("coretime-paseo")
+		.with_id("paseo-coretime")
 		.with_chain_type(ChainType::Live)
+		.with_protocol_id("ct-pas")
 		.with_genesis_config_preset_name("live")
 		.with_properties(properties)
 		.build(),
