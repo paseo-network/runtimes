@@ -17,8 +17,8 @@ jobs:
       - name: Setup Rust
         uses: actions-rs/toolchain@v1
         with:
-          profile: minimal
-          toolchain: stable
+          toolchain: 1.79.0
+          override: true
 
       - name: Build chain-spec-generator
         run: cargo build --package chain-spec-generator --features=fast-runtime --release
