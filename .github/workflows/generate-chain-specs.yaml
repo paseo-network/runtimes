@@ -38,6 +38,13 @@ jobs:
           mkdir -p chain-specs/local
           PACKAGES=(
             "paseo-local"
+            "paseo-dev"
+            "asset-hub-paseo-local"
+            "bridge-hub-paseo-local"
+            "people-paseo-local"
+            "coretime-paseo-local"
+            "coretime-paseo-tot"
+            "coretime-paseo"
           )
           
           for pkg in "${PACKAGES[@]}"; do
