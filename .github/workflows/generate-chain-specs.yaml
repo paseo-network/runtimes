@@ -14,6 +14,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install Dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y git protobuf-compiler
+
       - name: Setup Rust
         uses: actions-rs/toolchain@v1
         with:
