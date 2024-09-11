@@ -28,7 +28,7 @@ use frame_support::{
 };
 use pallet_broker::{ConfigRecordOf, RCBlockNumberOf, SaleInfo};
 use parachains_runtimes_test_utils::ExtBuilder;
-use polkadot_runtime_constants::system_parachain::coretime::TIMESLICE_PERIOD;
+use paseo_runtime_constants::system_parachain::coretime::TIMESLICE_PERIOD;
 use sp_runtime::traits::AccountIdConversion;
 
 fn advance_to(b: BlockNumber) {
