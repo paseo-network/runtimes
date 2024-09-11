@@ -1,0 +1,49 @@
+name: Generate Chain Specs
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+
+      - name: Build chain-spec-generator
+        run: cargo build --package chain-spec-generator --features=fast-runtime --release
+
+      - name: Generate chain specs
+        run: |
+          mkdir -p chain-specs/local
+          PACKAGES=(
+            "paseo-local"
+          )
+          
+          for pkg in "${PACKAGES[@]}"; do
+            ./target/release/chain-spec-generator "$pkg" --raw > "chain-specs/local/$pkg.json"
+            echo "Generated chain-specs/local/$pkg.json"
+          done
+
+      - name: Setup Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.PASEO_RUNTIME_CI_PAT }}
+
+      - name: Commit changes
+        run: |
+          git add chain-specs/local/*.json
+          git commit -m "Update chain specs" || echo "No changes to commit"
+          git push
