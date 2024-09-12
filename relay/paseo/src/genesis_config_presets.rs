@@ -130,7 +130,7 @@ fn default_parachains_host_configuration() -> HostConfiguration<polkadot_primiti
 			max_candidate_depth: 3,
 			allowed_ancestry_len: 2,
 		},
-		executor_params: Defaul::default(),
+		executor_params: Default::default(),
 		max_validators: None,
 		pvf_voting_ttl: 2,
 		approval_voting_params: ApprovalVotingParams { max_approval_coalesce_count: 1 },
