@@ -19,18 +19,18 @@
 
 use asset_hub_paseo_runtime::{
 	xcm_config::{
-		bridging::{self, XcmBridgeHubRouterFeeAssetId},
+		bridging::self,
 		CheckingAccount, DotLocation, ForeignCreatorsSovereignAccountOf, LocationToAccountId,
-		RelayTreasuryLocation, RelayTreasuryPalletAccount, StakingPot,
+		RelayTreasuryLocation, RelayTreasuryPalletAccount,
 		TrustBackedAssetsPalletLocation, XcmConfig,
 	},
 	AllPalletsWithoutSystem, AssetConversion, AssetDeposit, Assets, Balances, ExistentialDeposit,
 	ForeignAssets, ForeignAssetsInstance, MetadataDepositBase, MetadataDepositPerByte,
-	ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, SessionKeys,
+	ParachainSystem, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, SessionKeys,
 	TrustBackedAssetsInstance, XcmpQueue,
 };
 use asset_test_utils::{
-	test_cases_over_bridge::TestBridgingConfig, CollatorSessionKey, CollatorSessionKeys, ExtBuilder,
+	CollatorSessionKey, CollatorSessionKeys, ExtBuilder,
 };
 use codec::{Decode, Encode};
 use frame_support::{assert_ok, traits::fungibles::InspectEnumerable};
@@ -262,7 +262,7 @@ asset_test_utils::include_teleports_for_native_asset_works!(
 	ExistentialDeposit::get(),
 	Box::new(|runtime_event_encoded: Vec<u8>| {
 		match RuntimeEvent::decode(&mut &runtime_event_encoded[..]) {
-			Ok(RuntimeEvent::PolkadotXcm(event)) => Some(event),
+				Ok(RuntimeEvent::PolkadotXcm(event)) => Some(event),
 			_ => None,
 		}
 	}),
@@ -283,7 +283,7 @@ asset_test_utils::include_teleports_for_foreign_assets_works!(
 	ExistentialDeposit::get(),
 	Box::new(|runtime_event_encoded: Vec<u8>| {
 		match RuntimeEvent::decode(&mut &runtime_event_encoded[..]) {
-			Ok(RuntimeEvent::PolkadotXcm(event)) => Some(event),
+				Ok(RuntimeEvent::PolkadotXcm(event)) => Some(event),
 			_ => None,
 		}
 	}),

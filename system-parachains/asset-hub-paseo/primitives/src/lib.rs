@@ -18,10 +18,55 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use system_parachains_constants::paseo::currency::system_para_deposit;
+use codec::{Decode, Encode};
+use scale_info::TypeInfo;
+use xcm::prelude::*;
+
+pub use bp_xcm_bridge_hub_router::XcmBridgeHubRouterCall;
+
+use system_parachains_constants::paseo::currency::*;
+
+/// `AssetHubPaseo` Runtime `Call` enum.
+///
+/// The enum represents a subset of possible `Call`s we can send to `AssetHubPaseo` chain.
+/// Ideally this code would be auto-generated from metadata, because we want to
+/// avoid depending directly on the ENTIRE runtime just to get the encoding of `Dispatchable`s.
+///
+/// All entries here (like pretty much in the entire file) must be kept in sync with
+/// `AssetHubPaseo` `construct_runtime`, so that we maintain SCALE-compatibility.
+#[allow(clippy::large_enum_variant)]
+#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, TypeInfo)]
+pub enum Call {
+	/// `ToKusamaXcmRouter` bridge pallet.
+	#[codec(index = 34)]
+	ToKusamaXcmRouter(XcmBridgeHubRouterCall),
+}
 
 frame_support::parameter_types! {
+	/// Some sane weight to execute `xcm::Transact(pallet-xcm-bridge-hub-router::Call::report_bridge_status)`.
+	pub const XcmBridgeHubRouterTransactCallMaxWeight: Weight = Weight::from_parts(200_000_000, 6144);
+
+	/// Message that is sent to the sibling Kusama Asset Hub when the with-Paseo bridge becomes congested.
+	pub CongestedMessage: Xcm<()> = build_congestion_message(true).into();
+	/// Message that is sent to the sibling Kusama Asset Hub when the with-Paseo bridge becomes uncongested.
+	pub UncongestedMessage: Xcm<()> = build_congestion_message(false).into();
+
 	/// Should match the `AssetDeposit` of the `ForeignAssets` pallet on Asset Hub.
 	pub const CreateForeignAssetDeposit: u128 = system_para_deposit(1, 190);
 }
 
+fn build_congestion_message(is_congested: bool) -> sp_std::vec::Vec<Instruction<()>> {
+	sp_std::vec![
+		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
+		Transact {
+			origin_kind: OriginKind::Xcm,
+			require_weight_at_most: XcmBridgeHubRouterTransactCallMaxWeight::get(),
+			call: Call::ToKusamaXcmRouter(XcmBridgeHubRouterCall::report_bridge_status {
+				bridge_id: Default::default(),
+				is_congested,
+			})
+			.encode()
+			.into(),
+		}
+	]
+}

@@ -6,6 +6,12 @@ repository = "https://github.com/paseo-network/runtimes.git"
 license = "GPL-3.0-only"
 
 [workspace.dependencies]
+kusama-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.2.8", package = "kusama-runtime-constants", default-features = false  }
+bp-bridge-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.2.8", package = "bp-bridge-hub-kusama", default-features = false  }
+bp-bridge-hub-polkadot = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.2.8", package = "bp-bridge-hub-polkadot", default-features = false  }
+
+bp-asset-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.2.8", package = "bp-asset-hub-kusama", default-features = false  }
+
 asset-hub-paseo-runtime = { path = "system-parachains/asset-hub-paseo", default-features = false }
 bridge-hub-paseo-runtime = { path = "system-parachains/bridge-hub-paseo", default-features = false }
 bp-bridge-hub-paseo = { path = "system-parachains/bridge-hub-paseo/primitives", default-features = false}
@@ -18,14 +24,17 @@ bridge-hub-paseo-emulated-chain = { path = "integration-tests/emulated/chains/pa
 penpal-emulated-chain = { path = "integration-tests/emulated/chains/parachains/testing/penpal"}
 paseo-emulated-chain = { path = "integration-tests/emulated/chains/relays/paseo"}
 assert_matches = { version = "1.5.0" }
+
 asset-test-utils = { version = "8.0.1" }
 assets-common = { version = "0.8.0", default-features = false }
 authority-discovery-primitives = { version = "27.0.0", default-features = false, package = "sp-authority-discovery" }
 babe-primitives = { version = "0.33.0", default-features = false, package = "sp-consensus-babe" }
 beefy-primitives = { version = "14.0.0", default-features = false, package = "sp-consensus-beefy" }
 binary-merkle-tree = { version = "14.0.0", default-features = false }
+
 bp-bridge-hub-cumulus = { version = "0.8.0", default-features = false }
 bp-header-chain = { version = "0.8.1", default-features = false }
+bp-kusama = { version = "0.6.0", default-features = false }
 bp-messages = { version = "0.8.0", default-features = false }
 bp-parachains = { version = "0.8.0", default-features = false }
 bp-polkadot = { version = "0.6.0", default-features = false }
@@ -153,17 +162,17 @@ separator = { version = "0.4.1" }
 serde = { version = "1.0.196" }
 serde_json = { version = "1.0.113" }
 smallvec = { version = "1.13.1" }
-snowbridge-beacon-primitives = { version = "0.1.0", default-features = false }
-snowbridge-core = { version = "0.1.1", default-features = false }
+snowbridge-beacon-primitives = { version = "0.1.2", default-features = false }
+snowbridge-core = { version = "0.1.3", default-features = false }
 snowbridge-outbound-queue-runtime-api = { version = "0.1.1", default-features = false }
-snowbridge-pallet-ethereum-client = { version = "0.1.2", default-features = false }
-snowbridge-pallet-inbound-queue = { version = "0.1.1", default-features = false }
-snowbridge-pallet-inbound-queue-fixtures = { version = "0.9.0" }
+snowbridge-pallet-ethereum-client = { version = "0.1.3", default-features = false }
+snowbridge-pallet-inbound-queue = { version = "0.1.3", default-features = false }
+snowbridge-pallet-inbound-queue-fixtures = { version = "0.9.1" }
 snowbridge-pallet-outbound-queue = { version = "0.1.1", default-features = false }
 snowbridge-pallet-system = { version = "0.1.1", default-features = false }
 snowbridge-router-primitives = { version = "0.1.0", default-features = false }
 snowbridge-runtime-common = { version = "0.1.0", default-features = false }
-snowbridge-runtime-test-common = { version = "0.1.0" }
+snowbridge-runtime-test-common = { version = "0.1.2" }
 snowbridge-system-runtime-api = { version = "0.1.0", default-features = false }
 sp-api = { version = "27.0.1", default-features = false }
 sp-application-crypto = { version = "31.0.0", default-features = false }

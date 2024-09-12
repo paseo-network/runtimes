@@ -59,7 +59,7 @@ impl<T: frame_system::Config> snowbridge_pallet_outbound_queue::WeightInfo for W
 		//  Measured:  `81`
 		//  Estimated: `3513`
 		// Minimum execution time: 28_111_000 picoseconds.
-		Weight::from_parts(37_141_000, 0)
+		Weight::from_parts(28_570_000, 0)
 			.saturating_add(Weight::from_parts(0, 3513))
 			.saturating_add(T::DbWeight::get().reads(4))
 			.saturating_add(T::DbWeight::get().writes(3))
@@ -73,7 +73,7 @@ impl<T: frame_system::Config> snowbridge_pallet_outbound_queue::WeightInfo for W
 		//  Measured:  `1057`
 		//  Estimated: `2542`
 		// Minimum execution time: 27_193_000 picoseconds.
-		Weight::from_parts(35_599_200, 0)
+		Weight::from_parts(27_384_000, 0)
 			.saturating_add(Weight::from_parts(0, 2542))
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(1))
@@ -87,7 +87,7 @@ impl<T: frame_system::Config> snowbridge_pallet_outbound_queue::WeightInfo for W
 		//  Measured:  `64`
 		//  Estimated: `1549`
 		// Minimum execution time: 7_062_000 picoseconds.
-		Weight::from_parts(9_530_300, 0)
+		Weight::from_parts(7_331_000, 0)
 			.saturating_add(Weight::from_parts(0, 1549))
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(1))

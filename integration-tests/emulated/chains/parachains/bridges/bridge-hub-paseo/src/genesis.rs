@@ -14,7 +14,7 @@
 // limitations under the License.
 
 // Substrate
-use sp_core::{storage::Storage};
+use sp_core::storage::Storage;
 
 // Cumulus
 use emulated_integration_tests_common::{
@@ -46,8 +46,8 @@ pub fn genesis() -> Storage {
 				.into_iter()
 				.map(|(acc, aura)| {
 					(
-						acc.clone(),                                       // account id
-						acc,                                               // validator id
+						acc.clone(),                                    // account id
+						acc,                                            // validator id
 						bridge_hub_paseo_runtime::SessionKeys { aura }, // session keys
 					)
 				})
@@ -67,7 +67,6 @@ pub fn genesis() -> Storage {
 
 	build_genesis_storage(
 		&genesis_config,
-		bridge_hub_paseo_runtime::WASM_BINARY
-			.expect("WASM binary was not built, please build it!"),
+		bridge_hub_paseo_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
 	)
 }
