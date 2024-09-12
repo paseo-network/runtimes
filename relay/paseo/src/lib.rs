@@ -1427,7 +1427,7 @@ parameter_types! {
 	// Difference is 568 days.
 	// We want a lease period to start on the target onboarding date.
 	// 568 % (12 * 7) = 64 day offset
-	pub LeaseOffset: BlockNumber = prod_or_fast!(64 * DAYS, 0, "PAS_LEASE_OFFSET");
+	// pub LeaseOffset: BlockNumber = prod_or_fast!(64 * DAYS, 0, "PAS_LEASE_OFFSET");
 }
 
 impl slots::Config for Runtime {
@@ -2039,7 +2039,7 @@ pub mod migrations {
 			crate::xcm_config::XcmRouter,
 			GetLegacyLeaseImpl,
 		>,
-		CancelAuctions,
+		// CancelAuctions,
 	);
 
 	/// Migrations/checks that do not need to be versioned and can run on every update.
