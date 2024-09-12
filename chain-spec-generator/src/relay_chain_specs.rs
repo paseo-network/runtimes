@@ -41,6 +41,7 @@ pub fn paseo_development_config() -> Result<Box<dyn ChainSpec>, String> {
 		.with_name("Paseo Dev")
 		.with_id("paseo-dev")
 		.with_chain_type(ChainType::Development)
+		.with_protocol_id("pas")
 		.with_genesis_config_patch(
 			paseo_runtime::genesis_config_presets::paseo_development_config_genesis(),
 		)
@@ -49,7 +50,6 @@ pub fn paseo_development_config() -> Result<Box<dyn ChainSpec>, String> {
 		.build(),
 	))
 }
-
 
 /// Paseo local testnet config (multivalidator Alice + Bob)
 pub fn paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, String> {
@@ -61,6 +61,7 @@ pub fn paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, String> {
 		.with_name("Paseo Local Testnet")
 		.with_id("paseo-local")
 		.with_chain_type(ChainType::Local)
+		.with_protocol_id("pas")
 		.with_genesis_config_patch(
 			paseo_runtime::genesis_config_presets::paseo_local_testnet_genesis(),
 		)

@@ -21,7 +21,10 @@ pub use sp_runtime::DispatchError;
 pub use xcm::{
 	latest::ParentThen,
 	prelude::{AccountId32 as AccountId32Junction, *},
-	v3::{self, Error, NetworkId::Polkadot as PolkadotId},
+	v3::{
+		self, Error,
+		NetworkId::{Kusama as KusamaId, Polkadot as PaseoId},
+	},
 };
 
 // Bridges
@@ -31,6 +34,7 @@ pub use bp_messages::LaneId;
 pub use emulated_integration_tests_common::{
 	accounts::{ALICE, BOB},
 	impls::Inspect,
+	test_parachain_is_trusted_teleporter,
 	xcm_emulator::{
 		assert_expected_events, bx, helpers::weight_within_threshold, Chain, Parachain as Para,
 		RelayChain as Relay, Test, TestArgs, TestContext, TestExt,
@@ -38,21 +42,33 @@ pub use emulated_integration_tests_common::{
 	xcm_helpers::{xcm_transact_paid_execution, xcm_transact_unpaid_execution},
 	PROOF_SIZE_THRESHOLD, REF_TIME_THRESHOLD, XCM_V3,
 };
-pub use integration_tests_helpers::test_sibling_is_trusted_teleporter;
-pub use parachains_common::{AccountId, Balance};
-pub use paseo_system_emulated_network::{
+/*
+pub use kusama_paseo_system_emulated_network::{
+	asset_hub_kusama_emulated_chain::{
+		genesis::ED as ASSET_HUB_KUSAMA_ED, AssetHubKusamaParaPallet as AssetHubKusamaPallet,
+	},
 	asset_hub_paseo_emulated_chain::{
-		genesis::ED as ASSET_HUB_POLKADOT_ED, AssetHubPaseoParaPallet as AssetHubPaseoPallet,
+		genesis::ED as ASSET_HUB_POLKAPAS_ED, AssetHubPaseoParaPallet as AssetHubPaseoPallet,
 	},
 	bridge_hub_paseo_emulated_chain::{
-		genesis::ED as BRIDGE_HUB_POLKADOT_ED, BridgeHubPaseoParaPallet as BridgeHubPaseoPallet,
+		genesis::ED as BRIDGE_HUB_POLKAPAS_ED,
+		BridgeHubPaseoParaPallet as BridgeHubPaseoPallet,
 	},
-	paseo_emulated_chain::{genesis::ED as POLKADOT_ED, PaseoRelayPallet as PaseoPallet},
+	paseo_emulated_chain::{genesis::ED as POLKAPAS_ED, PaseoRelayPallet as PaseoPallet},
+	AssetHubKusamaPara as AssetHubKusama, AssetHubKusamaParaReceiver as AssetHubKusamaReceiver,
+	AssetHubPaseoPara as AssetHubPaseo,
+	AssetHubPaseoParaReceiver as AssetHubPaseoReceiver,
+	AssetHubPaseoParaSender as AssetHubPaseoSender, BridgeHubKusamaPara as BridgeHubKusama,
+	BridgeHubPaseoPara as BridgeHubPaseo,
+	BridgeHubPaseoParaSender as BridgeHubPaseoSender, PaseoRelay as Paseo,
+	PaseoRelayReceiver as PaseoReceiver, PaseoRelaySender as PaseoSender,
+};
+*/
+
+pub use parachains_common::{AccountId, Balance};
+pub use paseo_system_emulated_network::{
 	penpal_emulated_chain::PenpalBParaPallet as PenpalBPallet,
-	AssetHubPaseoPara as AssetHubPaseo, AssetHubPaseoParaReceiver as AssetHubPaseoReceiver,
-	AssetHubPaseoParaSender as AssetHubPaseoSender, BridgeHubPaseoPara as BridgeHubPaseo,
-	BridgeHubPaseoParaReceiver as BridgeHubPaseoReceiver,
-	BridgeHubPaseoParaSender as BridgeHubPaseoSender, PaseoRelay as Paseo, PenpalBPara as PenpalB,
+	BridgeHubPaseoParaReceiver as BridgeHubPaseoReceiver, PenpalBPara as PenpalB,
 	PenpalBParaReceiver as PenpalBReceiver, PenpalBParaSender as PenpalBSender,
 };
 

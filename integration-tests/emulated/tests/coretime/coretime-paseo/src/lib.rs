@@ -42,15 +42,15 @@ pub use emulated_integration_tests_common::{
 };
 pub use parachains_common::{AccountId, Balance};
 pub use paseo_system_emulated_network::{
-	coretime_polkadot_emulated_chain::{
-		genesis::ED as CORETIME_POLKADOT_ED, CoretimePolkadotParaPallet as CoretimePolkadotPallet,
+	coretime_paseo_emulated_chain::{
+		genesis::ED as CORETIME_POLKADOT_ED, CoretimePaseoParaPallet as CoretimePaseoPallet,
 	},
-	paseo_emulated_chain::{genesis::ED as POLKADOT_ED, PolkadotRelayPallet as PolkadotPallet},
-	CoretimePolkadotPara as CoretimePolkadot,
-	CoretimePolkadotParaReceiver as CoretimePolkadotReceiver,
-	CoretimePolkadotParaSender as CoretimePolkadotSender, PenpalAPara as PenpalA,
-	PolkadotRelay as Polkadot, PolkadotRelayReceiver as PolkadotReceiver,
-	PolkadotRelaySender as PolkadotSender,
+	paseo_emulated_chain::{genesis::ED as POLKAPAS_ED, PaseoRelayPallet as PaseoPallet},
+	CoretimePaseoPara as CoretimePolkadot,
+	CoretimePaseoParaReceiver as CoretimePolkadotReceiver,
+	CoretimePaseoParaSender as CoretimePaseoSender, PenpalAPara as PenpalA,
+	PaseoRelay as Paseo, PaseoRelayReceiver as PaseoReceiver,
+	PaseoRelaySender as PaseoSender,
 };
 
 #[cfg(test)]
