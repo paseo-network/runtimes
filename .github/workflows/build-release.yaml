@@ -1,12 +1,42 @@
-name: Build Deterministic Runtimes
+name: Create Runtimes releases
 
 on:
-  release:
-    types: [published]
   workflow_dispatch:
+    inputs:
+      tag_version:
+        description: 'Tag version for the release'
+        required: true
+        type: string
 
 jobs:
+  generate-chain-specs:
+    uses: ./.github/workflows/generate-chain-specs.yaml
+
+  create-tag:
+    needs: generate-chain-specs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for all branches and tags
+
+      - name: Setup Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.PASEO_RUNTIME_CI_PAT }}
+
+      - name: Create and push tag
+        run: |
+          git checkout ${{ github.ref }}
+          git tag ${{ github.event.inputs.tag_version }}
+          git push origin ${{ github.event.inputs.tag_version }}
+
   srtool:
+    needs: create-tag
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -21,9 +51,14 @@ jobs:
             path: "system-parachains/bridge-hub-paseo"
           - name: "people-paseo"
             path: "system-parachains/people-paseo"
+          - name: "coretime-paseo"
+            path: "system-parachains/coretime-paseo"
+
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag_version }}
 
       - name: Cache runtime target dir
         uses: actions/cache@v3
@@ -49,24 +84,27 @@ jobs:
         run: |
           echo '${{ steps.srtool_build.outputs.json }}' | jq . > ${{ matrix.runtime.name }}-srtool-digest.json
 
-      # Manual trigger: add artifacts to run
+      # Copy artifacts
       - name: Copy artifacts
-        if: github.event_name != 'release'
         run: cp `dirname ${{ steps.srtool_build.outputs.wasm }}`/*.wasm ./
+
       - name: Archive Runtime
-        if: github.event_name != 'release'
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.runtime.name }}-runtime-${{ github.sha }}
+          name: ${{ matrix.runtime.name }}-runtime-${{ github.event.inputs.tag_version }}
           path: |
             ${{ matrix.runtime.name }}*.wasm
             ${{ matrix.runtime.name }}-srtool-digest.json
 
       # Release published: add artifacts to release
-      - name: Add artifacts to release
-        if: github.event_name == 'release'
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: ${{ github.event.inputs.tag_version }}
+          name: Release ${{ github.event.inputs.tag_version }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
           append_body: true
           body: |
             ## Runtime: `${{ matrix.runtime.name }}`
@@ -82,3 +120,5 @@ jobs:
           files: |
             ${{ steps.srtool_build.outputs.wasm_compressed }}
             ${{ matrix.runtime.name }}-srtool-digest.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.PASEO_RUNTIME_CI_PAT }}
