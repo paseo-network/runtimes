@@ -46,10 +46,10 @@ use core::marker::PhantomData;
 
 /// Weight functions for `pallet_xcm_benchmarks::fungible`.
 pub struct WeightInfo<T>(PhantomData<T>);
-impl<T: frame_system::Config> WeightInfo<T> {
+impl<T: frame_system::Config> pallet_xcm_benchmarks::fungible::WeightInfo for WeightInfo<T> {
 	/// Storage: `System::Account` (r:1 w:1)
 	/// Proof: `System::Account` (`max_values`: None, `max_size`: Some(128), added: 2603, mode: `MaxEncodedLen`)
-	pub fn withdraw_asset() -> Weight {
+	fn withdraw_asset() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `101`
 		//  Estimated: `3593`
@@ -61,7 +61,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 	}
 	/// Storage: `System::Account` (r:2 w:2)
 	/// Proof: `System::Account` (`max_values`: None, `max_size`: Some(128), added: 2603, mode: `MaxEncodedLen`)
-	pub fn transfer_asset() -> Weight {
+	fn transfer_asset() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `101`
 		//  Estimated: `6196`
@@ -81,7 +81,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 	/// Proof: `Dmp::DownwardMessageQueues` (`max_values`: None, `max_size`: None, mode: `Measured`)
 	/// Storage: `Dmp::DownwardMessageQueueHeads` (r:1 w:1)
 	/// Proof: `Dmp::DownwardMessageQueueHeads` (`max_values`: None, `max_size`: None, mode: `Measured`)
-	pub fn transfer_reserve_asset() -> Weight {
+	fn transfer_reserve_asset() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `215`
 		//  Estimated: `6196`
@@ -93,7 +93,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 	}
 	/// Storage: `Benchmark::Override` (r:0 w:0)
 	/// Proof: `Benchmark::Override` (`max_values`: None, `max_size`: None, mode: `Measured`)
-	pub fn reserve_asset_deposited() -> Weight {
+	fn reserve_asset_deposited() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
@@ -111,7 +111,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 	/// Proof: `System::Account` (`max_values`: None, `max_size`: Some(128), added: 2603, mode: `MaxEncodedLen`)
 	/// Storage: `Dmp::DownwardMessageQueueHeads` (r:1 w:1)
 	/// Proof: `Dmp::DownwardMessageQueueHeads` (`max_values`: None, `max_size`: None, mode: `Measured`)
-	pub fn initiate_reserve_withdraw() -> Weight {
+	fn initiate_reserve_withdraw() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `215`
 		//  Estimated: `3680`
@@ -123,7 +123,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 	}
 	/// Storage: `System::Account` (r:1 w:1)
 	/// Proof: `System::Account` (`max_values`: None, `max_size`: Some(128), added: 2603, mode: `MaxEncodedLen`)
-	pub fn receive_teleported_asset() -> Weight {
+	fn receive_teleported_asset() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `103`
 		//  Estimated: `3593`
@@ -135,7 +135,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 	}
 	/// Storage: `System::Account` (r:1 w:1)
 	/// Proof: `System::Account` (`max_values`: None, `max_size`: Some(128), added: 2603, mode: `MaxEncodedLen`)
-	pub fn deposit_asset() -> Weight {
+	fn deposit_asset() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `3593`
@@ -155,7 +155,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 	/// Proof: `System::Account` (`max_values`: None, `max_size`: Some(128), added: 2603, mode: `MaxEncodedLen`)
 	/// Storage: `Dmp::DownwardMessageQueueHeads` (r:1 w:1)
 	/// Proof: `Dmp::DownwardMessageQueueHeads` (`max_values`: None, `max_size`: None, mode: `Measured`)
-	pub fn deposit_reserve_asset() -> Weight {
+	fn deposit_reserve_asset() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `114`
 		//  Estimated: `3593`
@@ -175,7 +175,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 	/// Proof: `Dmp::DownwardMessageQueues` (`max_values`: None, `max_size`: None, mode: `Measured`)
 	/// Storage: `Dmp::DownwardMessageQueueHeads` (r:1 w:1)
 	/// Proof: `Dmp::DownwardMessageQueueHeads` (`max_values`: None, `max_size`: None, mode: `Measured`)
-	pub fn initiate_teleport() -> Weight {
+	fn initiate_teleport() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `114`
 		//  Estimated: `3593`

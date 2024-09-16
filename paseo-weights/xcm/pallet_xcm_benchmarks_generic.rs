@@ -46,7 +46,7 @@ use core::marker::PhantomData;
 
 /// Weight functions for `pallet_xcm_benchmarks::generic`.
 pub struct WeightInfo<T>(PhantomData<T>);
-impl<T: frame_system::Config> WeightInfo<T> {
+impl<T: frame_system::Config> pallet_xcm_benchmarks::generic::WeightInfo for WeightInfo<T> {
 	/// Storage: `Dmp::DeliveryFeeFactor` (r:1 w:0)
 	/// Proof: `Dmp::DeliveryFeeFactor` (`max_values`: None, `max_size`: None, mode: `Measured`)
 	/// Storage: `XcmPallet::SupportedVersion` (r:1 w:0)
@@ -57,7 +57,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 	/// Proof: `System::Account` (`max_values`: None, `max_size`: Some(128), added: 2603, mode: `MaxEncodedLen`)
 	/// Storage: `Dmp::DownwardMessageQueueHeads` (r:1 w:1)
 	/// Proof: `Dmp::DownwardMessageQueueHeads` (`max_values`: None, `max_size`: None, mode: `Measured`)
-	pub fn report_holding() -> Weight {
+	fn report_holding() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `215`
 		//  Estimated: `3680`
@@ -67,7 +67,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(5))
 			.saturating_add(T::DbWeight::get().writes(3))
 	}
-	pub fn buy_execution() -> Weight {
+	fn buy_execution() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
@@ -77,7 +77,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 	}
 	/// Storage: `XcmPallet::Queries` (r:1 w:0)
 	/// Proof: `XcmPallet::Queries` (`max_values`: None, `max_size`: None, mode: `Measured`)
-	pub fn query_response() -> Weight {
+	fn query_response() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `3465`
@@ -86,7 +86,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 			.saturating_add(Weight::from_parts(0, 3465))
 			.saturating_add(T::DbWeight::get().reads(1))
 	}
-	pub fn transact() -> Weight {
+	fn transact() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
@@ -94,7 +94,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 		Weight::from_parts(7_031_000, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 	}
-	pub fn refund_surplus() -> Weight {
+	fn refund_surplus() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
@@ -102,7 +102,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 		Weight::from_parts(951_000, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 	}
-	pub fn set_error_handler() -> Weight {
+	fn set_error_handler() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
@@ -110,7 +110,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 		Weight::from_parts(820_000, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 	}
-	pub fn set_appendix() -> Weight {
+	fn set_appendix() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
@@ -118,7 +118,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 		Weight::from_parts(702_000, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 	}
-	pub fn clear_error() -> Weight {
+	fn clear_error() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
@@ -126,7 +126,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 		Weight::from_parts(842_000, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 	}
-	pub fn descend_origin() -> Weight {
+	fn descend_origin() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
@@ -134,7 +134,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 		Weight::from_parts(931_000, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 	}
-	pub fn clear_origin() -> Weight {
+	fn clear_origin() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
@@ -152,7 +152,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 	/// Proof: `System::Account` (`max_values`: None, `max_size`: Some(128), added: 2603, mode: `MaxEncodedLen`)
 	/// Storage: `Dmp::DownwardMessageQueueHeads` (r:1 w:1)
 	/// Proof: `Dmp::DownwardMessageQueueHeads` (`max_values`: None, `max_size`: None, mode: `Measured`)
-	pub fn report_error() -> Weight {
+	fn report_error() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `215`
 		//  Estimated: `3680`
@@ -164,7 +164,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 	}
 	/// Storage: `XcmPallet::AssetTraps` (r:1 w:1)
 	/// Proof: `XcmPallet::AssetTraps` (`max_values`: None, `max_size`: None, mode: `Measured`)
-	pub fn claim_asset() -> Weight {
+	fn claim_asset() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `23`
 		//  Estimated: `3488`
@@ -174,7 +174,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
-	pub fn trap() -> Weight {
+	fn trap() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
@@ -192,7 +192,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 	/// Proof: `Dmp::DownwardMessageQueues` (`max_values`: None, `max_size`: None, mode: `Measured`)
 	/// Storage: `Dmp::DownwardMessageQueueHeads` (r:1 w:1)
 	/// Proof: `Dmp::DownwardMessageQueueHeads` (`max_values`: None, `max_size`: None, mode: `Measured`)
-	pub fn subscribe_version() -> Weight {
+	fn subscribe_version() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `114`
 		//  Estimated: `3579`
@@ -204,7 +204,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 	}
 	/// Storage: `XcmPallet::VersionNotifyTargets` (r:0 w:1)
 	/// Proof: `XcmPallet::VersionNotifyTargets` (`max_values`: None, `max_size`: None, mode: `Measured`)
-	pub fn unsubscribe_version() -> Weight {
+	fn unsubscribe_version() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
@@ -213,7 +213,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 			.saturating_add(Weight::from_parts(0, 0))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
-	pub fn burn_asset() -> Weight {
+	fn burn_asset() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
@@ -221,7 +221,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 		Weight::from_parts(1_251_000, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 	}
-	pub fn expect_asset() -> Weight {
+	fn expect_asset() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
@@ -229,7 +229,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 		Weight::from_parts(952_000, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 	}
-	pub fn expect_origin() -> Weight {
+	fn expect_origin() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
@@ -237,7 +237,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 		Weight::from_parts(821_000, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 	}
-	pub fn expect_error() -> Weight {
+	fn expect_error() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
@@ -245,7 +245,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 		Weight::from_parts(782_000, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 	}
-	pub fn expect_transact_status() -> Weight {
+	fn expect_transact_status() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
@@ -263,7 +263,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 	/// Proof: `System::Account` (`max_values`: None, `max_size`: Some(128), added: 2603, mode: `MaxEncodedLen`)
 	/// Storage: `Dmp::DownwardMessageQueueHeads` (r:1 w:1)
 	/// Proof: `Dmp::DownwardMessageQueueHeads` (`max_values`: None, `max_size`: None, mode: `Measured`)
-	pub fn query_pallet() -> Weight {
+	fn query_pallet() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `215`
 		//  Estimated: `3680`
@@ -273,7 +273,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(5))
 			.saturating_add(T::DbWeight::get().writes(3))
 	}
-	pub fn expect_pallet() -> Weight {
+	fn expect_pallet() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
@@ -291,7 +291,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 	/// Proof: `System::Account` (`max_values`: None, `max_size`: Some(128), added: 2603, mode: `MaxEncodedLen`)
 	/// Storage: `Dmp::DownwardMessageQueueHeads` (r:1 w:1)
 	/// Proof: `Dmp::DownwardMessageQueueHeads` (`max_values`: None, `max_size`: None, mode: `Measured`)
-	pub fn report_transact_status() -> Weight {
+	fn report_transact_status() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `215`
 		//  Estimated: `3680`
@@ -301,7 +301,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(5))
 			.saturating_add(T::DbWeight::get().writes(3))
 	}
-	pub fn clear_transact_status() -> Weight {
+	fn clear_transact_status() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
@@ -309,7 +309,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 		Weight::from_parts(601_000, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 	}
-	pub fn set_topic() -> Weight {
+	fn set_topic() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
@@ -317,7 +317,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 		Weight::from_parts(531_000, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 	}
-	pub fn clear_topic() -> Weight {
+	fn clear_topic() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
@@ -325,7 +325,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 		Weight::from_parts(831_000, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 	}
-	pub fn set_fees_mode() -> Weight {
+	fn set_fees_mode() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
@@ -333,7 +333,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 		Weight::from_parts(961_000, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 	}
-	pub fn unpaid_execution() -> Weight {
+	fn unpaid_execution() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
