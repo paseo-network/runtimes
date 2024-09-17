@@ -11,6 +11,8 @@ on:
 jobs:
   generate-chain-specs:
     uses: ./.github/workflows/generate-chain-specs.yaml
+    with:
+      tag_version: ${{ github.event.inputs.tag_version }}
 
   create-tag:
     needs: generate-chain-specs

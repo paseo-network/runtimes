@@ -2,6 +2,17 @@ name: Generate Chain Specs
 
 on:
   workflow_dispatch:
+    inputs:
+      tag_version:
+        description: 'Tag version for the release'
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      tag_version:
+        description: 'Tag version for the release'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -69,7 +80,8 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes detected in chain specs. Skipping commit."
           else
-            git commit -m "Update chain specs"
+            COMMIT_MESSAGE="Update chain specs for version ${{ inputs.tag_version }}"
+            git commit -m "$COMMIT_MESSAGE"
             git push
             echo "Changes committed and pushed successfully."
           fi
