@@ -42,11 +42,17 @@ use sp_consensus_aura::SlotDuration;
 use sp_runtime::traits::MaybeEquivalence;
 use sp_std::ops::Mul;
 use system_parachains_constants::{
-	kusama::consensus::RELAY_CHAIN_SLOT_DURATION_MILLIS, paseo::fee::WeightToFee,
+	paseo::consensus::RELAY_CHAIN_SLOT_DURATION_MILLIS, paseo::fee::WeightToFee,
 };
 use xcm::latest::prelude::{Assets as XcmAssets, *};
 use xcm_builder::WithLatestLocationConverter;
 use xcm_executor::traits::{ConvertLocation, JustTry};
+use asset_hub_paseo_runtime::ToKusamaXcmRouterInstance;
+use asset_hub_paseo_runtime::StakingPot;
+use asset_hub_paseo_runtime::xcm_config::bridging::XcmBridgeHubRouterFeeAssetId;
+use asset_test_utils::test_cases_over_bridge::TestBridgingConfig;
+use asset_hub_paseo_runtime::PolkadotXcm;
+use asset_hub_paseo_runtime::SLOT_DURATION;
 
 const ALICE: [u8; 32] = [1u8; 32];
 const SOME_ASSET_ADMIN: [u8; 32] = [5u8; 32];

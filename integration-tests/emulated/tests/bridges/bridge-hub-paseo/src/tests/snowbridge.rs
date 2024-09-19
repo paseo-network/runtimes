@@ -49,7 +49,7 @@ use sp_runtime::{DispatchError::Token, FixedU128, TokenError::FundsUnavailable};
 use system_parachains_constants::paseo::currency::UNITS;
 
 const INITIAL_FUND: u128 = 5_000_000_000 * POLKADOT_ED;
-const CHAIN_ID: u64 = 1;
+const CHAIN_ID: u64 = 11155111;
 const WETH: [u8; 20] = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
 const ETHEREUM_DESTINATION_ADDRESS: [u8; 20] = hex!("44a57ee2f2FCcb85FDa2B0B18EBD0D8D2333700e");
 const GATEWAY_ADDRESS: [u8; 20] = hex!("EDa338E4dC46038493b885327842fD3E301CaB39");

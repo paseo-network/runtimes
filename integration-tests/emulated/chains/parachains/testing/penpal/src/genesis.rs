@@ -22,7 +22,6 @@ use emulated_integration_tests_common::{
 	accounts, build_genesis_storage, collators, get_account_id_from_seed, SAFE_XCM_VERSION,
 };
 use parachains_common::{AccountId, Balance};
-use penpal_runtime::xcm_config::{LocalReservableFromAssetHub, RelayLocation};
 
 // Penpal
 pub const PARA_ID_A: u32 = 2000;

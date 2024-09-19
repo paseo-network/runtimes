@@ -21,7 +21,6 @@ use babe_primitives::AuthorityId as BabeId;
 use pallet_staking::{Forcing, StakerStatus};
 use paseo_runtime_constants::currency::UNITS as PAS;
 use polkadot_primitives::{
-	v7::{ExecutorParam, ExecutorParams, PvfExecKind},
 	AccountPublic, AssignmentId, AsyncBackingParams,
 };
 use runtime_parachains::configuration::HostConfiguration;

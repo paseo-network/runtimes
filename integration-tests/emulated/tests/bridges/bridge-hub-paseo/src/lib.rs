@@ -42,29 +42,21 @@ pub use emulated_integration_tests_common::{
 	xcm_helpers::{xcm_transact_paid_execution, xcm_transact_unpaid_execution},
 	PROOF_SIZE_THRESHOLD, REF_TIME_THRESHOLD, XCM_V3,
 };
-/*
-pub use kusama_paseo_system_emulated_network::{
-	asset_hub_kusama_emulated_chain::{
-		genesis::ED as ASSET_HUB_KUSAMA_ED, AssetHubKusamaParaPallet as AssetHubKusamaPallet,
-	},
+pub use paseo_system_emulated_network::{
 	asset_hub_paseo_emulated_chain::{
-		genesis::ED as ASSET_HUB_POLKAPAS_ED, AssetHubPaseoParaPallet as AssetHubPaseoPallet,
+		genesis::ED as ASSET_HUB_POLKADOT_ED, AssetHubPaseoParaPallet as AssetHubPaseoPallet,
 	},
 	bridge_hub_paseo_emulated_chain::{
-		genesis::ED as BRIDGE_HUB_POLKAPAS_ED,
+		genesis::ED as BRIDGE_HUB_POLKADOT_ED,
 		BridgeHubPaseoParaPallet as BridgeHubPaseoPallet,
 	},
-	paseo_emulated_chain::{genesis::ED as POLKAPAS_ED, PaseoRelayPallet as PaseoPallet},
-	AssetHubKusamaPara as AssetHubKusama, AssetHubKusamaParaReceiver as AssetHubKusamaReceiver,
+	paseo_emulated_chain::{genesis::ED as POLKADOT_ED, PaseoRelayPallet as PaseoPallet},
 	AssetHubPaseoPara as AssetHubPaseo,
 	AssetHubPaseoParaReceiver as AssetHubPaseoReceiver,
-	AssetHubPaseoParaSender as AssetHubPaseoSender, BridgeHubKusamaPara as BridgeHubKusama,
+	AssetHubPaseoParaSender as AssetHubPaseoSender,
 	BridgeHubPaseoPara as BridgeHubPaseo,
 	BridgeHubPaseoParaSender as BridgeHubPaseoSender, PaseoRelay as Paseo,
-	PaseoRelayReceiver as PaseoReceiver, PaseoRelaySender as PaseoSender,
 };
-*/
-
 pub use parachains_common::{AccountId, Balance};
 pub use paseo_system_emulated_network::{
 	penpal_emulated_chain::PenpalBParaPallet as PenpalBPallet,
