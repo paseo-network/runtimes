@@ -27,7 +27,7 @@ use bridge_hub_paseo_runtime::{
 };
 use codec::{Decode, Encode};
 use cumulus_primitives_core::XcmError::{FailedToTransactAsset, TooExpensive};
-use frame_support::{parameter_types, traits::Contains};
+use frame_support::{parameter_types, traits::Contains, assert_err, assert_ok};
 use parachains_common::{AccountId, AuraId, Balance};
 pub use parachains_runtimes_test_utils::test_cases::change_storage_constant_by_governance_works;
 use snowbridge_pallet_ethereum_client::WeightInfo;
@@ -39,7 +39,16 @@ use sp_runtime::{
 };
 use xcm::latest::prelude::*;
 use xcm_builder::HandleFee;
-use xcm_executor::traits::{FeeManager, FeeReason};
+use xcm_executor::{
+	traits::{FeeManager, FeeReason},
+	XcmExecutor,
+};
+use parachains_runtimes_test_utils::{
+	AccountIdOf, CollatorSessionKeys, ExtBuilder, XcmReceivedFrom,
+};
+
+type RuntimeHelper<Runtime, AllPalletsWithoutSystem = ()> =
+parachains_runtimes_test_utils::RuntimeHelper<Runtime, AllPalletsWithoutSystem>;
 
 parameter_types! {
 		pub const DefaultBridgeHubEthereumBaseFee: Balance = 2_750_872_500_000;
