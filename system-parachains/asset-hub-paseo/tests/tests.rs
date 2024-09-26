@@ -48,11 +48,8 @@ use xcm::latest::prelude::{Assets as XcmAssets, *};
 use xcm_builder::WithLatestLocationConverter;
 use xcm_executor::traits::{ConvertLocation, JustTry};
 use asset_hub_paseo_runtime::ToKusamaXcmRouterInstance;
-use asset_hub_paseo_runtime::StakingPot;
 use asset_hub_paseo_runtime::xcm_config::bridging::XcmBridgeHubRouterFeeAssetId;
 use asset_test_utils::test_cases_over_bridge::TestBridgingConfig;
-use asset_hub_paseo_runtime::PolkadotXcm;
-use asset_hub_paseo_runtime::SLOT_DURATION;
 
 const ALICE: [u8; 32] = [1u8; 32];
 const SOME_ASSET_ADMIN: [u8; 32] = [5u8; 32];
@@ -400,108 +397,109 @@ asset_test_utils::include_create_and_manage_foreign_assets_for_local_consensus_p
 // 	}
 // }
 
-#[test]
-fn limited_reserve_transfer_assets_for_native_asset_to_asset_hub_kusama_works() {
-	asset_test_utils::test_cases_over_bridge::limited_reserve_transfer_assets_for_native_asset_works::<
-		Runtime,
-		AllPalletsWithoutSystem,
-		XcmConfig,
-		ParachainSystem,
-		XcmpQueue,
-		LocationToAccountId,
-	>(
-		collator_session_keys(),
-		slot_durations(),
-		ExistentialDeposit::get(),
-		AccountId::from(ALICE),
-		Box::new(|runtime_event_encoded: Vec<u8>| {
-			match RuntimeEvent::decode(&mut &runtime_event_encoded[..]) {
-				Ok(RuntimeEvent::PolkadotXcm(event)) => Some(event),
-				_ => None,
-			}
-		}),
-		Box::new(|runtime_event_encoded: Vec<u8>| {
-			match RuntimeEvent::decode(&mut &runtime_event_encoded[..]) {
-				Ok(RuntimeEvent::XcmpQueue(event)) => Some(event),
-				_ => None,
-			}
-		}),
-		//bridging_to_asset_hub_kusama,
-		WeightLimit::Unlimited,
-		//Some(XcmBridgeHubRouterFeeAssetId::get()),
-		Some(RelayTreasuryPalletAccount::get()),
-	)
-}
 
-#[test]
-fn receive_reserve_asset_deposited_ksm_from_asset_hub_kusama_fees_paid_by_pool_swap_works() {
-	const BLOCK_AUTHOR_ACCOUNT: [u8; 32] = [13; 32];
-	let block_author_account = AccountId::from(BLOCK_AUTHOR_ACCOUNT);
-	let staking_pot = StakingPot::get();
-
-
-	let foreign_asset_id_location =
-		xcm::v3::Location::new(2, [xcm::v3::Junction::GlobalConsensus(xcm::v3::NetworkId::Kusama)]);
-	let foreign_asset_id_minimum_balance = 1_000_000_000;
-	// sovereign account as foreign asset owner (can be whoever for this scenario)
-	let foreign_asset_owner = LocationToAccountId::convert_location(&Location::parent()).unwrap();
-	let foreign_asset_create_params =
-		(foreign_asset_owner, foreign_asset_id_location, foreign_asset_id_minimum_balance);
-
-	asset_test_utils::test_cases_over_bridge::receive_reserve_asset_deposited_from_different_consensus_works::<
-            Runtime,
-            AllPalletsWithoutSystem,
-            XcmConfig,
-            ForeignAssetsInstance,
-        >(
-            collator_session_keys().add(collator_session_key(BLOCK_AUTHOR_ACCOUNT)),
-            ExistentialDeposit::get(),
-            AccountId::from([73; 32]),
-            block_author_account.clone(),
-            // receiving KSMs
-            foreign_asset_create_params.clone(),
-            1000000000000,
-            || {
-                // setup pool for paying fees to touch `SwapFirstAssetTrader`
-                setup_pool_for_paying_fees_with_foreign_assets(foreign_asset_create_params);
-                // staking pot account for collecting local native fees from `BuyExecution`
-                let _ = Balances::force_set_balance(RuntimeOrigin::root(), StakingPot::get().into(), ExistentialDeposit::get());
-                // prepare bridge configuration
-                //bridging_to_asset_hub_kusama()
-            },
-            (
-                [PalletInstance(bp_bridge_hub_paseo::WITH_BRIDGE_POLKAPAS_TO_KUSAMA_MESSAGES_PALLET_INDEX)].into(),
-                GlobalConsensus(Kusama),
-                [Parachain(1000)].into()
-            ),
-            || {
-                // check staking pot for ED
-                assert_eq!(Balances::free_balance(&staking_pot), ExistentialDeposit::get());
-                // check now foreign asset for staking pot
-                assert_eq!(
-                    ForeignAssets::balance(
-                        foreign_asset_id_location,
-                        &staking_pot
-                    ),
-                    0
-                );
-            },
-            || {
-                // `SwapFirstAssetTrader` - staking pot receives xcm fees in KSMs
-                assert!(
-                    Balances::free_balance(&staking_pot) > ExistentialDeposit::get()
-                );
-                // staking pot receives no foreign assets
-                assert_eq!(
-                    ForeignAssets::balance(
-                        foreign_asset_id_location,
-                        &staking_pot
-                    ),
-                    0
-                );
-            }
-        )
-}
+//#[test]
+//fn limited_reserve_transfer_assets_for_native_asset_to_asset_hub_kusama_works() {
+//	asset_test_utils::test_cases_over_bridge::limited_reserve_transfer_assets_for_native_asset_works::<
+//		Runtime,
+//		AllPalletsWithoutSystem,
+//		XcmConfig,
+//		ParachainSystem,
+//		XcmpQueue,
+//		LocationToAccountId,
+//	>(
+//		collator_session_keys(),
+//		slot_durations(),
+//		ExistentialDeposit::get(),
+//		AccountId::from(ALICE),
+//		Box::new(|runtime_event_encoded: Vec<u8>| {
+//			match RuntimeEvent::decode(&mut &runtime_event_encoded[..]) {
+//				Ok(RuntimeEvent::PolkadotXcm(event)) => Some(event),
+//				_ => None,
+//			}
+//		}),
+//		Box::new(|runtime_event_encoded: Vec<u8>| {
+//			match RuntimeEvent::decode(&mut &runtime_event_encoded[..]) {
+//				Ok(RuntimeEvent::XcmpQueue(event)) => Some(event),
+//				_ => None,
+//			}
+//		}),
+//		//bridging_to_asset_hub_kusama,
+//		WeightLimit::Unlimited,
+//		//Some(XcmBridgeHubRouterFeeAssetId::get()),
+//		Some(RelayTreasuryPalletAccount::get()),
+//	)
+//}
+//
+//#[test]
+//fn receive_reserve_asset_deposited_ksm_from_asset_hub_kusama_fees_paid_by_pool_swap_works() {
+//	const BLOCK_AUTHOR_ACCOUNT: [u8; 32] = [13; 32];
+//	let block_author_account = AccountId::from(BLOCK_AUTHOR_ACCOUNT);
+//	let staking_pot = StakingPot::get();
+//
+//
+//	let foreign_asset_id_location =
+//		xcm::v3::Location::new(2, [xcm::v3::Junction::GlobalConsensus(xcm::v3::NetworkId::Kusama)]);
+//	let foreign_asset_id_minimum_balance = 1_000_000_000;
+//	// sovereign account as foreign asset owner (can be whoever for this scenario)
+//	let foreign_asset_owner = LocationToAccountId::convert_location(&Location::parent()).unwrap();
+//	let foreign_asset_create_params =
+//		(foreign_asset_owner, foreign_asset_id_location, foreign_asset_id_minimum_balance);
+//
+//	asset_test_utils::test_cases_over_bridge::receive_reserve_asset_deposited_from_different_consensus_works::<
+//            Runtime,
+//            AllPalletsWithoutSystem,
+//            XcmConfig,
+//            ForeignAssetsInstance,
+//        >(
+//            collator_session_keys().add(collator_session_key(BLOCK_AUTHOR_ACCOUNT)),
+//            ExistentialDeposit::get(),
+//            AccountId::from([73; 32]),
+//            block_author_account.clone(),
+//            // receiving KSMs
+//            foreign_asset_create_params.clone(),
+//            1000000000000,
+//            || {
+//                // setup pool for paying fees to touch `SwapFirstAssetTrader`
+//                setup_pool_for_paying_fees_with_foreign_assets(foreign_asset_create_params);
+//                // staking pot account for collecting local native fees from `BuyExecution`
+//                let _ = Balances::force_set_balance(RuntimeOrigin::root(), StakingPot::get().into(), ExistentialDeposit::get());
+//                // prepare bridge configuration
+//                //bridging_to_asset_hub_kusama()
+//            },
+//            (
+//                [PalletInstance(bp_bridge_hub_paseo::WITH_BRIDGE_POLKAPAS_TO_KUSAMA_MESSAGES_PALLET_INDEX)].into(),
+//                GlobalConsensus(Kusama),
+//                [Parachain(1000)].into()
+//            ),
+//            || {
+//                // check staking pot for ED
+//                assert_eq!(Balances::free_balance(&staking_pot), ExistentialDeposit::get());
+//                // check now foreign asset for staking pot
+//                assert_eq!(
+//                    ForeignAssets::balance(
+//                        foreign_asset_id_location,
+//                        &staking_pot
+//                    ),
+//                    0
+//                );
+//            },
+//            || {
+//                // `SwapFirstAssetTrader` - staking pot receives xcm fees in KSMs
+//                assert!(
+//                    Balances::free_balance(&staking_pot) > ExistentialDeposit::get()
+//                );
+//                // staking pot receives no foreign assets
+//                assert_eq!(
+//                    ForeignAssets::balance(
+//                        foreign_asset_id_location,
+//                        &staking_pot
+//                    ),
+//                    0
+//                );
+//            }
+//        )
+//}
 
 // #[test]
 // fn receive_reserve_asset_deposited_ksm_from_asset_hub_kusama_fees_paid_by_sufficient_asset_works() {

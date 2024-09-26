@@ -606,7 +606,7 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 			);
 		// Send the Weth back to Ethereum
 		assert_ok!(
-			<AssetHubPaseo as AssetHubPaseoPallet>::PaseoXcm::limited_reserve_transfer_assets(
+			<AssetHubPaseo as AssetHubPaseoPallet>::PolkadotXcm::limited_reserve_transfer_assets(
 				RuntimeOrigin::signed(AssetHubPaseoReceiver::get()),
 				Box::new(destination),
 				Box::new(beneficiary),

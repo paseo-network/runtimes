@@ -45,14 +45,14 @@ fn teleport_from_and_to_relay() {
 	let native_asset: Assets = (Here, amount).into();
 
 	test_relay_is_trusted_teleporter!(
-		Polkadot,
+		Paseo,
 		PolkadotXcmConfig,
 		vec![BridgeHubPolkadot],
 		(native_asset, amount)
 	);
 
 	test_parachain_is_trusted_teleporter_for_relay!(
-		BridgeHubPolkadot,
+		BridgeHubPaseo,
 		BridgeHubPolkadotXcmConfig,
 		Polkadot,
 		amount
