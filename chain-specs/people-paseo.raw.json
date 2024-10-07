@@ -2,7 +2,10 @@
   "name": "Paseo People",
   "id": "paseo-people",
   "chainType": "Live",
-  "bootNodes": [],
+  "bootNodes": [
+    "/dns/people-paseo-bootnode.radiumblock.com/tcp/30333/p2p/12D3KooWRY1dSd1vGJtB7WrU4JAAojPquLf41WV4LH21CjLp3TB2",
+    "/dns/people-paseo-bootnode.radiumblock.com/tcp/30336/wss/p2p/12D3KooWRY1dSd1vGJtB7WrU4JAAojPquLf41WV4LH21CjLp3TB2"
+  ],
   "telemetryEndpoints": null,
   "protocolId": "pc-pas",
   "properties": {
