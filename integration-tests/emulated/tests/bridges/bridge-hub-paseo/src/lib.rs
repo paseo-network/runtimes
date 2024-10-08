@@ -56,6 +56,7 @@ pub use paseo_system_emulated_network::{
 	AssetHubPaseoParaSender as AssetHubPaseoSender,
 	BridgeHubPaseoPara as BridgeHubPaseo,
 	BridgeHubPaseoParaSender as BridgeHubPaseoSender, PaseoRelay as Paseo,
+	PaseoRelayReceiver as PaseoReceiver, PaseoRelaySender as PaseoSender,
 };
 pub use parachains_common::{AccountId, Balance};
 pub use paseo_system_emulated_network::{

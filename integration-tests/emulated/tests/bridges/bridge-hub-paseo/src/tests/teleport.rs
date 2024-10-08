@@ -32,9 +32,9 @@ fn teleport_to_other_system_parachains_works() {
 	let native_asset: Assets = (Parent, amount).into();
 
 	test_parachain_is_trusted_teleporter!(
-		BridgeHubPolkadot,      // Origin
+		BridgeHubPaseo,      // Origin
 		XcmConfig,              // XCM Configuration
-		vec![AssetHubPolkadot], // Destination
+		vec![AssetHubPaseo], // Destination
 		(native_asset, amount)
 	);
 }
@@ -46,15 +46,15 @@ fn teleport_from_and_to_relay() {
 
 	test_relay_is_trusted_teleporter!(
 		Paseo,
-		PolkadotXcmConfig,
-		vec![BridgeHubPolkadot],
+		PaseoXcmConfig,
+		vec![BridgeHubPaseo],
 		(native_asset, amount)
 	);
 
 	test_parachain_is_trusted_teleporter_for_relay!(
 		BridgeHubPaseo,
-		BridgeHubPolkadotXcmConfig,
-		Polkadot,
+		BridgeHubPaseoXcmConfig,
+		Paseo,
 		amount
 	);
 }
