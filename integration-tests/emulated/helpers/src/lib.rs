@@ -30,6 +30,7 @@ pub use xcm_emulator::Chain;
 
 /// TODO: when bumping to polkadot-sdk v1.8.0,
 /// remove this crate altogether and get the macros from `emulated-integration-tests-common`.
+/// remove this crate altogether and get the macros from `emulated-integration-tests-common`.
 /// TODO: backport this macros to paseo-sdk
 
 #[macro_export]
@@ -192,7 +193,7 @@ macro_rules! test_parachain_is_trusted_teleporter_for_relay {
 				$crate::AccountId32 { network: None, id: receiver.clone().into() }.into();
 
 			// Dry-run first.
-			let call = <$sender_para as Chain>::RuntimeCall::PaseoXcm(pallet_xcm::Call::limited_teleport_assets {
+			let call = <$sender_para as Chain>::RuntimeCall::PolkadotXcm(pallet_xcm::Call::limited_teleport_assets {
 				dest: bx!(relay_destination.clone().into()),
 				beneficiary: bx!(beneficiary.clone().into()),
 				assets: bx!(assets.clone().into()),

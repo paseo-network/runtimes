@@ -14,7 +14,7 @@
 // limitations under the License.
 
 use crate::*;
-use bridge_hub_polkadot_runtime::xcm_config::XcmConfig;
+use bridge_hub_paseo_runtime::xcm_config::XcmConfig;
 use frame_support::{
 	dispatch::RawOrigin, sp_runtime::traits::Dispatchable, traits::fungible::Mutate,
 };
@@ -32,9 +32,9 @@ fn teleport_to_other_system_parachains_works() {
 	let native_asset: Assets = (Parent, amount).into();
 
 	test_parachain_is_trusted_teleporter!(
-		BridgeHubPolkadot,      // Origin
+		BridgeHubPaseo,      // Origin
 		XcmConfig,              // XCM Configuration
-		vec![AssetHubPolkadot], // Destination
+		vec![AssetHubPaseo], // Destination
 		(native_asset, amount)
 	);
 }
@@ -45,16 +45,16 @@ fn teleport_from_and_to_relay() {
 	let native_asset: Assets = (Here, amount).into();
 
 	test_relay_is_trusted_teleporter!(
-		Polkadot,
-		PolkadotXcmConfig,
-		vec![BridgeHubPolkadot],
+		Paseo,
+		PaseoXcmConfig,
+		vec![BridgeHubPaseo],
 		(native_asset, amount)
 	);
 
 	test_parachain_is_trusted_teleporter_for_relay!(
-		BridgeHubPolkadot,
-		BridgeHubPolkadotXcmConfig,
-		Polkadot,
+		BridgeHubPaseo,
+		BridgeHubPaseoXcmConfig,
+		Paseo,
 		amount
 	);
 }

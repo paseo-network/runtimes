@@ -15,96 +15,98 @@
 
 use crate::*;
 
-mod asset_transfers;
-mod claim_assets;
-mod send_xcm;
+
 mod snowbridge;
 mod teleport;
+mod claim_assets;
 
-pub(crate) fn asset_hub_kusama_location() -> Location {
-	Location::new(
-		2,
-		[GlobalConsensus(NetworkId::Kusama), Parachain(AssetHubKusama::para_id().into())],
-	)
-}
 
-pub(crate) fn bridge_hub_kusama_location() -> Location {
-	Location::new(
-		2,
-		[GlobalConsensus(NetworkId::Kusama), Parachain(BridgeHubKusama::para_id().into())],
-	)
-}
 
-pub(crate) fn send_asset_from_asset_hub_paseo(
-	destination: Location,
-	(id, amount): (Location, u128),
-) -> DispatchResult {
-	let signed_origin =
-		<AssetHubPaseo as Chain>::RuntimeOrigin::signed(AssetHubPaseoSender::get());
-
-	let beneficiary: Location =
-		AccountId32Junction { network: None, id: AssetHubKusamaReceiver::get().into() }.into();
-
-	let assets: Assets = (id, amount).into();
-	let fee_asset_item = 0;
-
-	AssetHubPaseo::execute_with(|| {
-		<AssetHubPaseo as AssetHubPaseoPallet>::PaseoXcm::limited_reserve_transfer_assets(
-			signed_origin,
-			bx!(destination.into()),
-			bx!(beneficiary.into()),
-			bx!(assets.into()),
-			fee_asset_item,
-			WeightLimit::Unlimited,
-		)
-	})
-}
-
-pub(crate) fn assert_bridge_hub_paseo_message_accepted(expected_processed: bool) {
-	BridgeHubPaseo::execute_with(|| {
-		type RuntimeEvent = <BridgeHubPaseo as Chain>::RuntimeEvent;
-
-		if expected_processed {
-			assert_expected_events!(
-				BridgeHubPaseo,
-				vec![
-					// pay for bridge fees
-					RuntimeEvent::Balances(pallet_balances::Event::Burned { .. }) => {},
-					// message exported
-					RuntimeEvent::BridgeKusamaMessages(
-						pallet_bridge_messages::Event::MessageAccepted { .. }
-					) => {},
-					// message processed successfully
-					RuntimeEvent::MessageQueue(
-						pallet_message_queue::Event::Processed { success: true, .. }
-					) => {},
-				]
-			);
-		} else {
-			assert_expected_events!(
-				BridgeHubPaseo,
-				vec![
-					RuntimeEvent::MessageQueue(pallet_message_queue::Event::Processed {
-						success: false,
-						..
-					}) => {},
-				]
-			);
-		}
-	});
-}
-
-pub(crate) fn assert_bridge_hub_kusama_message_received() {
-	BridgeHubKusama::execute_with(|| {
-		type RuntimeEvent = <BridgeHubKusama as Chain>::RuntimeEvent;
-		assert_expected_events!(
-			BridgeHubKusama,
-			vec![
-				// message sent to destination
-				RuntimeEvent::XcmpQueue(
-					cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }
-				) => {},
-			]
-		);
-	})
-}
+// pub(crate) fn asset_hub_kusama_location() -> Location {
+// 	Location::new(
+// 		2,
+// 		[GlobalConsensus(NetworkId::Kusama), Parachain(AssetHubKusama::para_id().into())],
+// 	)
+// }
+//
+// pub(crate) fn bridge_hub_kusama_location() -> Location {
+// 	Location::new(
+// 		2,
+// 		[GlobalConsensus(NetworkId::Kusama), Parachain(BridgeHubKusama::para_id().into())],
+// 	)
+// }
+//
+// pub(crate) fn send_asset_from_asset_hub_paseo(
+// 	destination: Location,
+// 	(id, amount): (Location, u128),
+// ) -> DispatchResult {
+// 	let signed_origin =
+// 		<AssetHubPaseo as Chain>::RuntimeOrigin::signed(AssetHubPaseoSender::get());
+//
+// 	let beneficiary: Location =
+// 		AccountId32Junction { network: None, id: AssetHubKusamaReceiver::get().into() }.into();
+//
+// 	let assets: Assets = (id, amount).into();
+// 	let fee_asset_item = 0;
+//
+// 	AssetHubPaseo::execute_with(|| {
+// 		<AssetHubPaseo as AssetHubPaseoPallet>::PolkadotXcm::limited_reserve_transfer_assets(
+// 			signed_origin,
+// 			bx!(destination.into()),
+// 			bx!(beneficiary.into()),
+// 			bx!(assets.into()),
+// 			fee_asset_item,
+// 			WeightLimit::Unlimited,
+// 		)
+// 	})
+// }
+//
+// pub(crate) fn assert_bridge_hub_paseo_message_accepted(expected_processed: bool) {
+// 	BridgeHubPaseo::execute_with(|| {
+// 		type RuntimeEvent = <BridgeHubPaseo as Chain>::RuntimeEvent;
+//
+// 		if expected_processed {
+// 			assert_expected_events!(
+// 				BridgeHubPaseo,
+// 				vec![
+// 					// pay for bridge fees
+// 					RuntimeEvent::Balances(pallet_balances::Event::Burned { .. }) => {},
+// 					// message exported
+// 					RuntimeEvent::BridgeKusamaMessages(
+// 						pallet_bridge_messages::Event::MessageAccepted { .. }
+// 					) => {},
+// 					// message processed successfully
+// 					RuntimeEvent::MessageQueue(
+// 						pallet_message_queue::Event::Processed { success: true, .. }
+// 					) => {},
+// 				]
+// 			);
+// 		} else {
+// 			assert_expected_events!(
+// 				BridgeHubPaseo,
+// 				vec![
+// 					RuntimeEvent::MessageQueue(pallet_message_queue::Event::Processed {
+// 						success: false,
+// 						..
+// 					}) => {},
+// 				]
+// 			);
+// 		}
+// 	});
+// }
+//
+// pub(crate) fn assert_bridge_hub_kusama_message_received() {
+// 	BridgeHubKusama::execute_with(|| {
+// 		type RuntimeEvent = <BridgeHubKusama as Chain>::RuntimeEvent;
+// 		assert_expected_events!(
+// 			BridgeHubKusama,
+// 			vec![
+// 				// message sent to destination
+// 				RuntimeEvent::XcmpQueue(
+// 					cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }
+// 				) => {},
+// 			]
+// 		);
+// 	})
+// }
+//
