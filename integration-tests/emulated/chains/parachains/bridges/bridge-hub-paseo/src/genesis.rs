@@ -14,11 +14,11 @@
 // limitations under the License.
 
 // Substrate
-use sp_core::storage::Storage;
+use sp_core::{sr25519, storage::Storage};
 
 // Cumulus
 use emulated_integration_tests_common::{
-	accounts, build_genesis_storage, collators, SAFE_XCM_VERSION,
+	accounts, build_genesis_storage, collators, get_account_id_from_seed, SAFE_XCM_VERSION,
 };
 use parachains_common::Balance;
 
@@ -46,8 +46,8 @@ pub fn genesis() -> Storage {
 				.into_iter()
 				.map(|(acc, aura)| {
 					(
-						acc.clone(),                                    // account id
-						acc,                                            // validator id
+						acc.clone(),                                       // account id
+						acc,                                               // validator id
 						bridge_hub_paseo_runtime::SessionKeys { aura }, // session keys
 					)
 				})
@@ -55,6 +55,14 @@ pub fn genesis() -> Storage {
 		},
 		polkadot_xcm: bridge_hub_paseo_runtime::PolkadotXcmConfig {
 			safe_xcm_version: Some(SAFE_XCM_VERSION),
+			..Default::default()
+		},
+		bridge_kusama_grandpa: bridge_hub_paseo_runtime::BridgeKusamaGrandpaConfig {
+			owner: Some(get_account_id_from_seed::<sr25519::Public>(accounts::BOB)),
+			..Default::default()
+		},
+		bridge_kusama_messages: bridge_hub_paseo_runtime::BridgeKusamaMessagesConfig {
+			owner: Some(get_account_id_from_seed::<sr25519::Public>(accounts::BOB)),
 			..Default::default()
 		},
 		ethereum_system: bridge_hub_paseo_runtime::EthereumSystemConfig {
@@ -67,6 +75,7 @@ pub fn genesis() -> Storage {
 
 	build_genesis_storage(
 		&genesis_config,
-		bridge_hub_paseo_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
+		bridge_hub_paseo_runtime::WASM_BINARY
+			.expect("WASM binary was not built, please build it!"),
 	)
 }

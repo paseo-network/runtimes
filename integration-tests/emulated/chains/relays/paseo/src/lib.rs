@@ -24,7 +24,7 @@ use emulated_integration_tests_common::{
 
 // Polkadot declaration
 decl_test_relay_chains! {
-	#[api_version(10)]
+	#[api_version(11)]
 	pub struct Paseo {
 		genesis = genesis::genesis(),
 		on_init = (),
@@ -38,7 +38,6 @@ decl_test_relay_chains! {
 			Treasury: paseo_runtime::Treasury,
 			AssetRate: paseo_runtime::AssetRate,
 			Hrmp: paseo_runtime::Hrmp,
-			Identity: paseo_runtime::Identity,
 		}
 	},
 }

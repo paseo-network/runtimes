@@ -18,18 +18,49 @@ use sp_core::storage::Storage;
 
 // Cumulus
 use emulated_integration_tests_common::{
-	accounts, build_genesis_storage, get_account_id_from_seed, get_from_seed, SAFE_XCM_VERSION,
+	accounts, build_genesis_storage, get_account_id_from_seed, get_from_seed, RESERVABLE_ASSET_ID,
+	SAFE_XCM_VERSION,
 };
+use frame_support::sp_runtime::traits::AccountIdConversion;
 use parachains_common::{AccountId, AuraId, Balance};
+use polkadot_parachain_primitives::primitives::Sibling;
 use sp_core::sr25519;
+use xcm::prelude::*;
 
 pub const PARA_ID: u32 = 1000;
 pub const ED: Balance = asset_hub_paseo_runtime::ExistentialDeposit::get();
+pub const USDT_ID: u32 = 1984;
+
+frame_support::parameter_types! {
+	pub AssetHubPaseoAssetOwner: AccountId = get_account_id_from_seed::<sr25519::Public>("Alice");
+	pub PenpalATeleportableAssetLocation: Location
+		= Location::new(1, [
+				Junction::Parachain(penpal_emulated_chain::PARA_ID_A),
+				Junction::PalletInstance(penpal_emulated_chain::ASSETS_PALLET_ID),
+				Junction::GeneralIndex(penpal_emulated_chain::TELEPORTABLE_ASSET_ID.into()),
+			]
+		);
+	pub PenpalBTeleportableAssetLocation: Location
+		= Location::new(1, [
+				Junction::Parachain(penpal_emulated_chain::PARA_ID_B),
+				Junction::PalletInstance(penpal_emulated_chain::ASSETS_PALLET_ID),
+				Junction::GeneralIndex(penpal_emulated_chain::TELEPORTABLE_ASSET_ID.into()),
+			]
+		);
+	pub PenpalASiblingSovereignAccount: AccountId = Sibling::from(penpal_emulated_chain::PARA_ID_A).into_account_truncating();
+	pub PenpalBSiblingSovereignAccount: AccountId = Sibling::from(penpal_emulated_chain::PARA_ID_B).into_account_truncating();
+}
 
 fn invulnerables_asset_hub_paseo() -> Vec<(AccountId, AuraId)> {
 	vec![
-		(get_account_id_from_seed::<sr25519::Public>("Alice"), get_from_seed::<AuraId>("Alice")),
-		(get_account_id_from_seed::<sr25519::Public>("Bob"), get_from_seed::<AuraId>("Bob")),
+		(
+			get_account_id_from_seed::<sr25519::Public>("Alice"),
+			get_from_seed::<AuraId>("Alice"),
+		),
+		(
+			get_account_id_from_seed::<sr25519::Public>("Bob"),
+			get_from_seed::<AuraId>("Bob"),
+		),
 	]
 }
 
@@ -37,7 +68,11 @@ pub fn genesis() -> Storage {
 	let genesis_config = asset_hub_paseo_runtime::RuntimeGenesisConfig {
 		system: asset_hub_paseo_runtime::SystemConfig::default(),
 		balances: asset_hub_paseo_runtime::BalancesConfig {
-			balances: accounts::init_balances().iter().cloned().map(|k| (k, ED * 4096)).collect(),
+			balances: accounts::init_balances()
+				.iter()
+				.cloned()
+				.map(|k| (k, ED * 4096 * 4096))
+				.collect(),
 		},
 		parachain_info: asset_hub_paseo_runtime::ParachainInfoConfig {
 			parachain_id: PARA_ID.into(),
@@ -57,8 +92,8 @@ pub fn genesis() -> Storage {
 				.into_iter()
 				.map(|(acc, aura)| {
 					(
-						acc.clone(),                                   // account id
-						acc,                                           // validator id
+						acc.clone(),                                      // account id
+						acc,                                              // validator id
 						asset_hub_paseo_runtime::SessionKeys { aura }, // session keys
 					)
 				})
@@ -68,11 +103,37 @@ pub fn genesis() -> Storage {
 			safe_xcm_version: Some(SAFE_XCM_VERSION),
 			..Default::default()
 		},
+		assets: asset_hub_paseo_runtime::AssetsConfig {
+			assets: vec![
+				(RESERVABLE_ASSET_ID, AssetHubPaseoAssetOwner::get(), false, ED),
+				(USDT_ID, AssetHubPaseoAssetOwner::get(), true, ED),
+			],
+			..Default::default()
+		},
+		foreign_assets: asset_hub_paseo_runtime::ForeignAssetsConfig {
+			assets: vec![
+				// Penpal's teleportable asset representation
+				(
+					PenpalATeleportableAssetLocation::get().try_into().unwrap(),
+					PenpalASiblingSovereignAccount::get(),
+					false,
+					ED,
+				),
+				(
+					PenpalBTeleportableAssetLocation::get().try_into().unwrap(),
+					PenpalBSiblingSovereignAccount::get(),
+					false,
+					ED,
+				),
+			],
+			..Default::default()
+		},
 		..Default::default()
 	};
 
 	build_genesis_storage(
 		&genesis_config,
-		asset_hub_paseo_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
+		asset_hub_paseo_runtime::WASM_BINARY
+			.expect("WASM binary was not built, please build it!"),
 	)
 }

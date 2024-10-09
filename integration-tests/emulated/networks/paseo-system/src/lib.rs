@@ -15,13 +15,17 @@
 
 pub use asset_hub_paseo_emulated_chain;
 pub use bridge_hub_paseo_emulated_chain;
-pub use paseo_emulated_chain;
+pub use coretime_paseo_emulated_chain;
 pub use penpal_emulated_chain;
+pub use people_paseo_emulated_chain;
+pub use paseo_emulated_chain;
 
 use asset_hub_paseo_emulated_chain::AssetHubPaseo;
 use bridge_hub_paseo_emulated_chain::BridgeHubPaseo;
+use coretime_paseo_emulated_chain::CoretimePaseo;
+use penpal_emulated_chain::{PenpalA, PenpalB};
+use people_paseo_emulated_chain::PeoplePaseo;
 use paseo_emulated_chain::Paseo;
-use penpal_emulated_chain::PenpalB;
 
 // Cumulus
 use emulated_integration_tests_common::{
@@ -35,7 +39,10 @@ decl_test_networks! {
 		parachains = vec![
 			AssetHubPaseo,
 			BridgeHubPaseo,
+			CoretimePaseo,
+			PenpalA,
 			PenpalB,
+			PeoplePaseo,
 		],
 		bridge = ()
 	},
@@ -45,5 +52,8 @@ decl_test_sender_receiver_accounts_parameter_types! {
 	PaseoRelay { sender: ALICE, receiver: BOB },
 	AssetHubPaseoPara { sender: ALICE, receiver: BOB },
 	BridgeHubPaseoPara { sender: ALICE, receiver: BOB },
-	PenpalBPara { sender: ALICE, receiver: BOB }
+	CoretimePaseoPara { sender: ALICE, receiver: BOB },
+	PenpalAPara { sender: ALICE, receiver: BOB },
+	PenpalBPara { sender: ALICE, receiver: BOB },
+	PeoplePaseoPara { sender: ALICE, receiver: BOB }
 }

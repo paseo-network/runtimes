@@ -10,7 +10,7 @@
     "spec_name: create_runtime_str!(\"polkadot\"),": "spec_name: create_runtime_str!(\"paseo\"),",
     "impl_name: create_runtime_str!(\"parity-polkadot\"),": "impl_name: create_runtime_str!(\"paseo-testnet\"),",
     "type LeaseOffset = LeaseOffset;": "type LeaseOffset = ();",
-    "// Polkadot version identifier;": "// Portico version identifier;",
+    "// Polkadot version identifier;": "// Paseo version identifier;",
     "/// Runtime version (Polkadot).": "/// Runtime version (Paseo).",
     "//! XCM configuration for Polkadot.": "//! XCM configuration for Paseo.",
     "pub const EPOCH_DURATION_IN_SLOTS: BlockNumber = prod_or_fast!(4 * HOURS, 1 * MINUTES);":"pub const EPOCH_DURATION_IN_SLOTS: BlockNumber = prod_or_fast!(1 * HOURS, 1 * MINUTES);",
