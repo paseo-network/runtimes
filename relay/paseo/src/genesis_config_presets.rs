@@ -19,12 +19,11 @@
 use crate::*;
 use babe_primitives::AuthorityId as BabeId;
 use pallet_staking::{Forcing, StakerStatus};
+use polkadot_primitives::{AccountPublic, AssignmentId, AsyncBackingParams};
 use paseo_runtime_constants::currency::UNITS as PAS;
-use polkadot_primitives::{
-	AccountPublic, AssignmentId, AsyncBackingParams,
-};
 use runtime_parachains::configuration::HostConfiguration;
 use sp_core::{sr25519, Pair, Public};
+use sp_genesis_builder::PresetId;
 use sp_runtime::{traits::IdentifyAccount, Perbill};
 #[cfg(not(feature = "std"))]
 use sp_std::alloc::format;
@@ -97,26 +96,26 @@ fn default_parachains_host_configuration() -> HostConfiguration<polkadot_primiti
 		max_code_size: MAX_CODE_SIZE,
 		max_pov_size: MAX_POV_SIZE,
 		max_head_data_size: 32 * 1024,
-		max_upward_queue_count: 174762,
+		max_upward_queue_count: 8,
 		max_upward_queue_size: 1024 * 1024,
 		max_downward_message_size: 1024 * 1024,
 		max_upward_message_size: 50 * 1024,
-		max_upward_message_num_per_candidate: 16,
+		max_upward_message_num_per_candidate: 5,
 		hrmp_sender_deposit: 0,
 		hrmp_recipient_deposit: 0,
-		hrmp_channel_max_capacity: 1000,
-		hrmp_channel_max_total_size: 100 * 1024,
-		hrmp_max_parachain_inbound_channels: 128,
-		hrmp_channel_max_message_size: 100 * 1024,
-		hrmp_max_parachain_outbound_channels: 128,
-		hrmp_max_message_num_per_candidate: 10,
+		hrmp_channel_max_capacity: 8,
+		hrmp_channel_max_total_size: 8 * 1024,
+		hrmp_max_parachain_inbound_channels: 4,
+		hrmp_channel_max_message_size: 1024 * 1024,
+		hrmp_max_parachain_outbound_channels: 4,
+		hrmp_max_message_num_per_candidate: 5,
 		dispute_period: 6,
 		no_show_slots: 2,
 		n_delay_tranches: 25,
 		needed_approvals: 2,
 		relay_vrf_modulo_samples: 2,
 		zeroth_delay_tranche_width: 0,
-		minimum_validation_upgrade_delay: 20,
+		minimum_validation_upgrade_delay: 5,
 		scheduler_params: polkadot_primitives::vstaging::SchedulerParams {
 			group_rotation_frequency: 20,
 			paras_availability_period: 4,
@@ -126,7 +125,7 @@ fn default_parachains_host_configuration() -> HostConfiguration<polkadot_primiti
 		minimum_backing_votes: 1,
 		node_features: NodeFeatures::EMPTY,
 		async_backing_params: AsyncBackingParams {
-			max_candidate_depth: 3,
+			max_candidate_depth: 2,
 			allowed_ancestry_len: 2,
 		},
 		executor_params: Default::default(),
@@ -224,6 +223,11 @@ pub fn paseo_development_config_genesis() -> serde_json::Value {
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		None,
 	)
+}
+
+/// Provides the names of the predefined genesis configs for this runtime.
+pub fn preset_names() -> Vec<PresetId> {
+	vec![PresetId::from("development"), PresetId::from("local_testnet")]
 }
 
 /// Provides the JSON representation of predefined genesis config for given `id`.
