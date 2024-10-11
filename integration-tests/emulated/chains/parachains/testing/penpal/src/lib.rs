@@ -14,9 +14,10 @@
 // limitations under the License.
 
 mod genesis;
-pub use genesis::{genesis, ED, PARA_ID_A, PARA_ID_B};
+pub use genesis::{genesis, PenpalAssetOwner, ED, PARA_ID_A, PARA_ID_B};
 pub use penpal_runtime::xcm_config::{
-	CustomizableAssetFromSystemAssetHub, LocalTeleportableToAssetHub, XcmConfig,
+	CustomizableAssetFromSystemAssetHub, LocalReservableFromAssetHub, LocalTeleportableToAssetHub,
+	XcmConfig, ASSETS_PALLET_ID, RESERVABLE_ASSET_ID, TELEPORTABLE_ASSET_ID,
 };
 
 // Substrate
@@ -25,12 +26,31 @@ use frame_support::traits::OnInitialize;
 // Cumulus
 use emulated_integration_tests_common::{
 	impl_accounts_helpers_for_parachain, impl_assert_events_helpers_for_parachain,
-	impl_assets_helpers_for_parachain, impls::Parachain, xcm_emulator::decl_test_parachains,
+	impl_assets_helpers_for_parachain, impl_foreign_assets_helpers_for_parachain, impls::Parachain,
+	xcm_emulator::decl_test_parachains,
 };
-use paseo_emulated_chain::Paseo;
 
 // Penpal Parachain declaration
 decl_test_parachains! {
+	pub struct PenpalA {
+		genesis = genesis(PARA_ID_A),
+		on_init = {
+			penpal_runtime::AuraExt::on_initialize(1);
+		},
+		runtime = penpal_runtime,
+		core = {
+			XcmpMessageHandler: penpal_runtime::XcmpQueue,
+			LocationToAccountId: penpal_runtime::xcm_config::LocationToAccountId,
+			ParachainInfo: penpal_runtime::ParachainInfo,
+			MessageOrigin: cumulus_primitives_core::AggregateMessageOrigin,
+		},
+		pallets = {
+			PolkadotXcm: penpal_runtime::PolkadotXcm,
+			Assets: penpal_runtime::Assets,
+			ForeignAssets: penpal_runtime::ForeignAssets,
+			Balances: penpal_runtime::Balances,
+		}
+	},
 	pub struct PenpalB {
 		genesis = genesis(PARA_ID_B),
 		on_init = {
@@ -53,6 +73,11 @@ decl_test_parachains! {
 }
 
 // Penpal implementation
+impl_accounts_helpers_for_parachain!(PenpalA);
 impl_accounts_helpers_for_parachain!(PenpalB);
-impl_assets_helpers_for_parachain!(PenpalB, Paseo);
+impl_assets_helpers_for_parachain!(PenpalA);
+impl_assets_helpers_for_parachain!(PenpalB);
+impl_foreign_assets_helpers_for_parachain!(PenpalA, xcm::latest::Location);
+impl_foreign_assets_helpers_for_parachain!(PenpalB, xcm::latest::Location);
+impl_assert_events_helpers_for_parachain!(PenpalA);
 impl_assert_events_helpers_for_parachain!(PenpalB);

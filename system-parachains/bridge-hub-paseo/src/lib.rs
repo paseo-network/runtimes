@@ -24,6 +24,8 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 pub mod bridge_to_ethereum_config;
 pub mod bridge_to_kusama_config;
+// Genesis preset configurations.
+pub mod genesis_config_presets;
 mod weights;
 pub mod xcm_config;
 
@@ -41,7 +43,7 @@ use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT},
+	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, Get},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult,
 };
@@ -54,13 +56,13 @@ use sp_version::RuntimeVersion;
 use frame_support::{
 	construct_runtime,
 	dispatch::DispatchClass,
-	genesis_builder_helper::{build_config, create_default_config},
+	genesis_builder_helper::{build_state, get_preset},
 	parameter_types,
 	traits::{
 		tokens::imbalance::ResolveTo, ConstBool, ConstU32, ConstU64, ConstU8, EitherOfDiverse,
 		Everything, TransformOrigin,
 	},
-	weights::{ConstantMultiplier, Weight},
+	weights::{ConstantMultiplier, Weight, WeightToFee as _},
 	PalletId,
 };
 use frame_system::{
@@ -78,7 +80,6 @@ use xcm_config::{
 pub use sp_runtime::BuildStorage;
 
 // Polkadot imports
-use paseo_runtime_constants::system_parachain::{ASSET_HUB_ID, BRIDGE_HUB_ID};
 use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
@@ -93,6 +94,10 @@ use system_parachains_constants::{
 
 // XCM Imports
 use xcm::prelude::*;
+use xcm_runtime_apis::{
+	dry_run::{CallDryRunEffects, Error as XcmDryRunApiError, XcmDryRunEffects},
+	fees::Error as XcmPaymentApiError,
+};
 
 /// The address format for describing accounts.
 pub type Address = MultiAddress<AccountId, ()>;
@@ -135,21 +140,10 @@ bridge_runtime_common::generate_bridge_reject_obsolete_headers_and_messages! {
 pub type UncheckedExtrinsic =
 	generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
 
-parameter_types! {
-	pub DmpQueueName: &'static str = "DmpQueue";
-}
-
 /// Migrations to apply on runtime upgrade.
 pub type Migrations = (
-	// unreleased
-	frame_support::migrations::RemovePallet<DmpQueueName, RocksDbWeight>,
-	cumulus_pallet_xcmp_queue::migration::v4::MigrationToV4<Runtime>,
-	snowbridge_pallet_system::migration::v0::InitializeOnUpgrade<
-		Runtime,
-		ConstU32<BRIDGE_HUB_ID>,
-		ConstU32<ASSET_HUB_ID>,
-	>,
-	pallet_collator_selection::migration::v2::MigrationToV2<Runtime>,
+	// unreleased and/or un-applied
+	cumulus_pallet_xcmp_queue::migration::v5::MigrateV4ToV5<Runtime>,
 	// permanent
 	pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
 );
@@ -175,7 +169,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bridge-hub-paseo"),
 	impl_name: create_runtime_str!("bridge-hub-paseo"),
 	authoring_version: 1,
-	spec_version: 1_002_008,
+	spec_version: 1_003_000,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 4,
@@ -261,6 +255,11 @@ impl frame_system::Config for Runtime {
 	/// The action to take on a Runtime Upgrade
 	type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
 	type MaxConsumers = ConstU32<16>;
+	type SingleBlockMigrations = ();
+	type MultiBlockMigrator = ();
+	type PreInherents = ();
+	type PostInherents = ();
+	type PostTransactions = ();
 }
 
 impl pallet_timestamp::Config for Runtime {
@@ -347,7 +346,11 @@ parameter_types! {
 	/// from 35% to 60% of the max block weight to accommodate the Ethereum beacon light client
 	/// extrinsics. The `force_checkpoint` and `submit` extrinsics (for submit, optionally) includes
 	/// the sync committee's pubkeys (512 x 48 bytes).
+	/// Furthermore, Bridge Hub is a specialized chain for moving messages between sibling
+	/// parachains and external ecosystems. As such, most of the block weight is expected to be
+	/// consumed by the Message Queue.
 	pub MessageQueueServiceWeight: Weight = Perbill::from_percent(60) * RuntimeBlockWeights::get().max_block;
+	pub MessageQueueIdleServiceWeight: Weight = Perbill::from_percent(20) * RuntimeBlockWeights::get().max_block;
 }
 
 impl pallet_message_queue::Config for Runtime {
@@ -376,6 +379,7 @@ impl pallet_message_queue::Config for Runtime {
 	type HeapSize = sp_core::ConstU32<{ 64 * 1024 }>;
 	type MaxStale = sp_core::ConstU32<8>;
 	type ServiceWeight = MessageQueueServiceWeight;
+	type IdleMaxServiceWeight = MessageQueueIdleServiceWeight;
 }
 
 impl cumulus_pallet_aura_ext::Config for Runtime {}
@@ -415,11 +419,20 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type VersionWrapper = PolkadotXcm;
 	// Enqueue XCMP messages from siblings for later processing.
 	type XcmpQueue = TransformOrigin<MessageQueue, AggregateMessageOrigin, ParaId, ParaIdToSibling>;
+	type MaxActiveOutboundChannels = ConstU32<128>;
+	// Most on-chain HRMP channels are configured to use 102400 bytes of max message size, so we
+	// need to set the page size larger than that until we reduce the channel size on-chain.
+	type MaxPageSize = ConstU32<{ 103 * 1024 }>;
 	type MaxInboundSuspended = sp_core::ConstU32<1_000>;
 	type ControllerOrigin = RootOrFellows;
 	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
 	type WeightInfo = weights::cumulus_pallet_xcmp_queue::WeightInfo<Runtime>;
 	type PriceForSiblingDelivery = PriceForSiblingParachainDelivery;
+}
+
+impl cumulus_pallet_xcmp_queue::migration::v5::V5Config for Runtime {
+	// This must be the same as the `ChannelInfo` from the `Config`:
+	type ChannelList = ParachainSystem;
 }
 
 pub const PERIOD: u32 = 6 * HOURS;
@@ -591,7 +604,7 @@ impl_runtime_apis! {
 		}
 
 		fn authorities() -> Vec<AuraId> {
-			Aura::authorities().into_inner()
+			pallet_aura::Authorities::<Runtime>::get().into_inner()
 		}
 	}
 
@@ -613,7 +626,7 @@ impl_runtime_apis! {
 			Executive::execute_block(block)
 		}
 
-		fn initialize_block(header: &<Block as BlockT>::Header) {
+		fn initialize_block(header: &<Block as BlockT>::Header) -> sp_runtime::ExtrinsicInclusionMode {
 			Executive::initialize_block(header)
 		}
 	}
@@ -731,6 +744,60 @@ impl_runtime_apis! {
 		}
 	}
 
+	impl xcm_runtime_apis::fees::XcmPaymentApi<Block> for Runtime {
+		fn query_acceptable_payment_assets(xcm_version: xcm::Version) -> Result<Vec<VersionedAssetId>, XcmPaymentApiError> {
+			let acceptable_assets = vec![AssetId(xcm_config::DotRelayLocation::get())];
+			PolkadotXcm::query_acceptable_payment_assets(xcm_version, acceptable_assets)
+		}
+
+		fn query_weight_to_asset_fee(weight: Weight, asset: VersionedAssetId) -> Result<u128, XcmPaymentApiError> {
+			match asset.try_as::<AssetId>() {
+				Ok(asset_id) if asset_id.0 == xcm_config::DotRelayLocation::get() => {
+					// for native token
+					Ok(WeightToFee::weight_to_fee(&weight))
+				},
+				Ok(asset_id) => {
+					log::trace!(target: "xcm::xcm_runtime_apis", "query_weight_to_asset_fee - unhandled asset_id: {asset_id:?}!");
+					Err(XcmPaymentApiError::AssetNotFound)
+				},
+				Err(_) => {
+					log::trace!(target: "xcm::xcm_runtime_apis", "query_weight_to_asset_fee - failed to convert asset: {asset:?}!");
+					Err(XcmPaymentApiError::VersionedConversionFailed)
+				}
+			}
+		}
+
+		fn query_xcm_weight(message: VersionedXcm<()>) -> Result<Weight, XcmPaymentApiError> {
+			PolkadotXcm::query_xcm_weight(message)
+		}
+
+		fn query_delivery_fees(destination: VersionedLocation, message: VersionedXcm<()>) -> Result<VersionedAssets, XcmPaymentApiError> {
+			PolkadotXcm::query_delivery_fees(destination, message)
+		}
+	}
+
+	impl xcm_runtime_apis::dry_run::DryRunApi<Block, RuntimeCall, RuntimeEvent, OriginCaller> for Runtime {
+		fn dry_run_call(origin: OriginCaller, call: RuntimeCall) -> Result<CallDryRunEffects<RuntimeEvent>, XcmDryRunApiError> {
+			PolkadotXcm::dry_run_call::<Runtime, xcm_config::XcmRouter, OriginCaller, RuntimeCall>(origin, call)
+		}
+
+		fn dry_run_xcm(origin_location: VersionedLocation, xcm: VersionedXcm<RuntimeCall>) -> Result<XcmDryRunEffects<RuntimeEvent>, XcmDryRunApiError> {
+			PolkadotXcm::dry_run_xcm::<Runtime, xcm_config::XcmRouter, RuntimeCall, xcm_config::XcmConfig>(origin_location, xcm)
+		}
+	}
+
+	impl xcm_runtime_apis::conversions::LocationToAccountApi<Block, AccountId> for Runtime {
+		fn convert_location(location: VersionedLocation) -> Result<
+			AccountId,
+			xcm_runtime_apis::conversions::Error
+		> {
+			xcm_runtime_apis::conversions::LocationToAccountHelper::<
+				AccountId,
+				xcm_config::LocationToAccountId,
+			>::convert_location(location)
+		}
+	}
+
 	impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
 		fn collect_collation_info(header: &<Block as BlockT>::Header) -> cumulus_primitives_core::CollationInfo {
 			ParachainSystem::collect_collation_info(header)
@@ -738,18 +805,31 @@ impl_runtime_apis! {
 	}
 
 	impl sp_genesis_builder::GenesisBuilder<Block> for Runtime {
-		fn create_default_config() -> Vec<u8> {
-			create_default_config::<RuntimeGenesisConfig>()
+		fn build_state(config: Vec<u8>) -> sp_genesis_builder::Result {
+			build_state::<RuntimeGenesisConfig>(config)
 		}
 
-		fn build_config(config: Vec<u8>) -> sp_genesis_builder::Result {
-			build_config::<RuntimeGenesisConfig>(config)
+		fn get_preset(id: &Option<sp_genesis_builder::PresetId>) -> Option<Vec<u8>> {
+			get_preset::<RuntimeGenesisConfig>(id, &genesis_config_presets::get_preset)
+		}
+
+		fn preset_names() -> Vec<sp_genesis_builder::PresetId> {
+			vec![
+				sp_genesis_builder::PresetId::from("local_testnet"),
+				sp_genesis_builder::PresetId::from("development"),
+			]
 		}
 	}
 
 	impl bp_kusama::KusamaFinalityApi<Block> for Runtime {
 		fn best_finalized() -> Option<bp_runtime::HeaderId<bp_kusama::Hash, bp_kusama::BlockNumber>> {
 			BridgeKusamaGrandpa::best_finalized()
+		}
+
+		fn free_headers_interval() -> Option<bp_kusama::BlockNumber> {
+			<Runtime as pallet_bridge_grandpa::Config<
+				bridge_to_kusama_config::BridgeGrandpaKusamaInstance
+			>>::FreeHeadersInterval::get()
 		}
 
 		fn synced_headers_grandpa_info(
@@ -763,6 +843,11 @@ impl_runtime_apis! {
 			BridgeKusamaParachains::best_parachain_head_id::<
 				bp_bridge_hub_kusama::BridgeHubKusama
 			>().unwrap_or(None)
+		}
+
+		fn free_headers_interval() -> Option<bp_bridge_hub_kusama::BlockNumber> {
+			// "free interval" is not currently used for parachains
+			None
 		}
 	}
 
@@ -1089,20 +1174,20 @@ impl_runtime_apis! {
 			use pallet_bridge_parachains::benchmarking::Config as BridgeParachainsConfig;
 
 			impl BridgeParachainsConfig<bridge_to_kusama_config::BridgeParachainKusamaInstance> for Runtime {
-				fn parachains() -> Vec<bp_paseo_core::parachains::ParaId> {
+				fn parachains() -> Vec<bp_polkadot_core::parachains::ParaId> {
 					use bp_runtime::Parachain;
-					vec![bp_paseo_core::parachains::ParaId(bp_bridge_hub_kusama::BridgeHubKusama::PARACHAIN_ID)]
+					vec![bp_polkadot_core::parachains::ParaId(bp_bridge_hub_kusama::BridgeHubKusama::PARACHAIN_ID)]
 				}
 
 				fn prepare_parachain_heads_proof(
-					parachains: &[bp_paseo_core::parachains::ParaId],
+					parachains: &[bp_polkadot_core::parachains::ParaId],
 					parachain_head_size: u32,
 					proof_size: bp_runtime::StorageProofSize,
 				) -> (
 					pallet_bridge_parachains::RelayBlockNumber,
 					pallet_bridge_parachains::RelayBlockHash,
-					bp_paseo_core::parachains::ParaHeadsProof,
-					Vec<(bp_paseo_core::parachains::ParaId, bp_paseo_core::parachains::ParaHash)>,
+					bp_polkadot_core::parachains::ParaHeadsProof,
+					Vec<(bp_polkadot_core::parachains::ParaId, bp_polkadot_core::parachains::ParaHash)>,
 				) {
 					prepare_parachain_heads_proof::<Runtime, bridge_to_kusama_config::BridgeParachainKusamaInstance>(
 						parachains,
@@ -1147,7 +1232,7 @@ impl_runtime_apis! {
 						Runtime,
 						bridge_to_kusama_config::BridgeGrandpaKusamaInstance,
 						bridge_to_kusama_config::WithBridgeHubKusamaMessageBridge,
-					>(params, generate_xcm_builder_bridge_message_sample([GlobalConsensus(Paseo), Parachain(42)].into()))
+					>(params, generate_xcm_builder_bridge_message_sample([GlobalConsensus(Polkadot), Parachain(42)].into()))
 				}
 
 				fn prepare_message_delivery_proof(
@@ -1198,9 +1283,9 @@ mod tests {
 	use super::*;
 
 	#[test]
-	fn test_transasction_byte_fee_is_one_tenth_of_relay() {
+	fn test_transasction_byte_fee_is_one_twentieth_of_relay() {
 		let relay_tbf = paseo_runtime_constants::fee::TRANSACTION_BYTE_FEE;
 		let parachain_tbf = TransactionByteFee::get();
-		assert_eq!(relay_tbf / 10, parachain_tbf);
+		assert_eq!(relay_tbf / 20, parachain_tbf);
 	}
 }

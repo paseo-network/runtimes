@@ -29,11 +29,11 @@ use emulated_integration_tests_common::{
 	accounts, build_genesis_storage, get_account_id_from_seed, get_from_seed, get_host_config,
 };
 use parachains_common::Balance;
-use paseo_runtime_constants::currency::UNITS as DOT;
+use paseo_runtime_constants::currency::UNITS as PAS;
 
 pub const ED: Balance = paseo_runtime::ExistentialDeposit::get();
-const ENDOWMENT: u128 = 1_000_000 * DOT;
-const STASH: u128 = 100 * DOT;
+const ENDOWMENT: u128 = 1_000_000 * PAS;
+const STASH: u128 = 100 * PAS;
 
 mod validators {
 	use super::*;
@@ -112,7 +112,7 @@ pub fn genesis() -> Storage {
 			minimum_validator_count: 1,
 			stakers: validators::initial_authorities()
 				.iter()
-				.map(|x| (x.0.clone(), x.1.clone(), STASH, paseo_runtime::StakerStatus::Validator))
+				.map(|x| (x.0.clone(), x.1.clone(), STASH, pallet_staking::StakerStatus::Validator))
 				.collect(),
 			invulnerables: validators::initial_authorities().iter().map(|x| x.0.clone()).collect(),
 			force_era: pallet_staking::Forcing::ForceNone,
@@ -121,7 +121,7 @@ pub fn genesis() -> Storage {
 		},
 		babe: paseo_runtime::BabeConfig {
 			authorities: Default::default(),
-			epoch_config: Some(paseo_runtime::BABE_GENESIS_EPOCH_CONFIG),
+			epoch_config: paseo_runtime::BABE_GENESIS_EPOCH_CONFIG,
 			..Default::default()
 		},
 		configuration: paseo_runtime::ConfigurationConfig { config: get_host_config() },
