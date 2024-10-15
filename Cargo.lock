@@ -2114,6 +2114,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sp-api",
+ "sp-arithmetic 26.0.0",
  "sp-block-builder",
  "sp-consensus-aura",
  "sp-core",
