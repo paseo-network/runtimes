@@ -103,11 +103,11 @@ fn transact_hardcoded_weights_are_sane() {
 
 	// Check that the request_core_count message was processed successfully. This will fail if the
 	// weights are misconfigured.
-	Polkadot::execute_with(|| {
-		Polkadot::assert_ump_queue_processed(true, Some(CoretimePolkadot::para_id()), None);
+	Paseo::execute_with(|| {
+		Paseo::assert_ump_queue_processed(true, Some(CoretimePolkadot::para_id()), None);
 
 		assert_expected_events!(
-			Polkadot,
+			Paseo,
 			vec![
 				RelayEvent::MessageQueue(
 					pallet_message_queue::Event::Processed { success: true, .. }
@@ -118,7 +118,7 @@ fn transact_hardcoded_weights_are_sane() {
 
 	// Keep track of the relay chain block number so we can fast forward while still checking the
 	// right block.
-	let mut block_number_cursor = Polkadot::ext_wrapper(<Polkadot as Chain>::System::block_number);
+	let mut block_number_cursor = Paseo::ext_wrapper(<Paseo as Chain>::System::block_number);
 
 	let config = CoretimePolkadot::ext_wrapper(|| {
 		Configuration::<<CoretimePolkadot as Chain>::Runtime>::get()
@@ -134,8 +134,8 @@ fn transact_hardcoded_weights_are_sane() {
 			);
 		});
 
-		Polkadot::ext_wrapper(|| {
-			block_number_cursor = <Polkadot as Chain>::System::block_number();
+		Paseo::ext_wrapper(|| {
+			block_number_cursor = <Paseo as Chain>::System::block_number();
 		});
 	}
 
@@ -181,11 +181,11 @@ fn transact_hardcoded_weights_are_sane() {
 
 	// Check that the assign_core and request_revenue_info_at messages were processed successfully.
 	// This will fail if the weights are misconfigured.
-	Polkadot::execute_with(|| {
-		Polkadot::assert_ump_queue_processed(true, Some(CoretimePolkadot::para_id()), None);
+	Paseo::execute_with(|| {
+		Paseo::assert_ump_queue_processed(true, Some(CoretimePolkadot::para_id()), None);
 
 		assert_expected_events!(
-			Polkadot,
+			Paseo,
 			vec![
 				RelayEvent::MessageQueue(
 					pallet_message_queue::Event::Processed { success: true, .. }
