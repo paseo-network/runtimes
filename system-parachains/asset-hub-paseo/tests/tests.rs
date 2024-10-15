@@ -19,18 +19,18 @@
 
 use asset_hub_paseo_runtime::{
 	xcm_config::{
-		bridging::self,
+		bridging::{self, XcmBridgeHubRouterFeeAssetId},
 		CheckingAccount, DotLocation, ForeignCreatorsSovereignAccountOf, LocationToAccountId,
 		RelayTreasuryLocation, RelayTreasuryPalletAccount, StakingPot,
 		TrustBackedAssetsPalletLocation, XcmConfig,
 	},
 	AllPalletsWithoutSystem, AssetConversion, AssetDeposit, Assets, Balances, ExistentialDeposit,
 	ForeignAssets, ForeignAssetsInstance, MetadataDepositBase, MetadataDepositPerByte,
-	ParachainSystem, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, SessionKeys,
-	TrustBackedAssetsInstance, XcmpQueue, SLOT_DURATION,
+	ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, SessionKeys,
+	ToKusamaXcmRouterInstance, TrustBackedAssetsInstance, XcmpQueue, SLOT_DURATION,
 };
 use asset_test_utils::{
-	CollatorSessionKey, CollatorSessionKeys, ExtBuilder,
+	test_cases_over_bridge::TestBridgingConfig, CollatorSessionKey, CollatorSessionKeys, ExtBuilder,
 };
 use codec::{Decode, Encode};
 use frame_support::{assert_ok, traits::fungibles::InspectEnumerable};
@@ -47,9 +47,6 @@ use system_parachains_constants::{
 use xcm::latest::prelude::{Assets as XcmAssets, *};
 use xcm_builder::WithLatestLocationConverter;
 use xcm_executor::traits::{ConvertLocation, JustTry};
-use asset_hub_paseo_runtime::ToKusamaXcmRouterInstance;
-use asset_hub_paseo_runtime::xcm_config::bridging::XcmBridgeHubRouterFeeAssetId;
-use asset_test_utils::test_cases_over_bridge::TestBridgingConfig;
 
 const ALICE: [u8; 32] = [1u8; 32];
 const SOME_ASSET_ADMIN: [u8; 32] = [5u8; 32];

@@ -10,6 +10,8 @@ kusama-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes
 bp-bridge-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.3.3", package = "bp-bridge-hub-kusama", default-features = false  }
 bp-bridge-hub-polkadot = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.3.3", package = "bp-bridge-hub-polkadot", default-features = false  }
 bp-asset-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.3.3", package = "bp-asset-hub-kusama", default-features = false  }
+collectives-polkadot-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.3.3", package = "collectives-polkadot-runtime-constants", default-features = false  }
+
 
 # Local dependencies
 

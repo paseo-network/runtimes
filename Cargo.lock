@@ -587,6 +587,7 @@ dependencies = [
  "bp-bridge-hub-kusama",
  "bp-bridge-hub-paseo",
  "bp-bridge-hub-polkadot",
+ "collectives-polkadot-runtime-constants",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-session-benchmarking",
@@ -1894,6 +1895,11 @@ dependencies = [
  "termcolor",
  "unicode-width",
 ]
+
+[[package]]
+name = "collectives-polkadot-runtime-constants"
+version = "1.0.0"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.3#55bd514d60311b67cb11400a545cb64ce7a87c0e"
 
 [[package]]
 name = "colorchoice"
