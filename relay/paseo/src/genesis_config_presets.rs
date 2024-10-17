@@ -125,7 +125,7 @@ fn default_parachains_host_configuration() -> HostConfiguration<polkadot_primiti
 		minimum_backing_votes: 1,
 		node_features: NodeFeatures::EMPTY,
 		async_backing_params: AsyncBackingParams {
-			max_candidate_depth: 2,
+			max_candidate_depth: 3,
 			allowed_ancestry_len: 2,
 		},
 		executor_params: Default::default(),
