@@ -27,6 +27,7 @@ PARACHAINS=(
     "asset_hub  asset-hubs/asset-hub-polkadot   asset-hub-paseo"
     "bridge_hub bridge-hubs/bridge-hub-polkadot bridge-hub-paseo"
     "people     people/people-polkadot          people-paseo"
+    "coretime   coretime/coretime-polkadot      coretime-paseo"
 )
 
 # Initialize default values
@@ -75,9 +76,9 @@ print_message "Paseo reference branch: ${PASEO_BRANCH}" "${GREEN}"
 print_message "Parachains processing: ${PROCESS_PARACHAINS}" "${GREEN}"
 print_message "========================================" "${GREEN}"
 
-rm -rf tmp_runtime
-mkdir tmp_runtime
-cd tmp_runtime
+rm -rf .tmp_runtime
+mkdir .tmp_runtime
+cd .tmp_runtime
 
 print_message "----- Cloning repositories -----" "${BLUE}"
 print_message "Cloning paseo-network/runtimes branch: ${PASEO_BRANCH}" "${BLUE}"

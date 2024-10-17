@@ -27,12 +27,12 @@ use frame_support::{
 };
 use frame_system::EnsureRoot;
 use pallet_xcm::XcmPassthrough;
-use paseo_runtime_constants::{
-	currency::CENTS, system_parachain::*, xcm::body::FELLOWSHIP_ADMIN_INDEX,
-};
 use polkadot_runtime_common::{
 	xcm_sender::{ChildParachainRouter, ExponentialPrice},
 	ToAuthor,
+};
+use paseo_runtime_constants::{
+	currency::CENTS, system_parachain::*, xcm::body::FELLOWSHIP_ADMIN_INDEX,
 };
 use sp_core::ConstU32;
 use xcm::latest::prelude::*;
@@ -267,7 +267,7 @@ pub type GeneralAdminToPlurality =
 /// location of this chain.
 pub type LocalOriginToLocation = (
 	GeneralAdminToPlurality,
-	// And a usual Signed origin to be used in XCM as a corresponding AccountId32
+	// And a usual Signed origin to be used in XCM as a corresponding `AccountId32`.
 	SignedToAccountId32<RuntimeOrigin, AccountId, ThisNetwork>,
 );
 
@@ -284,7 +284,7 @@ pub type TreasurerToPlurality = OriginToPluralityVoice<RuntimeOrigin, Treasurer,
 
 /// Type to convert a pallet `Origin` type value into a `Location` value which represents an
 /// interior location of this chain for a destination chain.
-pub type LocalPalletOriginToLocation = (
+pub type LocalPalletOrSignedOriginToLocation = (
 	// GeneralAdmin origin to be used in XCM as a corresponding Plurality `Location` value.
 	GeneralAdminToPlurality,
 	// StakingAdmin origin to be used in XCM as a corresponding Plurality `Location` value.
@@ -293,13 +293,16 @@ pub type LocalPalletOriginToLocation = (
 	FellowshipAdminToPlurality,
 	// `Treasurer` origin to be used in XCM as a corresponding Plurality `Location` value.
 	TreasurerToPlurality,
+	// And a usual Signed origin to be used in XCM as a corresponding `AccountId32`.
+	SignedToAccountId32<RuntimeOrigin, AccountId, ThisNetwork>,
 );
 
 impl pallet_xcm::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	// We only allow the root, the general admin, the fellowship admin and the staking admin to send
-	// messages.
-	type SendXcmOrigin = xcm_builder::EnsureXcmOrigin<RuntimeOrigin, LocalPalletOriginToLocation>;
+	// This is safe to enable for everyone (save the possibility of someone spamming a parachain
+	// if they're willing to pay the PAS to send from the Relay-chain).
+	type SendXcmOrigin =
+		xcm_builder::EnsureXcmOrigin<RuntimeOrigin, LocalPalletOrSignedOriginToLocation>;
 	type XcmRouter = XcmRouter;
 	// Anyone can execute XCM messages locally.
 	type ExecuteXcmOrigin = xcm_builder::EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
