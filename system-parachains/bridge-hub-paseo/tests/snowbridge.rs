@@ -30,6 +30,7 @@ use cumulus_primitives_core::XcmError::{FailedToTransactAsset, TooExpensive};
 use frame_support::{parameter_types, traits::Contains};
 use parachains_common::{AccountId, AuraId, Balance};
 pub use parachains_runtimes_test_utils::test_cases::change_storage_constant_by_governance_works;
+use snowbridge_beacon_primitives::{Fork, ForkVersions};
 use snowbridge_pallet_ethereum_client::WeightInfo;
 use sp_core::H160;
 use sp_keyring::AccountKeyring::Alice;
@@ -152,8 +153,8 @@ fn test_xcm_fee_manager_from_components_bh_origin_in_waived_locations() {
 
 /// Fee is waived when origin is in waived location with Export message, but not to Ethereum.
 #[test]
-fn test_xcm_fee_manager_from_components_bh_origin_in_waived_locations_with_export_to_paseo_reason(
-) {
+fn test_xcm_fee_manager_from_components_bh_origin_in_waived_locations_with_export_to_paseo_reason()
+{
 	assert!(TestXcmFeeManager::is_waived(
 		Some(&Location::new(1, [Parachain(2)])),
 		FeeReason::Export { network: Polkadot, destination: Here }
@@ -212,6 +213,35 @@ fn ethereum_to_paseo_message_extrinsics_work() {
 		1013,
 		construct_and_apply_extrinsic,
 	);
+}
+
+#[test]
+fn fork_versions_are_set_to_sepolia() {
+	assert_eq!(
+		ForkVersions {
+			genesis: Fork {
+				version: [0, 0, 0, 0], // 0x00000000
+				epoch: 0,
+			},
+			altair: Fork {
+				version: [1, 0, 0, 0], // 0x01000000
+				epoch: 74240,
+			},
+			bellatrix: Fork {
+				version: [2, 0, 0, 0], // 0x02000000
+				epoch: 144896,
+			},
+			capella: Fork {
+				version: [3, 0, 0, 0], // 0x03000000
+				epoch: 194048,
+			},
+			deneb: Fork {
+				version: [4, 0, 0, 0], // 0x04000000
+				epoch: 269568,
+			},
+		},
+		bridge_hub_paseo_runtime::bridge_to_ethereum_config::ChainForkVersions::get()
+	)
 }
 
 #[test]
