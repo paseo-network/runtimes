@@ -91,24 +91,24 @@ impl snowbridge_pallet_outbound_queue::Config for Runtime {
 parameter_types! {
 	pub const ChainForkVersions: ForkVersions = ForkVersions {
 		genesis: Fork {
-			version: [0, 0, 0, 0], // 0x00000000
+			version: [144, 0, 0, 111], // 0x90000069
 			epoch: 0,
 		},
 		altair: Fork {
-			version: [1, 0, 0, 0], // 0x01000000
-			epoch: 74240,
+			version: [144, 0, 0, 112], // 0x90000070
+			epoch: 50,
 		},
 		bellatrix: Fork {
-			version: [2, 0, 0, 0], // 0x02000000
-			epoch: 144896,
+			version: [144, 0, 0, 113], // 0x90000071
+			epoch: 100,
 		},
 		capella: Fork {
-			version: [3, 0, 0, 0], // 0x03000000
-			epoch: 194048,
+			version: [144, 0, 0, 114], // 0x90000072
+			epoch: 56832,
 		},
 		deneb: Fork {
-			version: [4, 0, 0, 0], // 0x04000000
-			epoch: 269568,
+			version: [144, 0, 0, 115], // 0x90000073
+			epoch: 132608,
 		},
 	};
 }
