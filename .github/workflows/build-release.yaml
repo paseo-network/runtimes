@@ -11,6 +11,8 @@ on:
 jobs:
   generate-chain-specs:
     uses: ./.github/workflows/generate-chain-specs.yaml
+    permissions:
+      contents: write 
     with:
       tag_version: ${{ github.event.inputs.tag_version }}
 
