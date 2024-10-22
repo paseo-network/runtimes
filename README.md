@@ -1,6 +1,6 @@
 # Runtimes
 
-Work In Progress runtime for Paseo Polkadot community testnet.
+Runtimes for Polkadot's community testnet.
 
 ## Structure
 
@@ -9,7 +9,9 @@ Work In Progress runtime for Paseo Polkadot community testnet.
 │   ├── paseo
 └── system-parachains
     ├── asset-hub-paseo
-        ├── bp-asset-hub-paseo
+    │    ├── bp-asset-hub-paseo
     ├── bridge-hub-paseo
-        ├── bp-bridge-hub-paseo
+    │    ├── bp-bridge-hub-paseo
+    ├── people-paseo
+    ├── coretime-paseo
 ```
