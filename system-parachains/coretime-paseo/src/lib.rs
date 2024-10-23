@@ -118,7 +118,7 @@ pub type UncheckedExtrinsic =
 pub type Migrations = (
 	// permanent
 	pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
-	migrations::FixMigration,
+	//migrations::FixMigration,
 );
 
 /// Executive: handles dispatch to the various modules.
