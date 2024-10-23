@@ -1,5 +1,6 @@
-// Copyright (C) Parity Technologies and the various Paseo contributors, see Contributions.md
-// for a list of specific contributors.
+// This file is part of Substrate.
+
+// Copyright (C) Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
