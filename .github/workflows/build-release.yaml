@@ -11,6 +11,9 @@ on:
 jobs:
   generate-chain-specs:
     uses: ./.github/workflows/generate-chain-specs.yaml
+    permissions:
+      contents: write 
+      packages: write
     with:
       tag_version: ${{ github.event.inputs.tag_version }}
 
@@ -107,6 +110,7 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: true
+          token: ${{ secrets.PASEO_RUNTIME_CI_PAT }}
           append_body: true
           body: |
             ## Runtime: `${{ matrix.runtime.name }}`
@@ -122,5 +126,3 @@ jobs:
           files: |
             ${{ steps.srtool_build.outputs.wasm_compressed }}
             ${{ matrix.runtime.name }}-srtool-digest.json
-        env:
-          GITHUB_TOKEN: ${{ secrets.PASEO_RUNTIME_CI_PAT }}

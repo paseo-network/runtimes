@@ -35,9 +35,8 @@ use frame_support::{
 	weights::WeightToFee as WeightToFeeT,
 };
 use parachains_common::{AccountId, AuraId};
-use paseo_runtime_constants::currency::UNITS;
 use sp_runtime::traits::MaybeEquivalence;
-use system_parachains_constants::paseo::fee::WeightToFee;
+use system_parachains_constants::paseo::{currency::*, fee::WeightToFee};
 use xcm::latest::prelude::*;
 use xcm_executor::traits::WeightTrader;
 
