@@ -13,6 +13,7 @@ jobs:
     uses: ./.github/workflows/generate-chain-specs.yaml
     permissions:
       contents: write 
+      packages: write
     with:
       tag_version: ${{ github.event.inputs.tag_version }}
 
