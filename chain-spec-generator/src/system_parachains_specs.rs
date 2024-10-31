@@ -73,8 +73,8 @@ pub fn bridge_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, Str
 				.expect("BridgeHubPaseo wasm not available!"),
 			Extensions { relay_chain: "paseo-local".into(), para_id: 1002 },
 		)
-		.with_name("Bridge Hub Paseo Local")
-		.with_id("bridge-hub-paseo-local")
+		.with_name("Paseo Bridge Hub Local")
+		.with_id("paseo-bridge-hub-local")
 		.with_chain_type(ChainType::Local)
 		.with_protocol_id("bh-pas")
 		.with_genesis_config_patch(
@@ -98,8 +98,8 @@ pub fn people_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, String>
 			people_paseo_runtime::WASM_BINARY.expect("PeoplePaseo wasm not available!"),
 			Extensions { relay_chain: "paseo-local".into(), para_id: 1004 },
 		)
-		.with_name("People Paseo Local")
-		.with_id("people-paseo-local")
+		.with_name("Paseo People Local")
+		.with_id("paseo-people-local")
 		.with_chain_type(ChainType::Local)
 		.with_protocol_id("pc-pas")
 		.with_genesis_config_patch(
@@ -123,8 +123,8 @@ pub fn coretime_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, Strin
 			coretime_paseo_runtime::WASM_BINARY.expect("CoretimePaseo wasm not available!"),
 			Extensions { relay_chain: "paseo-local".into(), para_id: 1005 },
 		)
-		.with_name("Coretime Paseo Local")
-		.with_id("coretime-paseo-local")
+		.with_name("Paseo Coretime Local")
+		.with_id("paseo-coretime-local")
 		.with_chain_type(ChainType::Local)
 		.with_protocol_id("ct-pas")
 		.with_genesis_config_preset_name("local_testnet")
@@ -144,8 +144,8 @@ pub fn coretime_paseo_tot_config() -> Result<Box<dyn ChainSpec>, String> {
 			coretime_paseo_runtime::WASM_BINARY.expect("CoretimePaseo wasm not available!"),
 			Extensions { relay_chain: "paseo".into(), para_id: 1005 },
 		)
-		.with_name("Coretime Paseo Local")
-		.with_id("coretime-paseo-local")
+		.with_name("Paseo Coretime Local")
+		.with_id("paseo-coretime-local")
 		.with_chain_type(ChainType::Live)
 		.with_protocol_id("ct-pas")
 		.with_genesis_config_preset_name("tot")
