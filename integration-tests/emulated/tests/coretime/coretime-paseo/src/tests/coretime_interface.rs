@@ -34,7 +34,7 @@ fn transact_hardcoded_weights_are_sane() {
 	type CoretimeEvent = <CoretimePolkadot as Chain>::RuntimeEvent;
 	type RelayEvent = <Paseo as Chain>::RuntimeEvent;
 
-	// Reserve a workload, configure broker and start s	ales.
+	// Reserve a workload, configure broker and start sales.
 	CoretimePolkadot::execute_with(|| {
 		// Hooks don't run in emulated tests - workaround as we need `on_initialize` to tick things
 		// along and have no concept of time passing otherwise.
