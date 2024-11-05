@@ -38,7 +38,7 @@ fn transact_hardcoded_weights_are_sane() {
 	CoretimePolkadot::execute_with(|| {
 		// Hooks don't run in emulated tests - workaround as we need `on_initialize` to tick things
 		// along and have no concept of time passing otherwise.
-		<CoretimePolkadot as CoretimePaseoPallet>::Broker::on_initialize(
+		<CoretimePolkadot as CoretimePolkadotPallet>::Broker::on_initialize(
 			<CoretimePolkadot as Chain>::System::block_number(),
 		);
 
@@ -53,7 +53,7 @@ fn transact_hardcoded_weights_are_sane() {
 			})
 		}
 
-		assert_ok!(<CoretimePolkadot as CoretimePaseoPallet>::Broker::reserve(
+		assert_ok!(<CoretimePolkadot as CoretimePolkadotPallet>::Broker::reserve(
 			coretime_root_origin.clone(),
 			schedule.try_into().expect("Vector is within bounds."),
 		));
@@ -69,11 +69,11 @@ fn transact_hardcoded_weights_are_sane() {
 			renewal_bump: Perbill::from_percent(2),
 			contribution_timeout: 1,
 		};
-		assert_ok!(<CoretimePolkadot as CoretimePaseoPallet>::Broker::configure(
+		assert_ok!(<CoretimePolkadot as CoretimePolkadotPallet>::Broker::configure(
 			coretime_root_origin.clone(),
 			config
 		));
-		assert_ok!(<CoretimePolkadot as CoretimePaseoPallet>::Broker::start_sales(
+		assert_ok!(<CoretimePolkadot as CoretimePolkadotPallet>::Broker::start_sales(
 			coretime_root_origin,
 			100,
 			0
@@ -129,7 +129,7 @@ fn transact_hardcoded_weights_are_sane() {
 	while block_number_cursor < TIMESLICE_PERIOD - config.advance_notice - 1 {
 		CoretimePolkadot::execute_with(|| {
 			// Hooks don't run in emulated tests - workaround.
-			<CoretimePolkadot as CoretimePaseoPallet>::Broker::on_initialize(
+			<CoretimePolkadot as CoretimePolkadotPallet>::Broker::on_initialize(
 				<CoretimePolkadot as Chain>::System::block_number(),
 			);
 		});
@@ -142,7 +142,7 @@ fn transact_hardcoded_weights_are_sane() {
 	// In this block we trigger assign core.
 	CoretimePolkadot::execute_with(|| {
 		// Hooks don't run in emulated tests - workaround.
-		<CoretimePolkadot as CoretimePaseoPallet>::Broker::on_initialize(
+		<CoretimePolkadot as CoretimePolkadotPallet>::Broker::on_initialize(
 			<CoretimePolkadot as Chain>::System::block_number(),
 		);
 
@@ -165,7 +165,7 @@ fn transact_hardcoded_weights_are_sane() {
 	// In this block we trigger request revenue.
 	CoretimePolkadot::execute_with(|| {
 		// Hooks don't run in emulated tests - workaround.
-		<CoretimePolkadot as CoretimePaseoPallet>::Broker::on_initialize(
+		<CoretimePolkadot as CoretimePolkadotPallet>::Broker::on_initialize(
 			<CoretimePolkadot as Chain>::System::block_number(),
 		);
 
@@ -203,7 +203,7 @@ fn transact_hardcoded_weights_are_sane() {
 	// Here we receive and process the notify_revenue XCM with zero revenue.
 	CoretimePolkadot::execute_with(|| {
 		// Hooks don't run in emulated tests - workaround.
-		<CoretimePolkadot as CoretimePaseoPallet>::Broker::on_initialize(
+		<CoretimePolkadot as CoretimePolkadotPallet>::Broker::on_initialize(
 			<CoretimePolkadot as Chain>::System::block_number(),
 		);
 
