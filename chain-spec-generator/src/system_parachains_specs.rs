@@ -47,8 +47,8 @@ pub fn asset_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, Stri
 			asset_hub_paseo_runtime::WASM_BINARY.expect("AssetHubPaseo wasm not available!"),
 			Extensions { relay_chain: "paseo-local".into(), para_id: 1000 },
 		)
-		.with_name("Paseo Asset Hub Local")
-		.with_id("paseo-asset-hub-local")
+		.with_name("Asset Hub Paseo Local")
+		.with_id("asset-hub-paseo-local")
 		.with_chain_type(ChainType::Local)
 		.with_protocol_id("ah-pas")
 		.with_genesis_config_patch(
