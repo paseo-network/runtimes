@@ -57,6 +57,9 @@ fn bridge_hub_paseo_genesis(
 				})
 				.collect(),
 		},
+		"sudo": {
+			"key": Some(get_account_id_from_seed::<sr25519::Public>("Alice"))
+		},
 		"polkadotXcm": {
 			"safeXcmVersion": Some(SAFE_XCM_VERSION),
 		},
