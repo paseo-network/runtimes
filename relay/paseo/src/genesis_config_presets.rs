@@ -148,7 +148,7 @@ fn paseo_testnet_genesis(
 		AuthorityDiscoveryId,
 		BeefyId,
 	)>,
-	_root_key: AccountId,
+	root_key: AccountId,
 	endowed_accounts: Option<Vec<AccountId>>,
 ) -> serde_json::Value {
 	let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(testnet_accounts);
@@ -196,6 +196,9 @@ fn paseo_testnet_genesis(
 		"configuration": {
 			"config": default_parachains_host_configuration(),
 		},
+		"sudo": {
+			"key": Some(root_key),
+		},
 	})
 }
 
@@ -214,7 +217,7 @@ pub fn paseo_local_testnet_genesis() -> serde_json::Value {
 	paseo_testnet_genesis(
 		vec![get_authority_keys_from_seed("Alice"), get_authority_keys_from_seed("Bob")],
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
-		None,
+		None
 	)
 }
 
@@ -222,7 +225,7 @@ pub fn paseo_development_config_genesis() -> serde_json::Value {
 	paseo_testnet_genesis(
 		vec![get_authority_keys_from_seed("Alice")],
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
-		None,
+		None
 	)
 }
 
