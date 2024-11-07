@@ -145,7 +145,7 @@ pub fn coretime_paseo_tot_config() -> Result<Box<dyn ChainSpec>, String> {
 			Extensions { relay_chain: "paseo".into(), para_id: 1005 },
 		)
 		.with_name("Paseo Coretime Local")
-		.with_id("paseo-coretime-local")
+		.with_id("paseo-coretime-tot")
 		.with_chain_type(ChainType::Live)
 		.with_protocol_id("ct-pas")
 		.with_genesis_config_preset_name("tot")

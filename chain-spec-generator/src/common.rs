@@ -36,16 +36,16 @@ pub fn from_json_file(filepath: &str, supported: String) -> Result<Box<dyn Chain
 	let chain_spec: EmptyChainSpecWithId = serde_json::from_reader(reader)
 		.expect("Failed to read 'json' file with ChainSpec configuration");
 	match &chain_spec.id {
-		x if x.starts_with("paseo") | x.starts_with("pas") =>
+		x if x.eq("paseo") | x.eq("paseo-local") | x.eq("paseo-dev") =>
 			Ok(Box::new(PaseoChainSpec::from_json_file(path)?)),
 		x if x.starts_with("asset-hub-paseo") =>
 			Ok(Box::new(AssetHubPaseoChainSpec::from_json_file(path)?)),
-		x if x.starts_with("bridge-hub-paseo") =>
+		x if x.starts_with("paseo-bridge-hub") =>
 			Ok(Box::new(BridgeHubPaseoChainSpec::from_json_file(path)?)),
-		x if x.starts_with("coretime-paseo") =>
+		x if x.starts_with("paseo-coretime") =>
 			Ok(Box::new(CoretimePaseoChainSpec::from_json_file(path)?)),
-		x if x.starts_with("people-paseo") =>
+		x if x.starts_with("paseo-people") =>
 			Ok(Box::new(PeoplePaseoChainSpec::from_json_file(path)?)),
 		_ => Err(format!("Unknown chain 'id' in json file. Only supported: {supported}'")),
 	}
-} 
+}
