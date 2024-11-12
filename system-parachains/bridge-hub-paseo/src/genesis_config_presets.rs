@@ -17,7 +17,9 @@
 //! Genesis configs presets for the BridgeHubPolkadot runtime
 
 use crate::*;
+use sp_genesis_builder::PresetId;
 use sp_std::vec::Vec;
+use sp_core::sr25519;
 use system_parachains_constants::genesis_presets::*;
 
 const BRIDGE_HUB_POLKADOT_ED: Balance = ExistentialDeposit::get();
@@ -56,6 +58,9 @@ fn bridge_hub_paseo_genesis(
 				})
 				.collect(),
 		},
+		"sudo": {
+			"key": Some(get_account_id_from_seed::<sr25519::Public>("Alice"))
+		},
 		"polkadotXcm": {
 			"safeXcmVersion": Some(SAFE_XCM_VERSION),
 		},
@@ -74,7 +79,12 @@ pub fn bridge_hub_paseo_local_testnet_genesis(para_id: ParaId) -> serde_json::Va
 }
 
 fn bridge_hub_paseo_development_genesis(para_id: ParaId) -> serde_json::Value {
-	bridge_hub_paseo_genesis(invulnerables_tot(), testnet_accounts(), para_id)
+	bridge_hub_paseo_local_testnet_genesis(para_id)
+}
+
+/// Provides the names of the predefined genesis configs for this runtime.
+pub fn preset_names() -> Vec<PresetId> {
+	vec![PresetId::from("development"), PresetId::from("local_testnet")]
 }
 
 /// Provides the JSON representation of predefined genesis config for given `id`.

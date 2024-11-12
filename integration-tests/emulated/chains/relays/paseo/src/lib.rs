@@ -22,7 +22,7 @@ use emulated_integration_tests_common::{
 	xcm_emulator::decl_test_relay_chains,
 };
 
-// Polkadot declaration
+// Paseo declaration
 decl_test_relay_chains! {
 	#[api_version(11)]
 	pub struct Paseo {

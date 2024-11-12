@@ -587,6 +587,7 @@ dependencies = [
  "bp-bridge-hub-kusama",
  "bp-bridge-hub-paseo",
  "bp-bridge-hub-polkadot",
+ "collectives-polkadot-runtime-constants",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-session-benchmarking",
@@ -618,6 +619,7 @@ dependencies = [
  "pallet-nfts-runtime-api",
  "pallet-proxy",
  "pallet-session",
+ "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
@@ -1041,7 +1043,7 @@ dependencies = [
 [[package]]
 name = "bp-asset-hub-kusama"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.1#24df7e1b0b2b0850a0ffe5abfeabd42aebcab02a"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.3#55bd514d60311b67cb11400a545cb64ce7a87c0e"
 dependencies = [
  "bp-xcm-bridge-hub-router",
  "frame-support",
@@ -1049,7 +1051,7 @@ dependencies = [
  "scale-info",
  "sp-std",
  "staging-xcm 14.1.0",
- "system-parachains-constants 1.0.0 (git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.1)",
+ "system-parachains-constants 1.0.0 (git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.3)",
 ]
 
 [[package]]
@@ -1084,7 +1086,7 @@ dependencies = [
 [[package]]
 name = "bp-bridge-hub-kusama"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.1#24df7e1b0b2b0850a0ffe5abfeabd42aebcab02a"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.3#55bd514d60311b67cb11400a545cb64ce7a87c0e"
 dependencies = [
  "bp-bridge-hub-cumulus",
  "bp-messages",
@@ -1095,7 +1097,7 @@ dependencies = [
  "sp-api",
  "sp-runtime",
  "sp-std",
- "system-parachains-constants 1.0.0 (git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.1)",
+ "system-parachains-constants 1.0.0 (git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.3)",
 ]
 
 [[package]]
@@ -1120,7 +1122,7 @@ dependencies = [
 [[package]]
 name = "bp-bridge-hub-polkadot"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.1#24df7e1b0b2b0850a0ffe5abfeabd42aebcab02a"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.3#55bd514d60311b67cb11400a545cb64ce7a87c0e"
 dependencies = [
  "bp-bridge-hub-cumulus",
  "bp-messages",
@@ -1134,7 +1136,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "staging-xcm 14.1.0",
- "system-parachains-constants 1.0.0 (git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.1)",
+ "system-parachains-constants 1.0.0 (git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.3)",
 ]
 
 [[package]]
@@ -1453,6 +1455,7 @@ dependencies = [
  "pallet-message-queue",
  "pallet-multisig",
  "pallet-session",
+ "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
@@ -1896,6 +1899,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "collectives-polkadot-runtime-constants"
+version = "1.0.0"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.3#55bd514d60311b67cb11400a545cb64ce7a87c0e"
+
+[[package]]
 name = "colorchoice"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2091,6 +2099,7 @@ dependencies = [
  "pallet-multisig",
  "pallet-proxy",
  "pallet-session",
+ "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
@@ -2108,6 +2117,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sp-api",
+ "sp-arithmetic 26.0.0",
  "sp-block-builder",
  "sp-consensus-aura",
  "sp-core",
@@ -4714,7 +4724,7 @@ checksum = "c33070833c9ee02266356de0c43f723152bd38bd96ddf52c82b3af10c9138b28"
 [[package]]
 name = "kusama-runtime-constants"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.1#24df7e1b0b2b0850a0ffe5abfeabd42aebcab02a"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.3#55bd514d60311b67cb11400a545cb64ce7a87c0e"
 dependencies = [
  "frame-support",
  "polkadot-primitives",
@@ -6894,6 +6904,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-parameters"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "58d9a81a93202105a660e6aa3d3f81638bdd109ca0497f3e528529cd52d034db"
+dependencies = [
+ "docify",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "paste",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-preimage"
 version = "36.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7549,7 +7578,7 @@ dependencies = [
 
 [[package]]
 name = "paseo-runtime"
-version = "1.3.1"
+version = "1.3.3"
 dependencies = [
  "binary-merkle-tree",
  "frame-benchmarking",
@@ -7562,6 +7591,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
+ "hex-literal",
  "log",
  "pallet-asset-rate",
  "pallet-authority-discovery",
@@ -7589,6 +7619,7 @@ dependencies = [
  "pallet-nomination-pools-runtime-api",
  "pallet-offences",
  "pallet-offences-benchmarking",
+ "pallet-parameters",
  "pallet-preimage",
  "pallet-proxy",
  "pallet-referenda",
@@ -7616,6 +7647,7 @@ dependencies = [
  "polkadot-primitives",
  "polkadot-runtime-common",
  "polkadot-runtime-parachains",
+ "relay-common",
  "scale-info",
  "separator",
  "serde_json",
@@ -7643,6 +7675,7 @@ dependencies = [
  "sp-transaction-pool",
  "sp-trie",
  "sp-version",
+ "ss58-registry",
  "staging-xcm 14.1.0",
  "staging-xcm-builder",
  "staging-xcm-executor",
@@ -7836,6 +7869,7 @@ dependencies = [
  "pallet-multisig",
  "pallet-proxy",
  "pallet-session",
+ "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
@@ -8083,7 +8117,7 @@ dependencies = [
 [[package]]
 name = "polkadot-runtime-constants"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.1#24df7e1b0b2b0850a0ffe5abfeabd42aebcab02a"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.3#55bd514d60311b67cb11400a545cb64ce7a87c0e"
 dependencies = [
  "frame-support",
  "polkadot-primitives",
@@ -8974,6 +9008,18 @@ name = "regex-syntax"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c08c74e62047bb2de4ff487b251e4a92e24f48745648451635cec7d591162d9f"
+
+[[package]]
+name = "relay-common"
+version = "1.0.0"
+dependencies = [
+ "pallet-staking-reward-fn",
+ "parity-scale-codec",
+ "polkadot-primitives",
+ "scale-info",
+ "sp-api",
+ "sp-runtime",
+]
 
 [[package]]
 name = "resolv-conf"
@@ -11923,7 +11969,7 @@ dependencies = [
 [[package]]
 name = "system-parachains-constants"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.1#24df7e1b0b2b0850a0ffe5abfeabd42aebcab02a"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.3#55bd514d60311b67cb11400a545cb64ce7a87c0e"
 dependencies = [
  "frame-support",
  "kusama-runtime-constants",

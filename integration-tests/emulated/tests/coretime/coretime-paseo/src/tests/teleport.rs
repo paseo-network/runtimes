@@ -15,6 +15,7 @@
 // limitations under the License.
 
 use crate::*;
+use coretime_paseo_runtime::xcm_config::XcmConfig;
 use frame_support::{
 	dispatch::RawOrigin, sp_runtime::traits::Dispatchable, traits::fungible::Mutate,
 };
@@ -28,20 +29,20 @@ use xcm_runtime_apis::{
 
 #[test]
 fn teleport_from_and_to_relay() {
-	let amount = POLKADOT_ED * 1000;
+	let amount = CORETIME_POLKADOT_ED * 1000;
 	let native_asset: Assets = (Here, amount).into();
 
 	test_relay_is_trusted_teleporter!(
-		Polkadot,
-		PolkadotXcmConfig,
+		Paseo,
+		PaseoXcmConfig,
 		vec![CoretimePolkadot],
 		(native_asset, amount)
 	);
 
 	test_parachain_is_trusted_teleporter_for_relay!(
 		CoretimePolkadot,
-		CoretimePolkadotXcmConfig,
-		Polkadot,
+		CoretimePaseoXcmConfig,
+		Paseo,
 		amount
 	);
 }

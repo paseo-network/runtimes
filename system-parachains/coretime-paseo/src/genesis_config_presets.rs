@@ -21,6 +21,7 @@ use hex_literal::hex;
 use sp_core::crypto::UncheckedInto;
 use sp_genesis_builder::PresetId;
 use sp_std::vec::Vec;
+use sp_core::sr25519;
 use system_parachains_constants::genesis_presets::*;
 
 const CORETIME_POLKADOT_ED: Balance = ExistentialDeposit::get();
@@ -58,6 +59,9 @@ fn coretime_paseo_genesis(
 					)
 				})
 				.collect(),
+		},
+		"sudo": {
+			"key": Some(get_account_id_from_seed::<sr25519::Public>("Alice"))
 		},
 		"polkadotXcm": {
 			"safeXcmVersion": Some(SAFE_XCM_VERSION),

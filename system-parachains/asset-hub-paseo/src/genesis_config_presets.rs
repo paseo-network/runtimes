@@ -17,11 +17,21 @@
 //! Genesis configs presets for the AssetHubPolkadot runtime
 
 use crate::*;
-use AuraId;
 use sp_std::vec::Vec;
+use sp_genesis_builder::PresetId;
+use sp_core::sr25519;
 use system_parachains_constants::genesis_presets::*;
+use AuraId;
 
 const ASSET_HUB_PASEO_ED: Balance = ExistentialDeposit::get();
+
+/// Invulnerable Collators for the particular case of AssetHubPaseo
+pub fn invulnerables_asset_hub_paseo() -> Vec<(AccountId, AuraId)> {
+	vec![
+		(get_account_id_from_seed::<sr25519::Public>("Alice"), get_from_seed::<AuraId>("Alice")),
+		(get_account_id_from_seed::<sr25519::Public>("Bob"), get_from_seed::<AuraId>("Bob")),
+	]
+}
 
 fn asset_hub_paseo_genesis(
 	invulnerables: Vec<(AccountId, AuraId)>,
@@ -57,6 +67,9 @@ fn asset_hub_paseo_genesis(
 				})
 				.collect(),
 		},
+		"sudo": {
+			"key": Some(get_account_id_from_seed::<sr25519::Public>("Alice"))
+		},
 		"polkadotXcm": {
 			"safeXcmVersion": Some(SAFE_XCM_VERSION),
 		},
@@ -66,11 +79,16 @@ fn asset_hub_paseo_genesis(
 }
 
 pub fn asset_hub_paseo_local_testnet_genesis(para_id: ParaId) -> serde_json::Value {
-	asset_hub_paseo_genesis(invulnerables(), testnet_accounts(), para_id)
+	asset_hub_paseo_genesis(invulnerables_asset_hub_paseo(), testnet_accounts(), para_id)
 }
 
 fn asset_hub_paseo_development_genesis(para_id: ParaId) -> serde_json::Value {
-	asset_hub_paseo_genesis(invulnerables_tot(), testnet_accounts(), para_id)
+	asset_hub_paseo_local_testnet_genesis(para_id)
+}
+
+/// Provides the names of the predefined genesis configs for this runtime.
+pub fn preset_names() -> Vec<PresetId> {
+	vec![PresetId::from("development"), PresetId::from("local_testnet")]
 }
 
 /// Provides the JSON representation of predefined genesis config for given `id`.

@@ -38,7 +38,7 @@ fn transact_hardcoded_weights_are_sane() {
 	CoretimePolkadot::execute_with(|| {
 		// Hooks don't run in emulated tests - workaround as we need `on_initialize` to tick things
 		// along and have no concept of time passing otherwise.
-		<CoretimePolkadot as CoretimePaseoPallet>::Broker::on_initialize(
+		<CoretimePolkadot as CoretimePolkadotPallet>::Broker::on_initialize(
 			<CoretimePolkadot as Chain>::System::block_number(),
 		);
 
@@ -53,7 +53,7 @@ fn transact_hardcoded_weights_are_sane() {
 			})
 		}
 
-		assert_ok!(<CoretimePolkadot as CoretimePaseoPallet>::Broker::reserve(
+		assert_ok!(<CoretimePolkadot as CoretimePolkadotPallet>::Broker::reserve(
 			coretime_root_origin.clone(),
 			schedule.try_into().expect("Vector is within bounds."),
 		));
@@ -69,11 +69,11 @@ fn transact_hardcoded_weights_are_sane() {
 			renewal_bump: Perbill::from_percent(2),
 			contribution_timeout: 1,
 		};
-		assert_ok!(<CoretimePolkadot as CoretimePaseoPallet>::Broker::configure(
+		assert_ok!(<CoretimePolkadot as CoretimePolkadotPallet>::Broker::configure(
 			coretime_root_origin.clone(),
 			config
 		));
-		assert_ok!(<CoretimePolkadot as CoretimePaseoPallet>::Broker::start_sales(
+		assert_ok!(<CoretimePolkadot as CoretimePolkadotPallet>::Broker::start_sales(
 			coretime_root_origin,
 			100,
 			0
@@ -103,11 +103,11 @@ fn transact_hardcoded_weights_are_sane() {
 
 	// Check that the request_core_count message was processed successfully. This will fail if the
 	// weights are misconfigured.
-	Polkadot::execute_with(|| {
-		Polkadot::assert_ump_queue_processed(true, Some(CoretimePolkadot::para_id()), None);
+	Paseo::execute_with(|| {
+		Paseo::assert_ump_queue_processed(true, Some(CoretimePolkadot::para_id()), None);
 
 		assert_expected_events!(
-			Polkadot,
+			Paseo,
 			vec![
 				RelayEvent::MessageQueue(
 					pallet_message_queue::Event::Processed { success: true, .. }
@@ -118,7 +118,7 @@ fn transact_hardcoded_weights_are_sane() {
 
 	// Keep track of the relay chain block number so we can fast forward while still checking the
 	// right block.
-	let mut block_number_cursor = Polkadot::ext_wrapper(<Polkadot as Chain>::System::block_number);
+	let mut block_number_cursor = Paseo::ext_wrapper(<Paseo as Chain>::System::block_number);
 
 	let config = CoretimePolkadot::ext_wrapper(|| {
 		Configuration::<<CoretimePolkadot as Chain>::Runtime>::get()
@@ -129,20 +129,20 @@ fn transact_hardcoded_weights_are_sane() {
 	while block_number_cursor < TIMESLICE_PERIOD - config.advance_notice - 1 {
 		CoretimePolkadot::execute_with(|| {
 			// Hooks don't run in emulated tests - workaround.
-			<CoretimePolkadot as CoretimePaseoPallet>::Broker::on_initialize(
+			<CoretimePolkadot as CoretimePolkadotPallet>::Broker::on_initialize(
 				<CoretimePolkadot as Chain>::System::block_number(),
 			);
 		});
 
-		Polkadot::ext_wrapper(|| {
-			block_number_cursor = <Polkadot as Chain>::System::block_number();
+		Paseo::ext_wrapper(|| {
+			block_number_cursor = <Paseo as Chain>::System::block_number();
 		});
 	}
 
 	// In this block we trigger assign core.
 	CoretimePolkadot::execute_with(|| {
 		// Hooks don't run in emulated tests - workaround.
-		<CoretimePolkadot as CoretimePaseoPallet>::Broker::on_initialize(
+		<CoretimePolkadot as CoretimePolkadotPallet>::Broker::on_initialize(
 			<CoretimePolkadot as Chain>::System::block_number(),
 		);
 
@@ -165,7 +165,7 @@ fn transact_hardcoded_weights_are_sane() {
 	// In this block we trigger request revenue.
 	CoretimePolkadot::execute_with(|| {
 		// Hooks don't run in emulated tests - workaround.
-		<CoretimePolkadot as CoretimePaseoPallet>::Broker::on_initialize(
+		<CoretimePolkadot as CoretimePolkadotPallet>::Broker::on_initialize(
 			<CoretimePolkadot as Chain>::System::block_number(),
 		);
 
@@ -181,11 +181,11 @@ fn transact_hardcoded_weights_are_sane() {
 
 	// Check that the assign_core and request_revenue_info_at messages were processed successfully.
 	// This will fail if the weights are misconfigured.
-	Polkadot::execute_with(|| {
-		Polkadot::assert_ump_queue_processed(true, Some(CoretimePolkadot::para_id()), None);
+	Paseo::execute_with(|| {
+		Paseo::assert_ump_queue_processed(true, Some(CoretimePolkadot::para_id()), None);
 
 		assert_expected_events!(
-			Polkadot,
+			Paseo,
 			vec![
 				RelayEvent::MessageQueue(
 					pallet_message_queue::Event::Processed { success: true, .. }
@@ -203,7 +203,7 @@ fn transact_hardcoded_weights_are_sane() {
 	// Here we receive and process the notify_revenue XCM with zero revenue.
 	CoretimePolkadot::execute_with(|| {
 		// Hooks don't run in emulated tests - workaround.
-		<CoretimePolkadot as CoretimePaseoPallet>::Broker::on_initialize(
+		<CoretimePolkadot as CoretimePolkadotPallet>::Broker::on_initialize(
 			<CoretimePolkadot as Chain>::System::block_number(),
 		);
 

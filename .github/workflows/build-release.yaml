@@ -11,6 +11,9 @@ on:
 jobs:
   generate-chain-specs:
     uses: ./.github/workflows/generate-chain-specs.yaml
+    permissions:
+      contents: write 
+      packages: write
     with:
       tag_version: ${{ github.event.inputs.tag_version }}
 
@@ -100,17 +103,14 @@ jobs:
 
       # Release published: add artifacts to release
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ github.event.inputs.tag_version }}
-          name: Release ${{ github.event.inputs.tag_version }}
-          draft: false
-          prerelease: false
-          generate_release_notes: true
-          append_body: true
-          body: |
-            ## Runtime: `${{ matrix.runtime.name }}`
-            ```
+        env:
+          GH_TOKEN: ${{ secrets.PASEO_RUNTIME_CI_PAT }}
+        run: |
+          gh release create ${{ github.event.inputs.tag_version }} \
+            --title "Release ${{ github.event.inputs.tag_version }}" \
+            --generate-notes \
+            --notes "## Runtime: \`${{ matrix.runtime.name }}\`
+            \`\`\`
             🏋️ Runtime Size:           ${{ fromJSON(steps.srtool_build.outputs.json).runtimes.compressed.subwasm.size }} bytes
             🔥 Core Version:           ${{ fromJSON(steps.srtool_build.outputs.json).runtimes.compressed.subwasm.core_version.specName }}-${{ fromJSON(steps.srtool_build.outputs.json).runtimes.compressed.subwasm.core_version.specVersion }}
             🎁 Metadata version:       V${{ fromJSON(steps.srtool_build.outputs.json).runtimes.compressed.subwasm.metadata_version }}
@@ -118,9 +118,6 @@ jobs:
             🗳️ authorizeUpgrade hash:  ${{ fromJSON(steps.srtool_build.outputs.json).runtimes.compressed.subwasm.parachain_authorize_upgrade_hash }}
             🗳️ Blake2-256 hash:        ${{ fromJSON(steps.srtool_build.outputs.json).runtimes.compressed.subwasm.blake2_256 }}
             📦 IPFS:                   ${{ fromJSON(steps.srtool_build.outputs.json).runtimes.compressed.subwasm.ipfs_hash }}
-            ```
-          files: |
-            ${{ steps.srtool_build.outputs.wasm_compressed }}
+            \`\`\`" \
+            ${{ steps.srtool_build.outputs.wasm_compressed }} \
             ${{ matrix.runtime.name }}-srtool-digest.json
-        env:
-          GITHUB_TOKEN: ${{ secrets.PASEO_RUNTIME_CI_PAT }}
