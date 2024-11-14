@@ -123,26 +123,8 @@ if [ "$PROCESS_PARACHAINS" = "true" ]; then
         "asset_hub  asset-hubs/asset-hub-polkadot   asset-hub-paseo"
         "bridge_hub bridge-hubs/bridge-hub-polkadot bridge-hub-paseo"
         "people     people/people-polkadot          people-paseo"
-        "coretime   coretime/coretime-polkadot     coretime-paseo"
+        "coretime   coretime/coretime-polkadot      coretime-paseo"
     )
-    for parachain in "${PARACHAINS[@]}"; do
-        read -r parachain_name source_dir dest_dir <<< "$parachain"
-        source_dir="../polkadot_runtime_next/system-parachains/${source_dir}"
-        dest_dir="system-parachains/${dest_dir}"
-        if [ -d "$source_dir" ]; then
-            mkdir -p "$dest_dir"
-            cp -rf "$source_dir"/* "$dest_dir/"
-            print_message "Copied ${parachain_name} from ${source_dir} to ${dest_dir}" "${WHITE}"
-        else
-            print_message "Warning: ${source_dir} not found for ${parachain_name}" "${RED}"
-        fi
-
-        # Create separate patch for each system-parachains
-        outDir="${PATCH_DIR}/system-parachains/0001-update-${parachain_name}-${NEXT_TAG}.patch"
-        mkdir -p "$(dirname "${outDir}")"
-        git format-patch -1 HEAD --stdout -- system-parachains > "${outDir}"
-        print_message "Created patch for system-parachains: ${outDir}" "${WHITE}"
-    done
 fi
 
 print_message "----- Committing changes -----" "${BLUE}"
@@ -177,6 +159,11 @@ if [ "$PROCESS_PARACHAINS" = "true" ]; then
         git format-patch -1 HEAD --stdout --root "${dest_dir}" > "${outDir}"
         print_message "Created patch for ${parachain_name}: ${outDir}" "${WHITE}"
     done
+
+    # Process system-parachains/constants
+    git format-patch -1 HEAD --stdout --root system-parachains/constants > "${PATCH_DIR}/system-parachains/0001-update-system-parachains-constants-${NEXT_TAG}.patch"
+    print_message "Created patch for system-parachains/constants: ${PATCH_DIR}/system-parachains/0001-update-system-parachains-constants-${NEXT_TAG}.patch" "${WHITE}"
+    
 fi
 
 print_message "--------------------" "${BLUE}"
