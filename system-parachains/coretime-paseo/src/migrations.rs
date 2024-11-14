@@ -90,7 +90,7 @@ impl FixMigration {
 	fn add_pool_core(first_core: &mut CoreIndex) {
 		let Some(sale_info) = SaleInfo::<Runtime>::get() else {
 			log::error!(target: TARGET, "Retrieving `SaleInfo` failed!");
-			return;
+			return
 		};
 
 		// Workplan add (speed up by one cycle):
@@ -203,7 +203,7 @@ impl FixMigration {
 	fn give_dropped_leases_renewal_rights_and_workplan_entry(first_core: &mut CoreIndex) {
 		let Some(sale_info) = SaleInfo::<Runtime>::get() else {
 			log::error!(target: TARGET, "Retrieving `SaleInfo` failed!");
-			return;
+			return
 		};
 
 		let dropped_leases =
@@ -254,7 +254,7 @@ impl OnRuntimeUpgrade for FixMigration {
 			log::error!(target: TARGET, "Retrieving `SaleInfo` (first_core) failed!");
 			// Return dummy weight. This should really not happen and if it does we have bigger
 			// problems than wrong weights.
-			return <Runtime as frame_system::Config>::DbWeight::get().writes(50);
+			return <Runtime as frame_system::Config>::DbWeight::get().writes(50)
 		};
 
 		Self::extend_short_leases();
@@ -283,7 +283,7 @@ impl OnRuntimeUpgrade for FixMigration {
 		// Idempotency check - this core will never be renewable at this timeslice ever again.
 		if PotentialRenewals::<Runtime>::get(PotentialRenewalId { core: 6, when: 292605 }).is_none()
 		{
-			return Ok(Vec::new());
+			return Ok(Vec::new())
 		}
 		let sale_info = SaleInfo::<Runtime>::get().unwrap();
 		let leases = Leases::<Runtime>::get();
@@ -297,7 +297,7 @@ impl OnRuntimeUpgrade for FixMigration {
 	#[cfg(feature = "try-runtime")]
 	fn post_upgrade(state: Vec<u8>) -> Result<(), TryRuntimeError> {
 		if state.is_empty() {
-			return Ok(());
+			return Ok(())
 		}
 		let (prev_sale_info, prev_leases): (SaleInfoRecordOf<Runtime>, LeasesRecordOf<Runtime>) =
 			Decode::decode(&mut &state[..]).unwrap();
