@@ -39,7 +39,6 @@ def load_replacements(replacements_file):
     literal_replacements = []
     for key, value in config.get("replacements", {}).items():
         if key.startswith("re:"):
-            # Compile as regex pattern
             try:
                 pattern = re.compile(key[3:])
             except re.error as e:
@@ -47,11 +46,16 @@ def load_replacements(replacements_file):
                 sys.exit(1)
             regex_replacements.append((pattern, value))
         else:
-            # Escape and compile as literal string pattern
             pattern = re.compile(re.escape(key))
             literal_replacements.append((pattern, value))
 
-    return regex_replacements, literal_replacements, config.get("remove_block_pattern", ""), config.get("revert_if_deleted", [])
+    return (
+        regex_replacements,
+        literal_replacements,
+        config.get("remove_block_pattern", ""),
+        config.get("revert_if_deleted", []),
+        config.get("ignored_files", [])
+    )
 
 def apply_filters(line, regex_replacements, literal_replacements):
     """Apply filters to determine if a line should be reverted."""
@@ -125,6 +129,18 @@ def process_deleted_file(file_path, revert_if_deleted):
     else:
         log(f"File {file_path} has been deleted, skipping.")
 
+def should_process_file(file_path, ignored_files):
+    """Check if the file should be processed or ignored."""
+    if file_path in ignored_files:
+        try:
+            # Revert the entire file to its original state
+            subprocess.run(['git', 'checkout', 'HEAD', file_path], check=True)
+            log(f"Reverted ignored file to original state: {file_path}")
+        except subprocess.CalledProcessError as e:
+            log(f"Error reverting ignored file {file_path}: {str(e)}")
+        return False
+    return True
+
 def main():
     if len(sys.argv) != 2:
         print("Usage: python revert_unwanted_changes.py <path_to_replacements_config.json>")
@@ -138,11 +154,16 @@ def main():
     log("Starting revert_unwanted_changes.py")
 
     try:
-        regex_replacements, literal_replacements, remove_block_pattern, revert_if_deleted = load_replacements(replacements_file)
+        regex_replacements, literal_replacements, remove_block_pattern, revert_if_deleted, ignored_files = load_replacements(replacements_file)
         changed_files = get_changed_files()
 
         for status, file_path in changed_files:
             log(f"Processing {file_path} (Status: {status})")
+            
+            # For ignored files, revert them completely and skip further processing
+            if not should_process_file(file_path, ignored_files):
+                continue
+
             if status == 'D':
                 process_deleted_file(file_path, revert_if_deleted)
             else:

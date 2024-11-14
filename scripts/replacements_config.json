@@ -21,5 +21,7 @@
   "remove_block_pattern": "\\s*// Polkadot Genesis was on May 26, 2020\\..*?DOT_LEASE_OFFSET\\\"\\);",
   "revert_if_deleted": [
     "relay/paseo/src/weights/pallet_sudo.rs"
+  ],
+  "ignored_files": [
   ]
 }
