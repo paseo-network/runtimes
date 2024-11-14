@@ -156,7 +156,7 @@ mkdir -p ${PATCH_DIR}
 print_message "Creating targeted patch files..." "${WHITE}"
 
 # Patch for relay/paseo
-git format-patch -1 HEAD --stdout --root relay/paseo > "${PATCH_DIR}/0001-update-relay-paseo-${NEXT_TAG}.patch"
+git format-patch -1 HEAD --stdout --root relay/paseo relay/common Cargo.toml > "${PATCH_DIR}/0001-update-relay-paseo-${NEXT_TAG}.patch"
 print_message "Created patch for relay/paseo: ${PATCH_DIR}/0001-update-relay-paseo-${NEXT_TAG}.patch" "${WHITE}"
 
 # Patch for chain-spec-generator
