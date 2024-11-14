@@ -111,22 +111,6 @@ cp -rf ../polkadot_runtime_next/integration-tests/emulated/tests/coretime/coreti
 cp -rf ../polkadot_runtime_next/integration-tests/emulated/tests/bridges/bridge-hub-polkadot/* integration-tests/emulated/tests/bridges/bridge-hub-paseo
 cp -rf ../polkadot_runtime_next/integration-tests/emulated/networks/polkadot-system/* integration-tests/emulated/networks/paseo-system
 
-if [ "$PROCESS_PARACHAINS" = "true" ]; then
-    print_message "----- Copying system-parachains files -----" "${BLUE}"
-    cp ../polkadot_runtime_next/system-parachains/constants/Cargo.toml system-parachains/constants
-    cp ../polkadot_runtime_next/system-parachains/constants/src/polkadot.rs system-parachains/constants/src/paseo.rs
-    cp ../polkadot_runtime_next/system-parachains/constants/src/lib.rs system-parachains/constants/src/
-
-    print_message "----- Copying specified parachains -----" "${BLUE}"
-    PARACHAINS=(
-        # Parachain name | source directory | destination directory
-        "asset_hub  asset-hubs/asset-hub-polkadot   asset-hub-paseo"
-        "bridge_hub bridge-hubs/bridge-hub-polkadot bridge-hub-paseo"
-        "people     people/people-polkadot          people-paseo"
-        "coretime   coretime/coretime-polkadot      coretime-paseo"
-    )
-fi
-
 print_message "----- Committing changes -----" "${BLUE}"
 git add .
 git commit -m "Update to Polkadot ${NEXT_TAG} runtime"
@@ -150,7 +134,40 @@ git format-patch -1 HEAD --stdout --root integration-tests > "${PATCH_DIR}/0001-
 print_message "Created patch for integration-tests: ${PATCH_DIR}/0001-update-integration-tests-${NEXT_TAG}.patch" "${WHITE}"
 
 if [ "$PROCESS_PARACHAINS" = "true" ]; then
-    # Create separate patches for each system-parachain
+    print_message "----- Copying and committing parachains -----" "${BLUE}"
+    
+    PARACHAINS=(
+        # Parachain name | source directory | destination directory
+        "asset_hub  asset-hubs/asset-hub-polkadot   asset-hub-paseo"
+        "bridge_hub bridge-hubs/bridge-hub-polkadot bridge-hub-paseo"
+        "people     people/people-polkadot          people-paseo"
+        "coretime   coretime/coretime-polkadot      coretime-paseo"
+    )
+
+    # First copy all parachains
+    for parachain in "${PARACHAINS[@]}"; do
+        read -r parachain_name source_dir dest_dir <<< "$parachain"
+        source_dir="../polkadot_runtime_next/system-parachains/${source_dir}"
+        dest_dir="system-parachains/${dest_dir}"
+        
+        print_message "Copying ${parachain_name} from ${source_dir} to ${dest_dir}" "${BLUE}"
+        rm -rf "${dest_dir}"
+        mkdir -p "${dest_dir}"
+        cp -rf "${source_dir}"/* "${dest_dir}/"
+    done
+
+    # Copy constants separately
+    print_message "Copying constants" "${BLUE}"
+    rm -rf system-parachains/constants
+    mkdir -p system-parachains/constants
+    cp -rf ../polkadot_runtime_next/system-parachains/constants/* system-parachains/constants/
+
+    # Commit all parachain changes
+    git add system-parachains/
+    git commit -m "Update system-parachains to Polkadot ${NEXT_TAG}"
+
+    # Now create patches for each parachain
+    print_message "----- Creating parachain patches -----" "${BLUE}"
     for parachain in "${PARACHAINS[@]}"; do
         read -r parachain_name source_dir dest_dir <<< "$parachain"
         dest_dir="system-parachains/${dest_dir}"
@@ -160,10 +177,10 @@ if [ "$PROCESS_PARACHAINS" = "true" ]; then
         print_message "Created patch for ${parachain_name}: ${outDir}" "${WHITE}"
     done
 
-    # Process system-parachains/constants
-    git format-patch -1 HEAD --stdout --root system-parachains/constants > "${PATCH_DIR}/system-parachains/0001-update-system-parachains-constants-${NEXT_TAG}.patch"
-    print_message "Created patch for system-parachains/constants: ${PATCH_DIR}/system-parachains/0001-update-system-parachains-constants-${NEXT_TAG}.patch" "${WHITE}"
-    
+    # Create constants patch
+    outDir="${PATCH_DIR}/system-parachains/0001-update-constants-${NEXT_TAG}.patch"
+    git format-patch -1 HEAD --stdout --root system-parachains/constants > "${outDir}"
+    print_message "Created patch for constants: ${outDir}" "${WHITE}"
 fi
 
 print_message "--------------------" "${BLUE}"
