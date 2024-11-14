@@ -78,7 +78,9 @@ cd paseo_runtime
 
 print_message "----- Copying new Polkadot runtime to Paseo -----" "${BLUE}"
 rm -rf relay/paseo/*
+rm -rf relay/common/*
 cp -rf ../polkadot_runtime_next/relay/polkadot/* relay/paseo/.
+cp -rf ../polkadot_runtime_next/relay/common/* relay/common/.
 cp -f ../polkadot_runtime_next/Cargo.toml ./
 
 print_message "----- Copying new Polkadot chain-spec-generator to Paseo -----" "${BLUE}"
