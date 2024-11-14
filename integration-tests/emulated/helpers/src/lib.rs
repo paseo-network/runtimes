@@ -30,7 +30,6 @@ pub use xcm_emulator::Chain;
 
 /// TODO: when bumping to polkadot-sdk v1.8.0,
 /// remove this crate altogether and get the macros from `emulated-integration-tests-common`.
-/// remove this crate altogether and get the macros from `emulated-integration-tests-common`.
 /// TODO: backport this macros to paseo-sdk
 
 #[macro_export]

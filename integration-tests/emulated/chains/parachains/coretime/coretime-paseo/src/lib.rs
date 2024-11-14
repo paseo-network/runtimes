@@ -25,7 +25,7 @@ use emulated_integration_tests_common::{
 	impls::Parachain, xcm_emulator::decl_test_parachains,
 };
 
-// CoretimePolkadot Parachain declaration
+// CoretimePaseo Parachain declaration
 decl_test_parachains! {
 	pub struct CoretimePaseo {
 		genesis = genesis::genesis(),

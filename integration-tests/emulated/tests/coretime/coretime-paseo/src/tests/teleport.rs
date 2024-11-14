@@ -15,7 +15,6 @@
 // limitations under the License.
 
 use crate::*;
-use coretime_paseo_runtime::xcm_config::XcmConfig;
 use frame_support::{
 	dispatch::RawOrigin, sp_runtime::traits::Dispatchable, traits::fungible::Mutate,
 };

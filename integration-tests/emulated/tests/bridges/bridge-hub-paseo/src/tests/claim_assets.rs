@@ -20,8 +20,6 @@ use crate::*;
 use bridge_hub_paseo_runtime::ExistentialDeposit;
 use integration_tests_helpers::test_chain_can_claim_assets;
 use xcm_executor::traits::DropAssets;
-use xcm::v3::NetworkId::Polkadot as PaseoId;
-
 
 #[test]
 fn assets_can_be_claimed() {
