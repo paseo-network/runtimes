@@ -21,7 +21,6 @@ mod register_bridged_assets;
 mod send_xcm;
 mod snowbridge;
 mod teleport;
-mod claim_assets;
 
 
 
