@@ -3569,9 +3569,9 @@ dependencies = [
 
 [[package]]
 name = "frame-system"
-version = "36.0.1"
+version = "36.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d19f388280c14dbabcee2a817e1123c59c55847c6d07a5b5ca901b34a5910093"
+checksum = "64d6a0e7bb6503facdcc6f8e19c83cd0bfc8bbbd268522b1a50e107dfc6b972d"
 dependencies = [
  "cfg-if",
  "docify",
@@ -6720,9 +6720,9 @@ dependencies = [
 
 [[package]]
 name = "pallet-message-queue"
-version = "39.0.0"
+version = "39.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "20e65a37881d1998546254a5e50a1f768b3f82deabe774e750f4ea95aba8030c"
+checksum = "8bb779dbfd58b3a4e6a84245392fe9d8c31a746ff7c6db414e91c012663859c3"
 dependencies = [
  "environmental",
  "frame-benchmarking",
