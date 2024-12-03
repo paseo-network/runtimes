@@ -6,11 +6,11 @@ repository = "https://github.com/paseo-network/runtimes.git"
 license = "GPL-3.0-only"
 
 [workspace.dependencies]
-kusama-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.3.3", package = "kusama-runtime-constants", default-features = false  }
-bp-bridge-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.3.3", package = "bp-bridge-hub-kusama", default-features = false  }
-bp-bridge-hub-polkadot = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.3.3", package = "bp-bridge-hub-polkadot", default-features = false  }
-bp-asset-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.3.3", package = "bp-asset-hub-kusama", default-features = false  }
-collectives-polkadot-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.3.3", package = "collectives-polkadot-runtime-constants", default-features = false  }
+kusama-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.3.4", package = "kusama-runtime-constants", default-features = false  }
+bp-bridge-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.3.4", package = "bp-bridge-hub-kusama", default-features = false  }
+bp-bridge-hub-polkadot = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.3.4", package = "bp-bridge-hub-polkadot", default-features = false  }
+bp-asset-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.3.4", package = "bp-asset-hub-kusama", default-features = false  }
+collectives-polkadot-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.3.4", package = "collectives-polkadot-runtime-constants", default-features = false  }
 
 
 # Local dependencies
@@ -33,6 +33,7 @@ penpal-emulated-chain = { path = "integration-tests/emulated/chains/parachains/t
 people-paseo-emulated-chain = { path = "integration-tests/emulated/chains/parachains/people/people-paseo"}
 paseo-emulated-chain = { path = "integration-tests/emulated/chains/relays/paseo"}
 assert_matches = { version = "1.5.0" }
+approx = { version = "0.5.1" }
 asset-test-utils = { version = "15.0.0" }
 assets-common = { version = "0.15.0", default-features = false }
 authority-discovery-primitives = { version = "33.0.0", default-features = false, package = "sp-authority-discovery" }
@@ -108,7 +109,6 @@ pallet-fast-unstake = { version = "35.0.0", default-features = false }
 pallet-glutton = { version = "22.0.0", default-features = false }
 pallet-grandpa = { version = "36.0.0", default-features = false }
 pallet-identity = { version = "36.0.0", default-features = false }
-pallet-im-online = { version = "35.0.0", default-features = false }
 pallet-indices = { version = "36.0.0", default-features = false }
 pallet-insecure-randomness-collective-flip = { version = "24.0.0", default-features = false }
 pallet-membership = { version = "36.0.0", default-features = false }

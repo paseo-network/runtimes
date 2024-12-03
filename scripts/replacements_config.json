@@ -16,10 +16,13 @@
     "pub const EPOCH_DURATION_IN_SLOTS: BlockNumber = prod_or_fast!(4 * HOURS, 1 * MINUTES);":"pub const EPOCH_DURATION_IN_SLOTS: BlockNumber = prod_or_fast!(1 * HOURS, 1 * MINUTES);",
     "Polkadot": "Paseo",
     "polkadot": "paseo",
-    "DOT": "PAS"
+    "DOT": "PAS",
+    "PaseoXcm" : "PolkadotXcm"
   },
   "remove_block_pattern": "\\s*// Polkadot Genesis was on May 26, 2020\\..*?DOT_LEASE_OFFSET\\\"\\);",
   "revert_if_deleted": [
     "relay/paseo/src/weights/pallet_sudo.rs"
+  ],
+  "ignored_files": [
   ]
 }

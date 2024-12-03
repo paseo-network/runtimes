@@ -153,7 +153,7 @@ fn paseo_testnet_genesis(
 		AuthorityDiscoveryId,
 		BeefyId,
 	)>,
-	_root_key: AccountId,
+	root_key: AccountId,
 	endowed_accounts: Option<Vec<AccountId>>,
 ) -> serde_json::Value {
 	let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(testnet_accounts);
@@ -194,6 +194,9 @@ fn paseo_testnet_genesis(
 			"invulnerables": initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
 			"forceEra": Forcing::NotForcing,
 			"slashRewardFraction": Perbill::from_percent(10),
+		},
+		"sudo": {
+			"key": Some(root_key),
 		},
 		"babe": {
 			"epochConfig": Some(BABE_GENESIS_EPOCH_CONFIG),

@@ -21,11 +21,12 @@ pub use sp_runtime::DispatchError;
 pub use xcm::{
 	latest::ParentThen,
 	prelude::{AccountId32 as AccountId32Junction, *},
-	v3::{
+	v4::{
 		self, Error,
 		NetworkId::{Kusama as KusamaId, Polkadot as PaseoId},
 	},
 };
+pub use xcm_executor::traits::TransferType;
 
 // Bridges
 pub use bp_messages::LaneId;
@@ -40,7 +41,7 @@ pub use emulated_integration_tests_common::{
 		RelayChain as Relay, Test, TestArgs, TestContext, TestExt,
 	},
 	xcm_helpers::{xcm_transact_paid_execution, xcm_transact_unpaid_execution},
-	PROOF_SIZE_THRESHOLD, REF_TIME_THRESHOLD, XCM_V3,
+	ASSETS_PALLET_ID, PROOF_SIZE_THRESHOLD, REF_TIME_THRESHOLD, XCM_V4,
 };
 pub use paseo_system_emulated_network::{
 	asset_hub_paseo_emulated_chain::{
@@ -67,7 +68,6 @@ pub use paseo_system_emulated_network::{
 
 pub const ASSET_ID: u32 = 1;
 pub const ASSET_MIN_BALANCE: u128 = 1000;
-pub const ASSETS_PALLET_ID: u8 = 50;
 
 #[cfg(test)]
 mod tests;

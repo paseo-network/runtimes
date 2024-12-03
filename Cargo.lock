@@ -1043,7 +1043,7 @@ dependencies = [
 [[package]]
 name = "bp-asset-hub-kusama"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.3#55bd514d60311b67cb11400a545cb64ce7a87c0e"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.4#3b18d942c766c7f358da50608b44edbe218284a4"
 dependencies = [
  "bp-xcm-bridge-hub-router",
  "frame-support",
@@ -1051,7 +1051,7 @@ dependencies = [
  "scale-info",
  "sp-std",
  "staging-xcm 14.1.0",
- "system-parachains-constants 1.0.0 (git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.3)",
+ "system-parachains-constants 1.0.0 (git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.4)",
 ]
 
 [[package]]
@@ -1086,7 +1086,7 @@ dependencies = [
 [[package]]
 name = "bp-bridge-hub-kusama"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.3#55bd514d60311b67cb11400a545cb64ce7a87c0e"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.4#3b18d942c766c7f358da50608b44edbe218284a4"
 dependencies = [
  "bp-bridge-hub-cumulus",
  "bp-messages",
@@ -1097,7 +1097,7 @@ dependencies = [
  "sp-api",
  "sp-runtime",
  "sp-std",
- "system-parachains-constants 1.0.0 (git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.3)",
+ "system-parachains-constants 1.0.0 (git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.4)",
 ]
 
 [[package]]
@@ -1122,7 +1122,7 @@ dependencies = [
 [[package]]
 name = "bp-bridge-hub-polkadot"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.3#55bd514d60311b67cb11400a545cb64ce7a87c0e"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.4#3b18d942c766c7f358da50608b44edbe218284a4"
 dependencies = [
  "bp-bridge-hub-cumulus",
  "bp-messages",
@@ -1136,7 +1136,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "staging-xcm 14.1.0",
- "system-parachains-constants 1.0.0 (git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.3)",
+ "system-parachains-constants 1.0.0 (git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.4)",
 ]
 
 [[package]]
@@ -1901,7 +1901,7 @@ dependencies = [
 [[package]]
 name = "collectives-polkadot-runtime-constants"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.3#55bd514d60311b67cb11400a545cb64ce7a87c0e"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.4#3b18d942c766c7f358da50608b44edbe218284a4"
 
 [[package]]
 name = "colorchoice"
@@ -3569,9 +3569,9 @@ dependencies = [
 
 [[package]]
 name = "frame-system"
-version = "36.0.1"
+version = "36.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d19f388280c14dbabcee2a817e1123c59c55847c6d07a5b5ca901b34a5910093"
+checksum = "64d6a0e7bb6503facdcc6f8e19c83cd0bfc8bbbd268522b1a50e107dfc6b972d"
 dependencies = [
  "cfg-if",
  "docify",
@@ -4724,7 +4724,7 @@ checksum = "c33070833c9ee02266356de0c43f723152bd38bd96ddf52c82b3af10c9138b28"
 [[package]]
 name = "kusama-runtime-constants"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.3#55bd514d60311b67cb11400a545cb64ce7a87c0e"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.4#3b18d942c766c7f358da50608b44edbe218284a4"
 dependencies = [
  "frame-support",
  "polkadot-primitives",
@@ -6720,9 +6720,9 @@ dependencies = [
 
 [[package]]
 name = "pallet-message-queue"
-version = "39.0.0"
+version = "39.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "20e65a37881d1998546254a5e50a1f768b3f82deabe774e750f4ea95aba8030c"
+checksum = "8bb779dbfd58b3a4e6a84245392fe9d8c31a746ff7c6db414e91c012663859c3"
 dependencies = [
  "environmental",
  "frame-benchmarking",
@@ -7578,8 +7578,9 @@ dependencies = [
 
 [[package]]
 name = "paseo-runtime"
-version = "1.3.3"
+version = "1.3.4"
 dependencies = [
+ "approx",
  "binary-merkle-tree",
  "frame-benchmarking",
  "frame-election-provider-support",
@@ -7609,7 +7610,6 @@ dependencies = [
  "pallet-election-provider-support-benchmarking",
  "pallet-fast-unstake",
  "pallet-grandpa",
- "pallet-im-online",
  "pallet-indices",
  "pallet-message-queue",
  "pallet-mmr",
@@ -8117,7 +8117,7 @@ dependencies = [
 [[package]]
 name = "polkadot-runtime-constants"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.3#55bd514d60311b67cb11400a545cb64ce7a87c0e"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.4#3b18d942c766c7f358da50608b44edbe218284a4"
 dependencies = [
  "frame-support",
  "polkadot-primitives",
@@ -11969,7 +11969,7 @@ dependencies = [
 [[package]]
 name = "system-parachains-constants"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.3#55bd514d60311b67cb11400a545cb64ce7a87c0e"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.3.4#3b18d942c766c7f358da50608b44edbe218284a4"
 dependencies = [
  "frame-support",
  "kusama-runtime-constants",

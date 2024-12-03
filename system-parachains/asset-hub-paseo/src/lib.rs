@@ -81,7 +81,7 @@ use sp_runtime::{
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, Perbill, Permill,
 };
-use xcm_config::TrustBackedAssetsPalletLocationV3;
+use xcm_config::TrustBackedAssetsPalletLocation;
 use xcm_runtime_apis::{
 	dry_run::{CallDryRunEffects, Error as XcmDryRunApiError, XcmDryRunEffects},
 	fees::Error as XcmPaymentApiError,
@@ -112,7 +112,7 @@ use frame_system::{
 };
 use pallet_nfts::PalletFeatures;
 use parachains_common::{
-	message_queue::*, AccountId, AssetIdForTrustBackedAssets, AuraId,
+	message_queue::*, AccountId, AuraId, AssetIdForTrustBackedAssets,
 	Balance, BlockNumber, Hash, Header, Nonce, Signature,
 };
 
@@ -127,7 +127,7 @@ use xcm::{
 	VersionedAssetId, VersionedAssets, VersionedLocation, VersionedXcm,
 };
 use xcm_config::{
-	DotLocation, DotLocationV3, FellowshipLocation, ForeignAssetsConvertedConcreteId,
+	DotLocation, FellowshipLocation, ForeignAssetsConvertedConcreteId,
 	ForeignCreatorsSovereignAccountOf, GovernanceLocation, PoolAssetsConvertedConcreteId,
 	TrustBackedAssetsConvertedConcreteId, XcmOriginToTransactDispatchOrigin,
 };
@@ -152,7 +152,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("asset-hub-paseo"),
 	impl_name: create_runtime_str!("asset-hub-paseo"),
 	authoring_version: 1,
-	spec_version: 1_003_003,
+	spec_version: 1_003_004,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 15,
@@ -290,7 +290,7 @@ impl pallet_transaction_payment::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type OnChargeTransaction = impls::tx_payment::FungiblesAdapter<
 		NativeAndAssets,
-		DotLocationV3,
+		DotLocation,
 		ResolveAssetTo<StakingPot, NativeAndAssets>,
 	>;
 	type WeightToFee = WeightToFee;
@@ -349,29 +349,31 @@ parameter_types! {
 	pub const ForeignAssetsMetadataDepositPerByte: Balance = MetadataDepositPerByte::get();
 }
 
-/// Assets managed by some foreign location. Note: we do not declare a `ForeignAssetsCall` type, as
-/// this type is used in proxy definitions. We assume that a foreign location would not want to set
-/// an individual, local account as a proxy for the issuance of their assets. This issuance should
-/// be managed by the foreign location's governance.
+/// Assets managed by some foreign location.
+///
+/// Note: we do not declare a `ForeignAssetsCall` type, as this type is used in proxy definitions.
+/// We assume that a foreign location would not want to set an individual, local account as a proxy
+/// for the issuance of their assets. This issuance should be managed by the foreign location's
+/// governance.
 pub type ForeignAssetsInstance = pallet_assets::Instance2;
 impl pallet_assets::Config<ForeignAssetsInstance> for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
-	type AssetId = xcm::v3::Location;
-	type AssetIdParameter = xcm::v3::Location;
+	type AssetId = xcm::v4::Location;
+	type AssetIdParameter = xcm::v4::Location;
 	type Currency = Balances;
 	type CreateOrigin = ForeignCreators<
 		(
-			FromSiblingParachain<parachain_info::Pallet<Runtime>, xcm::v3::Location>,
+			FromSiblingParachain<parachain_info::Pallet<Runtime>, xcm::v4::Location>,
 			FromNetwork<
 				xcm_config::UniversalLocation,
 				xcm_config::bridging::to_ethereum::EthereumNetwork,
-				xcm::v3::Location,
+				xcm::v4::Location,
 			>,
 		),
 		ForeignCreatorsSovereignAccountOf,
 		AccountId,
-		xcm::v3::Location,
+		xcm::v4::Location,
 	>;
 	type ForceOrigin = AssetsForceOrigin;
 	type AssetDeposit = ForeignAssetsAssetDeposit;
@@ -488,7 +490,8 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 					RuntimeCall::Assets { .. } |
 						RuntimeCall::Utility { .. } |
 						RuntimeCall::Multisig { .. } |
-						RuntimeCall::Nfts { .. } | RuntimeCall::Uniques { .. }
+						RuntimeCall::Nfts { .. } |
+						RuntimeCall::Uniques { .. }
 				)
 			},
 			ProxyType::AssetOwner => matches!(
@@ -759,7 +762,7 @@ impl pallet_asset_conversion_tx_payment::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Fungibles = LocalAndForeignAssets;
 	type OnChargeAssetTransaction =
-		impls::tx_payment::SwapCreditAdapter<DotLocationV3, AssetConversion>;
+		impls::tx_payment::SwapCreditAdapter<DotLocation, AssetConversion>;
 }
 
 parameter_types! {
@@ -892,11 +895,11 @@ pub type LocalAndForeignAssets = fungibles::UnionOf<
 	Assets,
 	ForeignAssets,
 	LocalFromLeft<
-		AssetIdForTrustBackedAssetsConvert<TrustBackedAssetsPalletLocationV3, xcm::v3::Location>,
+		AssetIdForTrustBackedAssetsConvert<TrustBackedAssetsPalletLocation, xcm::v4::Location>,
 		AssetIdForTrustBackedAssets,
-		xcm::v3::Location,
+		xcm::v4::Location,
 	>,
-	xcm::v3::Location,
+	xcm::v4::Location,
 	AccountId,
 >;
 
@@ -904,8 +907,8 @@ pub type LocalAndForeignAssets = fungibles::UnionOf<
 pub type NativeAndAssets = fungible::UnionOf<
 	Balances,
 	LocalAndForeignAssets,
-	TargetFromLeft<DotLocationV3, xcm::v3::Location>,
-	xcm::v3::Location,
+	TargetFromLeft<DotLocation, xcm::v4::Location>,
+	xcm::v4::Location,
 	AccountId,
 >;
 
@@ -919,18 +922,18 @@ parameter_types! {
 
 pub type PoolIdToAccountId = pallet_asset_conversion::AccountIdConverter<
 	AssetConversionPalletId,
-	(xcm::v3::Location, xcm::v3::Location),
+	(xcm::v4::Location, xcm::v4::Location),
 >;
 
 impl pallet_asset_conversion::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type HigherPrecisionBalance = sp_core::U256;
-	type AssetKind = xcm::v3::Location;
+	type AssetKind = xcm::v4::Location;
 	type Assets = NativeAndAssets;
 	type PoolId = (Self::AssetKind, Self::AssetKind);
 	type PoolLocator = pallet_asset_conversion::WithFirstAsset<
-		DotLocationV3,
+		DotLocation,
 		AccountId,
 		Self::AssetKind,
 		PoolIdToAccountId,
@@ -938,7 +941,7 @@ impl pallet_asset_conversion::Config for Runtime {
 	type PoolAssetId = u32;
 	type PoolAssets = PoolAssets;
 	type PoolSetupFee = PoolSetupFee;
-	type PoolSetupFeeAsset = DotLocationV3;
+	type PoolSetupFeeAsset = DotLocation;
 	type PoolSetupFeeTarget = ResolveAssetTo<xcm_config::RelayTreasuryPalletAccount, Self::Assets>;
 	type LiquidityWithdrawalFee = LiquidityWithdrawalFee;
 	type LPFee = ConstU32<3>;
@@ -948,7 +951,7 @@ impl pallet_asset_conversion::Config for Runtime {
 	type WeightInfo = weights::pallet_asset_conversion::WeightInfo<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = assets_common::benchmarks::AssetPairFactory<
-		DotLocationV3,
+		DotLocation,
 		parachain_info::Pallet<Runtime>,
 		xcm_config::TrustBackedAssetsPalletIndex,
 		Self::AssetKind,
@@ -1350,10 +1353,10 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl pallet_asset_conversion::AssetConversionApi<Block, Balance, xcm::v3::Location> for Runtime {
+	impl pallet_asset_conversion::AssetConversionApi<Block, Balance, xcm::v4::Location> for Runtime {
 		fn quote_price_exact_tokens_for_tokens(
-			asset1: xcm::v3::Location,
-			asset2: xcm::v3::Location,
+			asset1: xcm::v4::Location,
+			asset2: xcm::v4::Location,
 			amount: Balance,
 			include_fee: bool,
 		) -> Option<Balance> {
@@ -1366,8 +1369,8 @@ impl_runtime_apis! {
 		}
 
 		fn quote_price_tokens_for_exact_tokens(
-			asset1: xcm::v3::Location,
-			asset2: xcm::v3::Location,
+			asset1: xcm::v4::Location,
+			asset2: xcm::v4::Location,
 			amount: Balance,
 			include_fee: bool,
 		) -> Option<Balance> {
@@ -1380,8 +1383,8 @@ impl_runtime_apis! {
 		}
 
 		fn get_reserves(
-			asset1: xcm::v3::Location,
-			asset2: xcm::v3::Location,
+			asset1: xcm::v4::Location,
+			asset2: xcm::v4::Location,
 		) -> Option<(Balance, Balance)> {
 			AssetConversion::get_reserves(asset1, asset2).ok()
 		}
