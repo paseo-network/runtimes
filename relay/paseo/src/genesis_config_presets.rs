@@ -104,16 +104,16 @@ fn default_parachains_host_configuration() -> HostConfiguration<polkadot_primiti
 		max_head_data_size: 32 * 1024,
 		max_upward_queue_count: 174172,
 		max_upward_queue_size: 1024 * 1024,
-		max_downward_message_size: 1024 * 1024,
-		max_upward_message_size: 50 * 1024,
+		max_downward_message_size: 51_200,
+		max_upward_message_size: 65_531,
 		max_upward_message_num_per_candidate: 16,
 		hrmp_sender_deposit: 0,
 		hrmp_recipient_deposit: 0,
 		hrmp_channel_max_capacity: 1000,
 		hrmp_channel_max_total_size: 100 * 1024,
-		hrmp_max_parachain_inbound_channels: 10,
+		hrmp_max_parachain_inbound_channels: 30,
 		hrmp_channel_max_message_size: 1024 * 1024,
-		hrmp_max_parachain_outbound_channels: 10,
+		hrmp_max_parachain_outbound_channels: 30,
 		hrmp_max_message_num_per_candidate: 10,
 		dispute_period: 6,
 		no_show_slots: 2,
@@ -204,6 +204,9 @@ fn paseo_testnet_genesis(
 		"configuration": {
 			"config": default_parachains_host_configuration(),
 		},
+		"hrmp": {
+			"preopenHrmpChannels": Vec::<(u32,u32,u32,u32)>::new(),
+		}
 	})
 }
 
