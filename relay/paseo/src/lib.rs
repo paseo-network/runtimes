@@ -66,8 +66,7 @@ use frame_support::{
 	traits::{
 		fungible::HoldConsideration, tokens::UnityOrOuterConversion, ConstU32, ConstU8, EitherOf,
 		EitherOfDiverse, Everything, FromContains, Get, InstanceFilter, KeyOwnerProofSystem,
-		LinearStoragePrice, PrivilegeCmp, ProcessMessage, ProcessMessageError,
-		WithdrawReasons,
+		LinearStoragePrice, PrivilegeCmp, ProcessMessage, ProcessMessageError, WithdrawReasons,
 	},
 	weights::{
 		constants::{WEIGHT_PROOF_SIZE_PER_KB, WEIGHT_REF_TIME_PER_MICROS},
@@ -99,11 +98,7 @@ use sp_runtime::{
 	ApplyExtrinsicResult, FixedU128, KeyTypeId, Perbill, Percent, Permill, RuntimeDebug,
 };
 use sp_staking::SessionIndex;
-use sp_std::{
-	cmp::Ordering,
-	collections::{btree_map::BTreeMap, vec_deque::VecDeque},
-	prelude::*,
-};
+use sp_std::{cmp::Ordering, collections::vec_deque::VecDeque, prelude::*};
 #[cfg(any(feature = "std", test))]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
@@ -122,10 +117,11 @@ pub use pallet_timestamp::Call as TimestampCall;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 
+extern crate alloc;
+use alloc::{collections::BTreeMap, vec::Vec};
+
 /// Constant values used within the runtime.
-use paseo_runtime_constants::{
-	currency::*, fee::*, system_parachain, time::*, TREASURY_PALLET_ID,
-};
+use paseo_runtime_constants::{currency::*, fee::*, system_parachain, time::*, TREASURY_PALLET_ID};
 
 // Weights used in the runtime.
 mod weights;
@@ -230,7 +226,7 @@ pub struct OriginPrivilegeCmp;
 impl PrivilegeCmp<OriginCaller> for OriginPrivilegeCmp {
 	fn cmp_privilege(left: &OriginCaller, right: &OriginCaller) -> Option<Ordering> {
 		if left == right {
-			return Some(Ordering::Equal)
+			return Some(Ordering::Equal);
 		}
 
 		match (left, right) {
@@ -1159,23 +1155,23 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 			),
 			ProxyType::Governance => matches!(
 				c,
-				RuntimeCall::Treasury(..) |
-					RuntimeCall::Bounties(..) |
-					RuntimeCall::Utility(..) |
-					RuntimeCall::ChildBounties(..) |
-					RuntimeCall::ConvictionVoting(..) |
-					RuntimeCall::Referenda(..) |
-					RuntimeCall::Whitelist(..)
+				RuntimeCall::Treasury(..)
+					| RuntimeCall::Bounties(..)
+					| RuntimeCall::Utility(..)
+					| RuntimeCall::ChildBounties(..)
+					| RuntimeCall::ConvictionVoting(..)
+					| RuntimeCall::Referenda(..)
+					| RuntimeCall::Whitelist(..)
 			),
 			ProxyType::Staking => {
 				matches!(
 					c,
-					RuntimeCall::Staking(..) |
-						RuntimeCall::Session(..) |
-						RuntimeCall::Utility(..) |
-						RuntimeCall::FastUnstake(..) |
-						RuntimeCall::VoterList(..) |
-						RuntimeCall::NominationPools(..)
+					RuntimeCall::Staking(..)
+						| RuntimeCall::Session(..)
+						| RuntimeCall::Utility(..)
+						| RuntimeCall::FastUnstake(..)
+						| RuntimeCall::VoterList(..)
+						| RuntimeCall::NominationPools(..)
 				)
 			},
 			ProxyType::NominationPools => {
@@ -1186,10 +1182,10 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 			},
 			ProxyType::Auction => matches!(
 				c,
-				RuntimeCall::Auctions(..) |
-					RuntimeCall::Crowdloan(..) |
-					RuntimeCall::Registrar(..) |
-					RuntimeCall::Slots(..)
+				RuntimeCall::Auctions(..)
+					| RuntimeCall::Crowdloan(..)
+					| RuntimeCall::Registrar(..)
+					| RuntimeCall::Slots(..)
 			),
 		}
 	}
@@ -2129,6 +2125,7 @@ impl Runtime {
 }
 
 sp_api::impl_runtime_apis! {
+
 	impl relay_common::apis::Inflation<Block> for Runtime {
 		fn experimental_inflation_prediction_info() -> InflationInfo {
 			Runtime::impl_experimental_inflation_info()
@@ -3099,8 +3096,8 @@ mod test_fees {
 		};
 
 		let mut active = target_voters;
-		while weight_with(active).all_lte(OffchainSolutionWeightLimit::get()) ||
-			active == target_voters
+		while weight_with(active).all_lte(OffchainSolutionWeightLimit::get())
+			|| active == target_voters
 		{
 			active += 1;
 		}
@@ -3214,8 +3211,8 @@ mod multiplier_tests {
 	#[test]
 	fn multiplier_can_grow_from_zero() {
 		let minimum_multiplier = MinimumMultiplier::get();
-		let target = TargetBlockFullness::get() *
-			BlockWeights::get().get(DispatchClass::Normal).max_total.unwrap();
+		let target = TargetBlockFullness::get()
+			* BlockWeights::get().get(DispatchClass::Normal).max_total.unwrap();
 		// if the min is too small, then this will not change, and we are doomed forever.
 		// the weight is 1/100th bigger than target.
 		run_with_system_weight(target.saturating_mul(101) / 100, || {
@@ -3255,16 +3252,8 @@ mod multiplier_tests {
 			2 * MILLISECONDS_PER_DAY,
 		);
 
-		assert_relative_eq!(
-			to_stakers as f64,
-			(27_693 * UNITS) as f64 * 2.0,
-			max_relative = 0.001
-		);
-		assert_relative_eq!(
-			to_treasury as f64,
-			(4_887 * UNITS) as f64 * 2.0,
-			max_relative = 0.001
-		);
+		assert_relative_eq!(to_stakers as f64, (27_693 * UNITS) as f64 * 2.0, max_relative = 0.001);
+		assert_relative_eq!(to_treasury as f64, (4_887 * UNITS) as f64 * 2.0, max_relative = 0.001);
 	}
 
 	#[test]
@@ -3463,7 +3452,7 @@ mod remote_tests {
 	#[tokio::test]
 	async fn dispatch_all_proposals() {
 		if var("RUN_OPENGOV_TEST").is_err() {
-			return
+			return;
 		}
 
 		sp_tracing::try_init_simple();
@@ -3509,7 +3498,7 @@ mod remote_tests {
 	#[tokio::test]
 	async fn run_migrations() {
 		if var("RUN_MIGRATION_TESTS").is_err() {
-			return
+			return;
 		}
 
 		sp_tracing::try_init_simple();
