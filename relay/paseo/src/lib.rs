@@ -118,7 +118,7 @@ pub use pallet_timestamp::Call as TimestampCall;
 pub use sp_runtime::BuildStorage;
 
 extern crate alloc;
-use alloc::{collections::BTreeMap, vec::Vec};
+use alloc::{collections::{BTreeSet, BTreeMap}, vec::Vec};
 
 /// Constant values used within the runtime.
 use paseo_runtime_constants::{currency::*, fee::*, system_parachain, time::*, TREASURY_PALLET_ID};
