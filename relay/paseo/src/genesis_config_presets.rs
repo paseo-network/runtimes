@@ -19,8 +19,8 @@
 use crate::*;
 use babe_primitives::AuthorityId as BabeId;
 use pallet_staking::{Forcing, StakerStatus};
+use paseo_primitives::{AccountPublic, AssignmentId, AsyncBackingParams};
 use paseo_runtime_constants::currency::UNITS as PAS;
-use polkadot_primitives::{AccountPublic, AssignmentId, AsyncBackingParams, ExecutorParam::{MaxMemoryPages, PvfExecTimeout}, PvfExecKind};
 use runtime_parachains::configuration::HostConfiguration;
 use sp_core::{sr25519, Pair, Public};
 use sp_genesis_builder::PresetId;
@@ -134,7 +134,7 @@ fn default_parachains_host_configuration() -> HostConfiguration<polkadot_primiti
 			max_candidate_depth: 3,
 			allowed_ancestry_len: 2,
 		},
-		executor_params: executor_parameteres,
+		executor_params: Default::default(),
 		max_validators: None,
 		pvf_voting_ttl: 2,
 		approval_voting_params: ApprovalVotingParams { max_approval_coalesce_count: 1 },
@@ -153,7 +153,7 @@ fn paseo_testnet_genesis(
 		AuthorityDiscoveryId,
 		BeefyId,
 	)>,
-	root_key: AccountId,
+	_root_key: AccountId,
 	endowed_accounts: Option<Vec<AccountId>>,
 ) -> serde_json::Value {
 	let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(testnet_accounts);
