@@ -16,7 +16,9 @@
 // along with Polkadot.  If not, see <http://www.gnu.org/licenses/>.
 
 use sc_chain_spec::{ChainSpec, ChainSpecExtension, ChainSpecGroup, ChainType};
+use sc_network::config::MultiaddrWithPeerId;
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
 /// Generic extensions for Parachain ChainSpecs.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ChainSpecGroup, ChainSpecExtension)]
@@ -50,12 +52,7 @@ pub fn asset_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, Stri
 		.with_name("Asset Hub Paseo Local")
 		.with_id("asset-hub-paseo-local")
 		.with_chain_type(ChainType::Local)
-		.with_protocol_id("ah-pas")
-		.with_genesis_config_patch(
-			asset_hub_paseo_runtime::genesis_config_presets::asset_hub_paseo_local_testnet_genesis(
-				1000.into(),
-			),
-		)
+		.with_genesis_config_preset_name("local_testnet")
 		.with_properties(properties)
 		.build(),
 	))
