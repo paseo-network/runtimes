@@ -19,7 +19,7 @@
 use crate::*;
 use babe_primitives::AuthorityId as BabeId;
 use pallet_staking::{Forcing, StakerStatus};
-use paseo_primitives::{AccountPublic, AssignmentId, AsyncBackingParams};
+use polkadot_primitives::{AccountPublic, AssignmentId, AsyncBackingParams};
 use paseo_runtime_constants::currency::UNITS as PAS;
 use runtime_parachains::configuration::HostConfiguration;
 use sp_core::{sr25519, Pair, Public};
@@ -89,12 +89,6 @@ fn testnet_accounts() -> Vec<AccountId> {
 fn default_parachains_host_configuration() -> HostConfiguration<polkadot_primitives::BlockNumber> {
 	use polkadot_primitives::{MAX_CODE_SIZE, MAX_POV_SIZE};
 
-	let executor_parameteres = ExecutorParams::from(&[
-		MaxMemoryPages(8192),
-		PvfExecTimeout(PvfExecKind::Backing, 2500),
-		PvfExecTimeout(PvfExecKind::Approval, 15000),
-	][..]);
-
 	runtime_parachains::configuration::HostConfiguration {
 		validation_upgrade_cooldown: 2u32,
 		validation_upgrade_delay: 2,
@@ -122,7 +116,7 @@ fn default_parachains_host_configuration() -> HostConfiguration<polkadot_primiti
 		relay_vrf_modulo_samples: 2,
 		zeroth_delay_tranche_width: 0,
 		minimum_validation_upgrade_delay: 5,
-		scheduler_params: polkadot_primitives::vstaging::SchedulerParams {
+		scheduler_params: polkadot_primitives::SchedulerParams {
 			group_rotation_frequency: 20,
 			paras_availability_period: 4,
 			..Default::default()
@@ -196,7 +190,7 @@ fn paseo_testnet_genesis(
 			"slashRewardFraction": Perbill::from_percent(10),
 		},
 		"sudo": {
-			"key": Some(root_key),
+			"key": Some(_root_key),
 		},
 		"babe": {
 			"epochConfig": Some(BABE_GENESIS_EPOCH_CONFIG),

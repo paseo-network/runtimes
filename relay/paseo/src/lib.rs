@@ -34,14 +34,14 @@ use polkadot_runtime_common::{
 use relay_common::apis::InflationInfo;
 
 use runtime_parachains::{
-	assigner_coretime as parachains_assigner_coretime,
-	assigner_on_demand as parachains_assigner_on_demand, configuration as parachains_configuration,
+	assigner_coretime as parachains_assigner_coretime, configuration as parachains_configuration,
 	configuration::ActiveConfigHrmpChannelSizeAndCapacityRatio,
 	coretime, disputes as parachains_disputes,
 	disputes::slashing as parachains_slashing,
 	dmp as parachains_dmp, hrmp as parachains_hrmp, inclusion as parachains_inclusion,
 	inclusion::{AggregateMessageOrigin, UmpQueueId},
-	initializer as parachains_initializer, origin as parachains_origin, paras as parachains_paras,
+	initializer as parachains_initializer, on_demand as parachains_on_demand,
+	origin as parachains_origin, paras as parachains_paras,
 	paras_inherent as parachains_paras_inherent, reward_points as parachains_reward_points,
 	runtime_api_impl::{
 		v10 as parachains_runtime_api_impl, vstaging as parachains_vstaging_api_impl,
@@ -62,6 +62,7 @@ use frame_election_provider_support::{
 };
 use frame_support::{
 	construct_runtime,
+	dynamic_params::{dynamic_pallet_params, dynamic_params},
 	genesis_builder_helper::{build_state, get_preset},
 	parameter_types,
 	traits::{
@@ -621,6 +622,88 @@ impl pallet_bags_list::Config<VoterBagsListInstance> for Runtime {
 	type WeightInfo = weights::pallet_bags_list::WeightInfo<Runtime>;
 	type BagThresholds = BagThresholds;
 	type Score = sp_npos_elections::VoteWeight;
+}
+
+/// Dynamic params that can be adjusted at runtime.
+#[dynamic_params(RuntimeParameters, pallet_parameters::Parameters::<Runtime>)]
+pub mod dynamic_params {
+	use super::*;
+
+	/// Parameters used to calculate era payouts, see
+	/// [`paseo_runtime_common::impls::EraPayoutParams`].
+	#[dynamic_pallet_params]
+	#[codec(index = 0)]
+	pub mod inflation {
+		/// Minimum inflation rate used to calculate era payouts.
+		#[codec(index = 0)]
+		pub static MinInflation: Perquintill = Perquintill::from_rational(25u64, 1000);
+
+		/// Maximum inflation rate used to calculate era payouts.
+		#[codec(index = 1)]
+		pub static MaxInflation: Perquintill = Perquintill::from_percent(10);
+
+		/// Ideal stake ratio used to calculate era payouts.
+		#[codec(index = 2)]
+		pub static IdealStake: Perquintill = Perquintill::from_percent(75);
+
+		/// Falloff used to calculate era payouts.
+		#[codec(index = 3)]
+		pub static Falloff: Perquintill = Perquintill::from_percent(5);
+
+		/// Whether to use auction slots or not in the calculation of era payouts, then we subtract
+		/// `num_auctioned_slots.min(60) / 300` from `ideal_stake`.
+		///
+		/// That is, we assume up to 60 parachains that are leased can reduce the ideal stake by a
+		/// maximum of 20%.
+		///
+		/// With the move to agile-coretime, this parameter does not make much sense and should
+		/// generally be set to false.
+		#[codec(index = 4)]
+		pub static UseAuctionSlots: bool = true;
+	}
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+impl Default for RuntimeParameters {
+	fn default() -> Self {
+		RuntimeParameters::Inflation(dynamic_params::inflation::Parameters::MinInflation(
+			dynamic_params::inflation::MinInflation,
+			Some(Perquintill::from_rational(25u64, 1000u64)),
+		))
+	}
+}
+
+/// Defines what origin can modify which dynamic parameters.
+pub struct DynamicParameterOrigin;
+impl frame_support::traits::EnsureOriginWithArg<RuntimeOrigin, RuntimeParametersKey>
+	for DynamicParameterOrigin
+{
+	type Success = ();
+
+	fn try_origin(
+		origin: RuntimeOrigin,
+		key: &RuntimeParametersKey,
+	) -> Result<Self::Success, RuntimeOrigin> {
+		use crate::RuntimeParametersKey::*;
+
+		match key {
+			Inflation(_) => frame_system::ensure_root(origin.clone()),
+		}
+		.map_err(|_| origin)
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn try_successful_origin(_key: &RuntimeParametersKey) -> Result<RuntimeOrigin, ()> {
+		// Provide the origin for the parameter returned by `Default`:
+		Ok(RuntimeOrigin::root())
+	}
+}
+
+impl pallet_parameters::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeParameters = RuntimeParameters;
+	type AdminOrigin = DynamicParameterOrigin;
+	type WeightInfo = weights::pallet_parameters::WeightInfo<Runtime>;
 }
 
 /// Defines how much should the inflation be for an era given its duration.
@@ -1927,50 +2010,6 @@ pub mod migrations {
 		}
 	}
 
-	/// Cancel all ongoing auctions.
-	///
-	/// Any leases that come into existence after coretime was launched will not be served. Yet,
-	/// any ongoing auctions must be cancelled.
-	///
-	/// Safety:
-	///
-	/// - After coretime is launched, there are no auctions anymore. So if this forgotten to be
-	///   removed after the runtime upgrade, running this again on the next one is harmless.
-	/// - I am assuming scheduler `TaskName`s are unique, so removal of the scheduled entry multiple
-	///   times should also be fine.
-	pub struct CancelAuctions;
-	impl OnRuntimeUpgrade for CancelAuctions {
-		fn on_runtime_upgrade() -> Weight {
-			if let Err(err) = Auctions::cancel_auction(frame_system::RawOrigin::Root.into()) {
-				log::debug!(target: "runtime", "Cancelling auctions failed: {:?}", err);
-			}
-			// Cancel scheduled auction as well:
-			if let Err(err) = Scheduler::cancel_named(
-				pallet_custom_origins::Origin::AuctionAdmin.into(),
-				[
-					0x87, 0xa8, 0x71, 0xb4, 0xd6, 0x21, 0xf0, 0xb9, 0x73, 0x47, 0x5a, 0xaf, 0xcc,
-					0x32, 0x61, 0x0b, 0xd7, 0x68, 0x8f, 0x15, 0x02, 0x33, 0x8a, 0xcd, 0x00, 0xee,
-					0x48, 0x8a, 0xc3, 0x62, 0x0f, 0x4c,
-				],
-			) {
-				log::debug!(target: "runtime", "Cancelling scheduled auctions failed: {:?}", err);
-			}
-			use pallet_scheduler::WeightInfo as _;
-			use paseo_runtime_common::auctions::WeightInfo as _;
-			weights::paseo_runtime_common_auctions::WeightInfo::<Runtime>::cancel_auction()
-				.saturating_add(weights::pallet_scheduler::WeightInfo::<Runtime>::cancel_named(
-					<Runtime as pallet_scheduler::Config>::MaxScheduledPerBlock::get(),
-				))
-		}
-	}
-
-	parameter_types! {
-		// This is used to bound number of pools migrating in the runtime upgrade.  This is set to
-		// ~existing_pool_count * 2 to also account for any new pools getting created before the
-		// migration is actually executed.
-		pub const MaxPoolsToMigrate: u32 = 500;
-	}
-
 	/// Unreleased migrations. Add new ones here:
 	pub type Unreleased = (
 		parachains_configuration::migration::v12::MigrateToV12<Runtime>,
@@ -1991,69 +2030,10 @@ pub mod migrations {
 			crate::xcm_config::XcmRouter,
 			GetLegacyLeaseImpl,
 		>,
-		CancelAuctions,
-		// Migrate NominationPools to `DelegateStake` adapter.
-		pallet_nomination_pools::migration::unversioned::DelegationStakeMigration<
-			Runtime,
-			MaxPoolsToMigrate,
-		>,
-		restore_corrupt_ledger_2::Migrate,
 	);
 
 	/// Migrations/checks that do not need to be versioned and can run on every update.
 	pub type Permanent = (pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,);
-}
-
-pub mod restore_corrupt_ledger_2 {
-	use super::*;
-	use frame_system::RawOrigin;
-	use pallet_staking::WeightInfo;
-
-	parameter_types! {
-		// see https://paseo.subscan.io/tools/format_transform, this is the public key of
-		// 12gmcL9eej9jRBFT26vZLF4b7aAe4P9aEYHGHFzJdmf5arPi
-		pub CorruptStash: AccountId = hex_literal::hex!(
-			"4a90f8d375290b428e580408f18359f66ef367f0f8d1d56c5d3e002ad29c8e00"
-		).into();
-	}
-	pub struct Migrate;
-	impl OnRuntimeUpgrade for Migrate {
-		fn on_runtime_upgrade() -> frame_election_provider_support::Weight {
-			// ensure this only runs once, in the 1.4.0 release
-			if System::last_runtime_upgrade_spec_version() < 1_004_000 {
-				let _ = pallet_staking::Pallet::<Runtime>::force_unstake(
-					RawOrigin::Root.into(),
-					CorruptStash::get(),
-					0,
-				);
-				log::info!(
-					target: LOG_TARGET,
-					"migrations: force unstaked {:?}",
-					CorruptStash::get()
-				);
-				<Runtime as pallet_staking::Config>::WeightInfo::force_unstake(0)
-			} else {
-				Default::default()
-			}
-		}
-
-		#[cfg(feature = "try-runtime")]
-		fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
-			let found_corrupted =
-				pallet_staking::Ledger::<Runtime>::get(CorruptStash::get()).is_some();
-			Ok(found_corrupted.encode())
-		}
-
-		#[cfg(feature = "try-runtime")]
-		fn post_upgrade(state: Vec<u8>) -> Result<(), sp_runtime::TryRuntimeError> {
-			let found_corrupted: bool = Decode::decode(&mut &state[..])
-				.map_err(|_| sp_runtime::TryRuntimeError::Corruption)?;
-			if found_corrupted {
-				assert!(pallet_staking::Ledger::<Runtime>::get(CorruptStash::get()).is_none());
-			}
-			Ok(())
-		}
-	}
 }
 
 /// Unchecked extrinsic type as expected by this runtime.
