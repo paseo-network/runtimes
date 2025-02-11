@@ -57,6 +57,7 @@ fn people_paseo_genesis(
 					)
 				})
 				.collect(),
+			..Default::default()
 		},
 		"sudo": {
 			"key": Some(get_account_id_from_seed::<sr25519::Public>("Alice"))

@@ -8023,6 +8023,7 @@ dependencies = [
  "pallet-xcm",
  "pallet-xcm-benchmarks",
  "parachains-common",
+ "parachains-runtimes-test-utils",
  "parity-scale-codec",
  "paseo-runtime-constants",
  "polkadot-parachain-primitives",
