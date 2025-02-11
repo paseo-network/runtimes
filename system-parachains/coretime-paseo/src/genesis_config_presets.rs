@@ -59,6 +59,7 @@ fn coretime_paseo_genesis(
 					)
 				})
 				.collect(),
+			..Default::default()
 		},
 		"sudo": {
 			"key": Some(get_account_id_from_seed::<sr25519::Public>("Alice"))
@@ -95,7 +96,42 @@ fn coretime_paseo_live_genesis(para_id: ParaId) -> serde_json::Value {
 				hex!("0cf6762e28ed1505f5595a7845d153b1853b026d0b620a70a564378043c33b18").into(),
 				hex!("7e126fa970a75ae2cd371d01ee32e9387f0b256832e408ca8ea7b254e6bcde7d")
 					.unchecked_into(),
-			)
+			),
+			// Stakeworld.io
+			// 13Jpq4n3PXXaSAbJTMmFD78mXAzs8PzgUUQd5ve8saw7HQS5
+			(
+				hex!("6610a5024c2a5db3d02056d4344d120ec7be283100d71a6715f09275167e4f38").into(),
+				hex!("dcaa0b4c6840028f6d4fa8c460d5a7d687d1f81c9de453ef2f5ead88767fd22a")
+					.unchecked_into(),
+			),
+			// STKD
+			// 173Wc3mSdXa9ja9nv7C1z6GQHEBK4HZ9U4NGhHnvmTfJaJb
+			(
+				hex!("049bec59fb5fe6adea4578250578e89dd7e51ad88c7c92493d6f451c6680925c").into(),
+				hex!("7283ea6b8648673305a3e06be6dd83b7bc1840081d50d4deef1ce53eba21e914")
+					.unchecked_into(),
+			),
+			// Staker Space
+			// 1k4vuCxwbNcHfsNdQ3MgTGixwvrT7wbLc2XiZj68Gru6bLM
+			(
+				hex!("20d8c795eef2620fba2bde74dbc36461c07998ebf600ed265b746c1e05c70606").into(),
+				hex!("248dbf89d86998772b66900d78e98980ea2afc3c8fe5b93f4b38052f3018a230")
+					.unchecked_into(),
+			),
+			// openbitlab_
+			// 12iho9gjSMvF9smJjnihmn9j9Qqr3S1LFD97e8Lkcw4R6Yeb
+			(
+				hex!("4c0aa0240b2d7485675e52cdb283a87973652f6acb42c830a5a5faa80f7a707e").into(),
+				hex!("1c346cb44aa03f8995eeee230970772d6268cd7606740f269bb4e609a01a3a15")
+					.unchecked_into(),
+			),
+			// Math Crypto
+			// 112FKz5UNxjXqe3Wowe73a8FHnR5B4R9qi2pbMaXJczGNJsx
+			(
+				hex!("00f379b621bd73c45c7d155d2a1fe6a04649e3ece7c7e03b70b3a6242bc7c127").into(),
+				hex!("e063247ca37058db551a8d99f2f15cfede61fc796acc464a9cdce4c18f6a4659")
+					.unchecked_into(),
+			),
 		],
 		Vec::new(),
 		para_id,
