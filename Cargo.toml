@@ -21,7 +21,7 @@ bridge-hub-paseo-runtime = { path = "system-parachains/bridge-hub-paseo", defaul
 people-paseo-runtime = { path = "system-parachains/people-paseo", default-features = false }
 coretime-paseo-runtime = { path = "system-parachains/coretime-paseo", default-features = false }
 collectives-paseo-runtime = { path = "system-parachains/collectives-paseo" }
-collectives-paseo-runtime-constants = { path = "system-parachains/collectives/collectives-paseo/constants" }
+collectives-paseo-runtime-constants = { path = "system-parachains/collectives-paseo/constants" }
 
 # Polkadot SDK
 bp-bridge-hub-paseo = { path = "system-parachains/bridge-hub-paseo/primitives", default-features = false}

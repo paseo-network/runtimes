@@ -26,27 +26,27 @@ use emulated_integration_tests_common::{
 
 // CollectivesPolkadot Parachain declaration
 decl_test_parachains! {
-	pub struct CollectivesPolkadot {
+	pub struct CollectivesPaseo {
 		genesis = genesis::genesis(),
 		on_init = {
-			collectives_polkadot_runtime::AuraExt::on_initialize(1);
+			collectives_paseo_runtime::AuraExt::on_initialize(1);
 		},
-		runtime = collectives_polkadot_runtime,
+		runtime = collectives_paseo_runtime,
 		core = {
-			XcmpMessageHandler: collectives_polkadot_runtime::XcmpQueue,
-			LocationToAccountId: collectives_polkadot_runtime::xcm_config::LocationToAccountId,
-			ParachainInfo: collectives_polkadot_runtime::ParachainInfo,
+			XcmpMessageHandler: collectives_paseo_runtime::XcmpQueue,
+			LocationToAccountId: collectives_paseo_runtime::xcm_config::LocationToAccountId,
+			ParachainInfo: collectives_paseo_runtime::ParachainInfo,
 			MessageOrigin: cumulus_primitives_core::AggregateMessageOrigin,
 		},
 		pallets = {
-			PolkadotXcm: collectives_polkadot_runtime::PolkadotXcm,
-			Balances: collectives_polkadot_runtime::Balances,
-			FellowshipTreasury: collectives_polkadot_runtime::FellowshipTreasury,
-			AssetRate: collectives_polkadot_runtime::AssetRate,
+			PolkadotXcm: collectives_paseo_runtime::PolkadotXcm,
+			Balances: collectives_paseo_runtime::Balances,
+			FellowshipTreasury: collectives_paseo_runtime::FellowshipTreasury,
+			AssetRate: collectives_paseo_runtime::AssetRate,
 		}
 	},
 }
 
 // CollectivesPolkadot implementation
-impl_accounts_helpers_for_parachain!(CollectivesPolkadot);
-impl_assert_events_helpers_for_parachain!(CollectivesPolkadot);
+impl_accounts_helpers_for_parachain!(CollectivesPaseo);
+impl_assert_events_helpers_for_parachain!(CollectivesPaseo);
