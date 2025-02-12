@@ -1360,12 +1360,14 @@ dependencies = [
 name = "bridge-hub-paseo-emulated-chain"
 version = "1.0.0"
 dependencies = [
+ "bp-messages",
  "bridge-hub-common",
  "bridge-hub-paseo-runtime",
  "emulated-integration-tests-common",
  "frame-support",
  "parachains-common",
  "sp-core",
+ "staging-xcm 14.2.0",
 ]
 
 [[package]]
@@ -8121,6 +8123,7 @@ version = "1.0.0"
 dependencies = [
  "asset-hub-paseo-emulated-chain",
  "bridge-hub-paseo-emulated-chain",
+ "collectives-paseo-emulated-chain",
  "coretime-paseo-emulated-chain",
  "emulated-integration-tests-common",
  "paseo-emulated-chain",
@@ -8251,6 +8254,7 @@ dependencies = [
  "frame-support",
  "parachains-common",
  "paseo-emulated-chain",
+ "paseo-runtime-constants",
  "people-paseo-runtime",
  "sp-core",
 ]
