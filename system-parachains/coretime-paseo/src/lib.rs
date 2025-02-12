@@ -118,7 +118,7 @@ pub type UncheckedExtrinsic =
 pub type Migrations = (
 	// permanent
 	pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
-	//migrations::FixMigration,
+	migrations::FixMigration,
 );
 
 /// Executive: handles dispatch to the various modules.
@@ -142,7 +142,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("coretime-paseo"),
 	impl_name: create_runtime_str!("coretime-paseo"),
 	authoring_version: 1,
-	spec_version: 1_003_003,
+	spec_version: 1_004_000,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 0,
@@ -180,10 +180,10 @@ parameter_types! {
 	pub const SS58Prefix: u8 = 0;
 }
 
-/// Filter out credit purchase calls until the credit system is implemented.
-///
-/// Otherwise, users may have chance of locking their funds forever on purchased credits they cannot
-/// use. Also filter the interlace call until the relay can support this fully.
+/// Filter:
+/// - Credit purchase calls until the credit system is implemented. Otherwise, users may have chance
+///   of locking their funds forever on purchased credits they cannot use.
+/// - The interlace call until the relay can support this fully
 pub struct IsFilteredBrokerCall;
 impl Contains<RuntimeCall> for IsFilteredBrokerCall {
 	fn contains(c: &RuntimeCall) -> bool {
@@ -820,7 +820,8 @@ impl_runtime_apis! {
 		}
 
 		fn query_weight_to_asset_fee(weight: Weight, asset: VersionedAssetId) -> Result<u128, XcmPaymentApiError> {
-			match asset.try_as::<AssetId>() {
+			let latest_asset_id: Result<AssetId, ()> = asset.clone().try_into();
+			match latest_asset_id {
 				Ok(asset_id) if asset_id.0 == xcm_config::DotRelayLocation::get() => {
 					// for native token
 					Ok(WeightToFee::weight_to_fee(&weight))
@@ -909,7 +910,9 @@ impl_runtime_apis! {
 			config: frame_benchmarking::BenchmarkConfig
 		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
 			use frame_benchmarking::{Benchmarking, BenchmarkBatch, BenchmarkError};
+			use frame_support::traits::WhitelistedStorageKeys;
 			use sp_storage::TrackedStorageKey;
+			use pallet_broker::CoreMask;
 
 			use frame_system_benchmarking::Pallet as SystemBench;
 			impl frame_system_benchmarking::Config for Runtime {
@@ -934,15 +937,25 @@ impl_runtime_apis! {
 					DotRelayLocation::get(),
 					ExistentialDeposit::get()
 				).into());
+				pub const RandomParaId: ParaId = ParaId::new(43211234);
 			}
 
 			use pallet_xcm::benchmarking::Pallet as PalletXcmExtrinsicsBenchmark;
 			impl pallet_xcm::benchmarking::Config for Runtime {
-				type DeliveryHelper = cumulus_primitives_utility::ToParentDeliveryHelper<
+				type DeliveryHelper = (
+					cumulus_primitives_utility::ToParentDeliveryHelper<
 						xcm_config::XcmConfig,
 						ExistentialDepositAsset,
 						PriceForParentDelivery,
-					>;
+					>,
+					paseo_runtime_common::xcm_sender::ToParachainDeliveryHelper<
+						xcm_config::XcmConfig,
+						ExistentialDepositAsset,
+						PriceForSiblingParachainDelivery,
+						RandomParaId,
+						ParachainSystem,
+					>
+				);
 
 				fn reachable_dest() -> Option<Location> {
 					Some(Parent.into())
@@ -960,8 +973,21 @@ impl_runtime_apis! {
 				}
 
 				fn reserve_transferable_asset_and_dest() -> Option<(Asset, Location)> {
-					// Reserve transfers are disabled
-					None
+					// Coretime chain can reserve transfer regions to some random parachain.
+
+					// Properties of a mock region:
+					let core = 0;
+					let begin = 0;
+					let end = 42;
+
+					let region_id = pallet_broker::Pallet::<Runtime>::issue(core, begin, CoreMask::complete(), end, None, None);
+					Some((
+						Asset {
+							fun: NonFungible(Index(region_id.into())),
+							id: AssetId(xcm_config::BrokerPalletLocation::get())
+						},
+						ParentThen(Parachain(RandomParaId::get().into()).into()).into(),
+					))
 				}
 
 				fn get_asset() -> Asset {
@@ -974,11 +1000,20 @@ impl_runtime_apis! {
 
 			impl pallet_xcm_benchmarks::Config for Runtime {
 				type XcmConfig = xcm_config::XcmConfig;
-				type DeliveryHelper = cumulus_primitives_utility::ToParentDeliveryHelper<
-					xcm_config::XcmConfig,
-					ExistentialDepositAsset,
-					PriceForParentDelivery,
-				>;
+				type DeliveryHelper = (
+					cumulus_primitives_utility::ToParentDeliveryHelper<
+						xcm_config::XcmConfig,
+						ExistentialDepositAsset,
+						PriceForParentDelivery,
+					>,
+					paseo_runtime_common::xcm_sender::ToParachainDeliveryHelper<
+						xcm_config::XcmConfig,
+						ExistentialDepositAsset,
+						PriceForSiblingParachainDelivery,
+						RandomParaId,
+						ParachainSystem,
+					>
+				);
 				type AccountIdConverter = xcm_config::LocationToAccountId;
 				fn valid_destination() -> Result<Location, BenchmarkError> {
 					Ok(DotRelayLocation::get())

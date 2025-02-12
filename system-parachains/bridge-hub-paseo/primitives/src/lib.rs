@@ -25,7 +25,7 @@ use bp_runtime::{
 	decl_bridge_finality_runtime_apis, decl_bridge_messages_runtime_apis, Chain, ChainId, Parachain,
 };
 use frame_support::dispatch::DispatchClass;
-use sp_runtime::{FixedPointNumber, FixedU128, RuntimeDebug, Saturating};
+use sp_runtime::{FixedPointNumber, FixedU128, RuntimeDebug, Saturating, StateVersion};
 
 /// BridgeHubPaseo parachain.
 #[derive(RuntimeDebug)]
@@ -33,6 +33,7 @@ pub struct BridgeHubPaseo;
 
 impl Chain for BridgeHubPaseo {
 	const ID: ChainId = *b"bhpd";
+	const STATE_VERSION: StateVersion = StateVersion::V1;
 
 	type BlockNumber = BlockNumber;
 	type Hash = Hash;
@@ -66,8 +67,11 @@ impl ChainWithMessages for BridgeHubPaseo {
 		WITH_BRIDGE_HUB_POLKAPAS_MESSAGES_PALLET_NAME;
 	const MAX_UNREWARDED_RELAYERS_IN_CONFIRMATION_TX: MessageNonce =
 		MAX_UNREWARDED_RELAYERS_IN_CONFIRMATION_TX;
-	const MAX_UNCONFIRMED_MESSAGES_IN_CONFIRMATION_TX: MessageNonce =
-		MAX_UNCONFIRMED_MESSAGES_IN_CONFIRMATION_TX;
+	/// This constant limits the maximum number of messages in `receive_messages_proof`.
+	/// We need to adjust it from 4096 to 2024 due to the actual weights identified by
+	/// `check_message_lane_weights`. A higher value can be set once we switch
+	/// `max_extrinsic_weight` to `BlockWeightsForAsyncBacking`.
+	const MAX_UNCONFIRMED_MESSAGES_IN_CONFIRMATION_TX: MessageNonce = 2024;
 }
 
 /// Identifier of BridgeHubPaseo in the Paseo relay chain.
@@ -84,7 +88,7 @@ pub const WITH_BRIDGE_HUB_POLKAPAS_RELAYERS_PALLET_NAME: &str = "BridgeRelayers"
 pub const WITH_BRIDGE_POLKAPAS_TO_KUSAMA_MESSAGES_PALLET_INDEX: u8 = 53;
 
 decl_bridge_finality_runtime_apis!(bridge_hub_paseo);
-decl_bridge_messages_runtime_apis!(bridge_hub_paseo);
+decl_bridge_messages_runtime_apis!(bridge_hub_paseo, LegacyLaneId);
 
 frame_support::parameter_types! {
 	/// The XCM fee that is paid for executing XCM program (with `ExportMessage` instruction) at the Paseo
@@ -130,7 +134,7 @@ pub fn estimate_paseo_to_kusama_byte_fee() -> Balance {
 	// 2) the second part is the payment for bytes of the message delivery transaction, which is
 	//    "mined" at Kusama Bridge Hub. Hence, we need to use byte fees from that chain and convert
 	//    it to PASs here.
-	convert_from_uksm_to_udot(paseo_runtime_constants::fee::TRANSACTION_BYTE_FEE)
+	convert_from_uksm_to_udot(paseo_runtime_constants::fee::TRANSACTION_BYTE_FEE) // TODO
 }
 
 /// Convert from uKSMs to uPASs.
@@ -155,7 +159,7 @@ pub mod snowbridge {
 	use frame_support::parameter_types;
 	use snowbridge_core::{PricingParameters, Rewards, U256};
 	use sp_runtime::FixedU128;
-	use xcm::latest::NetworkId;
+	use xcm::latest::{Location, NetworkId};
 
 	parameter_types! {
 		/// Should match the `ForeignAssets::create` index on Asset Hub.
@@ -186,6 +190,7 @@ pub mod snowbridge {
 		/// <https://chainlist.org/chain/1>
 		/// <https://ethereum.org/en/developers/docs/apis/json-rpc/#net_version>
 		pub EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 11155111 };
+		pub EthereumLocation: Location = Location::new(2, EthereumNetwork::get());
 	}
 }
 

@@ -15,6 +15,7 @@ emulated-integration-tests-common = { workspace = true }
 # Runtimes
 asset-hub-paseo-emulated-chain = { workspace = true }
 bridge-hub-paseo-emulated-chain = { workspace = true }
+collectives-paseo-emulated-chain = { workspace = true }
 coretime-paseo-emulated-chain = { workspace = true }
 penpal-emulated-chain = { workspace = true }
 paseo-emulated-chain = { workspace = true }

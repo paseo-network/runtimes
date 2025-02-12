@@ -106,6 +106,7 @@ pub fn genesis() -> Storage {
 					)
 				})
 				.collect::<Vec<_>>(),
+			..Default::default()
 		},
 		staking: paseo_runtime::StakingConfig {
 			validator_count: validators::initial_authorities().len() as u32,

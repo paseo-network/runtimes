@@ -23,10 +23,11 @@ use bridge_hub_paseo_runtime::{
 	Runtime, RuntimeOrigin,
 };
 use codec::{Decode, Encode};
-use emulated_integration_tests_common::xcm_emulator::ConvertLocation;
+use emulated_integration_tests_common::{xcm_emulator::ConvertLocation, RESERVABLE_ASSET_ID};
 use frame_support::pallet_prelude::TypeInfo;
 use hex_literal::hex;
 use paseo_system_emulated_network::{
+	asset_hub_paseo_emulated_chain::genesis::AssetHubPaseoAssetOwner,
 	penpal_emulated_chain::CustomizableAssetFromSystemAssetHub,
 	BridgeHubPaseoParaSender as BridgeHubPaseoSender,
 };
@@ -38,7 +39,7 @@ use snowbridge_core::{
 	inbound::{InboundQueueFixture, Log, Message, Proof},
 	meth,
 	outbound::OperatingMode,
-	Rewards,
+	AssetMetadata, Rewards, TokenIdOf,
 };
 use snowbridge_pallet_system::PricingParametersOf;
 use snowbridge_router_primitives::inbound::{
@@ -55,7 +56,10 @@ const ETHEREUM_DESTINATION_ADDRESS: [u8; 20] = hex!("44a57ee2f2FCcb85FDa2B0B18EB
 const GATEWAY_ADDRESS: [u8; 20] = hex!("EDa338E4dC46038493b885327842fD3E301CaB39");
 const INSUFFICIENT_XCM_FEE: u128 = 1000;
 const XCM_FEE: u128 = 4_000_000_000;
-const WETH_AMOUNT: u128 = 1_000_000_000;
+const TOKEN_AMOUNT: u128 = 100_000_000_000;
+const AH_BASE_FEE: u128 = 2_750_872_500_000u128;
+const MIN_ETHER_BALANCE: u128 = 15_000_000_000_000;
+const ETHER_TOKEN_ADDRESS: [u8; 20] = [0; 20];
 
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, TypeInfo)]
 pub enum ControlCall {
@@ -132,14 +136,14 @@ fn create_agent() {
 
 	BridgeHubPaseo::execute_with(|| {
 		type RuntimeEvent = <BridgeHubPaseo as Chain>::RuntimeEvent;
-		// Check that a message was sent to Ethereum to create the agent
-		assert_expected_events!(
-			BridgeHubPaseo,
-			vec![
-				RuntimeEvent::EthereumSystem(snowbridge_pallet_system::Event::CreateAgent {
-					..
-				}) => {},
-			]
+
+		let events = BridgeHubPaseo::events();
+		assert!(
+			events.iter().any(|event| !matches!(
+				event,
+				RuntimeEvent::EthereumSystem(snowbridge_pallet_system::Event::CreateAgent { .. })
+			)),
+			"Create agent event found while not expected."
 		);
 	});
 }
@@ -212,14 +216,13 @@ fn create_channel() {
 	BridgeHubPaseo::execute_with(|| {
 		type RuntimeEvent = <BridgeHubPaseo as Chain>::RuntimeEvent;
 
-		// Check that the Channel was created
-		assert_expected_events!(
-			BridgeHubPaseo,
-			vec![
-				RuntimeEvent::EthereumSystem(snowbridge_pallet_system::Event::CreateChannel {
-					..
-				}) => {},
-			]
+		let events = BridgeHubPaseo::events();
+		assert!(
+			events.iter().any(|event| !matches!(
+				event,
+				RuntimeEvent::EthereumSystem(snowbridge_pallet_system::Event::CreateChannel { .. })
+			)),
+			"Create channel event found while not expected."
 		);
 	});
 }
@@ -240,14 +243,12 @@ fn register_weth_token_from_ethereum_to_asset_hub() {
 			vec![(EthereumGatewayAddress::key().to_vec(), H160(GATEWAY_ADDRESS).encode())],
 		));
 		// Construct RegisterToken message and sent to inbound queue
-		let message_id: H256 = [1; 32].into();
 		let message = VersionedMessage::V1(MessageV1 {
 			chain_id: CHAIN_ID,
 			command: Command::RegisterToken { token: WETH.into(), fee: XCM_FEE },
 		});
 		// Convert the message to XCM
-		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
-		// Send the XCM
+		let (xcm, _) = EthereumInboundQueue::do_convert([0; 32].into(), message).unwrap();
 		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubPaseo::para_id()).unwrap();
 
 		assert_expected_events!(
@@ -389,7 +390,7 @@ fn send_token_from_ethereum_to_penpal() {
 /// Tests the registering of a token as an asset on AssetHub, and then subsequently sending
 /// a token from Ethereum to AssetHub.
 #[test]
-fn send_token_from_ethereum_to_asset_hub() {
+fn send_weth_from_ethereum_to_asset_hub() {
 	BridgeHubPaseo::fund_para_sovereign(AssetHubPaseo::para_id(), INITIAL_FUND);
 	// Fund ethereum sovereign account on AssetHub.
 	AssetHubPaseo::fund_accounts(vec![(ethereum_sovereign_account(), INITIAL_FUND)]);
@@ -428,7 +429,7 @@ fn send_token_from_ethereum_to_asset_hub() {
 				destination: Destination::AccountId32 {
 					id: AssetHubPaseoReceiver::get().into(),
 				},
-				amount: WETH_AMOUNT,
+				amount: TOKEN_AMOUNT,
 				fee: XCM_FEE,
 			},
 		});
@@ -459,22 +460,14 @@ fn send_token_from_ethereum_to_asset_hub() {
 	});
 }
 
-/// Tests the full cycle of token transfers:
-/// - registering a token on AssetHub
-/// - sending a token to AssetHub
-/// - returning the token to Ethereum
-#[test]
-fn send_weth_asset_from_asset_hub_to_ethereum() {
-	let assethub_sovereign = BridgeHubPaseo::sovereign_account_id_of(Location::new(
-		1,
-		[Parachain(AssetHubPaseo::para_id().into())],
-	));
-
-	AssetHubPaseo::force_default_xcm_version(Some(XCM_VERSION));
-	BridgeHubPaseo::force_default_xcm_version(Some(XCM_VERSION));
-	AssetHubPaseo::force_xcm_version(
-		Location::new(2, [GlobalConsensus(Ethereum { chain_id: CHAIN_ID })]),
-		XCM_VERSION,
+// Performs a round trip tansfer of a token, asseting success.
+fn send_token_from_ethereum_to_asset_hub_and_back_works(
+	token_address: H160,
+	amount: u128,
+	asset_location: Location,
+) {
+	let assethub_sovereign = BridgeHubPaseo::sovereign_account_id_of(
+		BridgeHubPaseo::sibling_location_of(AssetHubPaseo::para_id()),
 	);
 
 	BridgeHubPaseo::fund_accounts(vec![
@@ -486,15 +479,17 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 		(ethereum_sovereign_account(), INITIAL_FUND),
 	]);
 
-	let base_fee = 2_750_872_500_000u128;
-
+	// Set base transfer fee to Ethereum on AH.
 	AssetHubPaseo::execute_with(|| {
+		type RuntimeOrigin = <AssetHubPaseo as Chain>::RuntimeOrigin;
+
 		assert_ok!(<AssetHubPaseo as Chain>::System::set_storage(
-			<AssetHubPaseo as Chain>::RuntimeOrigin::root(),
-			vec![(BridgeHubEthereumBaseFee::key().to_vec(), base_fee.encode())],
+			RuntimeOrigin::root(),
+			vec![(BridgeHubEthereumBaseFee::key().to_vec(), AH_BASE_FEE.encode())],
 		));
 	});
 
+	// Send Token from Bridge Hub (simulates received Command from Ethereum)
 	BridgeHubPaseo::execute_with(|| {
 		type RuntimeEvent = <BridgeHubPaseo as Chain>::RuntimeEvent;
 
@@ -519,32 +514,15 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 		));
 
 		let message_id: H256 = [1; 32].into();
-		let message = VersionedMessage::V1(MessageV1 {
-			chain_id: CHAIN_ID,
-			command: Command::RegisterToken { token: WETH.into(), fee: XCM_FEE },
-		});
-		// Convert the message to XCM
-		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
-		// Send the XCM
-		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubPaseo::para_id()).unwrap();
-
-		// Check that the register token message was sent using xcm
-		assert_expected_events!(
-			BridgeHubPaseo,
-			vec![
-				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},
-			]
-		);
-
 		// Construct SendToken message and sent to inbound queue
 		let message = VersionedMessage::V1(MessageV1 {
 			chain_id: CHAIN_ID,
 			command: Command::SendToken {
-				token: WETH.into(),
+				token: token_address,
 				destination: Destination::AccountId32 {
 					id: AssetHubPaseoReceiver::get().into(),
 				},
-				amount: WETH_AMOUNT,
+				amount,
 				fee: XCM_FEE,
 			},
 		});
@@ -553,7 +531,7 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 		// Send the XCM
 		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubPaseo::para_id()).unwrap();
 
-		// Check that the send token message was sent using xcm
+		// Check that the message was sent
 		assert_expected_events!(
 			BridgeHubPaseo,
 			vec![
@@ -562,33 +540,31 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 		);
 	});
 
-	// check treasury account balance on BH before
+	// Receive Token on Asset Hub.
+	AssetHubPaseo::execute_with(|| {
+		type RuntimeEvent = <AssetHubPaseo as Chain>::RuntimeEvent;
+
+		// Check that the token was received and issued as a foreign asset on AssetHub
+		assert_expected_events!(
+			AssetHubPaseo,
+			vec![
+				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { asset_id, .. }) => {
+					asset_id: *asset_id == asset_location,
+				},
+			]
+		);
+	});
+
 	let treasury_account_before = BridgeHubPaseo::execute_with(|| {
 		<<BridgeHubPaseo as BridgeHubPaseoPallet>::Balances as frame_support::traits::fungible::Inspect<_>>::balance(&RelayTreasuryPalletAccount::get())
 	});
 
+	// Send Token from Asset Hub back to Ethereum.
 	AssetHubPaseo::execute_with(|| {
-		type RuntimeEvent = <AssetHubPaseo as Chain>::RuntimeEvent;
 		type RuntimeOrigin = <AssetHubPaseo as Chain>::RuntimeOrigin;
 
-		// Check that AssetHub has issued the foreign asset
-		assert_expected_events!(
-			AssetHubPaseo,
-			vec![
-				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { .. }) => {},
-			]
-		);
-		let assets = vec![Asset {
-			id: AssetId(Location::new(
-				2,
-				[
-					GlobalConsensus(Ethereum { chain_id: CHAIN_ID }),
-					AccountKey20 { network: None, key: WETH },
-				],
-			)),
-			fun: Fungible(WETH_AMOUNT),
-		}];
-		let multi_assets = VersionedAssets::from(Assets::from(assets));
+		let assets = vec![Asset { id: AssetId(asset_location), fun: Fungible(amount) }];
+		let versioned_assets = VersionedAssets::from(Assets::from(assets));
 
 		let destination = VersionedLocation::from(Location::new(
 			2,
@@ -604,13 +580,13 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 			<AssetHubPaseo as AssetHubPaseoPallet>::Balances::free_balance(
 				AssetHubPaseoReceiver::get(),
 			);
-		// Send the Weth back to Ethereum
+		// Send the Token back to Ethereum
 		assert_ok!(
 			<AssetHubPaseo as AssetHubPaseoPallet>::PolkadotXcm::limited_reserve_transfer_assets(
 				RuntimeOrigin::signed(AssetHubPaseoReceiver::get()),
 				Box::new(destination),
 				Box::new(beneficiary),
-				Box::new(multi_assets),
+				Box::new(versioned_assets),
 				0,
 				Unlimited,
 			)
@@ -622,13 +598,13 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 			);
 		// Assert at least DefaultBridgeHubEthereumBaseFee charged from the sender
 		let free_balance_diff = free_balance_before - free_balance_after;
-		assert!(free_balance_diff > base_fee);
+		assert!(free_balance_diff > AH_BASE_FEE);
 	});
 
+	// Check that message with Token was queued on the BridgeHub
 	BridgeHubPaseo::execute_with(|| {
 		type RuntimeEvent = <BridgeHubPaseo as Chain>::RuntimeEvent;
-		// Check that the transfer token back to Ethereum message was queue in the Ethereum
-		// Outbound Queue
+		// check the outbound queue
 		assert_expected_events!(
 			BridgeHubPaseo,
 			vec![
@@ -645,8 +621,8 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 		assert!(
 			events.iter().any(|event| matches!(
 				event,
-				RuntimeEvent::Balances(pallet_balances::Event::Minted { who, amount })
-					if *who == RelayTreasuryPalletAccount::get() && *amount == local_fee
+				RuntimeEvent::Balances(pallet_balances::Event::Minted { who, amount: fee_minted })
+					if *who == RelayTreasuryPalletAccount::get() && *fee_minted == local_fee
 			)),
 			"Snowbridge sovereign takes local fee."
 		);
@@ -660,6 +636,55 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 			"AssetHub sovereign takes remote fee."
 		);
 	});
+}
+
+/// Tests sending Ether from Ethereum to Asset Hub and back to Ethereum
+#[test]
+fn send_eth_asset_from_asset_hub_to_ethereum() {
+	let ether_location: Location = (Parent, Parent, EthereumNetwork::get()).into();
+
+	// Register Ether as foreign asset on AH.
+	AssetHubPaseo::execute_with(|| {
+		type RuntimeEvent = <AssetHubPaseo as Chain>::RuntimeEvent;
+		type RuntimeOrigin = <AssetHubPaseo as Chain>::RuntimeOrigin;
+
+		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::ForeignAssets::force_create(
+			RuntimeOrigin::root(),
+			ether_location.clone(),
+			ethereum_sovereign_account().into(),
+			true,
+			MIN_ETHER_BALANCE,
+		));
+
+		assert_expected_events!(
+			AssetHubPaseo,
+			vec![
+				RuntimeEvent::ForeignAssets(pallet_assets::Event::ForceCreated { .. }) => {},
+			]
+		);
+	});
+
+	// Perform a roundtrip transfer of Ether
+	send_token_from_ethereum_to_asset_hub_and_back_works(
+		ETHER_TOKEN_ADDRESS.into(),
+		MIN_ETHER_BALANCE + TOKEN_AMOUNT,
+		ether_location,
+	);
+}
+
+/// Tests the full cycle of token transfers:
+/// - registering a token on AssetHub
+/// - sending a token to AssetHub
+/// - returning the token to Ethereum
+#[test]
+fn send_weth_asset_from_asset_hub_to_ethereum() {
+	// Register WETH on Asset Hub
+	register_weth_token_from_ethereum_to_asset_hub();
+
+	let weth_location: Location =
+		(Parent, Parent, EthereumNetwork::get(), AccountKey20 { network: None, key: WETH }).into();
+	// Perform a roundtrip transfer of WETH
+	send_token_from_ethereum_to_asset_hub_and_back_works(WETH.into(), TOKEN_AMOUNT, weth_location);
 }
 
 #[test]
@@ -959,6 +984,336 @@ fn send_token_from_ethereum_to_non_existent_account_on_asset_hub_with_sufficient
 			vec![
 				RuntimeEvent::MessageQueue(pallet_message_queue::Event::Processed { success:false, .. }) => {},
 			]
+		);
+	});
+}
+
+#[test]
+fn transfer_relay_token() {
+	let assethub_sovereign = BridgeHubPaseo::sovereign_account_id_of(
+		BridgeHubPaseo::sibling_location_of(AssetHubPaseo::para_id()),
+	);
+	BridgeHubPaseo::fund_accounts(vec![(assethub_sovereign.clone(), INITIAL_FUND)]);
+
+	let asset_id: Location = Location { parents: 1, interior: [].into() };
+	let expected_asset_id: Location =
+		Location { parents: 1, interior: [GlobalConsensus(Paseo)].into() };
+
+	let expected_token_id = TokenIdOf::convert_location(&expected_asset_id).unwrap();
+
+	let ethereum_sovereign: AccountId =
+		GlobalConsensusEthereumConvertsFor::<[u8; 32]>::convert_location(&Location::new(
+			2,
+			[GlobalConsensus(EthereumNetwork::get())],
+		))
+		.unwrap()
+		.into();
+
+	// Register token
+	BridgeHubPaseo::execute_with(|| {
+		type RuntimeOrigin = <BridgeHubPaseo as Chain>::RuntimeOrigin;
+		type RuntimeEvent = <BridgeHubPaseo as Chain>::RuntimeEvent;
+
+		assert_ok!(<BridgeHubPaseo as BridgeHubPaseoPallet>::Balances::force_set_balance(
+			RuntimeOrigin::root(),
+			sp_runtime::MultiAddress::Id(BridgeHubPaseoSender::get()),
+			INITIAL_FUND * 10,
+		));
+
+		assert_ok!(<BridgeHubPaseo as BridgeHubPaseoPallet>::EthereumSystem::register_token(
+			RuntimeOrigin::root(),
+			Box::new(VersionedLocation::V4(asset_id.clone())),
+			AssetMetadata {
+				name: "wnd".as_bytes().to_vec().try_into().unwrap(),
+				symbol: "wnd".as_bytes().to_vec().try_into().unwrap(),
+				decimals: 12,
+			},
+		));
+		// Check that a message was sent to Ethereum to create the agent
+		assert_expected_events!(
+			BridgeHubPaseo,
+			vec![RuntimeEvent::EthereumSystem(snowbridge_pallet_system::Event::RegisterToken { .. }) => {},]
+		);
+	});
+
+	// Send token to Ethereum
+	AssetHubPaseo::execute_with(|| {
+		type RuntimeOrigin = <AssetHubPaseo as Chain>::RuntimeOrigin;
+		type RuntimeEvent = <AssetHubPaseo as Chain>::RuntimeEvent;
+
+		// Set base transfer fee to Ethereum on AH.
+		assert_ok!(<AssetHubPaseo as Chain>::System::set_storage(
+			<AssetHubPaseo as Chain>::RuntimeOrigin::root(),
+			vec![(BridgeHubEthereumBaseFee::key().to_vec(), AH_BASE_FEE.encode())],
+		));
+
+		let assets = vec![Asset { id: AssetId(Location::parent()), fun: Fungible(TOKEN_AMOUNT) }];
+		let versioned_assets = VersionedAssets::V4(Assets::from(assets));
+
+		let destination = VersionedLocation::V4(Location::new(
+			2,
+			[GlobalConsensus(Ethereum { chain_id: CHAIN_ID })],
+		));
+
+		let beneficiary = VersionedLocation::V4(Location::new(
+			0,
+			[AccountKey20 { network: None, key: ETHEREUM_DESTINATION_ADDRESS }],
+		));
+
+		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::PolkadotXcm::limited_reserve_transfer_assets(
+			RuntimeOrigin::signed(AssetHubPaseoSender::get()),
+			Box::new(destination),
+			Box::new(beneficiary),
+			Box::new(versioned_assets),
+			0,
+			Unlimited,
+		));
+
+		let events = AssetHubPaseo::events();
+		// Check that the native asset transferred to some reserved account(sovereign of Ethereum)
+		assert!(
+			events.iter().any(|event| matches!(
+				event,
+				RuntimeEvent::Balances(pallet_balances::Event::Transfer { amount, to, ..})
+					if *amount == TOKEN_AMOUNT && *to == ethereum_sovereign.clone(),
+			)),
+			"native token reserved to Ethereum sovereign account."
+		);
+	});
+
+	// Send token back from ethereum
+	BridgeHubPaseo::execute_with(|| {
+		type RuntimeEvent = <BridgeHubPaseo as Chain>::RuntimeEvent;
+
+		// Check that the transfer token back to Ethereum message was queue in the Ethereum
+		// Outbound Queue
+		assert_expected_events!(
+			BridgeHubPaseo,
+			vec![RuntimeEvent::EthereumOutboundQueue(snowbridge_pallet_outbound_queue::Event::MessageQueued{ .. }) => {},]
+		);
+
+		// Send relay token back to AH
+		let message_id: H256 = [0; 32].into();
+		let message = VersionedMessage::V1(MessageV1 {
+			chain_id: CHAIN_ID,
+			command: Command::SendNativeToken {
+				token_id: expected_token_id,
+				destination: Destination::AccountId32 {
+					id: AssetHubPaseoReceiver::get().into(),
+				},
+				amount: TOKEN_AMOUNT,
+				fee: XCM_FEE,
+			},
+		});
+		// Convert the message to XCM
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
+		// Send the XCM
+		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubPaseo::para_id()).unwrap();
+
+		assert_expected_events!(
+			BridgeHubPaseo,
+			vec![RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},]
+		);
+	});
+
+	AssetHubPaseo::execute_with(|| {
+		type RuntimeEvent = <AssetHubPaseo as Chain>::RuntimeEvent;
+
+		assert_expected_events!(
+			AssetHubPaseo,
+			vec![RuntimeEvent::Balances(pallet_balances::Event::Burned{ .. }) => {},]
+		);
+
+		let events = AssetHubPaseo::events();
+
+		// Check that the native token burnt from some reserved account
+		assert!(
+			events.iter().any(|event| matches!(
+				event,
+				RuntimeEvent::Balances(pallet_balances::Event::Burned { who, ..})
+					if *who == ethereum_sovereign.clone(),
+			)),
+			"native token burnt from Ethereum sovereign account."
+		);
+
+		// Check that the token was minted to beneficiary
+		assert!(
+			events.iter().any(|event| matches!(
+				event,
+				RuntimeEvent::Balances(pallet_balances::Event::Minted { who, amount })
+					if *amount >= TOKEN_AMOUNT && *who == AssetHubPaseoReceiver::get()
+			)),
+			"Token minted to beneficiary."
+		);
+	});
+}
+
+#[test]
+fn transfer_ah_token() {
+	let assethub_sovereign = BridgeHubPaseo::sovereign_account_id_of(
+		BridgeHubPaseo::sibling_location_of(AssetHubPaseo::para_id()),
+	);
+	BridgeHubPaseo::fund_accounts(vec![(assethub_sovereign.clone(), INITIAL_FUND)]);
+
+	let ethereum_destination = Location::new(2, [GlobalConsensus(Ethereum { chain_id: CHAIN_ID })]);
+
+	let ethereum_sovereign: AccountId =
+		GlobalConsensusEthereumConvertsFor::<[u8; 32]>::convert_location(&ethereum_destination)
+			.unwrap()
+			.into();
+	AssetHubPaseo::fund_accounts(vec![(ethereum_sovereign.clone(), INITIAL_FUND)]);
+
+	let asset_id: Location =
+		[PalletInstance(ASSETS_PALLET_ID), GeneralIndex(RESERVABLE_ASSET_ID.into())].into();
+
+	let asset_id_in_bh: Location = Location::new(
+		1,
+		[
+			Parachain(AssetHubPaseo::para_id().into()),
+			PalletInstance(ASSETS_PALLET_ID),
+			GeneralIndex(RESERVABLE_ASSET_ID.into()),
+		],
+	);
+
+	let asset_id_after_reanchored = Location::new(
+		1,
+		[GlobalConsensus(Paseo), Parachain(AssetHubPaseo::para_id().into())],
+	)
+	.appended_with(asset_id.clone().interior)
+	.unwrap();
+
+	let token_id = TokenIdOf::convert_location(&asset_id_after_reanchored).unwrap();
+
+	// Register token
+	BridgeHubPaseo::execute_with(|| {
+		type RuntimeOrigin = <BridgeHubPaseo as Chain>::RuntimeOrigin;
+
+		assert_ok!(<BridgeHubPaseo as BridgeHubPaseoPallet>::EthereumSystem::register_token(
+			RuntimeOrigin::root(),
+			Box::new(VersionedLocation::V4(asset_id_in_bh.clone())),
+			AssetMetadata {
+				name: "ah_asset".as_bytes().to_vec().try_into().unwrap(),
+				symbol: "ah_asset".as_bytes().to_vec().try_into().unwrap(),
+				decimals: 12,
+			},
+		));
+	});
+
+	// Mint some token
+	AssetHubPaseo::mint_asset(
+		<AssetHubPaseo as Chain>::RuntimeOrigin::signed(AssetHubPaseoAssetOwner::get()),
+		RESERVABLE_ASSET_ID,
+		AssetHubPaseoSender::get(),
+		TOKEN_AMOUNT,
+	);
+
+	// Send token to Ethereum
+	AssetHubPaseo::execute_with(|| {
+		type RuntimeOrigin = <AssetHubPaseo as Chain>::RuntimeOrigin;
+		type RuntimeEvent = <AssetHubPaseo as Chain>::RuntimeEvent;
+
+		// Set base transfer fee to Ethereum on AH.
+		assert_ok!(<AssetHubPaseo as Chain>::System::set_storage(
+			<AssetHubPaseo as Chain>::RuntimeOrigin::root(),
+			vec![(BridgeHubEthereumBaseFee::key().to_vec(), AH_BASE_FEE.encode())],
+		));
+
+		// Send partial of the token, will fail if send all
+		let assets = vec![Asset { id: AssetId(asset_id.clone()), fun: Fungible(TOKEN_AMOUNT / 2) }];
+		let versioned_assets = VersionedAssets::V4(Assets::from(assets));
+
+		let beneficiary = VersionedLocation::V4(Location::new(
+			0,
+			[AccountKey20 { network: None, key: ETHEREUM_DESTINATION_ADDRESS }],
+		));
+
+		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::PolkadotXcm::limited_reserve_transfer_assets(
+			RuntimeOrigin::signed(AssetHubPaseoSender::get()),
+			Box::new(VersionedLocation::from(ethereum_destination)),
+			Box::new(beneficiary),
+			Box::new(versioned_assets),
+			0,
+			Unlimited,
+		));
+
+		assert_expected_events!(
+			AssetHubPaseo,
+			vec![RuntimeEvent::Assets(pallet_assets::Event::Transferred{ .. }) => {},]
+		);
+
+		let events = AssetHubPaseo::events();
+		// Check that the native asset transferred to some reserved account(sovereign of Ethereum)
+		assert!(
+			events.iter().any(|event| matches!(
+				event,
+				RuntimeEvent::Assets(pallet_assets::Event::Transferred { asset_id, to, ..})
+					if *asset_id == RESERVABLE_ASSET_ID && *to == ethereum_sovereign.clone()
+			)),
+			"native token reserved to Ethereum sovereign account."
+		);
+	});
+
+	// Send token back from Ethereum
+	BridgeHubPaseo::execute_with(|| {
+		type RuntimeEvent = <BridgeHubPaseo as Chain>::RuntimeEvent;
+
+		// Check that the transfer token back to Ethereum message was queue in the Ethereum
+		// Outbound Queue
+		assert_expected_events!(
+			BridgeHubPaseo,
+			vec![RuntimeEvent::EthereumOutboundQueue(snowbridge_pallet_outbound_queue::Event::MessageQueued{ .. }) => {},]
+		);
+
+		let message = VersionedMessage::V1(MessageV1 {
+			chain_id: CHAIN_ID,
+			command: Command::SendNativeToken {
+				token_id,
+				destination: Destination::AccountId32 {
+					id: AssetHubPaseoReceiver::get().into(),
+				},
+				amount: TOKEN_AMOUNT / 10,
+				fee: XCM_FEE,
+			},
+		});
+		// Convert the message to XCM
+		let (xcm, _) = EthereumInboundQueue::do_convert([0; 32].into(), message).unwrap();
+		// Send the XCM
+		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubPaseo::para_id()).unwrap();
+
+		assert_expected_events!(
+			BridgeHubPaseo,
+			vec![RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},]
+		);
+	});
+
+	AssetHubPaseo::execute_with(|| {
+		type RuntimeEvent = <AssetHubPaseo as Chain>::RuntimeEvent;
+
+		assert_expected_events!(
+			AssetHubPaseo,
+			vec![RuntimeEvent::Assets(pallet_assets::Event::Burned{..}) => {},]
+		);
+
+		let events = AssetHubPaseo::events();
+
+		// Check that the native token burnt from some reserved account
+		assert!(
+			events.iter().any(|event| matches!(
+				event,
+				RuntimeEvent::Assets(pallet_assets::Event::Burned { owner, .. })
+					if *owner == ethereum_sovereign.clone(),
+			)),
+			"token burnt from Ethereum sovereign account."
+		);
+
+		// Check that the token was minted to beneficiary
+		assert!(
+			events.iter().any(|event| matches!(
+				event,
+				RuntimeEvent::Assets(pallet_assets::Event::Issued { owner, .. })
+					if *owner == AssetHubPaseoReceiver::get()
+			)),
+			"Token minted to beneficiary."
 		);
 	});
 }
