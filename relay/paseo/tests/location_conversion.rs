@@ -15,7 +15,7 @@
 // along with Polkadot. If not, see <http://www.gnu.org/licenses/>.
 
 use polkadot_primitives::AccountId;
-use polkadot_runtime::xcm_config::SovereignAccountOf;
+use paseo_runtime::xcm_config::SovereignAccountOf;
 use sp_core::crypto::Ss58Codec;
 use xcm::prelude::*;
 use xcm_runtime_apis::conversions::LocationToAccountHelper;

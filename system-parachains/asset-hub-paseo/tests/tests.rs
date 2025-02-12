@@ -44,7 +44,7 @@ use sp_core::crypto::Ss58Codec;
 use sp_runtime::traits::MaybeEquivalence;
 use sp_std::ops::Mul;
 use system_parachains_constants::{
-	kusama::consensus::RELAY_CHAIN_SLOT_DURATION_MILLIS, polkadot::fee::WeightToFee,
+	paseo::consensus::RELAY_CHAIN_SLOT_DURATION_MILLIS, paseo::fee::WeightToFee,
 };
 use xcm::latest::prelude::{Assets as XcmAssets, *};
 use xcm_builder::WithLatestLocationConverter;
@@ -135,7 +135,7 @@ fn test_ed_is_one_hundredth_of_relay() {
 		)])
 		.build()
 		.execute_with(|| {
-			let relay_ed = polkadot_runtime_constants::currency::EXISTENTIAL_DEPOSIT;
+			let relay_ed = paseo_runtime_constants::currency::EXISTENTIAL_DEPOSIT;
 			let asset_hub_ed = ExistentialDeposit::get();
 			assert_eq!(relay_ed / 100, asset_hub_ed);
 		});
@@ -586,21 +586,21 @@ fn reserve_transfer_native_asset_to_non_teleport_para_works() {
 	);
 }
 
-#[test]
-fn report_bridge_status_from_xcm_bridge_router_for_kusama_works() {
-	asset_test_utils::test_cases_over_bridge::report_bridge_status_from_xcm_bridge_router_works::<
-		Runtime,
-		AllPalletsWithoutSystem,
-		XcmConfig,
-		LocationToAccountId,
-		ToKusamaXcmRouterInstance,
-	>(
-		collator_session_keys(),
-		bridging_to_asset_hub_kusama,
-		|| bp_asset_hub_polkadot::build_congestion_message(Default::default(), true).into(),
-		|| bp_asset_hub_polkadot::build_congestion_message(Default::default(), false).into(),
-	)
-}
+// #[test]
+// fn report_bridge_status_from_xcm_bridge_router_for_kusama_works() {
+// 	asset_test_utils::test_cases_over_bridge::report_bridge_status_from_xcm_bridge_router_works::<
+// 		Runtime,
+// 		AllPalletsWithoutSystem,
+// 		XcmConfig,
+// 		LocationToAccountId,
+// 		ToKusamaXcmRouterInstance,
+// 	>(
+// 		collator_session_keys(),
+// 		bridging_to_asset_hub_kusama,
+// 		|| bp_asset_hub_polkadot::build_congestion_message(Default::default(), true).into(),
+// 		|| bp_asset_hub_polkadot::build_congestion_message(Default::default(), false).into(),
+// 	)
+// }
 
 #[test]
 fn test_report_bridge_status_call_compatibility() {

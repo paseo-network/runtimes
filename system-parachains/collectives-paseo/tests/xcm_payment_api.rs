@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use collectives_polkadot_runtime::{Block, Runtime, RuntimeCall, RuntimeOrigin};
+use collectives_paseo_runtime::{Block, Runtime, RuntimeCall, RuntimeOrigin};
 
 #[test]
 fn xcm_payment_api_works() {

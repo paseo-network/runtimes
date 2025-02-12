@@ -1314,14 +1314,14 @@ fn fellowship_treasury_pallet_index() {
 
 #[test]
 fn test_ed_is_one_tenth_of_relay() {
-	let relay_ed = polkadot_runtime_constants::currency::EXISTENTIAL_DEPOSIT;
+	let relay_ed = paseo_runtime_constants::currency::EXISTENTIAL_DEPOSIT;
 	let collectives_ed = ExistentialDeposit::get();
 	assert_eq!(relay_ed / 10, collectives_ed);
 }
 
 #[test]
 fn test_transasction_byte_fee_is_one_twentieth_of_relay() {
-	let relay_tbf = polkadot_runtime_constants::fee::TRANSACTION_BYTE_FEE;
+	let relay_tbf = paseo_runtime_constants::fee::TRANSACTION_BYTE_FEE;
 	let parachain_tbf = TransactionByteFee::get();
 	assert_eq!(relay_tbf / 20, parachain_tbf);
 }

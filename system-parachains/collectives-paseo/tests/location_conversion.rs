@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Polkadot. If not, see <http://www.gnu.org/licenses/>.
 
-use collectives_polkadot_runtime::xcm_config::LocationToAccountId;
+use collectives_paseo_runtime::xcm_config::LocationToAccountId;
 use polkadot_core_primitives::AccountId;
 use sp_core::crypto::Ss58Codec;
 use xcm::prelude::*;

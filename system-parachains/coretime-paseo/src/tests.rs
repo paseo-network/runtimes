@@ -119,7 +119,7 @@ fn timeslice_period_is_sane() {
 #[test]
 fn location_conversion_works() {
 	let alice_32 =
-		AccountId32 { network: None, id: paseo_core_primitives::AccountId::from(ALICE).into() };
+		AccountId32 { network: None, id: polkadot_core_primitives::AccountId::from(ALICE).into() };
 	let bob_20 = AccountKey20 { network: None, key: [123u8; 20] };
 
 	// the purpose of hardcoded values is to catch an unintended location conversion logic change.
@@ -205,10 +205,10 @@ fn location_conversion_works() {
 	];
 
 	for tc in test_cases {
-		let expected = paseo_core_primitives::AccountId::from_string(tc.expected_account_id_str)
+		let expected = polkadot_core_primitives::AccountId::from_string(tc.expected_account_id_str)
 			.expect("Invalid AccountId string");
 
-		let got = LocationToAccountHelper::<paseo_core_primitives::AccountId, LocationToAccountId>::convert_location(
+		let got = LocationToAccountHelper::<polkadot_core_primitives::AccountId, LocationToAccountId>::convert_location(
 			tc.location.into(),
 		)
 			.unwrap();
