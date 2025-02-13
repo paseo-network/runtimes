@@ -50,10 +50,10 @@ use sp_runtime::{DispatchError::Token, FixedU128, TokenError::FundsUnavailable};
 use system_parachains_constants::paseo::currency::UNITS;
 
 const INITIAL_FUND: u128 = 5_000_000_000 * POLKADOT_ED;
-const CHAIN_ID: u64 = 11155111;
-const WETH: [u8; 20] = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
-const ETHEREUM_DESTINATION_ADDRESS: [u8; 20] = hex!("44a57ee2f2FCcb85FDa2B0B18EBD0D8D2333700e");
-const GATEWAY_ADDRESS: [u8; 20] = hex!("EDa338E4dC46038493b885327842fD3E301CaB39");
+pub const CHAIN_ID: u64 = 11155111;
+pub const WETH: [u8; 20] = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
+pub const ETHEREUM_DESTINATION_ADDRESS: [u8; 20] = hex!("44a57ee2f2FCcb85FDa2B0B18EBD0D8D2333700e");
+pub const GATEWAY_ADDRESS: [u8; 20] = hex!("EDa338E4dC46038493b885327842fD3E301CaB39");
 const INSUFFICIENT_XCM_FEE: u128 = 1000;
 const XCM_FEE: u128 = 4_000_000_000;
 const TOKEN_AMOUNT: u128 = 100_000_000_000;
@@ -997,7 +997,7 @@ fn transfer_relay_token() {
 
 	let asset_id: Location = Location { parents: 1, interior: [].into() };
 	let expected_asset_id: Location =
-		Location { parents: 1, interior: [GlobalConsensus(Paseo)].into() };
+		Location { parents: 1, interior: [GlobalConsensus(Polkadot)].into() };
 
 	let expected_token_id = TokenIdOf::convert_location(&expected_asset_id).unwrap();
 
@@ -1177,7 +1177,7 @@ fn transfer_ah_token() {
 
 	let asset_id_after_reanchored = Location::new(
 		1,
-		[GlobalConsensus(Paseo), Parachain(AssetHubPaseo::para_id().into())],
+		[GlobalConsensus(Polkadot), Parachain(AssetHubPaseo::para_id().into())],
 	)
 	.appended_with(asset_id.clone().interior)
 	.unwrap();

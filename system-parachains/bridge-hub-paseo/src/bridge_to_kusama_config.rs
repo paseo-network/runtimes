@@ -382,8 +382,8 @@ mod tests {
 		assert_complete_bridge_types!(
 			runtime: Runtime,
 			with_bridged_chain_messages_instance: WithBridgeHubKusamaMessagesInstance,
-			this_chain: bp_polkadot::Polkadot,
-			bridged_chain: bp_kusama::Kusama,
+			this_chain: bp_bridge_hub_paseo::BridgeHubPaseo,
+			bridged_chain: bp_bridge_hub_kusama::BridgeHubKusama,
 		);
 
 		assert_complete_with_parachain_bridge_constants::<

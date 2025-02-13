@@ -60,7 +60,7 @@ pub use paseo_system_emulated_network::{
 		},
 		PenpalAssetOwner, PenpalBParaPallet as PenpalBPallet,
 	},
-	paseo_emulated_chain::{genesis::ED as POLKAPAS_ED, PaseoRelayPallet as PaseoPallet},
+	paseo_emulated_chain::{genesis::ED as POLKADOT_ED, PaseoRelayPallet as PaseoPallet},
 	AssetHubPaseoPara as AssetHubPaseo,
 	AssetHubPaseoParaReceiver as AssetHubPaseoReceiver,
 	AssetHubPaseoParaSender as AssetHubPaseoSender,

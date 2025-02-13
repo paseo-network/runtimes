@@ -29,7 +29,7 @@ fn assets_can_be_claimed() {
 	test_chain_can_claim_assets!(
 		AssetHubPaseo,
 		RuntimeCall,
-		NetworkId::Paseo,
+		PaseoId.into(),
 		assets,
 		amount
 	);
