@@ -28,14 +28,14 @@ use xcm::latest::prelude::*;
 
 use system_parachains_constants::paseo::currency::*;
 
-/// `AssetHubPolkadot` Runtime `Call` enum.
+/// `AssetHubPaseo` Runtime `Call` enum.
 ///
-/// The enum represents a subset of possible `Call`s we can send to `AssetHubPolkadot` chain.
+/// The enum represents a subset of possible `Call`s we can send to `AssetHubPaseo` chain.
 /// Ideally this code would be auto-generated from metadata, because we want to
 /// avoid depending directly on the ENTIRE runtime just to get the encoding of `Dispatchable`s.
 ///
 /// All entries here (like pretty much in the entire file) must be kept in sync with
-/// `AssetHubPolkadot` `construct_runtime`, so that we maintain SCALE-compatibility.
+/// `AssetHubPaseo` `construct_runtime`, so that we maintain SCALE-compatibility.
 #[allow(clippy::large_enum_variant)]
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, TypeInfo)]
 pub enum Call {
