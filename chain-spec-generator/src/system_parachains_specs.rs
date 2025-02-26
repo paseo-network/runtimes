@@ -37,6 +37,7 @@ pub type BridgeHubPaseoChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
 pub type PeoplePaseoChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
 
 pub type CoretimePaseoChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
+pub type CollectivesPaseoChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
 
 pub fn asset_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, String> {
 	let mut properties = sc_chain_spec::Properties::new();
@@ -167,6 +168,27 @@ pub fn coretime_paseo_config() -> Result<Box<dyn ChainSpec>, String> {
 		.with_chain_type(ChainType::Live)
 		.with_protocol_id("ct-pas")
 		.with_genesis_config_preset_name("live")
+		.with_properties(properties)
+		.build(),
+	))
+}
+
+pub fn collectives_paseo_local_config() -> Result<Box<dyn ChainSpec>, String> {
+	let mut properties = sc_chain_spec::Properties::new();
+	properties.insert("ss58Format".into(), 0.into());
+	properties.insert("tokenSymbol".into(), "PAS".into());
+	properties.insert("tokenDecimals".into(), 10.into());
+
+	Ok(Box::new(
+		CollectivesPaseoChainSpec::builder(
+			collectives_paseo_runtime::WASM_BINARY.expect("Collectives wasm not available!"),
+			Extensions { relay_chain: "collectives-local".into(), para_id: 1001 },
+		)
+		.with_name("Paseo Collectives Local")
+		.with_id("paseo-collectives-local")
+		.with_chain_type(ChainType::Local)
+		.with_protocol_id("col-pas")
+		.with_genesis_config_preset_name("local_testnet")
 		.with_properties(properties)
 		.build(),
 	))

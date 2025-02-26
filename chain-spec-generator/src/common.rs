@@ -16,10 +16,10 @@
 // along with Polkadot.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
-	relay_chain_specs::{PaseoChainSpec},
+	relay_chain_specs::PaseoChainSpec,
 	system_parachains_specs::{
-		AssetHubPaseoChainSpec,
-		BridgeHubPaseoChainSpec,CoretimePaseoChainSpec,PeoplePaseoChainSpec,
+		AssetHubPaseoChainSpec, BridgeHubPaseoChainSpec, CollectivesPaseoChainSpec,
+		CoretimePaseoChainSpec, PeoplePaseoChainSpec,
 	},
 	ChainSpec,
 };
@@ -36,16 +36,24 @@ pub fn from_json_file(filepath: &str, supported: String) -> Result<Box<dyn Chain
 	let chain_spec: EmptyChainSpecWithId = serde_json::from_reader(reader)
 		.expect("Failed to read 'json' file with ChainSpec configuration");
 	match &chain_spec.id {
-		x if x.eq("paseo") | x.eq("paseo-local") | x.eq("paseo-dev") =>
-			Ok(Box::new(PaseoChainSpec::from_json_file(path)?)),
-		x if x.starts_with("asset-hub-paseo") =>
-			Ok(Box::new(AssetHubPaseoChainSpec::from_json_file(path)?)),
-		x if x.starts_with("paseo-bridge-hub") =>
-			Ok(Box::new(BridgeHubPaseoChainSpec::from_json_file(path)?)),
-		x if x.starts_with("paseo-coretime") =>
-			Ok(Box::new(CoretimePaseoChainSpec::from_json_file(path)?)),
-		x if x.starts_with("paseo-people") =>
-			Ok(Box::new(PeoplePaseoChainSpec::from_json_file(path)?)),
+		x if x.eq("paseo") | x.eq("paseo-local") | x.eq("paseo-dev") => {
+			Ok(Box::new(PaseoChainSpec::from_json_file(path)?))
+		},
+		x if x.starts_with("asset-hub-paseo") => {
+			Ok(Box::new(AssetHubPaseoChainSpec::from_json_file(path)?))
+		},
+		x if x.starts_with("paseo-bridge-hub") => {
+			Ok(Box::new(BridgeHubPaseoChainSpec::from_json_file(path)?))
+		},
+		x if x.starts_with("paseo-coretime") => {
+			Ok(Box::new(CoretimePaseoChainSpec::from_json_file(path)?))
+		},
+		x if x.starts_with("paseo-people") => {
+			Ok(Box::new(PeoplePaseoChainSpec::from_json_file(path)?))
+		},
+		x if x.starts_with("collectives-people") => {
+			Ok(Box::new(CollectivesPaseoChainSpec::from_json_file(path)?))
+		},
 		_ => Err(format!("Unknown chain 'id' in json file. Only supported: {supported}'")),
 	}
 }
