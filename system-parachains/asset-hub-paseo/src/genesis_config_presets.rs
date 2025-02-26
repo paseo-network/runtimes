@@ -14,10 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Polkadot.  If not, see <http://www.gnu.org/licenses/>.
 
-//! Genesis configs presets for the AssetHubPolkadot runtime
+//! Genesis configs presets for the AssetHubPaseo runtime
 
 use crate::*;
-use parachains_common::AssetHubPolkadotAuraId;
 use sp_core::sr25519;
 use sp_genesis_builder::PresetId;
 use sp_std::vec::Vec;
@@ -29,19 +28,13 @@ const ASSET_HUB_PASEO_ED: Balance = ExistentialDeposit::get();
 /// Invulnerable Collators for the particular case of AssetHubPaseo
 pub fn invulnerables_asset_hub_paseo() -> Vec<(AccountId, AuraId)> {
 	vec![
-		(
-			get_account_id_from_seed::<sr25519::Public>("Alice"),
-			get_from_seed::<AssetHubPolkadotAuraId>("Alice"),
-		),
-		(
-			get_account_id_from_seed::<sr25519::Public>("Bob"),
-			get_from_seed::<AssetHubPolkadotAuraId>("Bob"),
-		),
+		(get_account_id_from_seed::<sr25519::Public>("Alice"), get_from_seed::<AuraId>("Alice")),
+		(get_account_id_from_seed::<sr25519::Public>("Bob"), get_from_seed::<AuraId>("Bob")),
 	]
 }
 
-fn asset_hub_polkadot_genesis(
-	invulnerables: Vec<(AccountId, AssetHubPolkadotAuraId)>,
+fn asset_hub_paseo_genesis(
+	invulnerables: Vec<(AccountId, AuraId)>,
 	endowed_accounts: Vec<AccountId>,
 	id: ParaId,
 ) -> serde_json::Value {
@@ -86,12 +79,12 @@ fn asset_hub_polkadot_genesis(
 	})
 }
 
-pub fn asset_hub_polkadot_local_testnet_genesis(para_id: ParaId) -> serde_json::Value {
-	asset_hub_polkadot_genesis(invulnerables_asset_hub_paseo(), testnet_accounts(), para_id)
+pub fn asset_hub_paseo_local_testnet_genesis(para_id: ParaId) -> serde_json::Value {
+	asset_hub_paseo_genesis(invulnerables_asset_hub_paseo(), testnet_accounts(), para_id)
 }
 
-fn asset_hub_polkadot_development_genesis(para_id: ParaId) -> serde_json::Value {
-	asset_hub_polkadot_local_testnet_genesis(para_id)
+fn asset_hub_paseo_development_genesis(para_id: ParaId) -> serde_json::Value {
+	asset_hub_paseo_local_testnet_genesis(para_id)
 }
 
 /// Provides the names of the predefined genesis configs for this runtime.
@@ -102,8 +95,8 @@ pub fn preset_names() -> Vec<PresetId> {
 /// Provides the JSON representation of predefined genesis config for given `id`.
 pub fn get_preset(id: &sp_genesis_builder::PresetId) -> Option<sp_std::vec::Vec<u8>> {
 	let patch = match id.try_into() {
-		Ok("development") => asset_hub_polkadot_development_genesis(1000.into()),
-		Ok("local_testnet") => asset_hub_polkadot_local_testnet_genesis(1000.into()),
+		Ok("development") => asset_hub_paseo_development_genesis(1000.into()),
+		Ok("local_testnet") => asset_hub_paseo_local_testnet_genesis(1000.into()),
 		_ => return None,
 	};
 	Some(
