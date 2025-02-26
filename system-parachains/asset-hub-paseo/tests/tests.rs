@@ -37,7 +37,7 @@ use asset_test_utils::{
 use codec::{Decode, Encode};
 use frame_support::{assert_ok, traits::fungibles::InspectEnumerable};
 use parachains_common::{
-	AccountId, AssetHubPolkadotAuraId as AuraId, AssetIdForTrustBackedAssets, Balance,
+	AccountId, AuraId, AssetIdForTrustBackedAssets, Balance,
 };
 use sp_consensus_aura::SlotDuration;
 use sp_core::crypto::Ss58Codec;
@@ -63,7 +63,7 @@ fn collator_session_key(account: [u8; 32]) -> CollatorSessionKey<Runtime> {
 	CollatorSessionKey::new(
 		AccountId::from(account),
 		AccountId::from(account),
-		SessionKeys { aura: AuraId::from(sp_core::ed25519::Public::from_raw(account)) },
+		SessionKeys { aura: AuraId::from(sp_core::sr25519::Public::from_raw(account)) },
 	)
 }
 
@@ -131,7 +131,7 @@ fn test_ed_is_one_hundredth_of_relay() {
 		.with_session_keys(vec![(
 			AccountId::from(ALICE),
 			AccountId::from(ALICE),
-			SessionKeys { aura: AuraId::from(sp_core::ed25519::Public::from_raw(ALICE)) },
+			SessionKeys { aura: AuraId::from(sp_core::sr25519::Public::from_raw(ALICE)) },
 		)])
 		.build()
 		.execute_with(|| {
@@ -150,7 +150,7 @@ fn test_assets_balances_api_works() {
 		.with_session_keys(vec![(
 			AccountId::from(ALICE),
 			AccountId::from(ALICE),
-			SessionKeys { aura: AuraId::from(sp_core::ed25519::Public::from_raw(ALICE)) },
+			SessionKeys { aura: AuraId::from(sp_core::sr25519::Public::from_raw(ALICE)) },
 		)])
 		.build()
 		.execute_with(|| {
@@ -382,180 +382,6 @@ asset_test_utils::include_create_and_manage_foreign_assets_for_local_consensus_p
 	})
 );
 
-fn bridging_to_asset_hub_kusama() -> TestBridgingConfig {
-	PolkadotXcm::force_xcm_version(
-		RuntimeOrigin::root(),
-		Box::new(bridging::to_kusama::AssetHubKusama::get()),
-		XCM_VERSION,
-	)
-	.expect("version saved!");
-	TestBridgingConfig {
-		bridged_network: bridging::to_kusama::KusamaNetwork::get(),
-		local_bridge_hub_para_id: bridging::SiblingBridgeHubParaId::get(),
-		local_bridge_hub_location: bridging::SiblingBridgeHub::get(),
-		bridged_target_location: bridging::to_kusama::AssetHubKusama::get(),
-	}
-}
-
-#[test]
-fn limited_reserve_transfer_assets_for_native_asset_to_asset_hub_kusama_works() {
-	asset_test_utils::test_cases_over_bridge::limited_reserve_transfer_assets_for_native_asset_works::<
-		Runtime,
-		AllPalletsWithoutSystem,
-		XcmConfig,
-		ParachainSystem,
-		XcmpQueue,
-		LocationToAccountId,
-	>(
-		collator_session_keys(),
-		slot_durations(),
-		ExistentialDeposit::get(),
-		AccountId::from(ALICE),
-		Box::new(|runtime_event_encoded: Vec<u8>| {
-			match RuntimeEvent::decode(&mut &runtime_event_encoded[..]) {
-				Ok(RuntimeEvent::PolkadotXcm(event)) => Some(event),
-				_ => None,
-			}
-		}),
-		Box::new(|runtime_event_encoded: Vec<u8>| {
-			match RuntimeEvent::decode(&mut &runtime_event_encoded[..]) {
-				Ok(RuntimeEvent::XcmpQueue(event)) => Some(event),
-				_ => None,
-			}
-		}),
-		bridging_to_asset_hub_kusama,
-		WeightLimit::Unlimited,
-		Some(XcmBridgeHubRouterFeeAssetId::get()),
-		Some(RelayTreasuryPalletAccount::get()),
-	)
-}
-
-#[test]
-fn receive_reserve_asset_deposited_ksm_from_asset_hub_kusama_fees_paid_by_pool_swap_works() {
-	const BLOCK_AUTHOR_ACCOUNT: [u8; 32] = [13; 32];
-	let block_author_account = AccountId::from(BLOCK_AUTHOR_ACCOUNT);
-	let staking_pot = StakingPot::get();
-
-	let foreign_asset_id_location =
-		xcm::v4::Location::new(2, [xcm::v4::Junction::GlobalConsensus(xcm::v4::NetworkId::Kusama)]);
-	let foreign_asset_id_minimum_balance = 1_000_000_000;
-	// sovereign account as foreign asset owner (can be whoever for this scenario)
-	let foreign_asset_owner = LocationToAccountId::convert_location(&Location::parent()).unwrap();
-	let foreign_asset_create_params =
-		(foreign_asset_owner, foreign_asset_id_location.clone(), foreign_asset_id_minimum_balance);
-
-	remove_when_updated_to_stable2409::receive_reserve_asset_deposited_from_different_consensus_works::<
-            Runtime,
-            AllPalletsWithoutSystem,
-            XcmConfig,
-            ForeignAssetsInstance,
-        >(
-            collator_session_keys().add(collator_session_key(BLOCK_AUTHOR_ACCOUNT)),
-            ExistentialDeposit::get(),
-            AccountId::from([73; 32]),
-            block_author_account.clone(),
-            // receiving KSMs
-            foreign_asset_create_params.clone(),
-            1000000000000,
-            || {
-                // setup pool for paying fees to touch `SwapFirstAssetTrader`
-                setup_pool_for_paying_fees_with_foreign_assets(foreign_asset_create_params);
-                // staking pot account for collecting local native fees from `BuyExecution`
-                let _ = Balances::force_set_balance(RuntimeOrigin::root(), StakingPot::get().into(), ExistentialDeposit::get());
-                // prepare bridge configuration
-                bridging_to_asset_hub_kusama()
-            },
-            (
-                [PalletInstance(bp_bridge_hub_polkadot::WITH_BRIDGE_POLKADOT_TO_KUSAMA_MESSAGES_PALLET_INDEX)].into(),
-                GlobalConsensus(Kusama),
-                [Parachain(1000)].into()
-            ),
-            || {
-                // check staking pot for ED
-                assert_eq!(Balances::free_balance(&staking_pot), ExistentialDeposit::get());
-                // check now foreign asset for staking pot
-                assert_eq!(
-                    ForeignAssets::balance(
-                        foreign_asset_id_location.clone(),
-                        &staking_pot
-                    ),
-                    0
-                );
-            },
-            || {
-                // `SwapFirstAssetTrader` - staking pot receives xcm fees in KSMs
-                assert!(
-                    Balances::free_balance(&staking_pot) > ExistentialDeposit::get()
-                );
-                // staking pot receives no foreign assets
-                assert_eq!(
-                    ForeignAssets::balance(
-                        foreign_asset_id_location.clone(),
-                        &staking_pot
-                    ),
-                    0
-                );
-            }
-        )
-}
-
-#[test]
-fn receive_reserve_asset_deposited_ksm_from_asset_hub_kusama_fees_paid_by_sufficient_asset_works() {
-	const BLOCK_AUTHOR_ACCOUNT: [u8; 32] = [13; 32];
-	let block_author_account = AccountId::from(BLOCK_AUTHOR_ACCOUNT);
-	let staking_pot = <pallet_collator_selection::Pallet<Runtime>>::account_id();
-
-	let foreign_asset_id_location =
-		xcm::v4::Location::new(2, [xcm::v4::Junction::GlobalConsensus(xcm::v4::NetworkId::Kusama)]);
-	let foreign_asset_id_minimum_balance = 1_000_000_000;
-	// sovereign account as foreign asset owner (can be whoever for this scenario)
-	let foreign_asset_owner = LocationToAccountId::convert_location(&Location::parent()).unwrap();
-	let foreign_asset_create_params =
-		(foreign_asset_owner, foreign_asset_id_location.clone(), foreign_asset_id_minimum_balance);
-
-	remove_when_updated_to_stable2409::receive_reserve_asset_deposited_from_different_consensus_works::<
-			Runtime,
-			AllPalletsWithoutSystem,
-			XcmConfig,
-			ForeignAssetsInstance,
-		>(
-			collator_session_keys().add(collator_session_key(BLOCK_AUTHOR_ACCOUNT)),
-			ExistentialDeposit::get(),
-			AccountId::from([73; 32]),
-			block_author_account.clone(),
-			// receiving KSMs
-			foreign_asset_create_params,
-			1000000000000,
-			bridging_to_asset_hub_kusama,
-			(
-				PalletInstance(bp_bridge_hub_polkadot::WITH_BRIDGE_POLKADOT_TO_KUSAMA_MESSAGES_PALLET_INDEX).into(),
-				GlobalConsensus(Kusama),
-				Parachain(1000).into()
-			),
-			|| {
-				// check block author before
-				assert_eq!(
-					ForeignAssets::balance(
-						foreign_asset_id_location.clone(),
-						&block_author_account
-					),
-					0
-				);
-			},
-			|| {
-				// `TakeFirstAssetTrader` puts fees to the block author
-				assert!(
-					ForeignAssets::balance(
-						foreign_asset_id_location.clone(),
-						&block_author_account
-					) > 0
-				);
-				// nothing adds fees to stakting_pot (e.g. `SwapFirstAssetTrader`, ...)
-				assert_eq!(Balances::free_balance(&staking_pot), 0);
-			}
-		)
-}
-
 #[test]
 fn reserve_transfer_native_asset_to_non_teleport_para_works() {
 	asset_test_utils::test_cases::reserve_transfer_native_asset_to_non_teleport_para_works::<
@@ -586,22 +412,6 @@ fn reserve_transfer_native_asset_to_non_teleport_para_works() {
 	);
 }
 
-// #[test]
-// fn report_bridge_status_from_xcm_bridge_router_for_kusama_works() {
-// 	asset_test_utils::test_cases_over_bridge::report_bridge_status_from_xcm_bridge_router_works::<
-// 		Runtime,
-// 		AllPalletsWithoutSystem,
-// 		XcmConfig,
-// 		LocationToAccountId,
-// 		ToKusamaXcmRouterInstance,
-// 	>(
-// 		collator_session_keys(),
-// 		bridging_to_asset_hub_kusama,
-// 		|| bp_asset_hub_polkadot::build_congestion_message(Default::default(), true).into(),
-// 		|| bp_asset_hub_polkadot::build_congestion_message(Default::default(), false).into(),
-// 	)
-// }
-
 #[test]
 fn test_report_bridge_status_call_compatibility() {
 	// if this test fails, make sure `bp_asset_hub_kusama` has valid encoding
@@ -619,21 +429,6 @@ fn test_report_bridge_status_call_compatibility() {
 		)
 		.encode()
 	)
-}
-
-#[test]
-fn check_sane_weight_report_bridge_status() {
-	use pallet_xcm_bridge_hub_router::WeightInfo;
-	let actual = <Runtime as pallet_xcm_bridge_hub_router::Config<
-		ToKusamaXcmRouterInstance,
-	>>::WeightInfo::report_bridge_status();
-	let max_weight = bp_asset_hub_paseo::XcmBridgeHubRouterTransactCallMaxWeight::get();
-	assert!(
-		actual.all_lte(max_weight),
-		"max_weight: {:?} should be adjusted to actual {:?}",
-		max_weight,
-		actual
-	);
 }
 
 #[test]
