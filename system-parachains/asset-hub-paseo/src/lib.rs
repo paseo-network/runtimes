@@ -112,7 +112,7 @@ use frame_system::{
 };
 use pallet_nfts::PalletFeatures;
 use parachains_common::{
-	message_queue::*, AccountId, AssetHubPolkadotAuraId as AuraId, AssetIdForTrustBackedAssets,
+	message_queue::*, AccountId, AuraId, AssetIdForTrustBackedAssets,
 	Balance, BlockNumber, Hash, Header, Nonce, Signature,
 };
 
@@ -149,9 +149,6 @@ impl_opaque_keys! {
 
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	// Note: "statemint" is the legacy name for this chain. It has been renamed to
-	// "asset-hub-polkadot". Many wallets/tools depend on the `spec_name`, so it remains "statemint"
-	// for the time being. Wallets/tools should update to treat "asset-hub-polkadot" equally.
 	spec_name: create_runtime_str!("asset-hub-paseo"),
 	impl_name: create_runtime_str!("asset-hub-paseo"),
 	authoring_version: 1,
@@ -380,7 +377,6 @@ impl pallet_assets::Config<ForeignAssetsInstance> for Runtime {
 				xcm_config::bridging::to_ethereum::EthereumNetwork,
 				xcm::v4::Location,
 			>,
-			xcm_config::bridging::to_kusama::KusamaAssetFromAssetHubKusama,
 		),
 		ForeignCreatorsSovereignAccountOf,
 		AccountId,
