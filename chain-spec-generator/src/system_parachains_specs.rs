@@ -53,6 +53,7 @@ pub fn asset_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, Stri
 		.with_id("asset-hub-paseo-local")
 		.with_chain_type(ChainType::Local)
 		.with_genesis_config_preset_name("local_testnet")
+		.with_protocol_id("ah-pas")
 		.with_properties(properties)
 		.build(),
 	))
@@ -74,11 +75,7 @@ pub fn bridge_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, Str
 		.with_id("paseo-bridge-hub-local")
 		.with_chain_type(ChainType::Local)
 		.with_protocol_id("bh-pas")
-		.with_genesis_config_patch(
-		    bridge_hub_paseo_runtime::genesis_config_presets::bridge_hub_paseo_local_testnet_genesis(
-				1002.into()
-			),
-		)
+		.with_genesis_config_preset_name("local_testnet")
 		.with_properties(properties)
 		.build(),
 	))
@@ -99,11 +96,7 @@ pub fn people_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, String>
 		.with_id("paseo-people-local")
 		.with_chain_type(ChainType::Local)
 		.with_protocol_id("pc-pas")
-		.with_genesis_config_patch(
-			people_paseo_runtime::genesis_config_presets::people_paseo_local_testnet_genesis(
-				1004.into(),
-			),
-		)
+		.with_genesis_config_preset_name("local_testnet")
 		.with_properties(properties)
 		.build(),
 	))
