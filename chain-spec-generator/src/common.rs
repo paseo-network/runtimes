@@ -51,7 +51,7 @@ pub fn from_json_file(filepath: &str, supported: String) -> Result<Box<dyn Chain
 		x if x.starts_with("paseo-people") => {
 			Ok(Box::new(PeoplePaseoChainSpec::from_json_file(path)?))
 		},
-		x if x.starts_with("collectives-people") => {
+		x if x.starts_with("paseo-collectives") => {
 			Ok(Box::new(CollectivesPaseoChainSpec::from_json_file(path)?))
 		},
 		_ => Err(format!("Unknown chain 'id' in json file. Only supported: {supported}'")),
