@@ -35,7 +35,6 @@ use frame_support::{
 	traits::{ConstU128, PalletInfoAccess},
 };
 use frame_system::{EnsureNever, EnsureRoot};
-use hex_literal::hex;
 use pallet_bridge_messages::LaneIdOf;
 use pallet_bridge_relayers::extension::{
 	BridgeRelayersSignedExtension, WithMessagesExtensionConfig,
