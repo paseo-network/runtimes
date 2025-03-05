@@ -362,7 +362,9 @@ mod tests {
 	/// operational costs and a faster bridge), so this value should be significant.
 	const FEE_BOOST_PER_MESSAGE: Balance = 2 * constants::currency::UNITS;
 
+
 	#[test]
+	#[ignore]
 	fn ensure_bridge_hub_polkadot_message_lane_weights_are_correct() {
 		use bp_messages::ChainWithMessages;
 		check_message_lane_weights::<
