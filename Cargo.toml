@@ -177,7 +177,7 @@ remote-externalities = { version = "0.46.0", package = "frame-remote-externaliti
 runtime-parachains = { version = "17.0.2", default-features = false, package = "polkadot-runtime-parachains" }
 sc-chain-spec = { version = "38.0.0" }
 sc-network = { version = "0.45.5" }
-scale-info = { version = "2.10.0", default-features = false }
+scale-info = { version = "=2.11.3", default-features = false }
 separator = { version = "0.4.1" }
 serde = { version = "1.0.196" }
 serde_json = { version = "1.0.113", default-features = false }

@@ -69,7 +69,7 @@ use frame_support::{
 		fungible::HoldConsideration,
 		tokens::{imbalance::ResolveTo, UnityOrOuterConversion},
 		ConstU32, ConstU8, EitherOf, EitherOfDiverse, Everything, FromContains, Get,
-		InstanceFilter, KeyOwnerProofSystem, LinearStoragePrice, OnRuntimeUpgrade, PrivilegeCmp,
+		InstanceFilter, KeyOwnerProofSystem, LinearStoragePrice, PrivilegeCmp,
 		ProcessMessage, ProcessMessageError, WithdrawReasons,
 	},
 	weights::{
