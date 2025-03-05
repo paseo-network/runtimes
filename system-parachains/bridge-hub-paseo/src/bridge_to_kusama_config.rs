@@ -35,14 +35,15 @@ use frame_support::{
 	traits::{ConstU128, PalletInfoAccess},
 };
 use frame_system::{EnsureNever, EnsureRoot};
+use hex_literal::hex;
 use pallet_bridge_messages::LaneIdOf;
 use pallet_bridge_relayers::extension::{
 	BridgeRelayersSignedExtension, WithMessagesExtensionConfig,
 };
 use pallet_xcm_bridge_hub::{BridgeId, XcmAsPlainPayload};
 use parachains_common::xcm_config::{AllSiblingSystemParachains, RelayOrOtherSystemParachains};
-use polkadot_parachain_primitives::primitives::Sibling;
 use paseo_runtime_constants as constants;
+use polkadot_parachain_primitives::primitives::Sibling;
 use sp_runtime::traits::ConstU32;
 use xcm::latest::prelude::*;
 use xcm_builder::{BridgeBlobDispatcher, ParentIsPreset, SiblingParachainConvertsVia};
@@ -312,7 +313,7 @@ where
 	// insert bridge metadata
 	let lane_id = with;
 	let sibling_parachain = Location::new(1, [Parachain(sibling_para_id)]);
-	let universal_source = [GlobalConsensus(Paseo), Parachain(sibling_para_id)].into();
+	let universal_source: InteriorLocation =  UniversalLocation::get();
 	let universal_destination = [GlobalConsensus(Kusama), Parachain(2075)].into();
 	let bridge_id = BridgeId::new(&universal_source, &universal_destination);
 
