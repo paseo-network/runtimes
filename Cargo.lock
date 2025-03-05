@@ -1778,6 +1778,7 @@ dependencies = [
  "asset-hub-paseo-runtime",
  "bridge-hub-paseo-runtime",
  "clap",
+ "collectives-paseo-runtime",
  "coretime-paseo-runtime",
  "cumulus-primitives-core",
  "hex-literal",
