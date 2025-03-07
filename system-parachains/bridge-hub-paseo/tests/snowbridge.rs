@@ -221,7 +221,7 @@ fn ethereum_outbound_queue_processes_messages_before_message_queue_works() {
 		XcmConfig,
 		AllPalletsWithoutSystem,
 	>(
-		1,
+		CHAIN_ID,
 		collator_session_keys(),
 		1013,
 		1000,
