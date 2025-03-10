@@ -14,6 +14,7 @@
 // limitations under the License.
 
 // Substrate
+pub use codec::Encode;
 pub use frame_support::{assert_err, assert_ok, pallet_prelude::DispatchResult};
 pub use sp_runtime::DispatchError;
 
@@ -29,7 +30,7 @@ pub use xcm::{
 pub use xcm_executor::traits::TransferType;
 
 // Bridges
-pub use bp_messages::LaneId;
+pub use bp_messages::LegacyLaneId;
 
 // Cumulus
 pub use emulated_integration_tests_common::{
@@ -45,29 +46,36 @@ pub use emulated_integration_tests_common::{
 };
 pub use paseo_system_emulated_network::{
 	asset_hub_paseo_emulated_chain::{
-		genesis::ED as ASSET_HUB_POLKADOT_ED, AssetHubPaseoParaPallet as AssetHubPaseoPallet,
+		genesis::{AssetHubPaseoAssetOwner, ED as ASSET_HUB_POLKAPAS_ED},
+		AssetHubPaseoParaPallet as AssetHubPaseoPallet,
 	},
 	bridge_hub_paseo_emulated_chain::{
 		genesis::ED as BRIDGE_HUB_POLKADOT_ED,
 		BridgeHubPaseoParaPallet as BridgeHubPaseoPallet,
+	},
+	penpal_emulated_chain::{
+		penpal_runtime::xcm_config::{
+			CustomizableAssetFromSystemAssetHub as PenpalCustomizableAssetFromSystemAssetHub,
+			UniversalLocation as PenpalUniversalLocation,
+		},
+		PenpalAssetOwner, PenpalBParaPallet as PenpalBPallet,
 	},
 	paseo_emulated_chain::{genesis::ED as POLKADOT_ED, PaseoRelayPallet as PaseoPallet},
 	AssetHubPaseoPara as AssetHubPaseo,
 	AssetHubPaseoParaReceiver as AssetHubPaseoReceiver,
 	AssetHubPaseoParaSender as AssetHubPaseoSender,
 	BridgeHubPaseoPara as BridgeHubPaseo,
-	BridgeHubPaseoParaSender as BridgeHubPaseoSender, PaseoRelay as Paseo,
-	PaseoRelayReceiver as PaseoReceiver, PaseoRelaySender as PaseoSender,
+	BridgeHubPaseoParaReceiver as BridgeHubPaseoReceiver,
+	BridgeHubPaseoParaSender as BridgeHubPaseoSender, PenpalBPara as PenpalB,
+	PenpalBParaReceiver as PenpalBReceiver, PenpalBParaSender as PenpalBSender,
+	PaseoRelay as Paseo, PaseoRelayReceiver as PaseoReceiver,
+	PaseoRelaySender as PaseoSender,
 };
 pub use parachains_common::{AccountId, Balance};
-pub use paseo_system_emulated_network::{
-	penpal_emulated_chain::PenpalBParaPallet as PenpalBPallet,
-	BridgeHubPaseoParaReceiver as BridgeHubPaseoReceiver, PenpalBPara as PenpalB,
-	PenpalBParaReceiver as PenpalBReceiver, PenpalBParaSender as PenpalBSender,
-};
 
 pub const ASSET_ID: u32 = 1;
 pub const ASSET_MIN_BALANCE: u128 = 1000;
+pub const USDT_ID: u32 = 1984;
 
 #[cfg(test)]
 mod tests;

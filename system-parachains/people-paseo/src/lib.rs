@@ -21,6 +21,8 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 // Genesis preset configurations.
 pub mod genesis_config_presets;
 pub mod people;
+#[cfg(test)]
+mod tests;
 mod weights;
 pub mod xcm_config;
 
@@ -147,7 +149,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("people-paseo"),
 	impl_name: create_runtime_str!("people-paseo"),
 	authoring_version: 1,
-	spec_version: 1_003_003,
+	spec_version: 1_004_001,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 0,
@@ -454,7 +456,11 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 				c,
 				RuntimeCall::Balances { .. } |
 				// `request_judgement` puts up a deposit to transfer to a registrar
-				RuntimeCall::Identity(pallet_identity::Call::request_judgement { .. })
+				RuntimeCall::Identity(pallet_identity::Call::request_judgement { .. }) |
+				// `set_subs` and `add_sub` will take and repatriate deposits from the proxied
+				// account, should not be allowed.
+				RuntimeCall::Identity(pallet_identity::Call::add_sub { .. }) |
+				RuntimeCall::Identity(pallet_identity::Call::set_subs { .. })
 			),
 			ProxyType::CancelProxy => matches!(
 				c,
@@ -756,7 +762,8 @@ impl_runtime_apis! {
 		}
 
 		fn query_weight_to_asset_fee(weight: Weight, asset: VersionedAssetId) -> Result<u128, XcmPaymentApiError> {
-			match asset.try_as::<AssetId>() {
+			let latest_asset_id: Result<AssetId, ()> = asset.clone().try_into();
+			match latest_asset_id {
 				Ok(asset_id) if asset_id.0 == xcm_config::RelayLocation::get() => {
 					// for native token
 					Ok(WeightToFee::weight_to_fee(&weight))
@@ -857,6 +864,7 @@ impl_runtime_apis! {
 			config: frame_benchmarking::BenchmarkConfig
 		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
 			use frame_benchmarking::{Benchmarking, BenchmarkBatch, BenchmarkError};
+			use frame_support::traits::WhitelistedStorageKeys;
 			use sp_storage::TrackedStorageKey;
 
 			use frame_system_benchmarking::Pallet as SystemBench;

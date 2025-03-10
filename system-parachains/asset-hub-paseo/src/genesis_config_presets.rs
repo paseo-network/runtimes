@@ -14,12 +14,12 @@
 // You should have received a copy of the GNU General Public License
 // along with Polkadot.  If not, see <http://www.gnu.org/licenses/>.
 
-//! Genesis configs presets for the AssetHubPolkadot runtime
+//! Genesis configs presets for the AssetHubPaseo runtime
 
 use crate::*;
-use sp_std::vec::Vec;
-use sp_genesis_builder::PresetId;
 use sp_core::sr25519;
+use sp_genesis_builder::PresetId;
+use sp_std::vec::Vec;
 use system_parachains_constants::genesis_presets::*;
 use AuraId;
 
@@ -66,6 +66,7 @@ fn asset_hub_paseo_genesis(
 					)
 				})
 				.collect(),
+			..Default::default()
 		},
 		"sudo": {
 			"key": Some(get_account_id_from_seed::<sr25519::Public>("Alice"))

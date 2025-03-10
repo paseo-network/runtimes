@@ -18,6 +18,7 @@ asset-hub-paseo-runtime = { path = "../system-parachains/asset-hub-paseo", defau
 bridge-hub-paseo-runtime = { path = "../system-parachains/bridge-hub-paseo", default-features = true }
 people-paseo-runtime = { path = "../system-parachains/people-paseo", default-features = true }
 coretime-paseo-runtime = { path = "../system-parachains/coretime-paseo", default-features = true }
+collectives-paseo-runtime = { path = "../system-parachains/collectives-paseo", default-features = true }
 
 system-parachains-constants = { path = "../system-parachains/constants", default-features = true }
 

@@ -47,8 +47,7 @@ fn main() -> Result<(), String> {
 			),
 			(
 				"bridge-hub-paseo-local",
-				Box::new(|| system_parachains_specs::bridge_hub_paseo_local_testnet_config())
-					as Box<_>,
+				Box::new(system_parachains_specs::bridge_hub_paseo_local_testnet_config) as Box<_>,
 			),
 			(
 				"people-paseo-local",
@@ -56,7 +55,7 @@ fn main() -> Result<(), String> {
 			),
 			(
 				"coretime-paseo-local",
-				Box::new(|| system_parachains_specs::coretime_paseo_local_testnet_config()) as Box<_>,
+				Box::new(system_parachains_specs::coretime_paseo_local_testnet_config) as Box<_>,
 			),
 			(
 				"coretime-paseo-tot",
@@ -65,6 +64,10 @@ fn main() -> Result<(), String> {
 			(
 				"coretime-paseo",
 				Box::new(|| system_parachains_specs::coretime_paseo_config()) as Box<_>,
+			),
+			(
+				"collectives-paseo-local",
+				Box::new(|| system_parachains_specs::collectives_paseo_local_config()) as Box<_>,
 			),
 		]);
 

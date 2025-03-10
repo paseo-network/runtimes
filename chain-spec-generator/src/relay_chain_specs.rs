@@ -43,9 +43,7 @@ pub fn paseo_development_config() -> Result<Box<dyn ChainSpec>, String> {
 		.with_id("paseo-dev")
 		.with_chain_type(ChainType::Development)
 		.with_protocol_id("pas")
-		.with_genesis_config_patch(
-			paseo_runtime::genesis_config_presets::paseo_development_config_genesis(),
-		)
+		.with_genesis_config_preset_name("development")
 		.with_protocol_id(DEFAULT_PROTOCOL_ID)
 		.with_properties(paseo_chain_spec_properties())
 		.build(),
@@ -63,9 +61,7 @@ pub fn paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, String> {
 		.with_id("paseo-local")
 		.with_chain_type(ChainType::Local)
 		.with_protocol_id("pas")
-		.with_genesis_config_patch(
-			paseo_runtime::genesis_config_presets::paseo_local_testnet_genesis(),
-		)
+		.with_genesis_config_preset_name("local_testnet")
 		.with_protocol_id(DEFAULT_PROTOCOL_ID)
 		.with_properties(paseo_chain_spec_properties())
 		.build(),

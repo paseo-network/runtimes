@@ -142,6 +142,7 @@ if [ "$PROCESS_PARACHAINS" = "true" ]; then
         "bridge_hub bridge-hubs/bridge-hub-polkadot bridge-hub-paseo"
         "people     people/people-polkadot          people-paseo"
         "coretime   coretime/coretime-polkadot      coretime-paseo"
+        "collectives collectives/collectives-polkadot collectives-paseo"
     )
 
     # First copy all parachains

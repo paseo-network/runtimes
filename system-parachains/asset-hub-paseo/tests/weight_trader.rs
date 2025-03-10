@@ -34,7 +34,7 @@ use frame_support::{
 	},
 	weights::WeightToFee as WeightToFeeT,
 };
-use parachains_common::{AccountId, AuraId};
+use parachains_common::{AccountId, AssetHubPolkadotAuraId as AuraId};
 use sp_runtime::traits::MaybeEquivalence;
 use system_parachains_constants::paseo::{currency::*, fee::WeightToFee};
 use xcm::latest::prelude::*;
@@ -55,7 +55,7 @@ fn test_asset_xcm_trader() {
 		.with_session_keys(vec![(
 			AccountId::from(ALICE),
 			AccountId::from(ALICE),
-			SessionKeys { aura: AuraId::from(sp_core::sr25519::Public::from_raw(ALICE)) },
+			SessionKeys { aura: AuraId::from(sp_core::ed25519::Public::from_raw(ALICE)) },
 		)])
 		.build()
 		.execute_with(|| {
@@ -136,7 +136,7 @@ fn test_asset_xcm_trader_with_refund() {
 		.with_session_keys(vec![(
 			AccountId::from(ALICE),
 			AccountId::from(ALICE),
-			SessionKeys { aura: AuraId::from(sp_core::sr25519::Public::from_raw(ALICE)) },
+			SessionKeys { aura: AuraId::from(sp_core::ed25519::Public::from_raw(ALICE)) },
 		)])
 		.build()
 		.execute_with(|| {
@@ -220,7 +220,7 @@ fn test_asset_xcm_trader_refund_not_possible_since_amount_less_than_ed() {
 		.with_session_keys(vec![(
 			AccountId::from(ALICE),
 			AccountId::from(ALICE),
-			SessionKeys { aura: AuraId::from(sp_core::sr25519::Public::from_raw(ALICE)) },
+			SessionKeys { aura: AuraId::from(sp_core::ed25519::Public::from_raw(ALICE)) },
 		)])
 		.build()
 		.execute_with(|| {
@@ -276,7 +276,7 @@ fn test_that_buying_ed_refund_does_not_refund() {
 		.with_session_keys(vec![(
 			AccountId::from(ALICE),
 			AccountId::from(ALICE),
-			SessionKeys { aura: AuraId::from(sp_core::sr25519::Public::from_raw(ALICE)) },
+			SessionKeys { aura: AuraId::from(sp_core::ed25519::Public::from_raw(ALICE)) },
 		)])
 		.build()
 		.execute_with(|| {
@@ -342,7 +342,7 @@ fn test_asset_xcm_trader_not_possible_for_non_sufficient_assets() {
 		.with_session_keys(vec![(
 			AccountId::from(ALICE),
 			AccountId::from(ALICE),
-			SessionKeys { aura: AuraId::from(sp_core::sr25519::Public::from_raw(ALICE)) },
+			SessionKeys { aura: AuraId::from(sp_core::ed25519::Public::from_raw(ALICE)) },
 		)])
 		.build()
 		.execute_with(|| {
@@ -405,7 +405,7 @@ fn test_buy_and_refund_weight_with_native() {
 		.with_session_keys(vec![(
 			AccountId::from(ALICE),
 			AccountId::from(ALICE),
-			SessionKeys { aura: AuraId::from(sp_core::sr25519::Public::from_raw(ALICE)) },
+			SessionKeys { aura: AuraId::from(sp_core::ed25519::Public::from_raw(ALICE)) },
 		)])
 		.build()
 		.execute_with(|| {
@@ -463,7 +463,7 @@ fn test_buy_and_refund_weight_with_swap_local_asset_xcm_trader() {
 		.with_session_keys(vec![(
 			AccountId::from(ALICE),
 			AccountId::from(ALICE),
-			SessionKeys { aura: AuraId::from(sp_core::sr25519::Public::from_raw(ALICE)) },
+			SessionKeys { aura: AuraId::from(sp_core::ed25519::Public::from_raw(ALICE)) },
 		)])
 		.build()
 		.execute_with(|| {
@@ -562,7 +562,7 @@ fn test_buy_and_refund_weight_with_swap_foreign_asset_xcm_trader() {
 		.with_session_keys(vec![(
 			AccountId::from(ALICE),
 			AccountId::from(ALICE),
-			SessionKeys { aura: AuraId::from(sp_core::sr25519::Public::from_raw(ALICE)) },
+			SessionKeys { aura: AuraId::from(sp_core::ed25519::Public::from_raw(ALICE)) },
 		)])
 		.build()
 		.execute_with(|| {
