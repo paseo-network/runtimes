@@ -23,8 +23,6 @@ jobs:
             path: "system-parachains/people-paseo"
           - name: "coretime-paseo"
             path: "system-parachains/coretime-paseo"
-          - name: "collecives-paseo"
-            path: "system-parachains/collectives-paseo"
 
     steps:
       - name: Checkout sources
