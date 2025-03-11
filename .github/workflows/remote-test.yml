@@ -10,7 +10,7 @@ jobs:
     steps:
       - name: Trigger Remote Test Workflow
         env:
-          GH_TOKEN: ${{ secrets.PASEO_RUNTIME_CI_PAT }}
+          GH_TOKEN: ${{ secrets.CI_PAT }}
         run: |
           response=$(curl -L \
             -X POST \
