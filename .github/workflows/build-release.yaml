@@ -104,7 +104,7 @@ jobs:
       # Release published: add artifacts to release
       - name: Create GitHub Release
         env:
-          GH_TOKEN: ${{ secrets.PASEO_RUNTIME_CI_PAT }}
+          GH_TOKEN: ${{ secrets.CI_PAT }}
         run: |
           if ! gh release view ${{ github.event.inputs.tag_version }} &>/dev/null; then
             # Create release only if it doesn't exist
