@@ -106,18 +106,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.CI_PAT }}
         run: |
-          if ! gh release view ${{ github.event.inputs.tag_version }} &>/dev/null; then
-            # Create release only if it doesn't exist
-            gh release create ${{ github.event.inputs.tag_version }} \
-              --title "Release ${{ github.event.inputs.tag_version }}" \
-              --generate-notes
-          fi
-          
-          # Add assets to the existing release
-          gh release upload ${{ github.event.inputs.tag_version }} \
-            ${{ steps.srtool_build.outputs.wasm_compressed }} \
-            ${{ matrix.runtime.name }}-srtool-digest.json \
-            --clobber \
+          gh release create ${{ github.event.inputs.tag_version }} \
+            --title "Release ${{ github.event.inputs.tag_version }}" \
+            --generate-notes \
             --notes "## Runtime: \`${{ matrix.runtime.name }}\`
             \`\`\`
             🏋️ Runtime Size:           ${{ fromJSON(steps.srtool_build.outputs.json).runtimes.compressed.subwasm.size }} bytes
