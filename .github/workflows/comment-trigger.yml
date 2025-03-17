@@ -28,6 +28,7 @@ jobs:
           fi
 
       - name: Check comment content
+        if: steps.check-team.outputs.is_allowed == 'true'
         id: check-comment
         run: |
           comment="${{ github.event.comment.body }}"
@@ -40,7 +41,7 @@ jobs:
           fi
         
       - name: Get PR Details
-        if: steps.check-comment.outputs.is_bot_command == 'true'
+        if: steps.check-comment.outputs.is_bot_command == 'true' && steps.check-team.outputs.is_allowed == 'true'
         id: pr-details
         env:
           GH_TOKEN: ${{ secrets.CI_PAT }}
@@ -55,7 +56,7 @@ jobs:
           echo "branch=$pr_branch" >> $GITHUB_OUTPUT
 
       - name: Trigger Remote Test Workflow
-        if: steps.check-comment.outputs.is_bot_command == 'true'
+        if: steps.check-comment.outputs.is_bot_command == 'true' && steps.check-team.outputs.is_allowed == 'true'
         env:
           GH_TOKEN: ${{ secrets.CI_PAT }}
         run: |
