@@ -70,7 +70,7 @@ jobs:
               "ref": "main",
               "inputs": {
                 "target_repo": "https://github.com/${{ github.repository }}",
-                "target_branch": "$${{ steps.pr-details.outputs.branch }}",
+                "target_branch": "${{ steps.pr-details.outputs.branch }}",
                 "pr_number": "${{ github.event.issue.number }}",
                 "command": "${{ steps.check-comment.outputs.command }}"
             }' -w "%{http_code}" -o /dev/null)
