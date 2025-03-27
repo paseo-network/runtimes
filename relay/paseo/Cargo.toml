@@ -2,7 +2,7 @@
 name = "paseo-runtime"
 build = "build.rs"
 repository.workspace = true
-version = "1.4.1"
+version = "1.4.2"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -218,6 +218,7 @@ std = [
 	"sp-storage/std",
 	"sp-tracing/std",
 	"sp-transaction-pool/std",
+	"sp-trie/std",
 	"sp-version/std",
 	"substrate-wasm-builder",
 	"xcm-builder/std",
@@ -272,6 +273,7 @@ runtime-benchmarks = [
 	"polkadot-parachain-primitives/runtime-benchmarks",
 	"polkadot-primitives/runtime-benchmarks",
 	"polkadot-runtime-common/runtime-benchmarks",
+	"paseo-runtime-constants/runtime-benchmarks",
 	"runtime-parachains/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"sp-staking/runtime-benchmarks",
