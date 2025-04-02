@@ -41,8 +41,8 @@ use pallet_bridge_relayers::extension::{
 };
 use pallet_xcm_bridge_hub::{BridgeId, XcmAsPlainPayload};
 use parachains_common::xcm_config::{AllSiblingSystemParachains, RelayOrOtherSystemParachains};
-use paseo_runtime_constants as constants;
 use polkadot_parachain_primitives::primitives::Sibling;
+use paseo_runtime_constants as constants;
 use sp_runtime::traits::ConstU32;
 use xcm::latest::prelude::*;
 use xcm_builder::{BridgeBlobDispatcher, ParentIsPreset, SiblingParachainConvertsVia};
@@ -312,7 +312,7 @@ where
 	// insert bridge metadata
 	let lane_id = with;
 	let sibling_parachain = Location::new(1, [Parachain(sibling_para_id)]);
-	let universal_source: InteriorLocation =  UniversalLocation::get();
+	let universal_source = [GlobalConsensus(Paseo), Parachain(sibling_para_id)].into();
 	let universal_destination = [GlobalConsensus(Kusama), Parachain(2075)].into();
 	let bridge_id = BridgeId::new(&universal_source, &universal_destination);
 
@@ -361,7 +361,6 @@ mod tests {
 	/// We want this tip to be large enough (delivery transactions with more messages = less
 	/// operational costs and a faster bridge), so this value should be significant.
 	const FEE_BOOST_PER_MESSAGE: Balance = 2 * constants::currency::UNITS;
-
 
 	#[test]
 	#[ignore]
