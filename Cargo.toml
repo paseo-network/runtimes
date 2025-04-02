@@ -135,7 +135,6 @@ pallet-proxy = { version = "38.0.0", default-features = false }
 pallet-ranked-collective = { version = "38.2.0", default-features = false }
 pallet-recovery = { version = "38.0.0", default-features = false }
 pallet-referenda = { version = "38.0.0", default-features = false }
-# pallet-remote-proxy = { path = "pallets/remote-proxy", default-features = false }
 pallet-salary = { version = "23.2.0", default-features = false }
 pallet-scheduler = { version = "39.0.0", default-features = false }
 pallet-session = { version = "38.0.0", default-features = false }
@@ -170,7 +169,6 @@ people-kusama-runtime = { path = "system-parachains/people/people-kusama" }
 polkadot-core-primitives = { version = "15.0.0", default-features = false }
 polkadot-parachain-primitives = { version = "14.0.0", default-features = false }
 polkadot-primitives = { version = "16.0.0", default-features = false }
-# polkadot-runtime = { path = "relay/paseo" }
 polkadot-runtime-common = { version = "17.0.0", default-features = false }
 paseo-runtime-common = { version = "17.0.0", default-features = false }
 primitive-types = { version = "0.12.2", default-features = false }
@@ -254,7 +252,6 @@ members = [
 	"integration-tests/emulated/networks/paseo-system",
 	"integration-tests/emulated/tests/bridges/bridge-hub-paseo",
 	"integration-tests/emulated/tests/coretime/coretime-paseo",
-	# "pallets/remote-proxy",
 	"relay/common",
 	"relay/paseo",
 	"relay/paseo/constants",
