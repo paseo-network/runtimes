@@ -21,7 +21,7 @@ use sp_core::sr25519;
 use sp_genesis_builder::PresetId;
 use sp_std::vec::Vec;
 use system_parachains_constants::genesis_presets::*;
-use AuraId;
+use AuraId; // Is AssetHubPolkadotAuraId, a.k.a. ed25519.
 
 const ASSET_HUB_PASEO_ED: Balance = ExistentialDeposit::get();
 
