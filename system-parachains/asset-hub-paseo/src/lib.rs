@@ -1817,10 +1817,7 @@ impl pallet_state_trie_migration::Config for Runtime {
 	type SignedDepositPerItem = MigrationSignedDepositPerItem;
 	type SignedDepositBase = MigrationSignedDepositBase;
 	// An origin that can control the whole pallet: should be Root, or the fellowship.
-	type ControlOrigin = EitherOfDiverse<
-		EnsureRoot<AccountId>,
-		EnsureXcm<IsVoiceOfBody<FellowshipLocation, FellowsBodyId>>,
-	>;
+	type ControlOrigin = EnsureRoot<AccountId>;
 	type SignedFilter = EnsureSignedBy<MigController, AccountId>;
 
 	// Replace this with weight based on your runtime.
@@ -1831,7 +1828,7 @@ impl pallet_state_trie_migration::Config for Runtime {
 // Statemint State Migration Controller account controlled by parity.io. Can trigger migration.
 // See bot code https://github.com/paritytech/polkadot-scripts/blob/master/src/services/state_trie_migration.ts
 ord_parameter_types! {
-	pub const MigController: AccountId = AccountId::from(hex_literal::hex!("8458ed39dc4b6f6c7255f7bc42be50c2967db126357c999d44e12ca7ac80dc52"));
+	pub const MigController: AccountId = AccountId::from(hex_literal::hex!("7e939ef17e229e9a29210d95cb0b607e0030d54899c05f791a62d5c6f4557659"));
 }
 
 #[cfg(test)]
@@ -1913,7 +1910,7 @@ mod tests {
 		use frame_support::traits::SortedMembers;
 		use sp_core::crypto::Ss58Codec;
 		let acc =
-			AccountId::from_ss58check("5F4EbSkZz18X36xhbsjvDNs6NuZ82HyYtq5UiJ1h9SBHJXZD").unwrap();
+			AccountId::from_ss58check("5Evfk4MMJ1bgvTKoMEg6LW6CZXULaURHjCa1X777YE1SUWtX").unwrap();
 		assert_eq!(acc, MigController::sorted_members()[0]);
 	}
 }
