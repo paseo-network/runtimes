@@ -1917,15 +1917,6 @@ mod tests {
 	}
 
 	#[test]
-	fn aura_id_is_sr25519() {
-		// Ensure that we are not aliasing AuraId type to a different type.
-		assert_eq!(
-			TypeId::of::<AuraId>(),
-			TypeId::of::<sp_consensus_aura::sr25519::AuthorityId>()
-		)
-	}
-
-	#[test]
 	fn aura_uses_sr25519_for_authority_id() {
 		// Ensure that AuthorityId configuration is the expected.
 		assert_eq!(
