@@ -1833,6 +1833,8 @@ ord_parameter_types! {
 
 #[cfg(test)]
 mod tests {
+	use std::any::TypeId;
+	use sp_core::sr25519;
 	use super::*;
 	use sp_runtime::traits::Zero;
 	use sp_weights::WeightToFee;
@@ -1912,5 +1914,23 @@ mod tests {
 		let acc =
 			AccountId::from_ss58check("5Evfk4MMJ1bgvTKoMEg6LW6CZXULaURHjCa1X777YE1SUWtX").unwrap();
 		assert_eq!(acc, MigController::sorted_members()[0]);
+	}
+
+	#[test]
+	fn aura_id_is_sr25519() {
+		// Ensure that we are not aliasing AuraId type to a different type.
+		assert_eq!(
+			TypeId::of::<AuraId>(),
+			TypeId::of::<sp_consensus_aura::sr25519::AuthorityId>()
+		)
+	}
+
+	#[test]
+	fn aura_uses_sr25519_for_authority_id() {
+		// Ensure that AuthorityId configuration is the expected.
+		assert_eq!(
+			TypeId::of::<<Runtime as pallet_aura::Config>::AuthorityId>(),
+			TypeId::of::<sp_consensus_aura::sr25519::AuthorityId>(),
+		);
 	}
 }
