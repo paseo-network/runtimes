@@ -1834,7 +1834,6 @@ ord_parameter_types! {
 #[cfg(test)]
 mod tests {
 	use std::any::TypeId;
-	use sp_core::sr25519;
 	use super::*;
 	use sp_runtime::traits::Zero;
 	use sp_weights::WeightToFee;
