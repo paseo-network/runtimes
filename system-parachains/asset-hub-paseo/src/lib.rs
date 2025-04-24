@@ -97,7 +97,7 @@ use frame_support::{
 	construct_runtime,
 	dispatch::DispatchClass,
 	genesis_builder_helper::{build_state, get_preset},
-	parameter_types,
+	ord_parameter_types, parameter_types,
 	traits::{
 		fungible, fungibles, tokens::imbalance::ResolveAssetTo, AsEnsureOriginWithArg, ConstBool,
 		ConstU32, ConstU64, ConstU8, Contains, EitherOfDiverse, Equals, EverythingBut,
@@ -108,11 +108,11 @@ use frame_support::{
 };
 use frame_system::{
 	limits::{BlockLength, BlockWeights},
-	EnsureRoot, EnsureSigned,
+	EnsureRoot, EnsureSigned, EnsureSignedBy,
 };
 use pallet_nfts::PalletFeatures;
 use parachains_common::{
-	message_queue::*, AccountId, AssetHubPolkadotAuraId as AuraId, AssetIdForTrustBackedAssets,
+	message_queue::*, AccountId, AuraId, AssetIdForTrustBackedAssets,
 	Balance, BlockNumber, Hash, Header, Nonce, Signature,
 };
 
@@ -155,11 +155,11 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("asset-hub-paseo"),
 	impl_name: create_runtime_str!("asset-hub-paseo"),
 	authoring_version: 1,
-	spec_version: 1_004_001,
+	spec_version: 1_004_002,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 15,
-	state_version: 0,
+	state_version: 1,
 };
 
 /// The version information used to identify this runtime when compiled natively.
@@ -1014,6 +1014,9 @@ construct_runtime!(
 		PoolAssets: pallet_assets::<Instance3> = 54,
 		AssetConversion: pallet_asset_conversion = 55,
 
+		// State trie migration pallet, only temporary.
+		StateTrieMigration: pallet_state_trie_migration = 70,
+
 		// Sudo.
 		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 255,
 	}
@@ -1800,8 +1803,37 @@ cumulus_pallet_parachain_system::register_validate_block! {
 	BlockExecutor = cumulus_pallet_aura_ext::BlockExecutor::<Runtime, Executive>,
 }
 
+parameter_types! {
+	// The deposit configuration for the singed migration. Specially if you want to allow any signed account to do the migration (see `SignedFilter`, these deposits should be high)
+	pub const MigrationSignedDepositPerItem: Balance = CENTS;
+	pub const MigrationSignedDepositBase: Balance = 2_000 * CENTS;
+	pub const MigrationMaxKeyLen: u32 = 32;
+}
+
+impl pallet_state_trie_migration::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type RuntimeHoldReason = RuntimeHoldReason;
+	type SignedDepositPerItem = MigrationSignedDepositPerItem;
+	type SignedDepositBase = MigrationSignedDepositBase;
+	// An origin that can control the whole pallet: should be Root, or the fellowship.
+	type ControlOrigin = EnsureRoot<AccountId>;
+	type SignedFilter = EnsureSignedBy<MigController, AccountId>;
+
+	// Replace this with weight based on your runtime.
+	type WeightInfo = pallet_state_trie_migration::weights::SubstrateWeight<Runtime>;
+
+	type MaxKeyLen = MigrationMaxKeyLen;
+}
+// Statemint State Migration Controller account controlled by parity.io. Can trigger migration.
+// See bot code https://github.com/paritytech/polkadot-scripts/blob/master/src/services/state_trie_migration.ts
+ord_parameter_types! {
+	pub const MigController: AccountId = AccountId::from(hex_literal::hex!("7e939ef17e229e9a29210d95cb0b607e0030d54899c05f791a62d5c6f4557659"));
+}
+
 #[cfg(test)]
 mod tests {
+	use std::any::TypeId;
 	use super::*;
 	use sp_runtime::traits::Zero;
 	use sp_weights::WeightToFee;
@@ -1871,6 +1903,24 @@ mod tests {
 		assert_eq!(
 			bp_asset_hub_paseo::CreateForeignAssetDeposit::get(),
 			ForeignAssetsAssetDeposit::get()
+		);
+	}
+
+	#[test]
+	fn ensure_key_ss58() {
+		use frame_support::traits::SortedMembers;
+		use sp_core::crypto::Ss58Codec;
+		let acc =
+			AccountId::from_ss58check("5Evfk4MMJ1bgvTKoMEg6LW6CZXULaURHjCa1X777YE1SUWtX").unwrap();
+		assert_eq!(acc, MigController::sorted_members()[0]);
+	}
+
+	#[test]
+	fn aura_uses_sr25519_for_authority_id() {
+		// Ensure that AuthorityId configuration is the expected.
+		assert_eq!(
+			TypeId::of::<<Runtime as pallet_aura::Config>::AuthorityId>(),
+			TypeId::of::<sp_consensus_aura::sr25519::AuthorityId>(),
 		);
 	}
 }

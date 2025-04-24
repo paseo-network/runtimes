@@ -22,7 +22,7 @@ use emulated_integration_tests_common::{
 	SAFE_XCM_VERSION,
 };
 use frame_support::sp_runtime::traits::AccountIdConversion;
-use parachains_common::{AccountId, AssetHubPolkadotAuraId, Balance};
+use parachains_common::{AccountId, AuraId, Balance};
 use polkadot_parachain_primitives::primitives::Sibling;
 use sp_core::sr25519;
 use xcm::prelude::*;
@@ -51,15 +51,15 @@ frame_support::parameter_types! {
 	pub PenpalBSiblingSovereignAccount: AccountId = Sibling::from(penpal_emulated_chain::PARA_ID_B).into_account_truncating();
 }
 
-fn invulnerables_asset_hub_paseo() -> Vec<(AccountId, AssetHubPolkadotAuraId)> {
+fn invulnerables_asset_hub_paseo() -> Vec<(AccountId, AuraId)> {
 	vec![
 		(
 			get_account_id_from_seed::<sr25519::Public>("Alice"),
-			get_from_seed::<AssetHubPolkadotAuraId>("Alice"),
+			get_from_seed::<AuraId>("Alice"),
 		),
 		(
 			get_account_id_from_seed::<sr25519::Public>("Bob"),
-			get_from_seed::<AssetHubPolkadotAuraId>("Bob"),
+			get_from_seed::<AuraId>("Bob"),
 		),
 	]
 }

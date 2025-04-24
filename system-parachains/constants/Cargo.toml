@@ -33,3 +33,10 @@ std = [
 	"sp-std/std",
 	"xcm/std",
 ]
+runtime-benchmarks = [
+	"frame-support/runtime-benchmarks",
+	"parachains-common/runtime-benchmarks",
+	"polkadot-primitives/runtime-benchmarks",
+	"paseo-runtime-constants/runtime-benchmarks",
+	"sp-runtime/runtime-benchmarks",
+]

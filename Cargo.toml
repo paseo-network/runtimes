@@ -6,11 +6,12 @@ repository = "https://github.com/paseo-network/runtimes.git"
 license = "GPL-3.0-only"                                        # TODO <https://github.com/paseo-fellows/runtimes/issues/29>
 
 [workspace.dependencies]
-kusama-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.4.1", package = "kusama-runtime-constants", default-features = false  }
-bp-bridge-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.4.1", package = "bp-bridge-hub-kusama", default-features = false  }
-bp-bridge-hub-polkadot = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.4.1", package = "bp-bridge-hub-polkadot", default-features = false  }
-bp-asset-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.4.1", package = "bp-asset-hub-kusama", default-features = false  }
-collectives-polkadot-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.4.1", package = "collectives-polkadot-runtime-constants", default-features = false  }
+kusama-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.4.2", package = "kusama-runtime-constants", default-features = false  }
+bp-bridge-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.4.2", package = "bp-bridge-hub-kusama", default-features = false  }
+bp-bridge-hub-polkadot = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.4.2", package = "bp-bridge-hub-polkadot", default-features = false  }
+bp-asset-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.4.2", package = "bp-asset-hub-kusama", default-features = false  }
+collectives-polkadot-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.4.2", package = "collectives-polkadot-runtime-constants", default-features = false  }
+pallet-remote-proxy = {  git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.4.2", package = "pallet-remote-proxy", default-features = false   }
 
 
 # Local dependencies
@@ -168,7 +169,6 @@ people-kusama-runtime = { path = "system-parachains/people/people-kusama" }
 polkadot-core-primitives = { version = "15.0.0", default-features = false }
 polkadot-parachain-primitives = { version = "14.0.0", default-features = false }
 polkadot-primitives = { version = "16.0.0", default-features = false }
-polkadot-runtime = { path = "relay/paseo" }
 polkadot-runtime-common = { version = "17.0.0", default-features = false }
 paseo-runtime-common = { version = "17.0.0", default-features = false }
 primitive-types = { version = "0.12.2", default-features = false }
@@ -177,7 +177,7 @@ remote-externalities = { version = "0.46.0", package = "frame-remote-externaliti
 runtime-parachains = { version = "17.0.2", default-features = false, package = "polkadot-runtime-parachains" }
 sc-chain-spec = { version = "38.0.0" }
 sc-network = { version = "0.45.5" }
-scale-info = { version = "=2.11.3", default-features = false }
+scale-info = { version = "2.10.0", default-features = false }
 separator = { version = "0.4.1" }
 serde = { version = "1.0.196" }
 serde_json = { version = "1.0.113", default-features = false }
@@ -211,11 +211,12 @@ sp-offchain = { version = "34.0.0", default-features = false }
 sp-runtime = { version = "39.0.5", default-features = false }
 sp-session = { version = "36.0.0", default-features = false }
 sp-staking = { version = "36.0.0", default-features = false }
+sp-state-machine = { version = "0.43.0", default-features = false }
 sp-std = { version = "14.0.0", default-features = false }
 sp-storage = { version = "21.0.0", default-features = false }
 sp-tracing = { version = "17.0.1", default-features = false }
 sp-transaction-pool = { version = "34.0.0", default-features = false }
-sp-trie = { version = "37.0.0" }
+sp-trie = { version = "37.0.0", default-features = false }
 sp-version = { version = "37.0.0", default-features = false }
 sp-weights = { version = "31.0.0", default-features = false }
 static_assertions = { version = "1.1.0" }
@@ -244,23 +245,25 @@ members = [
 	"integration-tests/emulated/chains/parachains/bridges/bridge-hub-paseo",
 	"integration-tests/emulated/chains/parachains/collectives/collectives-paseo",
 	"integration-tests/emulated/chains/parachains/coretime/coretime-paseo",
+	"integration-tests/emulated/chains/parachains/people/people-paseo",
 	"integration-tests/emulated/chains/parachains/testing/penpal",
 	"integration-tests/emulated/chains/relays/paseo",
 	"integration-tests/emulated/helpers",
 	"integration-tests/emulated/networks/paseo-system",
 	"integration-tests/emulated/tests/bridges/bridge-hub-paseo",
 	"integration-tests/emulated/tests/coretime/coretime-paseo",
+	"relay/common",
 	"relay/paseo",
 	"relay/paseo/constants",
 	"system-parachains/asset-hub-paseo",
 	"system-parachains/asset-hub-paseo/primitives",
 	"system-parachains/bridge-hub-paseo",
 	"system-parachains/bridge-hub-paseo/primitives",
-	"system-parachains/people-paseo",
 	"system-parachains/collectives-paseo",
 	"system-parachains/collectives-paseo/constants",
 	"system-parachains/constants",
 	"system-parachains/coretime-paseo",
+	"system-parachains/people-paseo",
 ]
 
 [profile.release]
