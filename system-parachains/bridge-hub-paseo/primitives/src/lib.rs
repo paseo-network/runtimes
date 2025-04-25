@@ -186,12 +186,71 @@ pub mod snowbridge {
 			multiplier: FixedU128::from_rational(1, 1),
 		};
 		/// Network and location for the Ethereum chain. On Polkadot, the Ethereum chain bridged
-		/// to is the Ethereum Sepolia network, with chain ID 11155111.
+			/// to is the Ethereum Sepolia network, with chain ID 11155111.
 		/// <https://chainlist.org/chain/1>
 		/// <https://ethereum.org/en/developers/docs/apis/json-rpc/#net_version>
 		pub EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 11155111 };
 		pub EthereumLocation: Location = Location::new(2, EthereumNetwork::get());
 	}
+}
+
+/// Bridging primitives describing the Paseo relay chain, which we need for the other side.
+pub mod bp_paseo {
+	use super::{decl_bridge_finality_runtime_apis, Chain, ChainId, StateVersion, Weight};
+	use bp_header_chain::ChainWithGrandpa;
+	pub use bp_polkadot_core::*;
+
+	/// Paseo Chain
+	pub struct Paseo;
+
+	impl Chain for Paseo {
+		const ID: ChainId = *b"pdot";
+
+		type BlockNumber = BlockNumber;
+		type Hash = Hash;
+		type Hasher = Hasher;
+		type Header = Header;
+
+		type AccountId = AccountId;
+		type Balance = Balance;
+		type Nonce = Nonce;
+		type Signature = Signature;
+
+		const STATE_VERSION: StateVersion = StateVersion::V0;
+
+		fn max_extrinsic_size() -> u32 {
+			max_extrinsic_size()
+		}
+
+		fn max_extrinsic_weight() -> Weight {
+			max_extrinsic_weight()
+		}
+	}
+
+	impl ChainWithGrandpa for Paseo {
+		const WITH_CHAIN_GRANDPA_PALLET_NAME: &'static str = WITH_POLKAPAS_GRANDPA_PALLET_NAME;
+		const MAX_AUTHORITIES_COUNT: u32 = MAX_AUTHORITIES_COUNT;
+		const REASONABLE_HEADERS_IN_JUSTIFICATION_ANCESTRY: u32 =
+			REASONABLE_HEADERS_IN_JUSTIFICATION_ANCESTRY;
+		const MAX_MANDATORY_HEADER_SIZE: u32 = MAX_MANDATORY_HEADER_SIZE;
+		const AVERAGE_HEADER_SIZE: u32 = AVERAGE_HEADER_SIZE;
+	}
+
+	/// Name of the parachains pallet in the Paseo runtime.
+	pub const PARAS_PALLET_NAME: &str = "Paras";
+	/// Name of the With-Paseo GRANDPA pallet instance that is deployed at bridged chains.
+	pub const WITH_POLKAPAS_GRANDPA_PALLET_NAME: &str = "BridgePaseoGrandpa";
+	/// Name of the With-Paseo parachains pallet instance that is deployed at bridged chains.
+	pub const WITH_POLKAPAS_BRIDGE_PARACHAINS_PALLET_NAME: &str = "BridgePaseoParachains";
+
+	/// Maximal size of encoded `bp_parachains::ParaStoredHeaderData` structure among all Paseo
+	/// parachains.
+	///
+	/// It includes the block number and state root, so it shall be near 40 bytes, but let's have
+	/// some reserve.
+	pub const MAX_NESTED_PARACHAIN_HEAD_DATA_SIZE: u32 = 128;
+
+	decl_bridge_finality_runtime_apis!(paseo, grandpa);
 }
 
 #[cfg(test)]
