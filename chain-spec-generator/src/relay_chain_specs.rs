@@ -15,7 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Paseo.  If not, see <http://www.gnu.org/licenses/>.
 
-use sc_chain_spec::{ChainSpec, ChainType, NoExtension};
+use sc_chain_spec::NoExtension;
+use sc_chain_spec::{ChainSpec, ChainType};
 
 pub type PaseoChainSpec = sc_chain_spec::GenericChainSpec<NoExtension>;
 
@@ -25,7 +26,6 @@ const DEFAULT_PROTOCOL_ID: &str = "pas";
 pub fn paseo_chain_spec_properties() -> serde_json::map::Map<String, serde_json::Value> {
 	serde_json::json!({
 		"tokenDecimals": 10,
-		"ss58Format": 0,
 	})
 	.as_object()
 	.expect("Map given; qed")
