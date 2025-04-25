@@ -53,6 +53,8 @@ bp-runtime = { version = "0.18.0", default-features = false }
 bp-xcm-bridge-hub = { version = "0.4.2", default-features = false }
 bp-xcm-bridge-hub-router = { version = "0.14.1", default-features = false }
 bridge-hub-common = { version = "0.10.0", default-features = false }
+bridge-hub-test-utils = { version = "0.20.1" }
+bridge-runtime-common = { version = "0.18.3", default-features = false }
 clap = { version = "4.5.0" }
 codec = { package = "parity-scale-codec", version = "3.6.9", default-features = false }
 collectives-paseo-emulated-chain = { path = "integration-tests/emulated/chains/parachains/collectives/collectives-paseo" }
@@ -246,7 +248,6 @@ members = [
 	"integration-tests/emulated/networks/paseo-system",
 	"integration-tests/emulated/tests/bridges/bridge-hub-paseo",
 	"integration-tests/emulated/tests/coretime/coretime-paseo",
-	"pallets/remote-proxy",
 	"relay/common",
 	"relay/paseo",
 	"relay/paseo/constants",
