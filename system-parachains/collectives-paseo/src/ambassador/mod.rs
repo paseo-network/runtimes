@@ -28,6 +28,7 @@
 //!   inducted into [AmbassadorCore](pallet_core_fellowship)).
 //! - Ambassador Program Sub-Treasury (via [AmbassadorTreasury](pallet_treasury)).
 
+pub mod migrations;
 pub mod origins;
 mod tracks;
 
@@ -43,6 +44,7 @@ use frame_support::{
 };
 use frame_system::EnsureRootWithSuccess;
 use origins::pallet_origins::{EnsureAmbassadorsFrom, HeadAmbassadors, Origin, SeniorAmbassadors};
+
 use pallet_ranked_collective::{MemberIndex, Rank, Votes};
 use polkadot_runtime_common::impls::{LocatableAssetConverter, VersionedLocationConverter};
 use sp_core::ConstU128;
