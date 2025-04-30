@@ -1346,12 +1346,6 @@ impl paras_registrar::Config for Runtime {
 parameter_types! {
 	// 12 weeks = 3 months per lease period -> 8 lease periods ~ 2 years
 	pub LeasePeriod: BlockNumber = prod_or_fast!(1 * WEEKS, 1 * DAYS, "PAS_LEASE_PERIOD");
-	// Paseo Genesis was on May 26, 2020.
-	// Target Parachain Onboarding Date: Dec 15, 2021.
-	// Difference is 568 days.
-	// We want a lease period to start on the target onboarding date.
-	// 568 % (12 * 7) = 64 day offset
-	pub LeaseOffset: BlockNumber = prod_or_fast!(64 * DAYS, 0, "PAS_LEASE_OFFSET");
 }
 
 impl slots::Config for Runtime {
