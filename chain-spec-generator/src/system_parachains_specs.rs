@@ -171,7 +171,7 @@ pub fn coretime_paseo_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, Stri
 	))
 }
 
-pub fn people_paseo_local_testnet_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String> {
+pub fn collectives_paseo_local_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String> {
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("ss58Format".into(), 0.into());
 	properties.insert("tokenSymbol".into(), "PAS".into());
