@@ -26,6 +26,7 @@ const DEFAULT_PROTOCOL_ID: &str = "pas";
 pub fn paseo_chain_spec_properties() -> serde_json::map::Map<String, serde_json::Value> {
 	serde_json::json!({
 		"tokenDecimals": 10,
+                "ss58Format": 0,
 	})
 	.as_object()
 	.expect("Map given; qed")
