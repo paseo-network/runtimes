@@ -15,10 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Polkadot.  If not, see <http://www.gnu.org/licenses/>.
 
-use sc_chain_spec::{ChainSpec, ChainSpecExtension, ChainSpecGroup, ChainType};
-use sc_network::config::MultiaddrWithPeerId;
+use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
 
 /// Generic extensions for Parachain ChainSpecs.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ChainSpecGroup, ChainSpecExtension)]
@@ -32,14 +30,17 @@ pub struct Extensions {
 
 pub type AssetHubPaseoChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
 
+pub type CollectivesPaseoChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
+
 pub type BridgeHubPaseoChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
+
+pub type CoretimePaseoChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
+
 
 pub type PeoplePaseoChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
 
-pub type CoretimePaseoChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
-pub type CollectivesPaseoChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
-
-pub fn asset_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, String> {
+pub fn asset_hub_paseo_local_testnet_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String>
+{
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("ss58Format".into(), 0.into());
 	properties.insert("tokenSymbol".into(), "PAS".into());
@@ -52,7 +53,7 @@ pub fn asset_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, Stri
 		)
 		.with_name("Asset Hub Paseo Local")
 		.with_id("asset-hub-paseo-local")
-		.with_chain_type(ChainType::Local)
+		.with_chain_type(sc_chain_spec::ChainType::Local)
 		.with_genesis_config_preset_name("local_testnet")
 		.with_protocol_id("ah-pas")
 		.with_properties(properties)
@@ -60,7 +61,9 @@ pub fn asset_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, Stri
 	))
 }
 
-pub fn bridge_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, String> {
+
+pub fn bridge_hub_paseo_local_testnet_config(
+) -> Result<Box<dyn sc_chain_spec::ChainSpec>, String> {
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("ss58Format".into(), 0.into());
 	properties.insert("tokenSymbol".into(), "PAS".into());
@@ -74,7 +77,7 @@ pub fn bridge_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, Str
 		)
 		.with_name("Paseo Bridge Hub Local")
 		.with_id("paseo-bridge-hub-local")
-		.with_chain_type(ChainType::Local)
+		.with_chain_type(sc_chain_spec::ChainType::Local)
 		.with_protocol_id("bh-pas")
 		.with_genesis_config_preset_name("local_testnet")
 		.with_properties(properties)
@@ -82,7 +85,8 @@ pub fn bridge_hub_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, Str
 	))
 }
 
-pub fn people_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, String> {
+pub fn people_paseo_local_testnet_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String>
+{
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("ss58Format".into(), 0.into());
 	properties.insert("tokenSymbol".into(), "PAS".into());
@@ -95,7 +99,7 @@ pub fn people_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, String>
 		)
 		.with_name("Paseo People Local")
 		.with_id("paseo-people-local")
-		.with_chain_type(ChainType::Local)
+		.with_chain_type(sc_chain_spec::ChainType::Local)
 		.with_protocol_id("pc-pas")
 		.with_genesis_config_preset_name("local_testnet")
 		.with_properties(properties)
@@ -103,7 +107,7 @@ pub fn people_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, String>
 	))
 }
 
-pub fn coretime_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, String> {
+pub fn coretime_paseo_local_testnet_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String> {
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("ss58Format".into(), 0.into());
 	properties.insert("tokenSymbol".into(), "PAS".into());
@@ -116,7 +120,7 @@ pub fn coretime_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, Strin
 		)
 		.with_name("Paseo Coretime Local")
 		.with_id("paseo-coretime-local")
-		.with_chain_type(ChainType::Local)
+		.with_chain_type(sc_chain_spec::ChainType::Local)
 		.with_protocol_id("ct-pas")
 		.with_genesis_config_preset_name("local_testnet")
 		.with_properties(properties)
@@ -124,7 +128,8 @@ pub fn coretime_paseo_local_testnet_config() -> Result<Box<dyn ChainSpec>, Strin
 	))
 }
 
-pub fn coretime_paseo_tot_config() -> Result<Box<dyn ChainSpec>, String> {
+pub fn coretime_paseo_tot_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String>
+{
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("ss58Format".into(), 0.into());
 	properties.insert("tokenSymbol".into(), "PAS".into());
@@ -137,7 +142,7 @@ pub fn coretime_paseo_tot_config() -> Result<Box<dyn ChainSpec>, String> {
 		)
 		.with_name("Paseo Coretime Local")
 		.with_id("paseo-coretime-tot")
-		.with_chain_type(ChainType::Live)
+		.with_chain_type(sc_chain_spec::ChainType::Local)
 		.with_protocol_id("ct-pas")
 		.with_genesis_config_preset_name("tot")
 		.with_properties(properties)
@@ -145,7 +150,7 @@ pub fn coretime_paseo_tot_config() -> Result<Box<dyn ChainSpec>, String> {
 	))
 }
 
-pub fn coretime_paseo_config() -> Result<Box<dyn ChainSpec>, String> {
+pub fn coretime_paseo_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String> {
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("ss58Format".into(), 0.into());
 	properties.insert("tokenSymbol".into(), "PAS".into());
@@ -158,7 +163,7 @@ pub fn coretime_paseo_config() -> Result<Box<dyn ChainSpec>, String> {
 		)
 		.with_name("Paseo Coretime")
 		.with_id("paseo-coretime")
-		.with_chain_type(ChainType::Live)
+		.with_chain_type(sc_chain_spec::ChainType::Live)
 		.with_protocol_id("ct-pas")
 		.with_genesis_config_preset_name("live")
 		.with_properties(properties)
@@ -166,7 +171,7 @@ pub fn coretime_paseo_config() -> Result<Box<dyn ChainSpec>, String> {
 	))
 }
 
-pub fn collectives_paseo_local_config() -> Result<Box<dyn ChainSpec>, String> {
+pub fn collectives_paseo_local_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String> {
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("ss58Format".into(), 0.into());
 	properties.insert("tokenSymbol".into(), "PAS".into());
@@ -179,7 +184,7 @@ pub fn collectives_paseo_local_config() -> Result<Box<dyn ChainSpec>, String> {
 		)
 		.with_name("Paseo Collectives Local")
 		.with_id("paseo-collectives-local")
-		.with_chain_type(ChainType::Local)
+		.with_chain_type(sc_chain_spec::ChainType::Local)
 		.with_protocol_id("col-pas")
 		.with_genesis_config_preset_name("local_testnet")
 		.with_properties(properties)
