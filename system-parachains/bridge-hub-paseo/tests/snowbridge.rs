@@ -164,8 +164,8 @@ fn test_xcm_fee_manager_from_components_bh_origin_in_waived_locations() {
 
 /// Fee is waived when origin is in waived location with Export message, but not to Ethereum.
 #[test]
-fn test_xcm_fee_manager_from_components_bh_origin_in_waived_locations_with_export_to_paseo_reason()
-{
+fn test_xcm_fee_manager_from_components_bh_origin_in_waived_locations_with_export_to_paseo_reason(
+) {
 	assert!(TestXcmFeeManager::is_waived(
 		Some(&Location::new(1, [Parachain(2)])),
 		FeeReason::Export { network: Polkadot, destination: Here }
@@ -246,30 +246,6 @@ fn ethereum_outbound_queue_processes_messages_before_message_queue_works() {
 	)
 }
 
-fn construct_extrinsic(
-	sender: sp_keyring::AccountKeyring,
-	call: RuntimeCall,
-) -> UncheckedExtrinsic {
-	let account_id = AccountId32::from(sender.public());
-	let extra: SignedExtra = (
-		frame_system::CheckNonZeroSender::<Runtime>::new(),
-		frame_system::CheckSpecVersion::<Runtime>::new(),
-		frame_system::CheckTxVersion::<Runtime>::new(),
-		frame_system::CheckGenesis::<Runtime>::new(),
-		frame_system::CheckEra::<Runtime>::from(Era::immortal()),
-		frame_system::CheckNonce::<Runtime>::from(
-			frame_system::Pallet::<Runtime>::account(&account_id).nonce,
-		),
-		frame_system::CheckWeight::<Runtime>::new(),
-		pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(0),
-		BridgeRejectObsoleteHeadersAndMessages,
-		(OnBridgeHubPaseoRefundBridgeHubKusamaMessages::default()),
-		frame_metadata_hash_extension::CheckMetadataHash::<Runtime>::new(false),
-	);
-	let payload = SignedPayload::new(call.clone(), extra.clone()).unwrap();
-	let signature = payload.using_encoded(|e| sender.sign(e));
-	UncheckedExtrinsic::new_signed(call, account_id.into(), Signature::Sr25519(signature), extra)
-}
 
 // TODO replace with snowbridge runtime common method in stable-2412 release.
 pub fn ethereum_extrinsic<Runtime>(
@@ -409,6 +385,31 @@ pub fn ethereum_extrinsic<Runtime>(
 			// An invalid sync committee update is paid
 			assert!(balance_after_sync_com_update > balance_after_invalid_sync_com_update);
 		});
+}
+
+fn construct_extrinsic(
+	sender: sp_keyring::AccountKeyring,
+	call: RuntimeCall,
+) -> UncheckedExtrinsic {
+	let account_id = AccountId32::from(sender.public());
+	let extra: SignedExtra = (
+		frame_system::CheckNonZeroSender::<Runtime>::new(),
+		frame_system::CheckSpecVersion::<Runtime>::new(),
+		frame_system::CheckTxVersion::<Runtime>::new(),
+		frame_system::CheckGenesis::<Runtime>::new(),
+		frame_system::CheckEra::<Runtime>::from(Era::immortal()),
+		frame_system::CheckNonce::<Runtime>::from(
+			frame_system::Pallet::<Runtime>::account(&account_id).nonce,
+		),
+		frame_system::CheckWeight::<Runtime>::new(),
+		pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(0),
+		BridgeRejectObsoleteHeadersAndMessages,
+		(OnBridgeHubPaseoRefundBridgeHubKusamaMessages::default()),
+		frame_metadata_hash_extension::CheckMetadataHash::<Runtime>::new(false),
+	);
+	let payload = SignedPayload::new(call.clone(), extra.clone()).unwrap();
+	let signature = payload.using_encoded(|e| sender.sign(e));
+	UncheckedExtrinsic::new_signed(call, account_id.into(), Signature::Sr25519(signature), extra)
 }
 
 fn construct_and_apply_extrinsic(

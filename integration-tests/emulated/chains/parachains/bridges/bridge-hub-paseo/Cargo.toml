@@ -23,4 +23,4 @@ bridge-hub-common = { workspace = true, default-features = true }
 emulated-integration-tests-common = { workspace = true }
 
 # Runtimes
-bridge-hub-paseo-runtime = { workspace = true, default-features = true }
+bridge-hub-paseo-runtime = { workspace = true }

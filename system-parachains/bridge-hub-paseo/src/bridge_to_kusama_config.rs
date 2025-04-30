@@ -23,6 +23,7 @@ use crate::{
 	RuntimeEvent, RuntimeHoldReason, XcmOverBridgeHubKusama, XcmpQueue,
 };
 
+pub use bp_bridge_hub_kusama::bp_kusama;
 use bp_messages::{
 	source_chain::FromBridgedChainMessagesDeliveryProof,
 	target_chain::FromBridgedChainMessagesProof, LegacyLaneId,
@@ -41,8 +42,8 @@ use pallet_bridge_relayers::extension::{
 };
 use pallet_xcm_bridge_hub::{BridgeId, XcmAsPlainPayload};
 use parachains_common::xcm_config::{AllSiblingSystemParachains, RelayOrOtherSystemParachains};
-use paseo_runtime_constants as constants;
 use polkadot_parachain_primitives::primitives::Sibling;
+use paseo_runtime_constants as constants;
 use sp_runtime::traits::ConstU32;
 use xcm::latest::prelude::*;
 use xcm_builder::{BridgeBlobDispatcher, ParentIsPreset, SiblingParachainConvertsVia};
@@ -362,7 +363,6 @@ mod tests {
 	/// operational costs and a faster bridge), so this value should be significant.
 	const FEE_BOOST_PER_MESSAGE: Balance = 2 * constants::currency::UNITS;
 
-
 	#[test]
 	#[ignore]
 	fn ensure_bridge_hub_polkadot_message_lane_weights_are_correct() {
@@ -386,6 +386,7 @@ mod tests {
 			with_bridged_chain_messages_instance: WithBridgeHubKusamaMessagesInstance,
 			this_chain: bp_bridge_hub_paseo::BridgeHubPaseo,
 			bridged_chain: bp_bridge_hub_kusama::BridgeHubKusama,
+			expected_payload_type: XcmAsPlainPayload,
 		);
 
 		assert_complete_with_parachain_bridge_constants::<
