@@ -54,6 +54,7 @@ runtime-benchmarks = [
     "runtime-parachains/runtime-benchmarks",
     "sp-runtime/runtime-benchmarks",
 ]
+
 force-debug = [
     "paseo-runtime/force-debug",
     "asset-hub-paseo-runtime/force-debug",
