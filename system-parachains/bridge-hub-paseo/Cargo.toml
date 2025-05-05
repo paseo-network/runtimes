@@ -20,13 +20,13 @@ serde = { optional = true, features = ["derive"], workspace = true }
 serde_json = { features = ["alloc"], workspace = true }
 tuplex = { workspace = true }
 
-kusama-runtime-constants = {  workspace = true, default-features = false  }
-bp-bridge-hub-kusama = {  workspace = true, default-features = false   }
-bp-bridge-hub-polkadot = { workspace = true, default-features = false }
-bp-asset-hub-kusama = {  workspace = true, default-features = false  }
 # Local
+bp-asset-hub-kusama = { workspace = true }
 bp-asset-hub-paseo = { workspace = true }
+bp-bridge-hub-kusama = { workspace = true }
 bp-bridge-hub-paseo = { workspace = true }
+bp-bridge-hub-polkadot = { workspace = true }
+kusama-runtime-constants = { workspace = true }
 paseo-runtime-constants = { workspace = true }
 
 # Substrate
@@ -96,8 +96,6 @@ bp-parachains = { workspace = true }
 bp-polkadot-core = { workspace = true }
 bp-relayers = { workspace = true }
 bp-runtime = { workspace = true }
-bp-kusama = { workspace = true }
-bp-polkadot = { workspace = true }
 bp-xcm-bridge-hub = { workspace = true }
 bp-xcm-bridge-hub-router = { workspace = true }
 bridge-hub-common = { workspace = true }
@@ -129,7 +127,6 @@ bridge-runtime-common = { features = [
 ], workspace = true, default-features = true }
 pallet-bridge-relayers = { workspace = true, features = ["integrity-test"] }
 sp-keyring = { workspace = true }
-static_assertions = { workspace = true }
 snowbridge-runtime-test-common = { workspace = true }
 snowbridge-pallet-ethereum-client-fixtures = { workspace = true }
 parachains-runtimes-test-utils = { workspace = true }
@@ -137,18 +134,15 @@ parachains-runtimes-test-utils = { workspace = true }
 [features]
 default = ["std"]
 std = [
-	"kusama-runtime-constants/std",
 	"bp-asset-hub-kusama/std",
 	"bp-asset-hub-paseo/std",
 	"bp-bridge-hub-kusama/std",
 	"bp-bridge-hub-polkadot/std",
 	"bp-bridge-hub-paseo/std",
 	"bp-header-chain/std",
-	"bp-kusama/std",
 	"bp-messages/std",
 	"bp-parachains/std",
 	"bp-polkadot-core/std",
-	"bp-polkadot/std",
 	"bp-relayers/std",
 	"bp-runtime/std",
 	"bp-xcm-bridge-hub-router/std",
@@ -173,6 +167,7 @@ std = [
 	"frame-system/std",
 	"frame-try-runtime?/std",
 	"paseo-runtime-constants/std",
+	"kusama-runtime-constants/std",
 	"log/std",
 	"pallet-aura/std",
 	"pallet-authorship/std",
@@ -264,6 +259,7 @@ runtime-benchmarks = [
 	"parachains-common/runtime-benchmarks",
 	"polkadot-parachain-primitives/runtime-benchmarks",
 	"polkadot-runtime-common/runtime-benchmarks",
+	"paseo-runtime-constants/runtime-benchmarks",
 	"snowbridge-core/runtime-benchmarks",
 	"snowbridge-pallet-ethereum-client-fixtures/runtime-benchmarks",
 	"snowbridge-pallet-ethereum-client/runtime-benchmarks",
@@ -274,6 +270,7 @@ runtime-benchmarks = [
 	"snowbridge-runtime-common/runtime-benchmarks",
 	"snowbridge-runtime-test-common/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
+	"system-parachains-constants/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
 	"xcm-executor/runtime-benchmarks",
 	"xcm-runtime-apis/runtime-benchmarks",
