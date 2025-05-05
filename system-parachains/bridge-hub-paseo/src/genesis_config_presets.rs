@@ -84,6 +84,7 @@ pub fn bridge_hub_paseo_local_testnet_genesis(para_id: ParaId) -> serde_json::Va
 fn bridge_hub_paseo_development_genesis(para_id: ParaId) -> serde_json::Value {
 	bridge_hub_paseo_local_testnet_genesis(para_id)
 }
+
 /// Provides the names of the predefined genesis configs for this runtime.
 pub fn preset_names() -> Vec<PresetId> {
 	vec![PresetId::from("development"), PresetId::from("local_testnet")]

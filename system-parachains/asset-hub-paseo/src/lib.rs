@@ -124,7 +124,7 @@ use system_parachains_constants::{
 };
 use xcm::{
 	latest::prelude::{AssetId, BodyId},
-	VersionedAssetId, VersionedAssets, VersionedLocation, VersionedXcm,
+	Version as XcmVersion, VersionedAssetId, VersionedAssets, VersionedLocation, VersionedXcm,
 };
 use xcm_config::{
 	DotLocation, FellowshipLocation, ForeignAssetsConvertedConcreteId,
@@ -155,7 +155,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("asset-hub-paseo"),
 	impl_name: create_runtime_str!("asset-hub-paseo"),
 	authoring_version: 1,
-	spec_version: 1_004_002,
+	spec_version: 1_004_003,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 15,
@@ -380,6 +380,7 @@ impl pallet_assets::Config<ForeignAssetsInstance> for Runtime {
 				xcm_config::bridging::to_ethereum::EthereumNetwork,
 				xcm::v4::Location,
 			>,
+			xcm_config::bridging::to_kusama::KusamaAssetFromAssetHubKusama,
 		),
 		ForeignCreatorsSovereignAccountOf,
 		AccountId,
@@ -1048,13 +1049,6 @@ pub type UncheckedExtrinsic =
 
 /// Migrations to apply on runtime upgrade.
 pub type Migrations = (
-	// unreleased and/or un-applied
-	cumulus_pallet_xcmp_queue::migration::v5::MigrateV4ToV5<Runtime>,
-	pallet_assets::migration::next_asset_id::SetNextAssetId<
-		ConstU32<50_000_000>,
-		Runtime,
-		TrustBackedAssetsInstance,
-	>,
 	// permanent
 	pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
 );
@@ -1071,6 +1065,8 @@ pub type Executive = frame_executive::Executive<
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benches {
+	use super::*;
+
 	frame_benchmarking::define_benchmarks!(
 		[frame_system, SystemBench::<Runtime>]
 		[pallet_assets, Local]
@@ -1300,8 +1296,8 @@ impl_runtime_apis! {
 	}
 
 	impl xcm_runtime_apis::dry_run::DryRunApi<Block, RuntimeCall, RuntimeEvent, OriginCaller> for Runtime {
-		fn dry_run_call(origin: OriginCaller, call: RuntimeCall) -> Result<CallDryRunEffects<RuntimeEvent>, XcmDryRunApiError> {
-			PolkadotXcm::dry_run_call::<Runtime, xcm_config::XcmRouter, OriginCaller, RuntimeCall>(origin, call)
+		fn dry_run_call(origin: OriginCaller, call: RuntimeCall, result_xcms_version: XcmVersion) -> Result<CallDryRunEffects<RuntimeEvent>, XcmDryRunApiError> {
+			PolkadotXcm::dry_run_call::<Runtime, xcm_config::XcmRouter, OriginCaller, RuntimeCall>(origin, call, result_xcms_version)
 		}
 
 		fn dry_run_xcm(origin_location: VersionedLocation, xcm: VersionedXcm<RuntimeCall>) -> Result<XcmDryRunEffects<RuntimeEvent>, XcmDryRunApiError> {
@@ -1465,7 +1461,6 @@ impl_runtime_apis! {
 			type Pool = pallet_assets::Pallet::<Runtime, PoolAssetsInstance>;
 
 			type ToKusama = XcmBridgeHubRouterBench<Runtime, ToKusamaXcmRouterInstance>;
-
 			let mut list = Vec::<BenchmarkList>::new();
 			list_benchmarks!(list, extra);
 
@@ -1816,7 +1811,8 @@ impl pallet_state_trie_migration::Config for Runtime {
 	type RuntimeHoldReason = RuntimeHoldReason;
 	type SignedDepositPerItem = MigrationSignedDepositPerItem;
 	type SignedDepositBase = MigrationSignedDepositBase;
-	// An origin that can control the whole pallet: should be Root, or the fellowship.
+	// An origin that can control the whole pallet: Should be a Fellowship member or the controller
+	// of the migration.
 	type ControlOrigin = EnsureRoot<AccountId>;
 	type SignedFilter = EnsureSignedBy<MigController, AccountId>;
 

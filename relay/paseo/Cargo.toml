@@ -2,7 +2,7 @@
 name = "paseo-runtime"
 build = "build.rs"
 repository.workspace = true
-version = "1.4.2"
+version = "1.4.3"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true

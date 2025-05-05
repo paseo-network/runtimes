@@ -102,3 +102,4 @@ impl OnRuntimeUpgrade for TruncateHeadAmbassadors {
 		Ok(())
 	}
 }
+
