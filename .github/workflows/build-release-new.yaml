@@ -1,0 +1,235 @@
+name: Create Runtimes Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_version:
+        description: 'Tag version for the release'
+        required: true
+        type: string
+      packages:
+        description: 'Packages to build (relay, parachains, all)'
+        required: true
+        type: choice
+        options:
+          - relay
+          - parachains
+          - all
+        default: 'all'
+
+jobs:
+  generate-chain-specs:
+    uses: ./.github/workflows/generate-chain-specs-new.yaml
+    permissions:
+      contents: write
+      packages: write
+    with:
+      tag_version: ${{ github.event.inputs.tag_version }}
+      packages: ${{ github.event.inputs.packages }}
+
+  create-tag:
+    needs: generate-chain-specs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for all branches and tags
+
+      - name: Setup Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_PAT }}
+
+      - name: Create and push tag
+        run: |
+          git checkout ${{ github.ref }}
+          if [ "${{ github.event.inputs.packages }}" == "all" ]; then
+            TAG="${{ github.event.inputs.tag_version }}"
+          else
+            TAG="${{ github.event.inputs.tag_version }}-${{ github.event.inputs.packages }}"
+          fi
+          git tag $TAG
+          git push origin $TAG
+        
+      - name: Set outputs
+        id: set_outputs
+        run: |
+          if [ "${{ github.event.inputs.packages }}" == "all" ]; then
+            echo "release_tag=${{ github.event.inputs.tag_version }}" >> $GITHUB_OUTPUT
+          else
+            echo "release_tag=${{ github.event.inputs.tag_version }}-${{ github.event.inputs.packages }}" >> $GITHUB_OUTPUT
+          fi
+
+    outputs:
+      release_tag: ${{ steps.set_outputs.outputs.release_tag }}
+
+  build-runtimes:
+    needs: create-tag
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        include:
+          # Relay chain runtime
+          - name: "paseo"
+            path: "relay/paseo"
+            package_type: "relay"
+          # Parachain runtimes
+          - name: "asset-hub-paseo"
+            path: "system-parachains/asset-hub-paseo"
+            package_type: "parachains"
+          - name: "bridge-hub-paseo"
+            path: "system-parachains/bridge-hub-paseo"
+            package_type: "parachains"
+          - name: "people-paseo"
+            path: "system-parachains/people-paseo"
+            package_type: "parachains"
+          - name: "coretime-paseo"
+            path: "system-parachains/coretime-paseo"
+            package_type: "parachains"
+
+    steps:
+      - name: Check package type
+        id: check_package
+        run: |
+          if [[ "${{ github.event.inputs.packages }}" == "all" || "${{ github.event.inputs.packages }}" == "${{ matrix.package_type }}" ]]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_run=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Checkout sources
+        if: steps.check_package.outputs.should_run == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.create-tag.outputs.release_tag }}
+
+      - name: Cache runtime target dir
+        if: steps.check_package.outputs.should_run == 'true'
+        uses: actions/cache@v3
+        with:
+          path: "${{ github.workspace }}/${{ matrix.path }}/target"
+          key: srtool-target-${{ matrix.name }}-${{ github.sha }}
+          restore-keys: |
+            srtool-target-${{ matrix.name }}-
+            srtool-target-
+
+      - name: Build ${{ matrix.name }} runtime
+        if: steps.check_package.outputs.should_run == 'true'
+        id: srtool_build
+        uses: chevdor/srtool-actions@v0.8.0
+        env:
+          BUILD_OPTS: "--features on-chain-release-build"
+        with:
+          chain: ${{ matrix.name }}
+          package: "${{ matrix.name }}-runtime"
+          runtime_dir: ${{ matrix.path }}
+          profile: "production"
+
+      - name: Store srtool digest to disk
+        if: steps.check_package.outputs.should_run == 'true'
+        run: |
+          echo '${{ steps.srtool_build.outputs.json }}' | jq . > ${{ matrix.name }}-srtool-digest.json
+
+      # Copy artifacts
+      - name: Copy artifacts
+        if: steps.check_package.outputs.should_run == 'true'
+        run: cp `dirname ${{ steps.srtool_build.outputs.wasm }}`/*.wasm ./
+
+      - name: Archive Runtime
+        if: steps.check_package.outputs.should_run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}-runtime-${{ needs.create-tag.outputs.release_tag }}
+          path: |
+            ${{ matrix.name }}*.wasm
+            ${{ matrix.name }}-srtool-digest.json
+
+      - name: Prepare release notes
+        if: steps.check_package.outputs.should_run == 'true'
+        id: release_notes
+        run: |
+          {
+            echo "## Runtime: \`${{ matrix.name }}\`"
+            echo "\`\`\`"
+            echo "🏋️ Runtime Size:           ${{ fromJSON(steps.srtool_build.outputs.json).runtimes.compressed.subwasm.size }} bytes"
+            echo "🔥 Core Version:           ${{ fromJSON(steps.srtool_build.outputs.json).runtimes.compressed.subwasm.core_version.specName }}-${{ fromJSON(steps.srtool_build.outputs.json).runtimes.compressed.subwasm.core_version.specVersion }}"
+            echo "🎁 Metadata version:       V${{ fromJSON(steps.srtool_build.outputs.json).runtimes.compressed.subwasm.metadata_version }}"
+            echo "🗳️ system.setCode hash:    ${{ fromJSON(steps.srtool_build.outputs.json).runtimes.compressed.subwasm.proposal_hash }}"
+            echo "🗳️ authorizeUpgrade hash:  ${{ fromJSON(steps.srtool_build.outputs.json).runtimes.compressed.subwasm.parachain_authorize_upgrade_hash }}"
+            echo "🗳️ Blake2-256 hash:        ${{ fromJSON(steps.srtool_build.outputs.json).runtimes.compressed.subwasm.blake2_256 }}"
+            echo "📦 IPFS:                   ${{ fromJSON(steps.srtool_build.outputs.json).runtimes.compressed.subwasm.ipfs_hash }}"
+            echo "\`\`\`"
+          } > runtime_notes_${{ matrix.name }}.md
+          echo "notes_file=runtime_notes_${{ matrix.name }}.md" >> $GITHUB_OUTPUT
+
+      - name: Upload release notes
+        if: steps.check_package.outputs.should_run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-notes-${{ matrix.name }}
+          path: ${{ steps.release_notes.outputs.notes_file }}
+
+  create-release:
+    needs: [create-tag, build-runtimes]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.create-tag.outputs.release_tag }}
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release notes
+        run: |
+          echo "# Release ${{ needs.create-tag.outputs.release_tag }}" > release_notes.md
+          echo "" >> release_notes.md
+          
+          # Add information about the release
+          echo "## Release Information" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "- **Tag Version:** ${{ github.event.inputs.tag_version }}" >> release_notes.md
+          echo "- **Package Selection:** ${{ github.event.inputs.packages }}" >> release_notes.md
+          echo "" >> release_notes.md
+          
+          echo "## Runtime Details" >> release_notes.md
+          echo "" >> release_notes.md
+          
+          # Look for all release note files
+          if ls artifacts/release-notes-*/runtime_notes_*.md 1> /dev/null 2>&1; then
+            for notes_file in artifacts/release-notes-*/runtime_notes_*.md; do
+              cat "$notes_file" >> release_notes.md
+              echo "" >> release_notes.md
+            done
+          else
+            echo "No runtime notes were found. This could indicate that no runtimes were built for the selected packages." >> release_notes.md
+          fi
+          
+          cat release_notes.md
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.CI_PAT }}
+        run: |
+          # Prepare files for upload
+          UPLOAD_FILES=""
+          for file in artifacts/*-runtime-*/**.wasm artifacts/*-runtime-*/*-srtool-digest.json; do
+            UPLOAD_FILES="$UPLOAD_FILES $file"
+          done
+          
+          # Create the release with the notes
+          gh release create ${{ needs.create-tag.outputs.release_tag }} \
+            --title "Release ${{ needs.create-tag.outputs.release_tag }}" \
+            --notes-file release_notes.md \
+            $UPLOAD_FILES
