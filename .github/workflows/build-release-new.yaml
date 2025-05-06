@@ -18,14 +18,6 @@ on:
         default: 'all'
 
 jobs:
-  hello-world:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Say Hello
-        run: |
-          echo "👋 Hello from the silly job!"
-          echo "🤪 This job doesn't do anything useful!"
-          echo "🎉 But it sure is fun!"
   generate-chain-specs:
     uses: ./.github/workflows/generate-chain-specs-new.yaml
     permissions:
