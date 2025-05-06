@@ -53,32 +53,26 @@ on:
         default: 'none'
       build_paseo:
         description: 'Build paseo relay runtime'
-        required: false
         type: boolean
         default: false
       build_asset_hub_paseo:
         description: 'Build asset-hub-paseo runtime'
-        required: false
         type: boolean
         default: false
       build_bridge_hub_paseo:
         description: 'Build bridge-hub-paseo runtime'
-        required: false
         type: boolean
         default: false
       build_collectives_paseo:
         description: 'Build collectives-paseo runtime'
-        required: false
         type: boolean
         default: false
       build_people_paseo:
         description: 'Build people-paseo runtime'
-        required: false
         type: boolean
         default: false
       build_coretime_paseo:
         description: 'Build coretime-paseo runtime'
-        required: false
         type: boolean
         default: false
 
