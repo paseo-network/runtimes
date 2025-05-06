@@ -42,6 +42,19 @@ on:
         default: false
 
 jobs:
+  print-inputs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print Input Values
+        run: |
+          echo "Tag Version: ${{ github.event.inputs.tag_version }}"
+          echo "Tag Suffix: ${{ github.event.inputs.tag_suffix }}"
+          echo "Build Paseo: ${{ github.event.inputs.build_paseo }}"
+          echo "Build Asset Hub Paseo: ${{ github.event.inputs.build_asset_hub_paseo }}"
+          echo "Build Bridge Hub Paseo: ${{ github.event.inputs.build_bridge_hub_paseo }}"
+          echo "Build Collectives Paseo: ${{ github.event.inputs.build_collectives_paseo }}"
+          echo "Build People Paseo: ${{ github.event.inputs.build_people_paseo }}"
+          echo "Build Coretime Paseo: ${{ github.event.inputs.build_coretime_paseo }}"
   generate-chain-specs:
     uses: ./.github/workflows/generate-chain-specs-new.yaml
     permissions:
