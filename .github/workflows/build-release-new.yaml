@@ -7,15 +7,45 @@ on:
         description: 'Tag version for the release'
         required: true
         type: string
-      packages:
-        description: 'Packages to build (relay, parachains, all)'
+      tag_suffix:
+        description: 'Tag suffix to use (none for all packages)'
         required: true
         type: choice
         options:
+          - none
           - relay
           - parachains
-          - all
-        default: 'all'
+        default: 'none'
+      build_paseo:
+        description: 'Build paseo relay runtime'
+        required: true
+        type: boolean
+        default: false
+      build_asset_hub_paseo:
+        description: 'Build asset-hub-paseo runtime'
+        required: true
+        type: boolean
+        default: false
+      build_bridge_hub_paseo:
+        description: 'Build bridge-hub-paseo runtime'
+        required: true
+        type: boolean
+        default: false
+      build_collectives_paseo:
+        description: 'Build collectives-paseo runtime'
+        required: true
+        type: boolean
+        default: false
+      build_people_paseo:
+        description: 'Build people-paseo runtime'
+        required: true
+        type: boolean
+        default: false
+      build_coretime_paseo:
+        description: 'Build coretime-paseo runtime'
+        required: true
+        type: boolean
+        default: false
 
 jobs:
   generate-chain-specs:
@@ -25,7 +55,13 @@ jobs:
       packages: write
     with:
       tag_version: ${{ github.event.inputs.tag_version }}
-      packages: ${{ github.event.inputs.packages }}
+      packages: ${{ github.event.inputs.tag_suffix }}
+      build_paseo: ${{ github.event.inputs.build_paseo }}
+      build_asset_hub_paseo: ${{ github.event.inputs.build_asset_hub_paseo }}
+      build_bridge_hub_paseo: ${{ github.event.inputs.build_bridge_hub_paseo }}
+      build_collectives_paseo: ${{ github.event.inputs.build_collectives_paseo }}
+      build_people_paseo: ${{ github.event.inputs.build_people_paseo }}
+      build_coretime_paseo: ${{ github.event.inputs.build_coretime_paseo }}
 
   create-tag:
     needs: generate-chain-specs
@@ -47,10 +83,10 @@ jobs:
       - name: Create and push tag
         run: |
           git checkout ${{ github.ref }}
-          if [ "${{ github.event.inputs.packages }}" == "all" ]; then
+          if [ "${{ github.event.inputs.tag_suffix }}" == "none" ]; then
             TAG="${{ github.event.inputs.tag_version }}"
           else
-            TAG="${{ github.event.inputs.tag_version }}-${{ github.event.inputs.packages }}"
+            TAG="${{ github.event.inputs.tag_version }}-${{ github.event.inputs.tag_suffix }}"
           fi
           git tag $TAG
           git push origin $TAG
@@ -58,10 +94,10 @@ jobs:
       - name: Set outputs
         id: set_outputs
         run: |
-          if [ "${{ github.event.inputs.packages }}" == "all" ]; then
+          if [ "${{ github.event.inputs.tag_suffix }}" == "none" ]; then
             echo "release_tag=${{ github.event.inputs.tag_version }}" >> $GITHUB_OUTPUT
           else
-            echo "release_tag=${{ github.event.inputs.tag_version }}-${{ github.event.inputs.packages }}" >> $GITHUB_OUTPUT
+            echo "release_tag=${{ github.event.inputs.tag_version }}-${{ github.event.inputs.tag_suffix }}" >> $GITHUB_OUTPUT
           fi
 
     outputs:
@@ -86,6 +122,9 @@ jobs:
           - name: "bridge-hub-paseo"
             path: "system-parachains/bridge-hub-paseo"
             package_type: "parachains"
+          - name: "collectives-paseo"
+            path: "system-parachains/collectives-paseo"
+            package_type: "parachains"
           - name: "people-paseo"
             path: "system-parachains/people-paseo"
             package_type: "parachains"
@@ -97,11 +136,40 @@ jobs:
       - name: Check package type
         id: check_package
         run: |
-          if [[ "${{ github.event.inputs.packages }}" == "all" || "${{ github.event.inputs.packages }}" == "${{ matrix.package_type }}" ]]; then
-            echo "should_run=true" >> $GITHUB_OUTPUT
-          else
-            echo "should_run=false" >> $GITHUB_OUTPUT
-          fi
+          should_run=false
+          case "${{ matrix.name }}" in
+            "paseo")
+              if [[ "${{ github.event.inputs.build_paseo }}" == "true" ]]; then
+                should_run=true
+              fi
+              ;;
+            "asset-hub-paseo")
+              if [[ "${{ github.event.inputs.build_asset_hub_paseo }}" == "true" ]]; then
+                should_run=true
+              fi
+              ;;
+            "bridge-hub-paseo")
+              if [[ "${{ github.event.inputs.build_bridge_hub_paseo }}" == "true" ]]; then
+                should_run=true
+              fi
+              ;;
+            "collectives-paseo")
+              if [[ "${{ github.event.inputs.build_collectives_paseo }}" == "true" ]]; then
+                should_run=true
+              fi
+              ;;
+            "people-paseo")
+              if [[ "${{ github.event.inputs.build_people_paseo }}" == "true" ]]; then
+                should_run=true
+              fi
+              ;;
+            "coretime-paseo")
+              if [[ "${{ github.event.inputs.build_coretime_paseo }}" == "true" ]]; then
+                should_run=true
+              fi
+              ;;
+          esac
+          echo "should_run=$should_run" >> $GITHUB_OUTPUT
 
       - name: Checkout sources
         if: steps.check_package.outputs.should_run == 'true'
@@ -155,7 +223,7 @@ jobs:
         id: release_notes
         run: |
           {
-            echo "## Runtime: \`${{ matrix.name }}\`"
+            echo "### Runtime: \`${{ matrix.name }}\`"
             echo "\`\`\`"
             echo "🏋️ Runtime Size:           ${{ fromJSON(steps.srtool_build.outputs.json).runtimes.compressed.subwasm.size }} bytes"
             echo "🔥 Core Version:           ${{ fromJSON(steps.srtool_build.outputs.json).runtimes.compressed.subwasm.core_version.specName }}-${{ fromJSON(steps.srtool_build.outputs.json).runtimes.compressed.subwasm.core_version.specVersion }}"
@@ -193,15 +261,57 @@ jobs:
 
       - name: Prepare release notes
         run: |
-          echo "# Release ${{ needs.create-tag.outputs.release_tag }}" > release_notes.md
-          echo "" >> release_notes.md
-          
           # Add information about the release
           echo "## Release Information" >> release_notes.md
           echo "" >> release_notes.md
           echo "- **Tag Version:** ${{ github.event.inputs.tag_version }}" >> release_notes.md
-          echo "- **Package Selection:** ${{ github.event.inputs.packages }}" >> release_notes.md
+          echo "- **Tag Suffix:** ${{ github.event.inputs.tag_suffix }}" >> release_notes.md
+          echo "- **Runtimes Built:**" >> release_notes.md
+          if [ "${{ github.event.inputs.build_paseo }}" == "true" ]; then
+            echo "  - Paseo" >> release_notes.md
+          fi
+          if [ "${{ github.event.inputs.build_asset_hub_paseo }}" == "true" ]; then
+            echo "  - Asset Hub Paseo" >> release_notes.md
+          fi
+          if [ "${{ github.event.inputs.build_bridge_hub_paseo }}" == "true" ]; then
+            echo "  - Bridge Hub Paseo" >> release_notes.md
+          fi
+          if [ "${{ github.event.inputs.build_collectives_paseo }}" == "true" ]; then
+            echo "  - Collectives Paseo" >> release_notes.md
+          fi
+          if [ "${{ github.event.inputs.build_people_paseo }}" == "true" ]; then
+            echo "  - People Paseo" >> release_notes.md
+          fi
+          if [ "${{ github.event.inputs.build_coretime_paseo }}" == "true" ]; then
+            echo "  - Coretime Paseo" >> release_notes.md
+          fi
           echo "" >> release_notes.md
+          
+          # Get the latest release tag of the same kind
+          if [ "${{ github.event.inputs.tag_suffix }}" == "none" ]; then
+            # For "none" tag suffix, look for tags without suffixes
+            LATEST_RELEASE_TAG=$(git tag --sort=-v:refname | grep -v "${{ needs.create-tag.outputs.release_tag }}" | grep -v -- "-relay\$" | grep -v -- "-parachains\$" | head -n 1)
+          else
+            # For specific tag suffixes, look for tags with the same suffix
+            LATEST_RELEASE_TAG=$(git tag --sort=-v:refname | grep -v "${{ needs.create-tag.outputs.release_tag }}" | grep -- "-${{ github.event.inputs.tag_suffix }}\$" | head -n 1)
+          fi
+          
+          # Add list of changes since the last release
+          if [ -n "$LATEST_RELEASE_TAG" ]; then
+            echo "What's Changed" >> release_notes.md
+            echo "" >> release_notes.md
+            echo "\`\`\`" >> release_notes.md
+            echo "" >> release_notes.md
+            git log --pretty=format:"* %h %s (%an)" --grep="#[0-9]" $LATEST_RELEASE_TAG..${{ needs.create-tag.outputs.release_tag }} >> release_notes.md
+            echo "\`\`\`" >> release_notes.md
+            echo "" >> release_notes.md
+            echo "**Full Changelog:** [${LATEST_RELEASE_TAG}...${{ needs.create-tag.outputs.release_tag }}](https://github.com/${{ github.repository }}/compare/${LATEST_RELEASE_TAG}...${{ needs.create-tag.outputs.release_tag }})" >> release_notes.md
+          else
+            echo "## Changes" >> release_notes.md
+            echo "" >> release_notes.md
+            echo "No previous release of the same kind was found to compare changes." >> release_notes.md
+            echo "" >> release_notes.md
+          fi
           
           echo "## Runtime Details" >> release_notes.md
           echo "" >> release_notes.md
@@ -213,7 +323,7 @@ jobs:
               echo "" >> release_notes.md
             done
           else
-            echo "No runtime notes were found. This could indicate that no runtimes were built for the selected packages." >> release_notes.md
+            echo "No runtime notes were found. This could indicate that no runtimes were built for the selected tag suffix." >> release_notes.md
           fi
           
           cat release_notes.md
@@ -224,7 +334,7 @@ jobs:
         run: |
           # Prepare files for upload
           UPLOAD_FILES=""
-          for file in artifacts/*-runtime-*/**.wasm artifacts/*-runtime-*/*-srtool-digest.json; do
+          for file in artifacts/*-runtime-*/**.compressed.wasm artifacts/*-runtime-*/*-srtool-digest.json; do
             UPLOAD_FILES="$UPLOAD_FILES $file"
           done
           

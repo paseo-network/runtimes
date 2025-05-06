@@ -7,15 +7,45 @@ on:
         description: 'Tag version for the release'
         required: true
         type: string
-      packages:
-        description: 'Packages to build (relay, parachains, all)'
+      tag_suffix:
+        description: 'Tag suffix to use (none for all packages)'
         required: true
         type: choice
         options:
+          - none
           - relay
           - parachains
-          - all
-        default: 'all'
+        default: 'none'
+      build_paseo:
+        description: 'Build paseo relay runtime'
+        required: true
+        type: boolean
+        default: false
+      build_asset_hub_paseo:
+        description: 'Build asset-hub-paseo runtime'
+        required: true
+        type: boolean
+        default: false
+      build_bridge_hub_paseo:
+        description: 'Build bridge-hub-paseo runtime'
+        required: true
+        type: boolean
+        default: false
+      build_collectives_paseo:
+        description: 'Build collectives-paseo runtime'
+        required: true
+        type: boolean
+        default: false
+      build_people_paseo:
+        description: 'Build people-paseo runtime'
+        required: true
+        type: boolean
+        default: false
+      build_coretime_paseo:
+        description: 'Build coretime-paseo runtime'
+        required: true
+        type: boolean
+        default: false
   workflow_call:
     inputs:
       tag_version:
@@ -23,9 +53,39 @@ on:
         required: true
         type: string
       packages:
-        description: 'Packages to build (relay, parachains, all)'
+        description: 'Tag suffix (none, relay, parachains)'
         required: true
         type: string
+      build_paseo:
+        description: 'Build paseo relay runtime'
+        required: false
+        type: boolean
+        default: false
+      build_asset_hub_paseo:
+        description: 'Build asset-hub-paseo runtime'
+        required: false
+        type: boolean
+        default: false
+      build_bridge_hub_paseo:
+        description: 'Build bridge-hub-paseo runtime'
+        required: false
+        type: boolean
+        default: false
+      build_collectives_paseo:
+        description: 'Build collectives-paseo runtime'
+        required: false
+        type: boolean
+        default: false
+      build_people_paseo:
+        description: 'Build people-paseo runtime'
+        required: false
+        type: boolean
+        default: false
+      build_coretime_paseo:
+        description: 'Build coretime-paseo runtime'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -49,7 +109,7 @@ jobs:
       - name: Setup Rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.81.0
+          toolchain: 1.84.1
           target: wasm32-unknown-unknown
           components: rust-src
           override: true
@@ -64,28 +124,36 @@ jobs:
         run: |
           mkdir -p chain-specs/local
           
-          # Define array of packages based on input parameter
-          if [ "${{ inputs.packages }}" == "relay" ]; then
-            PACKAGES=("paseo-local" "paseo-dev")
-          elif [ "${{ inputs.packages }}" == "parachains" ]; then
-            PACKAGES=(
-              "asset-hub-paseo-local"
-              "bridge-hub-paseo-local"
-              "people-paseo-local"
-              "coretime-paseo-local"
-            )
-          else
-            # Default to all packages
-            PACKAGES=(
-              "paseo-local"
-              "paseo-dev"
-              "asset-hub-paseo-local"
-              "bridge-hub-paseo-local"
-              "people-paseo-local"
-              "coretime-paseo-local"
-            )
+          # Initialize empty array for packages
+          PACKAGES=()
+          
+          # Add relay packages if selected
+          if [[ "${{ inputs.build_paseo }}" == "true" || "${{ inputs.packages }}" == "relay" ]]; then
+            PACKAGES+=("paseo-local" "paseo-dev")
           fi
           
+          # Add parachain packages if selected
+          if [[ "${{ inputs.build_asset_hub_paseo }}" == "true" || "${{ inputs.packages }}" == "parachains" ]]; then
+            PACKAGES+=("asset-hub-paseo-local")
+          fi
+          
+          if [[ "${{ inputs.build_bridge_hub_paseo }}" == "true" || "${{ inputs.packages }}" == "parachains" ]]; then
+            PACKAGES+=("bridge-hub-paseo-local")
+          fi
+          
+          if [[ "${{ inputs.build_collectives_paseo }}" == "true" || "${{ inputs.packages }}" == "parachains" ]]; then
+            PACKAGES+=("collectives-paseo-local")
+          fi
+          
+          if [[ "${{ inputs.build_people_paseo }}" == "true" || "${{ inputs.packages }}" == "parachains" ]]; then
+            PACKAGES+=("people-paseo-local")
+          fi
+          
+          if [[ "${{ inputs.build_coretime_paseo }}" == "true" || "${{ inputs.packages }}" == "parachains" ]]; then
+            PACKAGES+=("coretime-paseo-local")
+          fi
+          
+          # Generate specs for each package
           for pkg in "${PACKAGES[@]}"; do
             ./target/release/chain-spec-generator "$pkg" --raw > "chain-specs/local/$pkg.json"
             echo "Generated chain-specs/local/$pkg.json"
