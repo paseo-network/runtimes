@@ -42,6 +42,13 @@ on:
         default: false
 
 jobs:
+  silly-job:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Do something silly
+        run: |
+          echo "🎭 Starting silly job..."
+          echo "🤪 Making silly faces..."
   generate-chain-specs:
     uses: ./.github/workflows/generate-chain-specs-new.yaml
     permissions:
