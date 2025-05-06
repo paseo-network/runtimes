@@ -50,6 +50,7 @@ on:
         description: 'Tag suffix (none, relay, parachains)'
         required: true
         type: string
+        default: 'none'
       build_paseo:
         description: 'Build paseo relay runtime'
         required: false
