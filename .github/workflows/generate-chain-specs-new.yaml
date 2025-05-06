@@ -18,32 +18,26 @@ on:
         default: 'none'
       build_paseo:
         description: 'Build paseo relay runtime'
-        required: true
         type: boolean
         default: false
       build_asset_hub_paseo:
         description: 'Build asset-hub-paseo runtime'
-        required: true
         type: boolean
         default: false
       build_bridge_hub_paseo:
         description: 'Build bridge-hub-paseo runtime'
-        required: true
         type: boolean
         default: false
       build_collectives_paseo:
         description: 'Build collectives-paseo runtime'
-        required: true
         type: boolean
         default: false
       build_people_paseo:
         description: 'Build people-paseo runtime'
-        required: true
         type: boolean
         default: false
       build_coretime_paseo:
         description: 'Build coretime-paseo runtime'
-        required: true
         type: boolean
         default: false
   workflow_call:
@@ -52,7 +46,7 @@ on:
         description: 'Tag version for the release'
         required: true
         type: string
-      packages:
+      tag_suffix:
         description: 'Tag suffix (none, relay, parachains)'
         required: true
         type: string
@@ -128,29 +122,42 @@ jobs:
           PACKAGES=()
           
           # Add relay packages if selected
-          if [[ "${{ inputs.build_paseo }}" == "true" || "${{ inputs.packages }}" == "relay" ]]; then
+          if [[ "${{ inputs.build_paseo }}" == "true" ]]; then
             PACKAGES+=("paseo-local" "paseo-dev")
           fi
           
           # Add parachain packages if selected
-          if [[ "${{ inputs.build_asset_hub_paseo }}" == "true" || "${{ inputs.packages }}" == "parachains" ]]; then
+          if [[ "${{ inputs.build_asset_hub_paseo }}" == "true" ]]; then
             PACKAGES+=("asset-hub-paseo-local")
           fi
           
-          if [[ "${{ inputs.build_bridge_hub_paseo }}" == "true" || "${{ inputs.packages }}" == "parachains" ]]; then
+          if [[ "${{ inputs.build_bridge_hub_paseo }}" == "true" ]]; then
             PACKAGES+=("bridge-hub-paseo-local")
           fi
           
-          if [[ "${{ inputs.build_collectives_paseo }}" == "true" || "${{ inputs.packages }}" == "parachains" ]]; then
+          if [[ "${{ inputs.build_collectives_paseo }}" == "true" ]]; then
             PACKAGES+=("collectives-paseo-local")
           fi
           
-          if [[ "${{ inputs.build_people_paseo }}" == "true" || "${{ inputs.packages }}" == "parachains" ]]; then
+          if [[ "${{ inputs.build_people_paseo }}" == "true" ]]; then
             PACKAGES+=("people-paseo-local")
           fi
           
-          if [[ "${{ inputs.build_coretime_paseo }}" == "true" || "${{ inputs.packages }}" == "parachains" ]]; then
+          if [[ "${{ inputs.build_coretime_paseo }}" == "true" ]]; then
             PACKAGES+=("coretime-paseo-local")
+          fi
+          
+          # If no packages are selected, build all
+          if [[ ${#PACKAGES[@]} -eq 0 ]]; then
+            PACKAGES=(
+              "paseo-local"
+              "paseo-dev"
+              "asset-hub-paseo-local"
+              "bridge-hub-paseo-local"
+              "collectives-paseo-local"
+              "people-paseo-local"
+              "coretime-paseo-local"
+            )
           fi
           
           # Generate specs for each package

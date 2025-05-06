@@ -18,32 +18,26 @@ on:
         default: 'none'
       build_paseo:
         description: 'Build paseo relay runtime'
-        required: true
         type: boolean
         default: false
       build_asset_hub_paseo:
         description: 'Build asset-hub-paseo runtime'
-        required: true
         type: boolean
         default: false
       build_bridge_hub_paseo:
         description: 'Build bridge-hub-paseo runtime'
-        required: true
         type: boolean
         default: false
       build_collectives_paseo:
         description: 'Build collectives-paseo runtime'
-        required: true
         type: boolean
         default: false
       build_people_paseo:
         description: 'Build people-paseo runtime'
-        required: true
         type: boolean
         default: false
       build_coretime_paseo:
         description: 'Build coretime-paseo runtime'
-        required: true
         type: boolean
         default: false
 
@@ -55,7 +49,7 @@ jobs:
       packages: write
     with:
       tag_version: ${{ github.event.inputs.tag_version }}
-      packages: ${{ github.event.inputs.tag_suffix }}
+      tag_suffix: ${{ github.event.inputs.tag_suffix }}
       build_paseo: ${{ github.event.inputs.build_paseo }}
       build_asset_hub_paseo: ${{ github.event.inputs.build_asset_hub_paseo }}
       build_bridge_hub_paseo: ${{ github.event.inputs.build_bridge_hub_paseo }}
