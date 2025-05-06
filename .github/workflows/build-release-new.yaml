@@ -18,6 +18,14 @@ on:
         default: 'all'
 
 jobs:
+  hello-world:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Say Hello
+        run: |
+          echo "👋 Hello from the silly job!"
+          echo "🤪 This job doesn't do anything useful!"
+          echo "🎉 But it sure is fun!"
   generate-chain-specs:
     uses: ./.github/workflows/generate-chain-specs-new.yaml
     permissions:
@@ -155,7 +163,7 @@ jobs:
         id: release_notes
         run: |
           {
-            echo "## Runtime: \`${{ matrix.name }}\`"
+            echo "### Runtime: \`${{ matrix.name }}\`"
             echo "\`\`\`"
             echo "🏋️ Runtime Size:           ${{ fromJSON(steps.srtool_build.outputs.json).runtimes.compressed.subwasm.size }} bytes"
             echo "🔥 Core Version:           ${{ fromJSON(steps.srtool_build.outputs.json).runtimes.compressed.subwasm.core_version.specName }}-${{ fromJSON(steps.srtool_build.outputs.json).runtimes.compressed.subwasm.core_version.specVersion }}"
@@ -193,15 +201,37 @@ jobs:
 
       - name: Prepare release notes
         run: |
-          echo "# Release ${{ needs.create-tag.outputs.release_tag }}" > release_notes.md
-          echo "" >> release_notes.md
-          
           # Add information about the release
           echo "## Release Information" >> release_notes.md
           echo "" >> release_notes.md
           echo "- **Tag Version:** ${{ github.event.inputs.tag_version }}" >> release_notes.md
           echo "- **Package Selection:** ${{ github.event.inputs.packages }}" >> release_notes.md
           echo "" >> release_notes.md
+          
+          # Get the latest release tag of the same kind
+          if [ "${{ github.event.inputs.packages }}" == "all" ]; then
+            # For "all" packages, look for tags without suffixes
+            LATEST_RELEASE_TAG=$(git tag --sort=-v:refname | grep -v "${{ needs.create-tag.outputs.release_tag }}" | grep -v -- "-relay\$" | grep -v -- "-parachains\$" | head -n 1)
+          else
+            # For specific package types, look for tags with the same suffix
+            LATEST_RELEASE_TAG=$(git tag --sort=-v:refname | grep -v "${{ needs.create-tag.outputs.release_tag }}" | grep -- "-${{ github.event.inputs.packages }}\$" | head -n 1)
+          fi
+          
+          # Add list of changes since the last release
+          if [ -n "$LATEST_RELEASE_TAG" ]; then
+            echo "What's Changed" >> release_notes.md
+            echo "" >> release_notes.md
+            echo "\`\`\`" >> release_notes.md
+            git log --pretty=format:"* %h %s (%an)" $LATEST_RELEASE_TAG..${{ needs.create-tag.outputs.release_tag }} >> release_notes.md
+            echo "\`\`\`" >> release_notes.md
+            echo "" >> release_notes.md
+            echo "**Full Changelog:** [${LATEST_RELEASE_TAG}...${{ needs.create-tag.outputs.release_tag }}](https://github.com/${{ github.repository }}/compare/${LATEST_RELEASE_TAG}...${{ needs.create-tag.outputs.release_tag }})" >> release_notes.md
+          else
+            echo "## Changes" >> release_notes.md
+            echo "" >> release_notes.md
+            echo "No previous release of the same kind was found to compare changes." >> release_notes.md
+            echo "" >> release_notes.md
+          fi
           
           echo "## Runtime Details" >> release_notes.md
           echo "" >> release_notes.md
@@ -224,7 +254,7 @@ jobs:
         run: |
           # Prepare files for upload
           UPLOAD_FILES=""
-          for file in artifacts/*-runtime-*/**.wasm artifacts/*-runtime-*/*-srtool-digest.json; do
+          for file in artifacts/*-runtime-*/**.compressed.wasm artifacts/*-runtime-*/*-srtool-digest.json; do
             UPLOAD_FILES="$UPLOAD_FILES $file"
           done
           
