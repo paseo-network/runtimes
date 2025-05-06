@@ -222,7 +222,8 @@ jobs:
             echo "What's Changed" >> release_notes.md
             echo "" >> release_notes.md
             echo "\`\`\`" >> release_notes.md
-            git log --pretty=format:"* %h %s (%an)" $LATEST_RELEASE_TAG..${{ needs.create-tag.outputs.release_tag }} >> release_notes.md
+            echo "" >> release_notes.md
+            git log --pretty=format:"* %h %s (%an)" --grep="#[0-9]" $LATEST_RELEASE_TAG..${{ needs.create-tag.outputs.release_tag }} >> release_notes.md
             echo "\`\`\`" >> release_notes.md
             echo "" >> release_notes.md
             echo "**Full Changelog:** [${LATEST_RELEASE_TAG}...${{ needs.create-tag.outputs.release_tag }}](https://github.com/${{ github.repository }}/compare/${LATEST_RELEASE_TAG}...${{ needs.create-tag.outputs.release_tag }})" >> release_notes.md
