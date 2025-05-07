@@ -21,10 +21,13 @@ use crate::*;
 use alloc::format;
 use babe_primitives::AuthorityId as BabeId;
 use pallet_staking::{Forcing, StakerStatus};
-use polkadot_primitives::{
-	node_features::FeatureIndex, AccountPublic, AssignmentId, AsyncBackingParams, ExecutorParam::{MaxMemoryPages, PvfExecTimeout}, PvfExecKind
-};
 use paseo_runtime_constants::currency::UNITS as PAS;
+use polkadot_primitives::{
+	node_features::FeatureIndex,
+	AccountPublic, AssignmentId, AsyncBackingParams,
+	ExecutorParam::{MaxMemoryPages, PvfExecTimeout},
+	PvfExecKind,
+};
 use runtime_parachains::configuration::HostConfiguration;
 use sp_core::{sr25519, Pair, Public};
 use sp_genesis_builder::PresetId;
@@ -90,11 +93,13 @@ fn testnet_accounts() -> Vec<AccountId> {
 fn default_parachains_host_configuration() -> HostConfiguration<polkadot_primitives::BlockNumber> {
 	use polkadot_primitives::{MAX_CODE_SIZE, MAX_POV_SIZE};
 
-	let executor_parameteres = ExecutorParams::from(&[
-		MaxMemoryPages(8192),
-		PvfExecTimeout(PvfExecKind::Backing, 2500),
-		PvfExecTimeout(PvfExecKind::Approval, 15000),
-	][..]);
+	let executor_parameteres = ExecutorParams::from(
+		&[
+			MaxMemoryPages(8192),
+			PvfExecTimeout(PvfExecKind::Backing, 2500),
+			PvfExecTimeout(PvfExecKind::Approval, 15000),
+		][..],
+	);
 
 	runtime_parachains::configuration::HostConfiguration {
 		validation_upgrade_cooldown: 2u32,
@@ -264,8 +269,8 @@ pub fn get_preset(id: &sp_genesis_builder::PresetId) -> Option<Vec<u8>> {
 
 #[cfg(test)]
 mod tests {
-	use polkadot_primitives::{MAX_CODE_SIZE, MAX_POV_SIZE};
 	use super::*;
+	use polkadot_primitives::{MAX_CODE_SIZE, MAX_POV_SIZE};
 
 	#[test]
 	fn default_parachains_host_configuration_is_consistent() {
@@ -278,11 +283,13 @@ mod tests {
 		// This way users requiring a local environment can have a closer experience to the live
 		// testnet.
 		// This test ensures we don't revert this configuration by accident.
-		let executor_parameteres = ExecutorParams::from(&[
-			MaxMemoryPages(8192),
-			PvfExecTimeout(PvfExecKind::Backing, 2500),
-			PvfExecTimeout(PvfExecKind::Approval, 15000),
-		][..]);
+		let executor_parameteres = ExecutorParams::from(
+			&[
+				MaxMemoryPages(8192),
+				PvfExecTimeout(PvfExecKind::Backing, 2500),
+				PvfExecTimeout(PvfExecKind::Approval, 15000),
+			][..],
+		);
 		let host_config_ref = HostConfiguration {
 			validation_upgrade_cooldown: 2u32,
 			validation_upgrade_delay: 2,
@@ -312,9 +319,9 @@ mod tests {
 			minimum_validation_upgrade_delay: 5,
 			scheduler_params: polkadot_primitives::SchedulerParams {
 				group_rotation_frequency: 20,
-				paras_availability_period: 4,
 				max_validators_per_core: Some(2),
 				on_demand_queue_max_size: 100,
+				paras_availability_period: 4,
 				..Default::default()
 			},
 			dispute_post_conclusion_acceptance_period: 100u32,
