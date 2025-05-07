@@ -292,14 +292,14 @@ jobs:
           
           # Add list of changes since the last release
           if [ -n "$LATEST_RELEASE_TAG" ]; then
-            echo "What's Changed" >> release_notes.md
+            echo "🚀 What's Changed" >> release_notes.md
             echo "" >> release_notes.md
             echo "\`\`\`" >> release_notes.md
             echo "" >> release_notes.md
             git log --pretty=format:"* %h %s (%an)" --grep="#[0-9]" $LATEST_RELEASE_TAG..${{ needs.create-tag.outputs.release_tag }} >> release_notes.md
             echo "\`\`\`" >> release_notes.md
             echo "" >> release_notes.md
-            echo "**Full Changelog:** [${LATEST_RELEASE_TAG}...${{ needs.create-tag.outputs.release_tag }}](https://github.com/${{ github.repository }}/compare/${LATEST_RELEASE_TAG}...${{ needs.create-tag.outputs.release_tag }})" >> release_notes.md
+            echo "📝 **Compare Changes:** [${LATEST_RELEASE_TAG}...${{ needs.create-tag.outputs.release_tag }}](https://github.com/${{ github.repository }}/compare/${LATEST_RELEASE_TAG}...${{ needs.create-tag.outputs.release_tag }})" >> release_notes.md
           else
             echo "## Changes" >> release_notes.md
             echo "" >> release_notes.md
