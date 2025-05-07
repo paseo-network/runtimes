@@ -103,18 +103,18 @@ fn default_parachains_host_configuration() -> HostConfiguration<polkadot_primiti
 		max_code_size: MAX_CODE_SIZE,
 		max_pov_size: MAX_POV_SIZE,
 		max_head_data_size: 32 * 1024,
-		max_upward_queue_count: 174172,
-		max_upward_queue_size: 1024 * 1024,
-		max_downward_message_size: 1024 * 1024,
-		max_upward_message_size: 50 * 1024,
+		max_upward_queue_count: 174762,
+		max_upward_queue_size: 65_531,
+		max_downward_message_size: 51_200,
+		max_upward_message_size: 102_400,
 		max_upward_message_num_per_candidate: 16,
 		hrmp_sender_deposit: 0,
 		hrmp_recipient_deposit: 0,
 		hrmp_channel_max_capacity: 1000,
 		hrmp_channel_max_total_size: 100 * 1024,
-		hrmp_max_parachain_inbound_channels: 10,
+		hrmp_max_parachain_inbound_channels: 30,
 		hrmp_channel_max_message_size: 1024 * 1024,
-		hrmp_max_parachain_outbound_channels: 10,
+		hrmp_max_parachain_outbound_channels: 30,
 		hrmp_max_message_num_per_candidate: 10,
 		dispute_period: 6,
 		no_show_slots: 2,
@@ -126,6 +126,8 @@ fn default_parachains_host_configuration() -> HostConfiguration<polkadot_primiti
 		scheduler_params: polkadot_primitives::SchedulerParams {
 			group_rotation_frequency: 20,
 			paras_availability_period: 4,
+			max_validators_per_core: Some(2),
+			on_demand_queue_max_size: 100,
 			..Default::default()
 		},
 		dispute_post_conclusion_acceptance_period: 100u32,
@@ -262,10 +264,75 @@ pub fn get_preset(id: &sp_genesis_builder::PresetId) -> Option<Vec<u8>> {
 
 #[cfg(test)]
 mod tests {
+	use polkadot_primitives::{MAX_CODE_SIZE, MAX_POV_SIZE};
 	use super::*;
 
 	#[test]
 	fn default_parachains_host_configuration_is_consistent() {
 		default_parachains_host_configuration().panic_if_not_consistent();
+	}
+
+	#[test]
+	fn paseo_ensure_consistency_of_host_config() {
+		// The above host config has been configured to match the live config as of Paseo v1.4.3
+		// This way users requiring a local environment can have a closer experience to the live
+		// testnet.
+		// This test ensures we don't revert this configuration by accident.
+		let executor_parameteres = ExecutorParams::from(&[
+			MaxMemoryPages(8192),
+			PvfExecTimeout(PvfExecKind::Backing, 2500),
+			PvfExecTimeout(PvfExecKind::Approval, 15000),
+		][..]);
+		let host_config_ref = HostConfiguration {
+			validation_upgrade_cooldown: 2u32,
+			validation_upgrade_delay: 2,
+			code_retention_period: 1200,
+			max_code_size: MAX_CODE_SIZE,
+			max_pov_size: MAX_POV_SIZE,
+			max_head_data_size: 32 * 1024,
+			max_upward_queue_count: 174762,
+			max_upward_queue_size: 65_531,
+			max_downward_message_size: 51_200,
+			max_upward_message_size: 102_400,
+			max_upward_message_num_per_candidate: 16,
+			hrmp_sender_deposit: 0,
+			hrmp_recipient_deposit: 0,
+			hrmp_channel_max_capacity: 1000,
+			hrmp_channel_max_total_size: 100 * 1024,
+			hrmp_max_parachain_inbound_channels: 30,
+			hrmp_channel_max_message_size: 1024 * 1024,
+			hrmp_max_parachain_outbound_channels: 30,
+			hrmp_max_message_num_per_candidate: 10,
+			dispute_period: 6,
+			no_show_slots: 2,
+			n_delay_tranches: 25,
+			needed_approvals: 2,
+			relay_vrf_modulo_samples: 2,
+			zeroth_delay_tranche_width: 0,
+			minimum_validation_upgrade_delay: 5,
+			scheduler_params: polkadot_primitives::SchedulerParams {
+				group_rotation_frequency: 20,
+				paras_availability_period: 4,
+				max_validators_per_core: Some(2),
+				on_demand_queue_max_size: 100,
+				..Default::default()
+			},
+			dispute_post_conclusion_acceptance_period: 100u32,
+			minimum_backing_votes: 1,
+			node_features: NodeFeatures::from_element(
+				1u8 << (FeatureIndex::ElasticScalingMVP as usize) |
+					1u8 << (FeatureIndex::EnableAssignmentsV2 as usize),
+			),
+			async_backing_params: AsyncBackingParams {
+				max_candidate_depth: 3,
+				allowed_ancestry_len: 2,
+			},
+			executor_params: executor_parameteres,
+			max_validators: None,
+			pvf_voting_ttl: 2,
+			approval_voting_params: ApprovalVotingParams { max_approval_coalesce_count: 1 },
+		};
+
+		assert_eq!(host_config_ref, default_parachains_host_configuration());
 	}
 }
