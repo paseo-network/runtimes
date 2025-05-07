@@ -125,6 +125,7 @@ fn default_parachains_host_configuration() -> HostConfiguration<polkadot_primiti
 		scheduler_params: polkadot_primitives::SchedulerParams {
 			group_rotation_frequency: 20,
 			paras_availability_period: 4,
+			lookahead: 3,
 			..Default::default()
 		},
 		dispute_post_conclusion_acceptance_period: 100u32,
