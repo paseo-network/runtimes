@@ -287,8 +287,8 @@ jobs:
           if [ "${{ github.event.inputs.tag_suffix }}" == "none" ]; then
             # For "none" tag suffix, look for tags without suffixes or with v prefix
             # First list all tags and debug them
-            echo "All tags:"
-            git tag --sort=-v:refname | head -n 20
+            echo "Previous tag:"
+            git tag --sort=-v:refname | grep -v "${{ needs.create-tag.outputs.release_tag }}" | grep -E "^v?[0-9]+\.[0-9]+\.[0-9]+" | head -n 1
             
             # Get previous tag excluding current tag, filtering by version-like pattern
             LATEST_RELEASE_TAG=$(git tag --sort=-v:refname | grep -v "${{ needs.create-tag.outputs.release_tag }}" | grep -E "^v?[0-9]+\.[0-9]+\.[0-9]+" | head -n 1)
@@ -353,4 +353,5 @@ jobs:
           gh release create ${{ needs.create-tag.outputs.release_tag }} \
             --title "Release ${{ needs.create-tag.outputs.release_tag }}" \
             --notes-file release_notes.md \
+            --prerelease \
             $UPLOAD_FILES
