@@ -328,7 +328,7 @@ jobs:
         run: |
           # Prepare files for upload
           UPLOAD_FILES=""
-          for file in artifacts/*-runtime-*/**.compressed.wasm artifacts/*-runtime-*/*-srtool-digest.json; do
+          for file in artifacts/*-runtime-*/*.compressed.wasm artifacts/*-runtime-*/*-srtool-digest.json; do
             UPLOAD_FILES="$UPLOAD_FILES $file"
           done
           
