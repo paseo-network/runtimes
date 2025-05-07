@@ -198,10 +198,12 @@ jobs:
         run: |
           echo '${{ steps.srtool_build.outputs.json }}' | jq . > ${{ matrix.name }}-srtool-digest.json
 
-      # Copy artifacts
-      - name: Copy artifacts
+      # Get the compressed WASM file
+      - name: Copy compressed WASM
         if: steps.check_package.outputs.should_run == 'true'
-        run: cp `dirname ${{ steps.srtool_build.outputs.wasm }}`/*.wasm ./
+        run: |
+          # Copy only the compressed WASM file
+          cp ${{ steps.srtool_build.outputs.wasm_compressed }} ./${{ matrix.name }}_runtime.compressed.wasm
 
       - name: Archive Runtime
         if: steps.check_package.outputs.should_run == 'true'
@@ -209,7 +211,7 @@ jobs:
         with:
           name: ${{ matrix.name }}-runtime-${{ needs.create-tag.outputs.release_tag }}
           path: |
-            ${{ matrix.name }}*.wasm
+            ${{ matrix.name }}_runtime.compressed.wasm
             ${{ matrix.name }}-srtool-digest.json
 
       - name: Prepare release notes
@@ -325,10 +327,10 @@ jobs:
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.CI_PAT }}
-        run: |
+        run: |         
           # Prepare files for upload
           UPLOAD_FILES=""
-          for file in artifacts/*-runtime-*/*.compressed.wasm artifacts/*-runtime-*/*-srtool-digest.json; do
+          for file in artifacts/*-runtime-*/*_runtime.compressed.wasm artifacts/*-runtime-*/*-srtool-digest.json; do
             UPLOAD_FILES="$UPLOAD_FILES $file"
           done
           
