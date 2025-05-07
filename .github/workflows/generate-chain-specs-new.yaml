@@ -50,34 +50,29 @@ on:
         description: 'Tag suffix (none, relay, parachains)'
         required: true
         type: string
+        default: 'none'
       build_paseo:
         description: 'Build paseo relay runtime'
-        required: false
         type: boolean
         default: false
       build_asset_hub_paseo:
         description: 'Build asset-hub-paseo runtime'
-        required: false
         type: boolean
         default: false
       build_bridge_hub_paseo:
         description: 'Build bridge-hub-paseo runtime'
-        required: false
         type: boolean
         default: false
       build_collectives_paseo:
         description: 'Build collectives-paseo runtime'
-        required: false
         type: boolean
         default: false
       build_people_paseo:
         description: 'Build people-paseo runtime'
-        required: false
         type: boolean
         default: false
       build_coretime_paseo:
         description: 'Build coretime-paseo runtime'
-        required: false
         type: boolean
         default: false
 
@@ -165,7 +160,27 @@ jobs:
             ./target/release/chain-spec-generator "$pkg" --raw > "chain-specs/local/$pkg.json"
             echo "Generated chain-specs/local/$pkg.json"
           done
+      
+      - name: Upload chain specs as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: chain-specs
+          path: chain-specs/
+          retention-days: 1
 
+  commit-changes:
+    needs: generate-chain-specs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Download chain specs artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: chain-specs
+          path: chain-specs/
+      
       - name: Setup Git
         run: |
           git config --global user.name 'github-actions[bot]'
@@ -176,10 +191,17 @@ jobs:
 
       - name: Commit changes
         run: |
+          # Add all chain spec files using glob pattern
           git add chain-specs/local/*.json
+          
+          # Check if there are any changes to commit
           if git diff --staged --quiet; then
             echo "No changes detected in chain specs. Skipping commit."
           else
+            # List the files that will be committed
+            echo "Changes detected in the following files:"
+            git diff --staged --name-status
+            
             COMMIT_MESSAGE="Update chain specs for version ${{ inputs.tag_version }}"
             git commit -m "$COMMIT_MESSAGE"
             git push

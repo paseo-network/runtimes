@@ -50,12 +50,12 @@ jobs:
     with:
       tag_version: ${{ github.event.inputs.tag_version }}
       tag_suffix: ${{ github.event.inputs.tag_suffix }}
-      build_paseo: ${{ github.event.inputs.build_paseo }}
-      build_asset_hub_paseo: ${{ github.event.inputs.build_asset_hub_paseo }}
-      build_bridge_hub_paseo: ${{ github.event.inputs.build_bridge_hub_paseo }}
-      build_collectives_paseo: ${{ github.event.inputs.build_collectives_paseo }}
-      build_people_paseo: ${{ github.event.inputs.build_people_paseo }}
-      build_coretime_paseo: ${{ github.event.inputs.build_coretime_paseo }}
+      build_paseo: ${{ fromJSON(github.event.inputs.build_paseo) }}
+      build_asset_hub_paseo: ${{ fromJSON(github.event.inputs.build_asset_hub_paseo) }}
+      build_bridge_hub_paseo: ${{ fromJSON(github.event.inputs.build_bridge_hub_paseo) }}
+      build_collectives_paseo: ${{ fromJSON(github.event.inputs.build_collectives_paseo) }}
+      build_people_paseo: ${{ fromJSON(github.event.inputs.build_people_paseo) }}
+      build_coretime_paseo: ${{ fromJSON(github.event.inputs.build_coretime_paseo) }}
 
   create-tag:
     needs: generate-chain-specs
@@ -170,6 +170,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.create-tag.outputs.release_tag }}
+          fetch-depth: 0  # Fetch all history and tags
+          fetch-tags: true  # Explicitly fetch all tags
 
       - name: Cache runtime target dir
         if: steps.check_package.outputs.should_run == 'true'
@@ -198,10 +200,12 @@ jobs:
         run: |
           echo '${{ steps.srtool_build.outputs.json }}' | jq . > ${{ matrix.name }}-srtool-digest.json
 
-      # Copy artifacts
-      - name: Copy artifacts
+      # Get the compressed WASM file
+      - name: Copy compressed WASM
         if: steps.check_package.outputs.should_run == 'true'
-        run: cp `dirname ${{ steps.srtool_build.outputs.wasm }}`/*.wasm ./
+        run: |
+          # Copy only the compressed WASM file
+          cp ${{ steps.srtool_build.outputs.wasm_compressed }} ./${{ matrix.name }}_runtime.compressed.wasm
 
       - name: Archive Runtime
         if: steps.check_package.outputs.should_run == 'true'
@@ -209,7 +213,7 @@ jobs:
         with:
           name: ${{ matrix.name }}-runtime-${{ needs.create-tag.outputs.release_tag }}
           path: |
-            ${{ matrix.name }}*.wasm
+            ${{ matrix.name }}_runtime.compressed.wasm
             ${{ matrix.name }}-srtool-digest.json
 
       - name: Prepare release notes
@@ -247,6 +251,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.create-tag.outputs.release_tag }}
+          fetch-depth: 0  # Fetch all history and tags
+          fetch-tags: true  # Explicitly fetch all tags
+      
+      - name: Ensure all tags are fetched
+        run: |
+          git fetch --tags --force
+          echo "All available tags:"
+          git tag
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -283,23 +295,47 @@ jobs:
           
           # Get the latest release tag of the same kind
           if [ "${{ github.event.inputs.tag_suffix }}" == "none" ]; then
-            # For "none" tag suffix, look for tags without suffixes
-            LATEST_RELEASE_TAG=$(git tag --sort=-v:refname | grep -v "${{ needs.create-tag.outputs.release_tag }}" | grep -v -- "-relay\$" | grep -v -- "-parachains\$" | head -n 1)
+            # For "none" tag suffix, look for tags without suffixes or with v prefix
+            # First list all tags and debug them
+            echo "Previous tag detection debug:"
+            echo "1. All tags available:"
+            git tag
+            echo "2. Command output test:"
+            git tag --sort=-v:refname | grep -v "${{ needs.create-tag.outputs.release_tag }}" | grep -E "^v?[0-9]+\.[0-9]+\.[0-9]+" | head -n 1
+            
+            # Get previous tag excluding current tag, filtering by version-like pattern
+            LATEST_RELEASE_TAG=$(git tag --sort=-v:refname | grep -v "${{ needs.create-tag.outputs.release_tag }}" | grep -E "^v?[0-9]+\.[0-9]+\.[0-9]+" | head -n 1)
           else
             # For specific tag suffixes, look for tags with the same suffix
+            echo "Previous tag detection debug (with suffix):"
+            echo "1. All tags available:"
+            git tag
+            echo "2. Command output test:"
+            git tag --sort=-v:refname | grep -v "${{ needs.create-tag.outputs.release_tag }}" | grep -- "-${{ github.event.inputs.tag_suffix }}$" | head -n 1
+            
             LATEST_RELEASE_TAG=$(git tag --sort=-v:refname | grep -v "${{ needs.create-tag.outputs.release_tag }}" | grep -- "-${{ github.event.inputs.tag_suffix }}\$" | head -n 1)
           fi
           
+          echo "Debug: Latest release tag found: $LATEST_RELEASE_TAG"
           # Add list of changes since the last release
           if [ -n "$LATEST_RELEASE_TAG" ]; then
-            echo "What's Changed" >> release_notes.md
+            echo "🚀 What's Changed" >> release_notes.md
             echo "" >> release_notes.md
             echo "\`\`\`" >> release_notes.md
             echo "" >> release_notes.md
-            git log --pretty=format:"* %h %s (%an)" --grep="#[0-9]" $LATEST_RELEASE_TAG..${{ needs.create-tag.outputs.release_tag }} >> release_notes.md
+            # First try to get commits that include issue numbers
+            COMMITS_WITH_ISSUES=$(git log --pretty=format:"* %h %s (%an)" --grep="#[0-9]" $LATEST_RELEASE_TAG..${{ needs.create-tag.outputs.release_tag }})
+            
+            # If we didn't find any, just get all non-merge commits
+            if [ -z "$COMMITS_WITH_ISSUES" ]; then
+              # Not commits with issues found, get all merge commits
+              git log --pretty=format:"* %h %s (%an)" --merges $LATEST_RELEASE_TAG..${{ needs.create-tag.outputs.release_tag }} >> release_notes.md
+            else
+              echo "$COMMITS_WITH_ISSUES" >> release_notes.md
+            fi
             echo "\`\`\`" >> release_notes.md
             echo "" >> release_notes.md
-            echo "**Full Changelog:** [${LATEST_RELEASE_TAG}...${{ needs.create-tag.outputs.release_tag }}](https://github.com/${{ github.repository }}/compare/${LATEST_RELEASE_TAG}...${{ needs.create-tag.outputs.release_tag }})" >> release_notes.md
+            echo "📝 **Compare Changes:** [${LATEST_RELEASE_TAG}...${{ needs.create-tag.outputs.release_tag }}](https://github.com/${{ github.repository }}/compare/${LATEST_RELEASE_TAG}...${{ needs.create-tag.outputs.release_tag }})" >> release_notes.md
           else
             echo "## Changes" >> release_notes.md
             echo "" >> release_notes.md
@@ -325,10 +361,10 @@ jobs:
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.CI_PAT }}
-        run: |
+        run: |         
           # Prepare files for upload
           UPLOAD_FILES=""
-          for file in artifacts/*-runtime-*/**.compressed.wasm artifacts/*-runtime-*/*-srtool-digest.json; do
+          for file in artifacts/*-runtime-*/*_runtime.compressed.wasm artifacts/*-runtime-*/*-srtool-digest.json; do
             UPLOAD_FILES="$UPLOAD_FILES $file"
           done
           
@@ -336,4 +372,5 @@ jobs:
           gh release create ${{ needs.create-tag.outputs.release_tag }} \
             --title "Release ${{ needs.create-tag.outputs.release_tag }}" \
             --notes-file release_notes.md \
+            --prerelease \
             $UPLOAD_FILES
