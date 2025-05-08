@@ -131,6 +131,7 @@ fn default_parachains_host_configuration() -> HostConfiguration<polkadot_primiti
 		scheduler_params: polkadot_primitives::SchedulerParams {
 			group_rotation_frequency: 20,
 			paras_availability_period: 4,
+                        lookahead: 3,
 			max_validators_per_core: Some(2),
 			on_demand_queue_max_size: 100,
 			..Default::default()
@@ -319,6 +320,7 @@ mod tests {
 			minimum_validation_upgrade_delay: 5,
 			scheduler_params: polkadot_primitives::SchedulerParams {
 				group_rotation_frequency: 20,
+                                lookahead: 3,
 				max_validators_per_core: Some(2),
 				on_demand_queue_max_size: 100,
 				paras_availability_period: 4,
