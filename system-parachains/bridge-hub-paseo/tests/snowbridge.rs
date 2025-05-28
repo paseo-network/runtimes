@@ -22,7 +22,7 @@ use bridge_hub_paseo_runtime::{
 	bridge_to_kusama_config::OnBridgeHubPaseoRefundBridgeHubKusamaMessages,
 	xcm_config::{XcmConfig, XcmFeeManagerFromComponentsBridgeHub},
 	AllPalletsWithoutSystem, BridgeRejectObsoleteHeadersAndMessages, Executive,
-	MessageQueueServiceWeight, Runtime, RuntimeCall, RuntimeEvent, SessionKeys, SignedExtra,
+	MessageQueueServiceWeight, Runtime, RuntimeCall, RuntimeEvent, SessionKeys, TxExtension,
 	UncheckedExtrinsic,
 };
 use codec::{Decode, Encode};
@@ -37,9 +37,7 @@ use parachains_runtimes_test_utils::{
 	AccountIdOf, BalanceOf, CollatorSessionKeys, ExtBuilder, ValidatorIdOf,
 };
 use snowbridge_pallet_ethereum_client::WeightInfo;
-use snowbridge_pallet_ethereum_client_fixtures::{
-	make_checkpoint, make_finalized_header_update, make_sync_committee_update,
-};
+use snowbridge_pallet_ethereum_client_fixtures::*;
 use sp_core::{Get, H160};
 use sp_keyring::AccountKeyring::Alice;
 use sp_runtime::{
@@ -50,7 +48,7 @@ use xcm::latest::prelude::*;
 use xcm_builder::HandleFee;
 use xcm_executor::traits::{FeeManager, FeeReason};
 parameter_types! {
-		pub const DefaultBridgeHubEthereumBaseFee: Balance = 2_750_872_500_000;
+	pub const DefaultBridgeHubEthereumBaseFee: Balance = 3_833_568_200_000;
 }
 type RuntimeHelper<Runtime, AllPalletsWithoutSystem = ()> =
 	parachains_runtimes_test_utils::RuntimeHelper<Runtime, AllPalletsWithoutSystem>;
@@ -63,12 +61,10 @@ fn collator_session_keys() -> CollatorSessionKeys<Runtime> {
 	)
 }
 
-const CHAIN_ID: u64 = 11155111;
-
 #[test]
 pub fn transfer_token_to_ethereum_works() {
 	snowbridge_runtime_test_common::send_transfer_token_message_success::<Runtime, XcmConfig>(
-		CHAIN_ID,
+		1,
 		collator_session_keys(),
 		1013,
 		1000,
@@ -87,7 +83,7 @@ pub fn transfer_token_to_ethereum_works() {
 #[test]
 pub fn unpaid_transfer_token_to_ethereum_fails_with_barrier() {
 	snowbridge_runtime_test_common::send_unpaid_transfer_token_message::<Runtime, XcmConfig>(
-		CHAIN_ID,
+		11155111,
 		collator_session_keys(),
 		1013,
 		1000,
@@ -99,7 +95,7 @@ pub fn unpaid_transfer_token_to_ethereum_fails_with_barrier() {
 #[test]
 pub fn transfer_token_to_ethereum_fee_not_enough() {
 	snowbridge_runtime_test_common::send_transfer_token_message_failure::<Runtime, XcmConfig>(
-		CHAIN_ID,
+		1,
 		collator_session_keys(),
 		1013,
 		1000,
@@ -115,7 +111,7 @@ pub fn transfer_token_to_ethereum_fee_not_enough() {
 #[test]
 pub fn transfer_token_to_ethereum_insufficient_fund() {
 	snowbridge_runtime_test_common::send_transfer_token_message_failure::<Runtime, XcmConfig>(
-		CHAIN_ID,
+		1,
 		collator_session_keys(),
 		1013,
 		1000,
@@ -230,7 +226,7 @@ fn ethereum_outbound_queue_processes_messages_before_message_queue_works() {
 		XcmConfig,
 		AllPalletsWithoutSystem,
 	>(
-		CHAIN_ID,
+		1,
 		collator_session_keys(),
 		1013,
 		1000,
@@ -245,7 +241,6 @@ fn ethereum_outbound_queue_processes_messages_before_message_queue_works() {
 		}),
 	)
 }
-
 
 // TODO replace with snowbridge runtime common method in stable-2412 release.
 pub fn ethereum_extrinsic<Runtime>(
@@ -392,7 +387,7 @@ fn construct_extrinsic(
 	call: RuntimeCall,
 ) -> UncheckedExtrinsic {
 	let account_id = AccountId32::from(sender.public());
-	let extra: SignedExtra = (
+	let extra: TxExtension = (
 		frame_system::CheckNonZeroSender::<Runtime>::new(),
 		frame_system::CheckSpecVersion::<Runtime>::new(),
 		frame_system::CheckTxVersion::<Runtime>::new(),

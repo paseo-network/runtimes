@@ -38,7 +38,7 @@ use frame_support::{
 use frame_system::{EnsureNever, EnsureRoot};
 use pallet_bridge_messages::LaneIdOf;
 use pallet_bridge_relayers::extension::{
-	BridgeRelayersSignedExtension, WithMessagesExtensionConfig,
+	BridgeRelayersTransactionExtension, WithMessagesExtensionConfig,
 };
 use pallet_xcm_bridge_hub::{BridgeId, XcmAsPlainPayload};
 use parachains_common::xcm_config::{AllSiblingSystemParachains, RelayOrOtherSystemParachains};
@@ -78,10 +78,6 @@ parameter_types! {
 	/// Interior location (relative to this runtime) of the with-Kusama messages pallet.
 	pub BridgePolkadotToKusamaMessagesPalletInstance: InteriorLocation = PalletInstance(<BridgeKusamaMessages as PalletInfoAccess>::index() as u8).into();
 
-	/// Identifier of the sibling Polkadot Asset Hub parachain.
-	pub AssetHubPaseoParaId: cumulus_primitives_core::ParaId = paseo_runtime_constants::system_parachain::ASSET_HUB_ID.into();
-	/// Identifier of the sibling Kusama Asset Hub parachain.
-	pub AssetHubKusamaParaId: cumulus_primitives_core::ParaId = kusama_runtime_constants::system_parachain::ASSET_HUB_ID.into();
 	/// Location of the bridged Kusama Bridge Hub parachain.
 	pub BridgeHubKusamaLocation: Location = Location {
 		parents: 2,
@@ -158,7 +154,7 @@ pub type FromKusamaMessageBlobDispatcher = BridgeBlobDispatcher<
 >;
 
 /// Signed extension that refunds relayers that are delivering messages from the Kusama parachain.
-pub type OnBridgeHubPaseoRefundBridgeHubKusamaMessages = BridgeRelayersSignedExtension<
+pub type OnBridgeHubPaseoRefundBridgeHubKusamaMessages = BridgeRelayersTransactionExtension<
 	Runtime,
 	WithMessagesExtensionConfig<
 		StrOnBridgeHubPaseoRefundBridgeHubKusamaMessages,
@@ -306,6 +302,7 @@ where
 		bp_runtime::AccountIdOf<pallet_xcm_bridge_hub::ThisChainOf<R, XBHI>>,
 	>,
 {
+	use alloc::boxed::Box;
 	use pallet_xcm_bridge_hub::{Bridge, BridgeId, BridgeState};
 	use sp_runtime::traits::Zero;
 	use xcm::VersionedInteriorLocation;
@@ -313,7 +310,7 @@ where
 	// insert bridge metadata
 	let lane_id = with;
 	let sibling_parachain = Location::new(1, [Parachain(sibling_para_id)]);
-	let universal_source: InteriorLocation =  UniversalLocation::get();
+	let universal_source = [GlobalConsensus(Paseo), Parachain(sibling_para_id)].into();
 	let universal_destination = [GlobalConsensus(Kusama), Parachain(2075)].into();
 	let bridge_id = BridgeId::new(&universal_source, &universal_destination);
 
@@ -321,15 +318,13 @@ where
 	pallet_xcm_bridge_hub::Bridges::<R, XBHI>::insert(
 		bridge_id,
 		Bridge {
-			bridge_origin_relative_location: sp_std::boxed::Box::new(
-				sibling_parachain.clone().into(),
-			),
-			bridge_origin_universal_location: sp_std::boxed::Box::new(
-				VersionedInteriorLocation::from(universal_source.clone()),
-			),
-			bridge_destination_universal_location: sp_std::boxed::Box::new(
-				VersionedInteriorLocation::from(universal_destination),
-			),
+			bridge_origin_relative_location: Box::new(sibling_parachain.clone().into()),
+			bridge_origin_universal_location: Box::new(VersionedInteriorLocation::from(
+				universal_source.clone(),
+			)),
+			bridge_destination_universal_location: Box::new(VersionedInteriorLocation::from(
+				universal_destination,
+			)),
 			state: BridgeState::Opened,
 			bridge_owner_account: C::convert_location(&sibling_parachain).expect("valid AccountId"),
 			deposit: Zero::zero(),
@@ -391,7 +386,7 @@ mod tests {
 
 		assert_complete_with_parachain_bridge_constants::<
 			Runtime,
-			BridgeGrandpaKusamaInstance,
+			BridgeParachainKusamaInstance,
 			WithBridgeHubKusamaMessagesInstance,
 		>(AssertCompleteBridgeConstants {
 			this_chain_constants: AssertChainConstants {
@@ -418,26 +413,41 @@ mod tests {
 	}
 }
 
-/// Contains the migration for the AssetHubPaseo<>AssetHubKusama bridge.
+/// Contains the migrations for a P/K bridge.
 pub mod migration {
 	use super::*;
-	use frame_support::traits::ConstBool;
 
-	parameter_types! {
-		pub AssetHubPaseoToAssetHubKusamaMessagesLane: LegacyLaneId = LegacyLaneId([0, 0, 0, 1]);
-		pub AssetHubPaseoLocation: Location = Location::new(1, [Parachain(bp_asset_hub_paseo::ASSET_HUB_PASEO_PARACHAIN_ID)]);
-		pub AssetHubKusamaUniversalLocation: InteriorLocation = [GlobalConsensus(KusamaGlobalConsensusNetwork::get()), Parachain(bp_asset_hub_kusama::ASSET_HUB_KUSAMA_PARACHAIN_ID)].into();
+	/// Fix data from XCMv4 to XCMv5 because of buggy of XCM `try_as` implementation.
+	pub struct MigrateToXcm5<T, I>(core::marker::PhantomData<(T, I)>);
+
+	impl<T: pallet_xcm_bridge_hub::Config<I>, I: 'static> frame_support::traits::OnRuntimeUpgrade
+		for MigrateToXcm5<T, I>
+	{
+		fn on_runtime_upgrade() -> Weight {
+			use sp_core::Get;
+			use xcm::IntoVersion;
+			let mut weight = T::DbWeight::get().reads(1);
+
+			// `Migrate to latest XCM`.
+			let translate =
+				|mut pre: pallet_xcm_bridge_hub::BridgeOf<T, I>| -> Option<pallet_xcm_bridge_hub::BridgeOf<T, I>> {
+					weight.saturating_accrue(T::DbWeight::get().reads_writes(1, 1));
+
+					if let Ok(latest) = pre.bridge_origin_relative_location.clone().into_latest() {
+						pre.bridge_origin_relative_location = alloc::boxed::Box::new(latest);
+					}
+					if let Ok(latest) = pre.bridge_origin_universal_location.clone().into_latest() {
+						pre.bridge_origin_universal_location = alloc::boxed::Box::new(latest);
+					}
+					if let Ok(latest) = pre.bridge_destination_universal_location.clone().into_latest() {
+						pre.bridge_destination_universal_location = alloc::boxed::Box::new(latest);
+					}
+
+					Some(pre)
+				};
+			pallet_xcm_bridge_hub::Bridges::<T, I>::translate_values(translate);
+
+			weight
+		}
 	}
-
-	/// Ensure that the existing lanes for the AHR<>AHW bridge are correctly configured.
-	pub type StaticToDynamicLanes = pallet_xcm_bridge_hub::migration::OpenBridgeForLane<
-		Runtime,
-		XcmOverBridgeHubKusamaInstance,
-		AssetHubPaseoToAssetHubKusamaMessagesLane,
-		// the lanes are already created for AHP<>AHK, but we need to link them to the bridge
-		// structs
-		ConstBool<false>,
-		AssetHubPaseoLocation,
-		AssetHubKusamaUniversalLocation,
-	>;
 }
