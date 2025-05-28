@@ -17,9 +17,9 @@
 //! Genesis configs presets for the BridgeHubPolkadot runtime
 
 use crate::*;
-use sp_genesis_builder::PresetId;
-use sp_std::vec::Vec;
+use alloc::vec::Vec;
 use sp_core::sr25519;
+use sp_genesis_builder::PresetId;
 use system_parachains_constants::genesis_presets::*;
 
 const BRIDGE_HUB_POLKADOT_ED: Balance = ExistentialDeposit::get();
@@ -69,7 +69,7 @@ fn bridge_hub_paseo_genesis(
 		"xcmOverBridgeHubKusama": XcmOverBridgeHubKusamaConfig { opened_bridges, ..Default::default() },
 		"ethereumSystem": EthereumSystemConfig {
 			para_id: id,
-			asset_hub_para_id: paseo_runtime_constants::system_parachain::ASSET_HUB_ID.into(),
+			asset_hub_para_id: paseo_runtime_constants::system_parachain::AssetHubParaId::get(),
 			..Default::default()
 		},
 		// no need to pass anything to aura, in fact it will panic if we do. Session will take care
@@ -87,15 +87,18 @@ fn bridge_hub_paseo_development_genesis(para_id: ParaId) -> serde_json::Value {
 
 /// Provides the names of the predefined genesis configs for this runtime.
 pub fn preset_names() -> Vec<PresetId> {
-	vec![PresetId::from("development"), PresetId::from("local_testnet")]
+	vec![
+		PresetId::from(sp_genesis_builder::DEV_RUNTIME_PRESET),
+		PresetId::from(sp_genesis_builder::LOCAL_TESTNET_RUNTIME_PRESET),
+	]
 }
 
 /// Provides the JSON representation of predefined genesis config for given `id`.
-pub fn get_preset(id: &sp_genesis_builder::PresetId) -> Option<sp_std::vec::Vec<u8>> {
-	let patch = match id.try_into() {
-		Ok("development") =>
+pub fn get_preset(id: &PresetId) -> Option<Vec<u8>> {
+	let patch = match id.as_ref() {
+		sp_genesis_builder::DEV_RUNTIME_PRESET =>
 			bridge_hub_paseo_genesis(invulnerables(), testnet_accounts(), 1002.into(), vec![]),
-		Ok("local_testnet") => bridge_hub_paseo_genesis(
+		sp_genesis_builder::LOCAL_TESTNET_RUNTIME_PRESET => bridge_hub_paseo_genesis(
 			invulnerables(),
 			testnet_accounts(),
 			1002.into(),

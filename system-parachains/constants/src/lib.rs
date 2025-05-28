@@ -88,6 +88,6 @@ pub mod async_backing {
 	/// We allow for 2 seconds of compute with a 6 second average block time.
 	pub const MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
 		WEIGHT_REF_TIME_PER_SECOND.saturating_mul(2),
-		paseo_primitives::MAX_POV_SIZE as u64,
+		polkadot_primitives::MAX_POV_SIZE as u64,
 	);
 }
