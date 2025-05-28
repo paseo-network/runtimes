@@ -673,7 +673,6 @@ dependencies = [
  "sp-offchain",
  "sp-runtime 40.1.0",
  "sp-session",
- "sp-std",
  "sp-storage 22.0.0",
  "sp-transaction-pool",
  "sp-version 38.0.0",
@@ -1137,6 +1136,7 @@ dependencies = [
  "bp-bridge-hub-cumulus",
  "bp-header-chain 0.19.0",
  "bp-messages 0.19.0",
+ "bp-polkadot-core 0.18.0",
  "bp-runtime 0.19.1",
  "frame-support 39.1.0",
  "kusama-runtime-constants",
@@ -13236,7 +13236,6 @@ dependencies = [
  "smallvec",
  "sp-core 35.0.0",
  "sp-runtime 40.1.0",
- "sp-std",
  "staging-xcm 15.1.0",
 ]
 
