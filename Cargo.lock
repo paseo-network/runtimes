@@ -7987,7 +7987,7 @@ dependencies = [
 
 [[package]]
 name = "paseo-runtime"
-version = "1.4.3"
+version = "1.4.4"
 dependencies = [
  "approx",
  "binary-merkle-tree",
