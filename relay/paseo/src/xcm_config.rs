@@ -143,6 +143,8 @@ parameter_types! {
 	pub DotForBridgeHub: (AssetFilter, Location) = (Dot::get(), BridgeHubLocation::get());
 	pub People: Location = Parachain(PEOPLE_ID).into_location();
 	pub DotForPeople: (AssetFilter, Location) = (Dot::get(), People::get());
+	pub PAssetHubLocation: Location = Parachain(PASSET_HUB_ID).into_location();
+	pub DotForPAssetHub: (AssetFilter, Location) = (Dot::get(), PAssetHubLocation::get());
 	pub const MaxAssetsIntoHolding: u32 = 64;
 }
 
@@ -153,6 +155,7 @@ pub type TrustedTeleporters = (
 	xcm_builder::Case<DotForBridgeHub>,
 	xcm_builder::Case<DotForCoretime>,
 	xcm_builder::Case<DotForPeople>,
+	xcm_builder::Case<DotForPAssetHub>,
 );
 
 pub struct Fellows;
@@ -328,4 +331,26 @@ impl pallet_xcm::Config for Runtime {
 	type RemoteLockConsumerIdentifier = ();
 	type WeightInfo = crate::weights::pallet_xcm::WeightInfo<Runtime>;
 	type AdminOrigin = EnsureRoot<AccountId>;
+}
+
+#[cfg(test)]
+mod tests {
+	use std::any::TypeId;
+	use super::*;
+
+	#[test]
+	fn ensure_trusted_teleporters() {
+		type TrustedTeleporters = (
+			xcm_builder::Case<DotForAssetHub>,
+			xcm_builder::Case<DotForCollectives>,
+			xcm_builder::Case<DotForBridgeHub>,
+			xcm_builder::Case<DotForCoretime>,
+			xcm_builder::Case<DotForPeople>,
+			xcm_builder::Case<DotForPAssetHub>,
+		);
+		assert_eq!(
+				TypeId::of::<<XcmConfig as xcm_executor::Config>::IsTeleporter>(),
+				TypeId::of::<TrustedTeleporters>(),
+			);
+	}
 }

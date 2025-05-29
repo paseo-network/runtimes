@@ -164,7 +164,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("paseo"),
 	impl_name: create_runtime_str!("paseo-testnet"),
 	authoring_version: 0,
-	spec_version: 1_004_003,
+	spec_version: 1_004_004,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 26,
