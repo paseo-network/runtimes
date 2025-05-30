@@ -7991,6 +7991,7 @@ version = "1.4.4"
 dependencies = [
  "approx",
  "binary-merkle-tree",
+ "bitvec",
  "frame-benchmarking",
  "frame-election-provider-support",
  "frame-executive",

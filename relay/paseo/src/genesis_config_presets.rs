@@ -20,6 +20,7 @@ use crate::*;
 use babe_primitives::AuthorityId as BabeId;
 use pallet_staking::{Forcing, StakerStatus};
 use polkadot_primitives::{AccountPublic, AssignmentId, AsyncBackingParams, ExecutorParam::{MaxMemoryPages, PvfExecTimeout}, PvfExecKind};
+use polkadot_primitives::node_features::FeatureIndex;
 use paseo_runtime_constants::currency::UNITS as PAS;
 use runtime_parachains::configuration::HostConfiguration;
 use sp_core::{sr25519, Pair, Public};
@@ -130,7 +131,10 @@ fn default_parachains_host_configuration() -> HostConfiguration<polkadot_primiti
 		},
 		dispute_post_conclusion_acceptance_period: 100u32,
 		minimum_backing_votes: 1,
-		node_features: NodeFeatures::EMPTY,
+		node_features: bitvec::vec::BitVec::from_element(
+			(1u8 << (FeatureIndex::ElasticScalingMVP as usize)) |
+				(1u8 << (FeatureIndex::EnableAssignmentsV2 as usize)),
+		),
 		async_backing_params: AsyncBackingParams {
 			max_candidate_depth: 3,
 			allowed_ancestry_len: 2,
@@ -261,5 +265,16 @@ mod tests {
 	#[test]
 	fn default_parachains_host_configuration_is_consistent() {
 		default_parachains_host_configuration().panic_if_not_consistent();
+	}
+
+	#[test]
+	fn ensure_node_features() {
+		let genesis_node_features = default_parachains_host_configuration().node_features;
+		let expected_node_features: NodeFeatures = bitvec::vec::BitVec::from_element(
+			(1u8 << (FeatureIndex::ElasticScalingMVP as usize)) |
+				(1u8 << (FeatureIndex::EnableAssignmentsV2 as usize)),
+		);
+
+		assert_eq!(genesis_node_features, expected_node_features);
 	}
 }
