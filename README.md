@@ -2,7 +2,7 @@
 
 **Next Step:**
 
-- [ ] Update to stable 2503 ([#1](https://github.com/paseo-network/runtimes/pull/1))
+- [ ] Update to stable 2503 ([#1](https://github.com/paritytech/paseo-ahm/pull/1))
 
 #### Testing
 
