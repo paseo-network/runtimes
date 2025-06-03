@@ -9,3 +9,8 @@
 - [ ] Setup CI checks
 - [ ] Test ZombieBite / ZombieNet
 - [ ] Integrate Chopstick tests
+
+### TODO guideline
+
+If you add a TODO then you must include the GitHub handle of the person who has to resolve it, example: `TODO @ggwpez cleanup`. Please include context if you tag someone else.   
+Ideally, we have all resolved before going live.
