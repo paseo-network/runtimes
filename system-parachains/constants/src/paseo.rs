@@ -167,3 +167,4 @@ pub mod locations {
 		pub AssetHubLocation: Location =
 			Location::new(1, Parachain(paseo_runtime_constants::system_parachain::ASSET_HUB_ID));
 	}
+}
