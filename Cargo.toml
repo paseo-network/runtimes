@@ -3,7 +3,7 @@ version = "1.0.0"
 authors = ["Paseo Core Team"]
 edition = "2021"
 repository = "https://github.com/paseo-network/runtimes.git"
-license = "GPL-3.0-only"                                        # TODO <https://github.com/paseo-fellows/runtimes/issues/29>
+license = "GPL-3.0-only"                                        # TO-old-DO <https://github.com/paseo-fellows/runtimes/issues/29>
 
 [workspace.dependencies]
 kusama-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.4.3", package = "kusama-runtime-constants", default-features = false  }

@@ -134,7 +134,7 @@ pub fn estimate_paseo_to_kusama_byte_fee() -> Balance {
 	// 2) the second part is the payment for bytes of the message delivery transaction, which is
 	//    "mined" at Kusama Bridge Hub. Hence, we need to use byte fees from that chain and convert
 	//    it to PASs here.
-	convert_from_uksm_to_udot(paseo_runtime_constants::fee::TRANSACTION_BYTE_FEE) // TODO
+	convert_from_uksm_to_udot(paseo_runtime_constants::fee::TRANSACTION_BYTE_FEE) // TO-old-DO
 }
 
 /// Convert from uKSMs to uPASs.

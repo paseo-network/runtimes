@@ -654,7 +654,7 @@ pub mod bridging {
 		pub type KusamaAssetFromAssetHubKusama =
 			RemoteAssetFromLocation<StartsWith<KsmLocation>, AssetHubKusama>;
 
-		// TODO: get this from `assets_common v0.17.1` when SDK deps are upgraded
+		// TO-old-DO:get this from `assets_common v0.17.1` when SDK deps are upgraded
 		/// Accept an asset if it is native to `AssetsAllowedNetworks` and it is coming from
 		/// `OriginLocation`.
 		pub struct RemoteAssetFromLocation<AssetsAllowedNetworks, OriginLocation>(

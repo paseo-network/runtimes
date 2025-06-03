@@ -704,7 +704,7 @@ impl pallet_staking::Config for Runtime {
 	type EventListeners = (NominationPools, DelegatedStaking);
 	type DisablingStrategy = pallet_staking::UpToLimitDisablingStrategy;
 	type WeightInfo = weights::pallet_staking::WeightInfo<Runtime>;
-	// TODO: this will come back later (stable2412/stable25XY)
+	// TO-old-DO:this will come back later (stable2412/stable25XY)
 	// type Filter = pallet_nomination_pools::AllPoolMembers<Runtime>;
 
 	fn filter(who: &AccountId) -> bool {
@@ -1424,7 +1424,7 @@ impl pallet_nomination_pools::Config for Runtime {
 	type MaxPointsToBalance = MaxPointsToBalance;
 	type WeightInfo = weights::pallet_nomination_pools::WeightInfo<Self>;
 	type AdminOrigin = EitherOf<EnsureRoot<AccountId>, StakingAdmin>;
-	// TODO: this will come back later (stable2412/stable25XY)
+	// TO-old-DO:this will come back later (stable2412/stable25XY)
 	// type Filter = pallet_staking::AllStakers<Runtime>;
 }
 

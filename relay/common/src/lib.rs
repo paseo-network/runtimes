@@ -49,7 +49,7 @@ pub mod apis {
 	}
 }
 
-// ---- TODO: Below is copy pasted from sdk, remove once we pull the version containing
+// ---- TO-old-DO:Below is copy pasted from sdk, remove once we pull the version containing
 // https://github.com/paritytech/polkadot-sdk/pull/4938
 
 #[derive(Debug, Clone)]
@@ -112,5 +112,5 @@ pub fn relay_era_payout(params: EraPayoutParams) -> (Balance, Balance) {
 	(staking_payout, rest)
 }
 
-// ---- TODO: Above is copy pasted from sdk, remove once we pull the version containing
+// ---- TO-old-DO:Above is copy pasted from sdk, remove once we pull the version containing
 // https://github.com/paritytech/polkadot-sdk/pull/4938

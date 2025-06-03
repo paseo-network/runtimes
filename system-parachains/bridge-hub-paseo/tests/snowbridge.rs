@@ -247,7 +247,7 @@ fn ethereum_outbound_queue_processes_messages_before_message_queue_works() {
 }
 
 
-// TODO replace with snowbridge runtime common method in stable-2412 release.
+// TO-old-DO replace with snowbridge runtime common method in stable-2412 release.
 pub fn ethereum_extrinsic<Runtime>(
 	collator_session_key: CollatorSessionKeys<Runtime>,
 	runtime_para_id: u32,
