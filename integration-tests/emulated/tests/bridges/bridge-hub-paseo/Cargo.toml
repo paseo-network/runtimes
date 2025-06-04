@@ -38,10 +38,10 @@ pallet-bridge-messages = { workspace = true, default-features = true }
 
 # Local
 bp-bridge-hub-paseo = { workspace = true, default-features = true }
-bridge-hub-paseo-runtime = { workspace = true }
-asset-hub-paseo-runtime = { workspace = true }
-integration-tests-helpers = { workspace = true }
-paseo-system-emulated-network = { workspace = true }
+bridge-hub-paseo-runtime = { workspace = true, default-features = true }
+asset-hub-paseo-runtime = { workspace = true, default-features = true }
+integration-tests-helpers = { workspace = true, default-features = true }
+paseo-system-emulated-network = { workspace = true, default-features = true }
 system-parachains-constants = { workspace = true, default-features = true }
 
 # Snowbridge
@@ -50,4 +50,4 @@ snowbridge-core = { workspace = true, default-features = true }
 snowbridge-router-primitives = { workspace = true, default-features = true }
 snowbridge-pallet-system = { workspace = true, default-features = true }
 snowbridge-pallet-outbound-queue = { workspace = true, default-features = true }
-snowbridge-pallet-inbound-queue-fixtures = { workspace = true }
+snowbridge-pallet-inbound-queue-fixtures = { workspace = true, default-features = true }
