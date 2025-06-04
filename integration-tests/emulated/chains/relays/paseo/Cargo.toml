@@ -28,3 +28,13 @@ emulated-integration-tests-common = { workspace = true }
 # Runtimes
 paseo-runtime-constants = { workspace = true, default-features = true }
 paseo-runtime = { workspace = true }
+
+[features]
+runtime-benchmarks = [
+	"pallet-staking/runtime-benchmarks",
+	"parachains-common/runtime-benchmarks",
+	"polkadot-primitives/runtime-benchmarks",
+	"paseo-runtime-constants/runtime-benchmarks",
+	"paseo-runtime/runtime-benchmarks",
+	"sp-runtime/runtime-benchmarks",
+]
