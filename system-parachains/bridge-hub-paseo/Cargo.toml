@@ -273,6 +273,8 @@ runtime-benchmarks = [
 	"xcm-builder/runtime-benchmarks",
 	"xcm-executor/runtime-benchmarks",
 	"xcm-runtime-apis/runtime-benchmarks",
+	"kusama-runtime-constants/runtime-benchmarks",
+	"pallet-sudo/runtime-benchmarks"
 ]
 
 try-runtime = [

@@ -153,6 +153,7 @@ runtime-benchmarks = [
 	"xcm-builder/runtime-benchmarks",
 	"xcm-executor/runtime-benchmarks",
 	"xcm-runtime-apis/runtime-benchmarks",
+	"pallet-sudo/runtime-benchmarks"
 ]
 try-runtime = [
 	"cumulus-pallet-aura-ext/try-runtime",
@@ -266,6 +267,7 @@ std = [
 	"xcm-executor/std",
 	"xcm-runtime-apis/std",
 	"xcm/std",
+	"sp-debug-derive/std"
 ]
 
 # Enable metadata hash generation at compile time for the `CheckMetadataHash` extension.
