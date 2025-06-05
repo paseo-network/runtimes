@@ -23,6 +23,7 @@ print_message() {
 # Initialize default values
 PASEO_BRANCH="main"
 PROCESS_PARACHAINS="false"
+USE_POLKADOT_BRANCH="false"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -31,13 +32,17 @@ while [[ $# -gt 0 ]]; do
             PASEO_BRANCH="$2"
             shift 2
             ;;
+        --polkadot-branch)
+            USE_POLKADOT_BRANCH="true"
+            shift
+            ;;
         --parachains)
             PROCESS_PARACHAINS="true"
             shift
             ;;
         *)
-            if [ -z "$NEXT_TAG" ]; then
-                NEXT_TAG="$1"
+            if [ -z "$POLKADOT_REF" ]; then
+                POLKADOT_REF="$1"
             else
                 echo "Error: Unexpected argument '$1'"
                 exit 1
@@ -48,14 +53,23 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Check if required argument is provided
-if [ -z "$NEXT_TAG" ]; then
-    echo "Usage: $0 <new_polkadot_runtime_version> [--paseo-ref-branch <branch>] [--parachains]"
+if [ -z "$POLKADOT_REF" ]; then
+    echo "Usage: $0 <polkadot_version_or_branch> [--polkadot-branch] [--paseo-ref-branch <branch>] [--parachains]"
+    echo "<polkadot_version_or_branch>: Polkadot version (e.g., '1.2.0') or branch name (e.g., 'release-polkadot-v1.2.0')"
+    echo "--polkadot-branch: Optional. Treat the first argument as a branch name instead of a version tag."
     echo "--paseo-ref-branch: Optional. Specify the branch to clone for Paseo runtime. Defaults to 'main'."
     echo "--parachains: Optional. Process parachains if specified."
     exit 1
 fi
 
-POLKADOT_NEXT_TAG=v${NEXT_TAG}
+# Set the Polkadot reference (tag or branch)
+if [ "$USE_POLKADOT_BRANCH" = "true" ]; then
+    POLKADOT_NEXT_TAG="$POLKADOT_REF"
+    PATCH_SUFFIX="$POLKADOT_REF"
+else
+    POLKADOT_NEXT_TAG="v${POLKADOT_REF}"
+    PATCH_SUFFIX="$POLKADOT_REF"
+fi
 
 print_message "========================================" "${GREEN}"
 print_message "Creating patches for Polkadot ${POLKADOT_NEXT_TAG}" "${GREEN}"
@@ -113,25 +127,25 @@ cp -rf ../polkadot_runtime_next/integration-tests/emulated/networks/polkadot-sys
 
 print_message "----- Committing changes -----" "${BLUE}"
 git add .
-git commit -m "Update to Polkadot ${NEXT_TAG} runtime"
+git commit -m "Update to Polkadot ${PATCH_SUFFIX} runtime"
 
-print_message "----- Creating patch files for Polkadot ${NEXT_TAG} runtime -----" "${WHITE}"
+print_message "----- Creating patch files for Polkadot ${PATCH_SUFFIX} runtime -----" "${WHITE}"
 mkdir -p ${PATCH_DIR}
 
 # Create targeted patch files
 print_message "Creating targeted patch files..." "${WHITE}"
 
 # Patch for relay/paseo
-git format-patch -1 HEAD --stdout --root relay/paseo relay/common Cargo.toml > "${PATCH_DIR}/0001-update-relay-paseo-${NEXT_TAG}.patch"
-print_message "Created patch for relay/paseo: ${PATCH_DIR}/0001-update-relay-paseo-${NEXT_TAG}.patch" "${WHITE}"
+git format-patch -1 HEAD --stdout --root relay/paseo relay/common Cargo.toml > "${PATCH_DIR}/0001-update-relay-paseo-${PATCH_SUFFIX}.patch"
+print_message "Created patch for relay/paseo: ${PATCH_DIR}/0001-update-relay-paseo-${PATCH_SUFFIX}.patch" "${WHITE}"
 
 # Patch for chain-spec-generator
-git format-patch -1 HEAD --stdout --root chain-spec-generator > "${PATCH_DIR}/0001-update-chain-spec-generator-${NEXT_TAG}.patch"
-print_message "Created patch for chain-spec-generator: ${PATCH_DIR}/0001-update-chain-spec-generator-${NEXT_TAG}.patch" "${WHITE}"
+git format-patch -1 HEAD --stdout --root chain-spec-generator > "${PATCH_DIR}/0001-update-chain-spec-generator-${PATCH_SUFFIX}.patch"
+print_message "Created patch for chain-spec-generator: ${PATCH_DIR}/0001-update-chain-spec-generator-${PATCH_SUFFIX}.patch" "${WHITE}"
 
 # Patch for integration-tests
-git format-patch -1 HEAD --stdout --root integration-tests > "${PATCH_DIR}/0001-update-integration-tests-${NEXT_TAG}.patch"
-print_message "Created patch for integration-tests: ${PATCH_DIR}/0001-update-integration-tests-${NEXT_TAG}.patch" "${WHITE}"
+git format-patch -1 HEAD --stdout --root integration-tests > "${PATCH_DIR}/0001-update-integration-tests-${PATCH_SUFFIX}.patch"
+print_message "Created patch for integration-tests: ${PATCH_DIR}/0001-update-integration-tests-${PATCH_SUFFIX}.patch" "${WHITE}"
 
 if [ "$PROCESS_PARACHAINS" = "true" ]; then
     print_message "----- Copying and committing parachains -----" "${BLUE}"
@@ -165,21 +179,21 @@ if [ "$PROCESS_PARACHAINS" = "true" ]; then
 
     # Commit all parachain changes
     git add system-parachains/
-    git commit -m "Update system-parachains to Polkadot ${NEXT_TAG}"
+    git commit -m "Update system-parachains to Polkadot ${PATCH_SUFFIX}"
 
     # Now create patches for each parachain
     print_message "----- Creating parachain patches -----" "${BLUE}"
     for parachain in "${PARACHAINS[@]}"; do
         read -r parachain_name source_dir dest_dir <<< "$parachain"
         dest_dir="system-parachains/${dest_dir}"
-        outDir="${PATCH_DIR}/system-parachains/0001-update-${parachain_name}-${NEXT_TAG}.patch"
+        outDir="${PATCH_DIR}/system-parachains/0001-update-${parachain_name}-${PATCH_SUFFIX}.patch"
         mkdir -p "$(dirname "${outDir}")"
         git format-patch -1 HEAD --stdout --root "${dest_dir}" > "${outDir}"
         print_message "Created patch for ${parachain_name}: ${outDir}" "${WHITE}"
     done
 
     # Create constants patch
-    outDir="${PATCH_DIR}/system-parachains/0001-update-constants-${NEXT_TAG}.patch"
+    outDir="${PATCH_DIR}/system-parachains/0001-update-constants-${PATCH_SUFFIX}.patch"
     git format-patch -1 HEAD --stdout --root system-parachains/constants > "${outDir}"
     print_message "Created patch for constants: ${outDir}" "${WHITE}"
 fi
