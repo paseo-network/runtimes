@@ -22,5 +22,15 @@ emulated-integration-tests-common = { workspace = true }
 paseo-runtime-constants = { workspace = true, default-features = true }
 
 # Local
-people-paseo-runtime = { workspace = true }
+people-paseo-runtime = { workspace = true, default-features = true }
 paseo-emulated-chain = { workspace = true }
+
+[features]
+runtime-benchmarks = [
+	"cumulus-primitives-core/runtime-benchmarks",
+	"frame-support/runtime-benchmarks",
+	"parachains-common/runtime-benchmarks",
+	"people-paseo-runtime/runtime-benchmarks",
+	"paseo-emulated-chain/runtime-benchmarks",
+	"paseo-runtime-constants/runtime-benchmarks",
+]

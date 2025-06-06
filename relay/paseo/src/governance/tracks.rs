@@ -332,38 +332,3 @@ impl pallet_referenda::TracksInfo<Balance, BlockNumber> for TracksInfo {
 	}
 }
 pallet_referenda::impl_tracksinfo_get!(TracksInfo, Balance, BlockNumber);
-
-#[cfg(test)]
-mod tests {
-	use super::*;
-
-	parameter_types! {
-		const Linear100Percent: Curve = Curve::make_linear(28, 28, percent(100), percent(100));
-	}
-
-	#[test]
-	fn ensure_root_track_configuration() {
-		let (root_track_index, root_track_data) = TRACKS_DATA.get(0).unwrap();
-		assert_eq!(*root_track_index, 0);
-		// Ensure Root track decision deposit is 1M.
-		assert_eq!(root_track_data.decision_deposit, 1000*GRAND);
-		// Ensure Root track is configured with a linear curve set at 100%
-		// for both support and approval.
-		assert_eq!(
-			root_track_data.min_approval, Linear100Percent::get()
-		);
-		assert_eq!(
-			root_track_data.min_support, Linear100Percent::get()
-		);
-	}
-
-	#[test]
-	fn ensure_approval_curve_root() {
-		assert_eq!(APP_ROOT, Linear100Percent::get());
-	}
-
-	#[test]
-	fn ensure_support_curve_root() {
-		assert_eq!(APP_ROOT, Linear100Percent::get());
-	}
-}

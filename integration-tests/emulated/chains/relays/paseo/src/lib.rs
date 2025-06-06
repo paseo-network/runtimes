@@ -14,6 +14,7 @@
 // limitations under the License.
 
 pub mod genesis;
+pub use paseo_runtime;
 
 // Cumulus
 use emulated_integration_tests_common::{
@@ -24,7 +25,7 @@ use emulated_integration_tests_common::{
 
 // Paseo declaration
 decl_test_relay_chains! {
-	#[api_version(11)]
+	#[api_version(12)]
 	pub struct Paseo {
 		genesis = genesis::genesis(),
 		on_init = (),
