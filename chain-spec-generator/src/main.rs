@@ -37,7 +37,7 @@ fn main() -> Result<(), String> {
 	let cli = Cli::parse();
 
 	let supported_chains =
-		HashMap::<_, Box<dyn Fn() -> Result<Box<dyn ChainSpec>, String>>>::from([
+		HashMap::<&str, Box<dyn Fn() -> Result<Box<dyn ChainSpec>, String>>>::from([
 			("paseo-dev", Box::new(|| relay_chain_specs::paseo_development_config()) as Box<_>),
 			("paseo-local", Box::new(|| relay_chain_specs::paseo_local_testnet_config()) as Box<_>),
 			(
@@ -50,8 +50,8 @@ fn main() -> Result<(), String> {
 				Box::new(system_parachains_specs::bridge_hub_paseo_local_testnet_config) as Box<_>,
 			),
 			(
-				"people-paseo-local",
-				Box::new(|| system_parachains_specs::people_paseo_local_testnet_config()) as Box<_>,
+				"collectives-paseo-local",
+				Box::new(|| system_parachains_specs::collectives_paseo_local_config()) as Box<_>,
 			),
 			(
 				"coretime-paseo-local",
@@ -66,8 +66,8 @@ fn main() -> Result<(), String> {
 				Box::new(|| system_parachains_specs::coretime_paseo_config()) as Box<_>,
 			),
 			(
-				"collectives-paseo-local",
-				Box::new(|| system_parachains_specs::collectives_paseo_local_config()) as Box<_>,
+				"people-paseo-local",
+				Box::new(|| system_parachains_specs::people_paseo_local_testnet_config()) as Box<_>,
 			),
 		]);
 
@@ -85,7 +85,10 @@ fn main() -> Result<(), String> {
 			print!("{chain_spec}");
 			Ok(())
 		} else {
-			Err(format!("Unknown chain, only supported: {supported} or a json file"))
+			Err(format!(
+				"Unknown chain: '{}', only supported: '{supported}' or a json file",
+				cli.chain
+			))
 		}
 	}
 }
