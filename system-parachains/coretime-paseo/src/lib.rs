@@ -42,8 +42,8 @@ use frame_support::{
 	genesis_builder_helper::{build_state, get_preset},
 	parameter_types,
 	traits::{
-		tokens::imbalance::ResolveTo, ConstBool, ConstU32, ConstU64, ConstU8, Contains,
-		EitherOfDiverse, EverythingBut, InstanceFilter, TransformOrigin,
+		tokens::imbalance::ResolveTo, ConstBool, ConstU32, ConstU64, ConstU8,
+		EitherOfDiverse, InstanceFilter, TransformOrigin,
 	},
 	weights::{ConstantMultiplier, Weight, WeightToFee as _},
 	PalletId,
@@ -180,25 +180,9 @@ parameter_types! {
 	pub const SS58Prefix: u8 = 0;
 }
 
-/// Filter:
-/// - Credit purchase calls until the credit system is implemented. Otherwise, users may have chance
-///   of locking their funds forever on purchased credits they cannot use.
-/// - The interlace call until the relay can support this fully
-pub struct IsFilteredBrokerCall;
-impl Contains<RuntimeCall> for IsFilteredBrokerCall {
-	fn contains(c: &RuntimeCall) -> bool {
-		matches!(
-			c,
-			RuntimeCall::Broker(pallet_broker::Call::purchase_credit { .. }) |
-				RuntimeCall::Broker(pallet_broker::Call::interlace { .. })
-		)
-	}
-}
-
 // Configure FRAME pallets to include in runtime.
 #[derive_impl(frame_system::config_preludes::ParaChainDefaultConfig as frame_system::DefaultConfig)]
 impl frame_system::Config for Runtime {
-	type BaseCallFilter = EverythingBut<IsFilteredBrokerCall>;
 	/// The identifier used to distinguish between accounts.
 	type AccountId = AccountId;
 	/// The nonce type for storing how many extrinsics an account has signed.
