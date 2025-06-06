@@ -579,11 +579,14 @@ dependencies = [
  "cumulus-primitives-core",
  "emulated-integration-tests-common",
  "frame-support",
+ "integration-tests-helpers",
  "parachains-common",
  "paseo-emulated-chain",
  "penpal-emulated-chain",
  "polkadot-parachain-primitives",
+ "snowbridge-router-primitives",
  "sp-core",
+ "sp-keyring",
  "staging-xcm 15.1.0",
 ]
 
@@ -1354,6 +1357,7 @@ dependencies = [
  "frame-support",
  "parachains-common",
  "sp-core",
+ "sp-keyring",
  "staging-xcm 15.1.0",
 ]
 
@@ -4833,6 +4837,8 @@ version = "1.0.0"
 dependencies = [
  "asset-test-utils",
  "cumulus-pallet-xcmp-queue",
+ "frame-support",
+ "hex-literal",
  "pallet-balances",
  "pallet-message-queue",
  "pallet-xcm",
@@ -8414,6 +8420,7 @@ dependencies = [
  "paseo-emulated-chain",
  "penpal-runtime",
  "sp-core",
+ "sp-keyring",
  "staging-xcm 15.1.0",
 ]
 

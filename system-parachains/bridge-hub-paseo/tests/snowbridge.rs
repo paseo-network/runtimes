@@ -61,10 +61,12 @@ fn collator_session_keys() -> CollatorSessionKeys<Runtime> {
 	)
 }
 
+const CHAIN_ID: u64 = 11155111;
+
 #[test]
 pub fn transfer_token_to_ethereum_works() {
 	snowbridge_runtime_test_common::send_transfer_token_message_success::<Runtime, XcmConfig>(
-		1,
+		CHAIN_ID,
 		collator_session_keys(),
 		1013,
 		1000,
@@ -95,7 +97,7 @@ pub fn unpaid_transfer_token_to_ethereum_fails_with_barrier() {
 #[test]
 pub fn transfer_token_to_ethereum_fee_not_enough() {
 	snowbridge_runtime_test_common::send_transfer_token_message_failure::<Runtime, XcmConfig>(
-		1,
+		CHAIN_ID,
 		collator_session_keys(),
 		1013,
 		1000,
@@ -111,7 +113,7 @@ pub fn transfer_token_to_ethereum_fee_not_enough() {
 #[test]
 pub fn transfer_token_to_ethereum_insufficient_fund() {
 	snowbridge_runtime_test_common::send_transfer_token_message_failure::<Runtime, XcmConfig>(
-		1,
+		CHAIN_ID,
 		collator_session_keys(),
 		1013,
 		1000,
@@ -226,7 +228,7 @@ fn ethereum_outbound_queue_processes_messages_before_message_queue_works() {
 		XcmConfig,
 		AllPalletsWithoutSystem,
 	>(
-		1,
+		CHAIN_ID,
 		collator_session_keys(),
 		1013,
 		1000,
