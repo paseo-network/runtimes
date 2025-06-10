@@ -4,7 +4,7 @@
   "chainType": "Local",
   "bootNodes": [],
   "telemetryEndpoints": null,
-  "protocolId": null,
+  "protocolId": "col-pas",
   "properties": {
     "ss58Format": 0,
     "tokenDecimals": 10,
