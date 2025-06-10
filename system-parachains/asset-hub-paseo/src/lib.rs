@@ -1876,10 +1876,7 @@ impl pallet_state_trie_migration::Config for Runtime {
 	type SignedDepositBase = MigrationSignedDepositBase;
 	// An origin that can control the whole pallet: Should be a Fellowship member or the controller
 	// of the migration.
-	type ControlOrigin = EitherOfDiverse<
-		EnsureXcm<IsVoiceOfBody<FellowshipLocation, FellowsBodyId>>,
-		EnsureSignedBy<MigControllerRoot, AccountId>,
-	>;
+	type ControlOrigin = EnsureRoot<AccountId>;
 	type SignedFilter = EnsureSignedBy<MigController, AccountId>;
 
 	// Replace this with weight based on your runtime.
@@ -1891,7 +1888,6 @@ impl pallet_state_trie_migration::Config for Runtime {
 // See bot code https://github.com/paritytech/polkadot-scripts/blob/master/src/services/state_trie_migration.ts
 ord_parameter_types! {
 	pub const MigController: AccountId = AccountId::from(hex_literal::hex!("7e939ef17e229e9a29210d95cb0b607e0030d54899c05f791a62d5c6f4557659"));
-	pub const MigControllerRoot: AccountId = AccountId::from(hex_literal::hex!("7e939ef17e229e9a29210d95cb0b607e0030d54899c05f791a62d5c6f4557659"));
 }
 
 #[cfg(test)]
