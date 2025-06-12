@@ -19,6 +19,8 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+extern crate alloc;
+
 pub use bp_bridge_hub_cumulus::*;
 use bp_messages::*;
 use bp_runtime::{
@@ -134,7 +136,7 @@ pub fn estimate_paseo_to_kusama_byte_fee() -> Balance {
 	// 2) the second part is the payment for bytes of the message delivery transaction, which is
 	//    "mined" at Kusama Bridge Hub. Hence, we need to use byte fees from that chain and convert
 	//    it to PASs here.
-	convert_from_uksm_to_udot(paseo_runtime_constants::fee::TRANSACTION_BYTE_FEE) // TODO
+	convert_from_uksm_to_udot(paseo_runtime_constants::fee::TRANSACTION_BYTE_FEE)
 }
 
 /// Convert from uKSMs to uPASs.
@@ -186,7 +188,7 @@ pub mod snowbridge {
 			multiplier: FixedU128::from_rational(1, 1),
 		};
 		/// Network and location for the Ethereum chain. On Polkadot, the Ethereum chain bridged
-			/// to is the Ethereum Sepolia network, with chain ID 11155111.
+		/// to is the Ethereum Sepolia network, with chain ID 11155111.
 		/// <https://chainlist.org/chain/1>
 		/// <https://ethereum.org/en/developers/docs/apis/json-rpc/#net_version>
 		pub EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 11155111 };

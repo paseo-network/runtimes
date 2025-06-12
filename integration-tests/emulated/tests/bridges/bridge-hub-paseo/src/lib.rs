@@ -22,7 +22,7 @@ pub use sp_runtime::DispatchError;
 pub use xcm::{
 	latest::ParentThen,
 	prelude::{AccountId32 as AccountId32Junction, *},
-	v4::{
+	v5::{
 		self, Error,
 		NetworkId::{Kusama as KusamaId, Polkadot as PaseoId},
 	},
@@ -44,6 +44,7 @@ pub use emulated_integration_tests_common::{
 	xcm_helpers::{xcm_transact_paid_execution, xcm_transact_unpaid_execution},
 	ASSETS_PALLET_ID, PROOF_SIZE_THRESHOLD, REF_TIME_THRESHOLD, XCM_V4,
 };
+pub use integration_tests_helpers::common::snowbridge::{MIN_ETHER_BALANCE, WETH};
 pub use paseo_system_emulated_network::{
 	asset_hub_paseo_emulated_chain::{
 		genesis::{AssetHubPaseoAssetOwner, ED as ASSET_HUB_POLKAPAS_ED},
@@ -60,7 +61,11 @@ pub use paseo_system_emulated_network::{
 		},
 		PenpalAssetOwner, PenpalBParaPallet as PenpalBPallet,
 	},
-	paseo_emulated_chain::{genesis::ED as POLKADOT_ED, PaseoRelayPallet as PaseoPallet},
+	paseo_emulated_chain::{
+		genesis::ED as POLKADOT_ED,
+		paseo_runtime::xcm_config::UniversalLocation as PaseoRelayUniversalLocation,
+		PaseoRelayPallet as PaseoPallet,
+	},
 	AssetHubPaseoPara as AssetHubPaseo,
 	AssetHubPaseoParaReceiver as AssetHubPaseoReceiver,
 	AssetHubPaseoParaSender as AssetHubPaseoSender,

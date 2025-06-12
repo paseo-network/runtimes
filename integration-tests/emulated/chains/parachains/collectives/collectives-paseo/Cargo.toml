@@ -20,3 +20,12 @@ emulated-integration-tests-common = { workspace = true }
 
 # Runtimes
 collectives-paseo-runtime = { workspace = true }
+
+
+[features]
+runtime-benchmarks = [
+	"collectives-paseo-runtime/runtime-benchmarks",
+	"cumulus-primitives-core/runtime-benchmarks",
+	"frame-support/runtime-benchmarks",
+	"parachains-common/runtime-benchmarks",
+]
