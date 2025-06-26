@@ -143,6 +143,7 @@ parameter_types! {
 	pub DotForBridgeHub: (AssetFilter, Location) = (Dot::get(), BridgeHubLocation::get());
 	pub People: Location = Parachain(PEOPLE_ID).into_location();
 	pub DotForPeople: (AssetFilter, Location) = (Dot::get(), People::get());
+	pub PassetHubLocation: (AssetFilter, Location) = (Dot::get(),Parachain(PASSET_HUB_ID).into_location());
 	pub const MaxAssetsIntoHolding: u32 = 64;
 }
 
@@ -153,6 +154,7 @@ pub type TrustedTeleporters = (
 	xcm_builder::Case<DotForBridgeHub>,
 	xcm_builder::Case<DotForCoretime>,
 	xcm_builder::Case<DotForPeople>,
+	xcm_builder::Case<PassetHubLocation>
 );
 
 pub struct Fellows;
@@ -346,7 +348,7 @@ mod tests {
 			xcm_builder::Case<DotForBridgeHub>,
 			xcm_builder::Case<DotForCoretime>,
 			xcm_builder::Case<DotForPeople>,
-			// xcm_builder::Case<DotForPAssetHub>, // TODO: Add back when we have a PAssetHub
+			xcm_builder::Case<PassetHubLocation>
 		);
 		assert_eq!(
 				TypeId::of::<<XcmConfig as xcm_executor::Config>::IsTeleporter>(),
