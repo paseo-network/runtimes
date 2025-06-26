@@ -23,7 +23,7 @@ use super::{
 };
 use frame_support::{
 	parameter_types,
-	traits::{Contains, Equals, Everything, Nothing},
+	traits::{Contains, Disabled, Equals, Everything, Nothing},
 };
 use frame_system::EnsureRoot;
 use pallet_xcm::XcmPassthrough;
@@ -143,8 +143,7 @@ parameter_types! {
 	pub DotForBridgeHub: (AssetFilter, Location) = (Dot::get(), BridgeHubLocation::get());
 	pub People: Location = Parachain(PEOPLE_ID).into_location();
 	pub DotForPeople: (AssetFilter, Location) = (Dot::get(), People::get());
-	pub PAssetHubLocation: Location = Parachain(PASSET_HUB_ID).into_location();
-	pub DotForPAssetHub: (AssetFilter, Location) = (Dot::get(), PAssetHubLocation::get());
+	pub PassetHubLocation: (AssetFilter, Location) = (Dot::get(),Parachain(PASSET_HUB_ID).into_location());
 	pub const MaxAssetsIntoHolding: u32 = 64;
 }
 
@@ -155,7 +154,7 @@ pub type TrustedTeleporters = (
 	xcm_builder::Case<DotForBridgeHub>,
 	xcm_builder::Case<DotForCoretime>,
 	xcm_builder::Case<DotForPeople>,
-	xcm_builder::Case<DotForPAssetHub>,
+	xcm_builder::Case<PassetHubLocation>
 );
 
 pub struct Fellows;
@@ -248,6 +247,7 @@ impl xcm_executor::Config for XcmConfig {
 	type HrmpNewChannelOpenRequestHandler = ();
 	type HrmpChannelAcceptedHandler = ();
 	type HrmpChannelClosingHandler = ();
+	type XcmEventEmitter = XcmPallet;
 }
 
 parameter_types! {
@@ -331,6 +331,8 @@ impl pallet_xcm::Config for Runtime {
 	type RemoteLockConsumerIdentifier = ();
 	type WeightInfo = crate::weights::pallet_xcm::WeightInfo<Runtime>;
 	type AdminOrigin = EnsureRoot<AccountId>;
+	// Aliasing is disabled: xcm_executor::Config::Aliasers allows `Nothing`.
+	type AuthorizedAliasConsideration = Disabled;
 }
 
 #[cfg(test)]
@@ -346,7 +348,7 @@ mod tests {
 			xcm_builder::Case<DotForBridgeHub>,
 			xcm_builder::Case<DotForCoretime>,
 			xcm_builder::Case<DotForPeople>,
-			xcm_builder::Case<DotForPAssetHub>,
+			xcm_builder::Case<PassetHubLocation>
 		);
 		assert_eq!(
 				TypeId::of::<<XcmConfig as xcm_executor::Config>::IsTeleporter>(),

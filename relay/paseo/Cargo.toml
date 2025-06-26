@@ -2,7 +2,7 @@
 name = "paseo-runtime"
 build = "build.rs"
 repository.workspace = true
-version = "1.5.1"
+version = "1.6.0"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -277,6 +277,7 @@ runtime-benchmarks = [
 	"xcm-builder/runtime-benchmarks",
 	"xcm-executor/runtime-benchmarks",
 	"xcm-runtime-apis/runtime-benchmarks",
+	"xcm/runtime-benchmarks",
 ]
 try-runtime = [
 	"frame-election-provider-support/try-runtime",
