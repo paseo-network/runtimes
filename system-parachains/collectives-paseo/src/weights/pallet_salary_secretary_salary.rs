@@ -27,9 +27,9 @@
 // v1
 // benchmark
 // pallet
-// --runtime=target/production/wbuild/collectives-paseo-runtime/collectives_paseo_runtime.compact.compressed.wasm
+// --runtime=target/production/wbuild/collectives-polkadot-runtime/collectives_polkadot_runtime.compact.compressed.wasm
 // --header=.github/scripts/cmd/file_header.txt
-// --output=./system-parachains/collectives/collectives-paseo/src/weights/
+// --output=./system-parachains/collectives/collectives-polkadot/src/weights/
 // --all
 // --quiet
 
@@ -44,68 +44,68 @@ use core::marker::PhantomData;
 /// Weight functions for `pallet_salary`.
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_salary::WeightInfo for WeightInfo<T> {
-	/// Storage: `FellowshipSalary::Status` (r:1 w:1)
-	/// Proof: `FellowshipSalary::Status` (`max_values`: Some(1), `max_size`: Some(56), added: 551, mode: `MaxEncodedLen`)
+	/// Storage: `SecretarySalary::Status` (r:1 w:1)
+	/// Proof: `SecretarySalary::Status` (`max_values`: Some(1), `max_size`: Some(56), added: 551, mode: `MaxEncodedLen`)
 	fn init() -> Weight {
 		// Proof Size summary in bytes:
-		//  Measured:  `142`
+		//  Measured:  `4`
 		//  Estimated: `1541`
-		// Minimum execution time: 10_590_000 picoseconds.
-		Weight::from_parts(10_910_000, 0)
+		// Minimum execution time: 9_370_000 picoseconds.
+		Weight::from_parts(9_660_000, 0)
 			.saturating_add(Weight::from_parts(0, 1541))
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
-	/// Storage: `FellowshipSalary::Status` (r:1 w:1)
-	/// Proof: `FellowshipSalary::Status` (`max_values`: Some(1), `max_size`: Some(56), added: 551, mode: `MaxEncodedLen`)
+	/// Storage: `SecretarySalary::Status` (r:1 w:1)
+	/// Proof: `SecretarySalary::Status` (`max_values`: Some(1), `max_size`: Some(56), added: 551, mode: `MaxEncodedLen`)
 	fn bump() -> Weight {
 		// Proof Size summary in bytes:
-		//  Measured:  `224`
+		//  Measured:  `86`
 		//  Estimated: `1541`
-		// Minimum execution time: 12_480_000 picoseconds.
-		Weight::from_parts(12_791_000, 0)
+		// Minimum execution time: 11_220_000 picoseconds.
+		Weight::from_parts(11_630_000, 0)
 			.saturating_add(Weight::from_parts(0, 1541))
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
-	/// Storage: `FellowshipSalary::Status` (r:1 w:0)
-	/// Proof: `FellowshipSalary::Status` (`max_values`: Some(1), `max_size`: Some(56), added: 551, mode: `MaxEncodedLen`)
-	/// Storage: `FellowshipCollective::Members` (r:1 w:0)
-	/// Proof: `FellowshipCollective::Members` (`max_values`: None, `max_size`: Some(42), added: 2517, mode: `MaxEncodedLen`)
-	/// Storage: `FellowshipSalary::Claimant` (r:1 w:1)
-	/// Proof: `FellowshipSalary::Claimant` (`max_values`: None, `max_size`: Some(86), added: 2561, mode: `MaxEncodedLen`)
+	/// Storage: `SecretarySalary::Status` (r:1 w:0)
+	/// Proof: `SecretarySalary::Status` (`max_values`: Some(1), `max_size`: Some(56), added: 551, mode: `MaxEncodedLen`)
+	/// Storage: `SecretaryCollective::Members` (r:1 w:0)
+	/// Proof: `SecretaryCollective::Members` (`max_values`: None, `max_size`: Some(42), added: 2517, mode: `MaxEncodedLen`)
+	/// Storage: `SecretarySalary::Claimant` (r:1 w:1)
+	/// Proof: `SecretarySalary::Claimant` (`max_values`: None, `max_size`: Some(86), added: 2561, mode: `MaxEncodedLen`)
 	fn induct() -> Weight {
 		// Proof Size summary in bytes:
-		//  Measured:  `395`
+		//  Measured:  `295`
 		//  Estimated: `3551`
-		// Minimum execution time: 21_960_000 picoseconds.
-		Weight::from_parts(22_470_000, 0)
+		// Minimum execution time: 22_010_000 picoseconds.
+		Weight::from_parts(22_620_000, 0)
 			.saturating_add(Weight::from_parts(0, 3551))
 			.saturating_add(T::DbWeight::get().reads(3))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
-	/// Storage: `FellowshipCollective::Members` (r:1 w:0)
-	/// Proof: `FellowshipCollective::Members` (`max_values`: None, `max_size`: Some(42), added: 2517, mode: `MaxEncodedLen`)
-	/// Storage: `FellowshipSalary::Status` (r:1 w:1)
-	/// Proof: `FellowshipSalary::Status` (`max_values`: Some(1), `max_size`: Some(56), added: 551, mode: `MaxEncodedLen`)
-	/// Storage: `FellowshipSalary::Claimant` (r:1 w:1)
-	/// Proof: `FellowshipSalary::Claimant` (`max_values`: None, `max_size`: Some(86), added: 2561, mode: `MaxEncodedLen`)
+	/// Storage: `SecretaryCollective::Members` (r:1 w:0)
+	/// Proof: `SecretaryCollective::Members` (`max_values`: None, `max_size`: Some(42), added: 2517, mode: `MaxEncodedLen`)
+	/// Storage: `SecretarySalary::Status` (r:1 w:1)
+	/// Proof: `SecretarySalary::Status` (`max_values`: Some(1), `max_size`: Some(56), added: 551, mode: `MaxEncodedLen`)
+	/// Storage: `SecretarySalary::Claimant` (r:1 w:1)
+	/// Proof: `SecretarySalary::Claimant` (`max_values`: None, `max_size`: Some(86), added: 2561, mode: `MaxEncodedLen`)
 	fn register() -> Weight {
 		// Proof Size summary in bytes:
-		//  Measured:  `462`
+		//  Measured:  `362`
 		//  Estimated: `3551`
-		// Minimum execution time: 25_920_000 picoseconds.
-		Weight::from_parts(26_510_000, 0)
+		// Minimum execution time: 26_080_000 picoseconds.
+		Weight::from_parts(26_780_000, 0)
 			.saturating_add(Weight::from_parts(0, 3551))
 			.saturating_add(T::DbWeight::get().reads(3))
 			.saturating_add(T::DbWeight::get().writes(2))
 	}
-	/// Storage: `FellowshipSalary::Status` (r:1 w:1)
-	/// Proof: `FellowshipSalary::Status` (`max_values`: Some(1), `max_size`: Some(56), added: 551, mode: `MaxEncodedLen`)
-	/// Storage: `FellowshipSalary::Claimant` (r:1 w:1)
-	/// Proof: `FellowshipSalary::Claimant` (`max_values`: None, `max_size`: Some(86), added: 2561, mode: `MaxEncodedLen`)
-	/// Storage: `FellowshipCollective::Members` (r:1 w:0)
-	/// Proof: `FellowshipCollective::Members` (`max_values`: None, `max_size`: Some(42), added: 2517, mode: `MaxEncodedLen`)
+	/// Storage: `SecretarySalary::Status` (r:1 w:1)
+	/// Proof: `SecretarySalary::Status` (`max_values`: Some(1), `max_size`: Some(56), added: 551, mode: `MaxEncodedLen`)
+	/// Storage: `SecretarySalary::Claimant` (r:1 w:1)
+	/// Proof: `SecretarySalary::Claimant` (`max_values`: None, `max_size`: Some(86), added: 2561, mode: `MaxEncodedLen`)
+	/// Storage: `SecretaryCollective::Members` (r:1 w:0)
+	/// Proof: `SecretaryCollective::Members` (`max_values`: None, `max_size`: Some(42), added: 2517, mode: `MaxEncodedLen`)
 	/// Storage: `ParachainInfo::ParachainId` (r:1 w:0)
 	/// Proof: `ParachainInfo::ParachainId` (`max_values`: Some(1), `max_size`: Some(4), added: 499, mode: `MaxEncodedLen`)
 	/// Storage: `PolkadotXcm::QueryCounter` (r:1 w:1)
@@ -124,20 +124,20 @@ impl<T: frame_system::Config> pallet_salary::WeightInfo for WeightInfo<T> {
 	/// Proof: `PolkadotXcm::Queries` (`max_values`: None, `max_size`: None, mode: `Measured`)
 	fn payout() -> Weight {
 		// Proof Size summary in bytes:
-		//  Measured:  `696`
-		//  Estimated: `4161`
-		// Minimum execution time: 73_611_000 picoseconds.
-		Weight::from_parts(74_421_000, 0)
-			.saturating_add(Weight::from_parts(0, 4161))
+		//  Measured:  `734`
+		//  Estimated: `4199`
+		// Minimum execution time: 74_540_000 picoseconds.
+		Weight::from_parts(75_711_000, 0)
+			.saturating_add(Weight::from_parts(0, 4199))
 			.saturating_add(T::DbWeight::get().reads(9))
 			.saturating_add(T::DbWeight::get().writes(6))
 	}
-	/// Storage: `FellowshipSalary::Status` (r:1 w:1)
-	/// Proof: `FellowshipSalary::Status` (`max_values`: Some(1), `max_size`: Some(56), added: 551, mode: `MaxEncodedLen`)
-	/// Storage: `FellowshipSalary::Claimant` (r:1 w:1)
-	/// Proof: `FellowshipSalary::Claimant` (`max_values`: None, `max_size`: Some(86), added: 2561, mode: `MaxEncodedLen`)
-	/// Storage: `FellowshipCollective::Members` (r:1 w:0)
-	/// Proof: `FellowshipCollective::Members` (`max_values`: None, `max_size`: Some(42), added: 2517, mode: `MaxEncodedLen`)
+	/// Storage: `SecretarySalary::Status` (r:1 w:1)
+	/// Proof: `SecretarySalary::Status` (`max_values`: Some(1), `max_size`: Some(56), added: 551, mode: `MaxEncodedLen`)
+	/// Storage: `SecretarySalary::Claimant` (r:1 w:1)
+	/// Proof: `SecretarySalary::Claimant` (`max_values`: None, `max_size`: Some(86), added: 2561, mode: `MaxEncodedLen`)
+	/// Storage: `SecretaryCollective::Members` (r:1 w:0)
+	/// Proof: `SecretaryCollective::Members` (`max_values`: None, `max_size`: Some(42), added: 2517, mode: `MaxEncodedLen`)
 	/// Storage: `ParachainInfo::ParachainId` (r:1 w:0)
 	/// Proof: `ParachainInfo::ParachainId` (`max_values`: Some(1), `max_size`: Some(4), added: 499, mode: `MaxEncodedLen`)
 	/// Storage: `PolkadotXcm::QueryCounter` (r:1 w:1)
@@ -156,27 +156,27 @@ impl<T: frame_system::Config> pallet_salary::WeightInfo for WeightInfo<T> {
 	/// Proof: `PolkadotXcm::Queries` (`max_values`: None, `max_size`: None, mode: `Measured`)
 	fn payout_other() -> Weight {
 		// Proof Size summary in bytes:
-		//  Measured:  `696`
-		//  Estimated: `4161`
-		// Minimum execution time: 73_790_000 picoseconds.
-		Weight::from_parts(74_741_000, 0)
-			.saturating_add(Weight::from_parts(0, 4161))
+		//  Measured:  `734`
+		//  Estimated: `4199`
+		// Minimum execution time: 75_230_000 picoseconds.
+		Weight::from_parts(76_961_000, 0)
+			.saturating_add(Weight::from_parts(0, 4199))
 			.saturating_add(T::DbWeight::get().reads(9))
 			.saturating_add(T::DbWeight::get().writes(6))
 	}
-	/// Storage: `FellowshipSalary::Status` (r:1 w:1)
-	/// Proof: `FellowshipSalary::Status` (`max_values`: Some(1), `max_size`: Some(56), added: 551, mode: `MaxEncodedLen`)
-	/// Storage: `FellowshipSalary::Claimant` (r:1 w:1)
-	/// Proof: `FellowshipSalary::Claimant` (`max_values`: None, `max_size`: Some(86), added: 2561, mode: `MaxEncodedLen`)
+	/// Storage: `SecretarySalary::Status` (r:1 w:1)
+	/// Proof: `SecretarySalary::Status` (`max_values`: Some(1), `max_size`: Some(56), added: 551, mode: `MaxEncodedLen`)
+	/// Storage: `SecretarySalary::Claimant` (r:1 w:1)
+	/// Proof: `SecretarySalary::Claimant` (`max_values`: None, `max_size`: Some(86), added: 2561, mode: `MaxEncodedLen`)
 	/// Storage: `PolkadotXcm::Queries` (r:1 w:1)
 	/// Proof: `PolkadotXcm::Queries` (`max_values`: None, `max_size`: None, mode: `Measured`)
 	fn check_payment() -> Weight {
 		// Proof Size summary in bytes:
-		//  Measured:  `336`
-		//  Estimated: `3801`
-		// Minimum execution time: 28_411_000 picoseconds.
-		Weight::from_parts(29_400_000, 0)
-			.saturating_add(Weight::from_parts(0, 3801))
+		//  Measured:  `198`
+		//  Estimated: `3663`
+		// Minimum execution time: 27_920_000 picoseconds.
+		Weight::from_parts(28_540_000, 0)
+			.saturating_add(Weight::from_parts(0, 3663))
 			.saturating_add(T::DbWeight::get().reads(3))
 			.saturating_add(T::DbWeight::get().writes(3))
 	}
