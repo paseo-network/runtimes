@@ -874,6 +874,7 @@ dependencies = [
  "primitive-types 0.12.2",
  "scale-info",
  "serde_json",
+ "snowbridge-inbound-queue-primitives",
  "sp-api",
  "sp-block-builder",
  "sp-consensus-aura",
