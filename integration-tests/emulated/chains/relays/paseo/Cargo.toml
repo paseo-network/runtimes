@@ -15,7 +15,7 @@ sp-runtime = { workspace = true, default-features = true }
 authority-discovery-primitives = { workspace = true, default-features = true }
 babe-primitives = { workspace = true, default-features = true }
 beefy-primitives = { workspace = true, default-features = true }
-grandpa = { workspace = true, default-features = true }
+grandpa = { workspace = true }
 pallet-staking = { workspace = true, default-features = true }
 
 # Polkadot
@@ -27,7 +27,7 @@ emulated-integration-tests-common = { workspace = true }
 
 # Runtimes
 paseo-runtime-constants = { workspace = true, default-features = true }
-paseo-runtime = { workspace = true, default-features = true }
+paseo-runtime = { workspace = true }
 
 [features]
 runtime-benchmarks = [
@@ -38,4 +38,3 @@ runtime-benchmarks = [
 	"paseo-runtime/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 ]
-

@@ -30,6 +30,7 @@ pub fn genesis() -> Storage {
 		system: collectives_paseo_runtime::SystemConfig::default(),
 		balances: collectives_paseo_runtime::BalancesConfig {
 			balances: accounts::init_balances().iter().cloned().map(|k| (k, ED * 4096)).collect(),
+			dev_accounts: None,
 		},
 		parachain_info: collectives_paseo_runtime::ParachainInfoConfig {
 			parachain_id: PARA_ID.into(),
