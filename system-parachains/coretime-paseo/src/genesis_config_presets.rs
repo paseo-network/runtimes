@@ -38,6 +38,7 @@ fn coretime_paseo_genesis(
 				.cloned()
 				.map(|k| (k, CORETIME_POLKADOT_ED * 4096 * 4096))
 				.collect(),
+			dev_accounts: None,
 		},
 		"parachainInfo": ParachainInfoConfig {
 			parachain_id: id,
@@ -77,7 +78,14 @@ fn coretime_paseo_local_testnet_genesis(para_id: ParaId) -> serde_json::Value {
 }
 
 fn coretime_paseo_tot_genesis(para_id: ParaId) -> serde_json::Value {
-	coretime_paseo_genesis(invulnerables_tot(), testnet_accounts(), para_id)
+	coretime_paseo_genesis(
+		invulnerables_tot(),
+		testnet_accounts_with([
+			// Make sure `StakingPot` is funded for benchmarking purposes.
+			StakingPot::get(),
+		]),
+		para_id,
+	)
 }
 
 fn coretime_paseo_live_genesis(para_id: ParaId) -> serde_json::Value {
