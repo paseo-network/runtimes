@@ -74,7 +74,7 @@ const TRACKS_DATA: [pallet_referenda::Track<u16, Balance, BlockNumber>; 16] = [
 		info: pallet_referenda::TrackInfo {
 			name: s("root"),
 			max_deciding: 1,
-			decision_deposit: 100 * GRAND,
+			decision_deposit: 1000 * GRAND,
 			prepare_period: 2 * HOURS,
 			decision_period: 28 * DAYS,
 			confirm_period: 24 * HOURS,
@@ -349,8 +349,8 @@ mod tests {
 	fn ensure_root_track_configuration() {
 		let root_track = TRACKS_DATA.get(0).unwrap();
 		assert_eq!(root_track.id, 0);
-		// Ensure Root track decision deposit is 100K.
-		assert_eq!(root_track.info.decision_deposit, 100*GRAND);
+		// Ensure Root track decision deposit is 1M.
+		assert_eq!(root_track.info.decision_deposit, 1000*GRAND);
 		// Ensure Root track is configured with a linear curve set at 100%
 		// for both support and approval.
 		assert_eq!(
