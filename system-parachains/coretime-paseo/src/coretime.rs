@@ -29,11 +29,15 @@ use frame_support::{
 };
 use frame_system::Pallet as System;
 use pallet_broker::{
-	CoreAssignment, CoreIndex, CoretimeInterface, PartsOf57600, RCBlockNumberOf, TaskId,
+	AdaptPrice, AdaptedPrices, CoreAssignment, CoreIndex, CoretimeInterface, PartsOf57600,
+	RCBlockNumberOf, SalePerformance, TaskId,
 };
 use parachains_common::{AccountId, Balance};
 use paseo_runtime_constants::{system_parachain::coretime, time::DAYS as RELAY_DAYS};
-use sp_runtime::traits::{AccountIdConversion, MaybeConvert};
+use sp_runtime::{
+	traits::{AccountIdConversion, MaybeConvert},
+	FixedPointOperand, FixedU64, SaturatedConversion, Saturating,
+};
 use xcm::latest::prelude::*;
 use xcm_config::LocationToAccountId;
 use xcm_executor::traits::{ConvertLocation, TransactAsset};
@@ -347,4 +351,27 @@ impl pallet_broker::Config for Runtime {
 	type MaxAutoRenewals = ConstU32<100>;
 	type PriceAdapter = pallet_broker::MinimumPrice<Balance, MinimumEndPrice>;
 	type MinimumCreditPurchase = MinimumCreditPurchase;
+}
+
+/// Simple implementation of `AdaptPrice` fitting the needs of a testnet environment.
+pub struct TestnetAdjustedAdapter<Balance>(core::marker::PhantomData<Balance>);
+
+impl<Balance: FixedPointOperand> AdaptPrice<Balance> for TestnetAdjustedAdapter<Balance> {
+	fn leadin_factor_at(when: FixedU64) -> FixedU64 {
+		if when <= FixedU64::from_rational(1, 2) {
+			FixedU64::from(100).saturating_sub(when.saturating_mul(180.into()))
+		} else {
+			FixedU64::from(19).saturating_sub(when.saturating_mul(18.into()))
+		}
+	}
+
+	fn adapt_price(_performance: SalePerformance<Balance>) -> AdaptedPrices<Balance> {
+		// Always return fixed prices regardless of previous sale performance
+		// Use the initial base price from configuration
+
+		let end_price = Balance::saturated_from(5000 * UNITS);
+		let target_price = Balance::saturated_from(1000 * UNITS);
+
+		AdaptedPrices { end_price, target_price }
+	}
 }
