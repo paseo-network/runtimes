@@ -36,7 +36,8 @@ pub use bp_messages::LegacyLaneId;
 pub use emulated_integration_tests_common::{
 	accounts::{ALICE, BOB},
 	impls::Inspect,
-	test_parachain_is_trusted_teleporter,
+	test_parachain_is_trusted_teleporter, test_parachain_is_trusted_teleporter_for_relay,
+	test_relay_is_trusted_teleporter,
 	xcm_emulator::{
 		assert_expected_events, bx, helpers::weight_within_threshold, Chain, Parachain as Para,
 		RelayChain as Relay, Test, TestArgs, TestContext, TestExt,
@@ -63,7 +64,7 @@ pub use paseo_system_emulated_network::{
 	},
 	paseo_emulated_chain::{
 		genesis::ED as POLKADOT_ED,
-		paseo_runtime::xcm_config::UniversalLocation as PaseoRelayUniversalLocation,
+		paseo_runtime::{xcm_config::UniversalLocation as PaseoRelayUniversalLocation, Dmp},
 		PaseoRelayPallet as PaseoPallet,
 	},
 	AssetHubPaseoPara as AssetHubPaseo,

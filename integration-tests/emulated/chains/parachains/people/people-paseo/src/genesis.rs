@@ -32,6 +32,7 @@ pub fn genesis() -> Storage {
 	let genesis_config = people_paseo_runtime::RuntimeGenesisConfig {
 		balances: people_paseo_runtime::BalancesConfig {
 			balances: accounts::init_balances().iter().cloned().map(|k| (k, ENDOWMENT)).collect(),
+			dev_accounts: None,
 		},
 		system: people_paseo_runtime::SystemConfig::default(),
 		parachain_info: people_paseo_runtime::ParachainInfoConfig {

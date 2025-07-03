@@ -22,7 +22,7 @@ use bridge_hub_paseo_runtime::{
 	bridge_to_ethereum_config::EthereumGatewayAddress, EthereumBeaconClient, EthereumInboundQueue,
 	Runtime, RuntimeOrigin,
 };
-use codec::{Decode, Encode};
+use codec::{Decode, DecodeWithMemTracking, Encode};
 use emulated_integration_tests_common::{xcm_emulator::ConvertLocation, RESERVABLE_ASSET_ID};
 use frame_support::pallet_prelude::TypeInfo;
 use hex_literal::hex;
@@ -35,17 +35,13 @@ use paseo_system_emulated_network::{
 use snowbridge_beacon_primitives::{
 	types::deneb, AncestryProof, BeaconHeader, ExecutionProof, VersionedExecutionPayloadHeader,
 };
-use snowbridge_core::{
-	gwei,
-	inbound::{InboundQueueFixture, Log, Message, Proof},
-	meth,
-	outbound::OperatingMode,
-	AssetMetadata, Rewards, TokenIdOf,
+use snowbridge_core::{gwei, meth, AssetMetadata, Rewards, TokenIdOf};
+use snowbridge_inbound_queue_primitives::{
+	v1::{Command, Destination, MessageV1, VersionedMessage},
+	EthereumLocationsConverterFor, EventFixture, EventProof, Log, Proof,
 };
+use snowbridge_outbound_queue_primitives::OperatingMode;
 use snowbridge_pallet_system::PricingParametersOf;
-use snowbridge_router_primitives::inbound::{
-	Command, Destination, EthereumLocationsConverterFor, MessageV1, VersionedMessage,
-};
 use sp_core::{H160, H256, U256};
 use sp_runtime::{DispatchError::Token, FixedU128, TokenError::FundsUnavailable};
 use system_parachains_constants::paseo::currency::UNITS;
@@ -61,7 +57,7 @@ const TOKEN_AMOUNT: u128 = 20_000_000_000_000;
 const AH_BASE_FEE: u128 = 2_750_872_500_000u128;
 const ETHER_TOKEN_ADDRESS: [u8; 20] = [0; 20];
 
-#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, TypeInfo)]
+#[derive(Encode, Decode, DecodeWithMemTracking, Debug, PartialEq, Eq, Clone, TypeInfo)]
 pub enum ControlCall {
 	#[codec(index = 3)]
 	CreateAgent,
@@ -70,13 +66,13 @@ pub enum ControlCall {
 }
 
 #[allow(clippy::large_enum_variant)]
-#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, TypeInfo)]
+#[derive(Encode, Decode, DecodeWithMemTracking, Debug, PartialEq, Eq, Clone, TypeInfo)]
 pub enum SnowbridgeControl {
 	#[codec(index = 83)]
 	Control(ControlCall),
 }
 
-pub fn send_inbound_message(fixture: InboundQueueFixture) -> DispatchResult {
+pub fn send_inbound_message(fixture: EventFixture) -> DispatchResult {
 	EthereumBeaconClient::store_finalized_header(
 		fixture.finalized_header,
 		fixture.block_roots_root,
@@ -85,7 +81,7 @@ pub fn send_inbound_message(fixture: InboundQueueFixture) -> DispatchResult {
 
 	EthereumInboundQueue::submit(
 		RuntimeOrigin::signed(BridgeHubPaseoSender::get()),
-		fixture.message,
+		fixture.event,
 	)
 }
 
@@ -638,9 +634,9 @@ fn ethereum_sovereign_account() -> AccountId {
 	EthereumLocationsConverterFor::<AccountId>::convert_location(&origin_location).unwrap()
 }
 
-fn make_register_token_message() -> InboundQueueFixture {
-	InboundQueueFixture{
-		message: Message {
+fn make_register_token_message() -> EventFixture {
+	EventFixture{
+		event: EventProof {
 			event_log: Log{
 				address: hex!("eda338e4dc46038493b885327842fd3e301cab39").into(),
 				topics: vec![

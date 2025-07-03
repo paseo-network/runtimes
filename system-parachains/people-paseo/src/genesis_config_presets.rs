@@ -35,6 +35,7 @@ fn people_paseo_genesis(
 				.cloned()
 				.map(|k| (k, PEOPLE_POLKADOT_ED * 4096 * 4096))
 				.collect(),
+			dev_accounts: None,
 		},
 		"parachainInfo": ParachainInfoConfig {
 			parachain_id: id,
@@ -74,7 +75,14 @@ pub fn people_paseo_local_testnet_genesis(para_id: ParaId) -> serde_json::Value 
 }
 
 fn people_paseo_development_genesis(para_id: ParaId) -> serde_json::Value {
-	people_paseo_local_testnet_genesis(para_id)
+	people_paseo_genesis(
+		invulnerables(),
+		testnet_accounts_with([
+			// Make sure `StakingPot` is funded for benchmarking purposes.
+			StakingPot::get(),
+		]),
+		para_id,
+	)
 }
 
 /// Provides the names of the predefined genesis configs for this runtime.
