@@ -375,15 +375,10 @@ impl<Balance: FixedPointOperand, MinPrice: Get<Balance>, TargetPrice: Get<Balanc
 	}
 
 	fn adapt_price(performance: SalePerformance<Balance>) -> AdaptedPrices<Balance> {
-		let mut proposal = CenterTargetPrice::<Balance>::adapt_price(performance);
-		let min_price = MinPrice::get();
+		let end_price = MinPrice::get();
 		let target_price = TargetPrice::get();
-		// Fix floor price:
-		proposal.end_price = min_price;
-		// Fix target price:
-		proposal.target_price = target_price;
 
-		proposal
+		AdaptedPrices { end_price, target_price }
 	}
 }
 #[cfg(test)]
