@@ -19,6 +19,7 @@ bridge-hub-paseo-runtime = { path = "../system-parachains/bridge-hub-paseo", def
 people-paseo-runtime = { path = "../system-parachains/people-paseo", default-features = true }
 coretime-paseo-runtime = { path = "../system-parachains/coretime-paseo", default-features = true }
 collectives-paseo-runtime = { path = "../system-parachains/collectives-paseo", default-features = true }
+passet-hub-runtime = { git = "https://github.com/paseo-network/passet-hub.git", default-features = false}
 
 system-parachains-constants = { path = "../system-parachains/constants", default-features = true }
 

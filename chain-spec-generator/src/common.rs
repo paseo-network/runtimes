@@ -19,7 +19,7 @@ use crate::{
 	relay_chain_specs::PaseoChainSpec,
 	system_parachains_specs::{
 		AssetHubPaseoChainSpec, BridgeHubPaseoChainSpec, CollectivesPaseoChainSpec,
-		CoretimePaseoChainSpec, PeoplePaseoChainSpec,
+		CoretimePaseoChainSpec, PassethubChainSpec, PeoplePaseoChainSpec,
 	},
 	ChainSpec,
 };
@@ -54,6 +54,7 @@ pub fn from_json_file(filepath: &str, supported: String) -> Result<Box<dyn Chain
 		x if x.starts_with("paseo-collectives") => {
 			Ok(Box::new(CollectivesPaseoChainSpec::from_json_file(path)?))
 		},
+		x if x.starts_with("passet-hub") => Ok(Box::new(PassethubChainSpec::from_json_file(path)?)),
 		_ => Err(format!("Unknown chain 'id' in json file. Only supported: {supported}'")),
 	}
 }

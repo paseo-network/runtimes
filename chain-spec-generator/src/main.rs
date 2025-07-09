@@ -69,6 +69,10 @@ fn main() -> Result<(), String> {
 				"people-paseo-local",
 				Box::new(|| system_parachains_specs::people_paseo_local_testnet_config()) as Box<_>,
 			),
+			(
+				"passet-hub-local",
+				Box::new(|| system_parachains_specs::passet_hub_local_config()) as Box<_>,
+			),
 		]);
 
 	if let Some(function) = supported_chains.get(&*cli.chain) {
