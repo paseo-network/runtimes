@@ -22,16 +22,16 @@
 //! BLOCK-NUM: `BlockId::Number(9653477)`
 //! SKIP-WRITE: `false`, SKIP-READ: `false`, WARMUPS: `1`
 //! STATE-VERSION: `V0`, STATE-CACHE-SIZE: `0`
-//! WEIGHT-PATH: `runtime/polkadot/constants/src/weights/`
+//! WEIGHT-PATH: `runtime/paseo/constants/src/weights/`
 //! METRIC: `Average`, WEIGHT-MUL: `1.1`, WEIGHT-ADD: `0`
 
 // Executed Command:
-//   ./target/production/polkadot
+//   ./target/production/paseo
 //   benchmark-storage
 //   --db=paritydb
 //   --state-version=0
 //   --mul=1.1
-//   --weight-path=runtime/polkadot/constants/src/weights/
+//   --weight-path=runtime/paseo/constants/src/weights/
 
 /// Storage DB weights for the `Paseo` runtime and `ParityDb`.
 pub mod constants {

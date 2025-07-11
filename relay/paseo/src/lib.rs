@@ -34,7 +34,7 @@ use polkadot_runtime_common::{
 		ContainsParts as ContainsLocationParts, DealWithFees, LocatableAssetConverter,
 		VersionedLocatableAsset, VersionedLocationConverter,
 	},
-	paras_registrar, paras_sudo_wrapper, prod_or_fast, slots,
+	paras_registrar, prod_or_fast, slots,
 	traits::OnSwap,
 	BlockHashCount, BlockLength, CurrencyToVote, SlowAdjustingFeeUpdate,
 };
@@ -57,6 +57,7 @@ use runtime_parachains::{
 	shared as parachains_shared,
 };
 
+use ah_migration::phase1 as ahm_phase1;
 use authority_discovery_primitives::AuthorityId as AuthorityDiscoveryId;
 use beefy_primitives::{
 	ecdsa_crypto::{AuthorityId as BeefyId, Signature as BeefySignature},
@@ -75,9 +76,9 @@ use frame_support::{
 	traits::{
 		fungible::HoldConsideration,
 		tokens::{imbalance::ResolveTo, UnityOrOuterConversion},
-		ConstU32, ConstU8, EitherOf, EitherOfDiverse, Everything, FromContains, Get,
-		InstanceFilter, KeyOwnerProofSystem, LinearStoragePrice, PrivilegeCmp, ProcessMessage,
-		ProcessMessageError, WithdrawReasons,
+		ConstU32, ConstU8, Contains, EitherOf, EitherOfDiverse, Equals, Everything, FromContains,
+		Get, InstanceFilter, KeyOwnerProofSystem, LinearStoragePrice, OnRuntimeUpgrade,
+		PrivilegeCmp, ProcessMessage, ProcessMessageError, WithdrawReasons,
 	},
 	weights::{
 		constants::{WEIGHT_PROOF_SIZE_PER_KB, WEIGHT_REF_TIME_PER_MICROS},
@@ -89,6 +90,7 @@ use frame_system::EnsureRoot;
 use pallet_grandpa::{fg_primitives, AuthorityId as GrandpaId};
 use pallet_session::historical as session_historical;
 use pallet_transaction_payment::{FeeDetails, RuntimeDispatchInfo};
+use pallet_xcm::{EnsureXcm, IsVoiceOfBody};
 use polkadot_primitives::{
 	slashing,
 	vstaging::{
@@ -118,6 +120,7 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use xcm::prelude::*;
 use xcm_builder::PayOverXcm;
+use xcm_config::{AssetHubLocation, CollectivesLocation, FellowsBodyId};
 use xcm_runtime_apis::{
 	dry_run::{CallDryRunEffects, Error as XcmDryRunApiError, XcmDryRunEffects},
 	fees::Error as XcmPaymentApiError,
@@ -144,6 +147,7 @@ mod bag_thresholds;
 // Genesis preset configurations.
 pub mod genesis_config_presets;
 // Governance configurations.
+pub mod ah_migration;
 pub mod governance;
 use governance::{
 	pallet_custom_origins, AuctionAdmin, FellowshipAdmin, GeneralAdmin, LeaseAdmin, StakingAdmin,
@@ -166,9 +170,9 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: alloc::borrow::Cow::Borrowed("paseo"),
-	impl_name: alloc::borrow::Cow::Borrowed("paseo-testnet"),
+	impl_name: alloc::borrow::Cow::Borrowed("parity-paseo"), // TODO check
 	authoring_version: 0,
-	spec_version: 1_006_000,
+	spec_version: 1_006_001,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 26,
@@ -194,7 +198,7 @@ parameter_types! {
 }
 
 impl frame_system::Config for Runtime {
-	type BaseCallFilter = Everything;
+	type BaseCallFilter = RcMigrator;
 	type BlockWeights = BlockWeights;
 	type BlockLength = BlockLength;
 	type RuntimeOrigin = RuntimeOrigin;
@@ -229,6 +233,7 @@ impl frame_system::Config for Runtime {
 parameter_types! {
 	pub MaximumSchedulerWeight: Weight = Perbill::from_percent(80) *
 		BlockWeights::get().max_block;
+	pub ZeroWeight: Weight = Weight::zero();
 	pub const MaxScheduledPerBlock: u32 = 50;
 	pub const NoPreimagePostponement: Option<u32> = Some(10);
 }
@@ -239,7 +244,7 @@ pub struct OriginPrivilegeCmp;
 impl PrivilegeCmp<OriginCaller> for OriginPrivilegeCmp {
 	fn cmp_privilege(left: &OriginCaller, right: &OriginCaller) -> Option<Ordering> {
 		if left == right {
-			return Some(Ordering::Equal)
+			return Some(Ordering::Equal);
 		}
 
 		match (left, right) {
@@ -256,7 +261,8 @@ impl pallet_scheduler::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type PalletsOrigin = OriginCaller;
 	type RuntimeCall = RuntimeCall;
-	type MaximumWeight = MaximumSchedulerWeight;
+	type MaximumWeight =
+		pallet_rc_migrator::types::LeftOrRight<RcMigrator, ZeroWeight, MaximumSchedulerWeight>;
 	// The goal of having ScheduleOrigin include AuctionAdmin is to allow the auctions track of
 	// OpenGov to schedule periodic auctions.
 	// Also allow Treasurer to schedule recurring payments.
@@ -289,7 +295,11 @@ impl pallet_preimage::Config for Runtime {
 }
 
 parameter_types! {
-	pub EpochDuration: u64 = EPOCH_DURATION_IN_SLOTS as u64;
+	pub EpochDuration: u64 = prod_or_fast!(
+		EPOCH_DURATION_IN_SLOTS as u64,
+		2 * MINUTES as u64,
+		"DOT_EPOCH_DURATION" // TODO check
+	);
 	pub const ExpectedBlockTime: Moment = MILLISECS_PER_BLOCK;
 	pub ReportLongevity: u64 =
 		BondingDuration::get() as u64 * SessionsPerEra::get() as u64 * EpochDuration::get();
@@ -485,7 +495,7 @@ impl pallet_session::Config for Runtime {
 	type SessionHandler = <SessionKeys as OpaqueKeys>::KeyTypeIdProviders;
 	type Keys = SessionKeys;
 	type WeightInfo = weights::pallet_session::WeightInfo<Runtime>;
-	type DisablingStrategy = pallet_session::disabling::UpToLimitDisablingStrategy;
+	type DisablingStrategy = pallet_session::disabling::UpToLimitWithReEnablingDisablingStrategy;
 }
 
 impl pallet_session::historical::Config for Runtime {
@@ -645,7 +655,7 @@ impl pallet_staking::EraPayout<Balance> for EraPayout {
 		let relative_era_len =
 			FixedU128::from_rational(era_duration_millis.into(), MILLISECONDS_PER_YEAR.into());
 
-		// TI at the time of execution of [Referendum 1139](https://polkadot.subsquare.io/referenda/1139), block hash: `0x39422610299a75ef69860417f4d0e1d94e77699f45005645ffc5e8e619950f9f`.
+		// TI at the time of execution of [Referendum 1139](https://paseo.subsquare.io/referenda/1139), block hash: `0x39422610299a75ef69860417f4d0e1d94e77699f45005645ffc5e8e619950f9f`.
 		let fixed_total_issuance: i128 = 1_487_502_468_008_283_162;
 		let fixed_inflation_rate = FixedU128::from_rational(8, 100);
 		let yearly_emission = fixed_inflation_rate.saturating_mul_int(fixed_total_issuance);
@@ -685,6 +695,8 @@ parameter_types! {
 	pub TreasuryAccount: AccountId = Treasury::account_id();
 }
 
+// TODO finish checking below here
+
 impl pallet_staking::Config for Runtime {
 	type OldCurrency = Balances;
 	type Currency = Balances;
@@ -715,7 +727,7 @@ impl pallet_staking::Config for Runtime {
 	type BenchmarkingConfig = polkadot_runtime_common::StakingBenchmarkingConfig;
 	type EventListeners = (NominationPools, DelegatedStaking);
 	type WeightInfo = weights::pallet_staking::WeightInfo<Runtime>;
-	type Filter = ();
+	type Filter = pallet_nomination_pools::AllPoolMembers<Runtime>;
 }
 
 impl pallet_fast_unstake::Config for Runtime {
@@ -726,7 +738,10 @@ impl pallet_fast_unstake::Config for Runtime {
 	type ControlOrigin = EnsureRoot<AccountId>;
 	type Staking = Staking;
 	type MaxErasToCheckPerBlock = ConstU32<1>;
-	type WeightInfo = weights::pallet_fast_unstake::WeightInfo<Runtime>;
+	type WeightInfo = pallet_rc_migrator::types::MaxOnIdleOrInner<
+		RcMigrator,
+		weights::pallet_fast_unstake::WeightInfo<Runtime>,
+	>;
 }
 
 parameter_types! {
@@ -734,9 +749,10 @@ parameter_types! {
 	pub const ProposalBondMinimum: Balance = 100 * DOLLARS;
 	pub const ProposalBondMaximum: Balance = 500 * DOLLARS;
 	pub const SpendPeriod: BlockNumber = 24 * DAYS;
+	pub const DisableSpends: BlockNumber = BlockNumber::MAX;
 	pub const Burn: Permill = Permill::from_percent(1);
 	pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
-	pub const PayoutSpendPeriod: BlockNumber = 30 * DAYS;
+	pub const PayoutSpendPeriod: BlockNumber = 90 * DAYS;
 	// The asset's interior location for the paying account. This is the Treasury
 	// pallet instance (which sits at index 19).
 	pub TreasuryInteriorLocation: InteriorLocation = PalletInstance(TREASURY_PALLET_ID).into();
@@ -758,7 +774,8 @@ impl pallet_treasury::Config for Runtime {
 	type Currency = Balances;
 	type RejectOrigin = EitherOfDiverse<EnsureRoot<AccountId>, Treasurer>;
 	type RuntimeEvent = RuntimeEvent;
-	type SpendPeriod = SpendPeriod;
+	type SpendPeriod =
+		pallet_rc_migrator::types::LeftOrRight<RcMigrator, DisableSpends, SpendPeriod>;
 	type Burn = Burn;
 	type BurnDestination = ();
 	type SpendFunds = Bounties;
@@ -788,7 +805,8 @@ impl pallet_treasury::Config for Runtime {
 parameter_types! {
 	pub const BountyDepositBase: Balance = DOLLARS;
 	pub const BountyDepositPayoutDelay: BlockNumber = 0;
-	pub const BountyUpdatePeriod: BlockNumber = 90 * DAYS;
+	// Bounties expire after 10 years.
+	pub const BountyUpdatePeriod: BlockNumber = 10 * 12 * 30 * DAYS;
 	pub const MaximumReasonLength: u32 = 16384;
 	pub const CuratorDepositMultiplier: Permill = Permill::from_percent(50);
 	pub const CuratorDepositMin: Balance = 10 * DOLLARS;
@@ -950,7 +968,7 @@ parameter_types! {
 }
 
 parameter_types! {
-	pub Prefix: &'static [u8] = b"Pay PASs to the Paseo account:";
+	pub Prefix: &'static [u8] = b"Pay DOTs to the Paseo account:";
 }
 
 impl claims::Config for Runtime {
@@ -1034,7 +1052,13 @@ parameter_types! {
 	MaxEncodedLen,
 	Default,
 )]
-pub struct TransparentProxyType<T>(T);
+pub struct TransparentProxyType<T>(pub T);
+
+impl Into<ProxyType> for TransparentProxyType<ProxyType> {
+	fn into(self) -> ProxyType {
+		self.0
+	}
+}
 
 impl<T: scale_info::TypeInfo> scale_info::TypeInfo for TransparentProxyType<T> {
 	type Identity = T::Identity;
@@ -1381,7 +1405,13 @@ impl paras_registrar::Config for Runtime {
 
 parameter_types! {
 	// 12 weeks = 3 months per lease period -> 8 lease periods ~ 2 years
-	pub LeasePeriod: BlockNumber = prod_or_fast!(1 * WEEKS, 1 * DAYS, "PAS_LEASE_PERIOD");
+	pub LeasePeriod: BlockNumber = prod_or_fast!(12 * WEEKS, 12 * WEEKS, "DOT_LEASE_PERIOD");
+	// Paseo Genesis was on May 26, 2020.
+	// Target Parachain Onboarding Date: Dec 15, 2021.
+	// Difference is 568 days.
+	// We want a lease period to start on the target onboarding date.
+	// 568 % (12 * 7) = 64 day offset
+	pub LeaseOffset: BlockNumber = prod_or_fast!(64 * DAYS, 0, "DOT_LEASE_OFFSET");
 }
 
 impl slots::Config for Runtime {
@@ -1460,7 +1490,7 @@ impl pallet_nomination_pools::Config for Runtime {
 	type MaxPointsToBalance = MaxPointsToBalance;
 	type WeightInfo = weights::pallet_nomination_pools::WeightInfo<Self>;
 	type AdminOrigin = EitherOf<EnsureRoot<AccountId>, StakingAdmin>;
-	type Filter = ();
+	type Filter = pallet_staking::AllStakers<Runtime>;
 	type BlockNumberProvider = System;
 }
 
@@ -1535,14 +1565,55 @@ impl OnSwap for SwapLeases {
 	}
 }
 
-impl pallet_sudo::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type RuntimeCall = RuntimeCall;
-	type WeightInfo = weights::pallet_sudo::WeightInfo<Runtime>;
+// Derived from `paseo_asset_hub_runtime::RuntimeBlockWeights`.
+const AH_MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
+	frame_support::weights::constants::WEIGHT_REF_TIME_PER_SECOND.saturating_div(2),
+	polkadot_primitives::MAX_POV_SIZE as u64,
+);
+
+parameter_types! {
+	// Exvivalent to `paseo_asset_hub_runtime::MessageQueueServiceWeight`.
+	pub AhMqServiceWeight: Weight = Perbill::from_percent(50) * AH_MAXIMUM_BLOCK_WEIGHT;
+	// 80 percent of the `AhMqServiceWeight` to leave some space for XCM message base processing.
+	pub AhMigratorMaxWeight: Weight = Perbill::from_percent(80) * AhMqServiceWeight::get(); // ~ 0.2 sec + 2 mb
+	pub RcMigratorMaxWeight: Weight = Perbill::from_percent(50) * BlockWeights::get().max_block; // TODO set the actual max weight
+	pub AhExistentialDeposit: Balance = EXISTENTIAL_DEPOSIT / 100;
+	pub const XcmResponseTimeout: BlockNumber = 30 * DAYS;
+	pub const AhUmpQueuePriorityPattern: (BlockNumber, BlockNumber) = (18, 2);
 }
 
-impl paras_sudo_wrapper::Config for Runtime {}
+impl pallet_rc_migrator::Config for Runtime {
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
+	type RuntimeHoldReason = RuntimeHoldReason;
+	type RuntimeEvent = RuntimeEvent;
+	type ManagerOrigin = EitherOfDiverse<
+		EnsureRoot<AccountId>,
+		EitherOfDiverse<
+			EnsureXcm<IsVoiceOfBody<CollectivesLocation, FellowsBodyId>>,
+			EnsureXcm<Equals<AssetHubLocation>, Location>,
+		>,
+	>;
+	type Currency = Balances;
+	type CheckingAccount = xcm_config::CheckAccount;
+	type SendXcm = xcm_config::XcmRouterWithoutException;
+	type MaxRcWeight = RcMigratorMaxWeight;
+	type MaxAhWeight = AhMigratorMaxWeight;
+	type AhExistentialDeposit = AhExistentialDeposit;
+	type RcWeightInfo = weights::pallet_rc_migrator::WeightInfo<Runtime>;
+	type AhWeightInfo = weights::pallet_ah_migrator::WeightInfo<ah_migration::weights::AhDbConfig>;
+	type RcIntraMigrationCalls = ahm_phase1::CallsEnabledDuringMigration;
+	type RcPostMigrationCalls = ahm_phase1::CallsEnabledAfterMigration;
+	type StakingDelegationReason = ahm_phase1::StakingDelegationReason;
+	type OnDemandPalletId = OnDemandPalletId;
+	type UnprocessedMsgBuffer = ConstU32<5>;
+	type XcmResponseTimeout = XcmResponseTimeout;
+	// TODO: set actual message queue instance when upgraded to sdk/2503
+	type MessageQueue = ();
+	type AhUmpQueuePriorityPattern = AhUmpQueuePriorityPattern;
+}
 
+#[cfg(not(feature = "zombie-bite-sudo"))]
 construct_runtime! {
 	pub enum Runtime
 	{
@@ -1656,10 +1727,142 @@ construct_runtime! {
 		Mmr: pallet_mmr = 201,
 		BeefyMmrLeaf: pallet_beefy_mmr = 202,
 
-		// Sudo.
-		ParaSudoWrapper: paras_sudo_wrapper = 250,
-		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 255,
+		// Relay Chain Migrator
+		// The pallet must be located below `MessageQueue` to get the XCM message acknowledgements
+		// from Asset Hub before we get the `RcMigrator` `on_initialize` executed.
+		RcMigrator: pallet_rc_migrator = 255,
 	}
+}
+
+#[cfg(feature = "zombie-bite-sudo")] // FAIL-CI
+construct_runtime! {
+	pub enum Runtime
+	{
+		// Basic stuff; balances is uncallable initially.
+		System: frame_system = 0,
+		Scheduler: pallet_scheduler = 1,
+		Preimage: pallet_preimage = 10,
+
+		// Babe must be before session.
+		Babe: pallet_babe = 2,
+
+		Timestamp: pallet_timestamp = 3,
+		Indices: pallet_indices = 4,
+		Balances: pallet_balances = 5,
+		TransactionPayment: pallet_transaction_payment = 32,
+
+		// Consensus support.
+		// Authorship must be before session in order to note author in the correct session and era
+		// for staking.
+		Authorship: pallet_authorship = 6,
+		Staking: pallet_staking = 7,
+		Offences: pallet_offences = 8,
+		Historical: session_historical = 33,
+
+		Session: pallet_session = 9,
+		Grandpa: pallet_grandpa = 11,
+		AuthorityDiscovery: pallet_authority_discovery = 13,
+
+		// OpenGov stuff.
+		Treasury: pallet_treasury = 19,
+		ConvictionVoting: pallet_conviction_voting = 20,
+		Referenda: pallet_referenda = 21,
+		Origins: pallet_custom_origins = 22,
+		Whitelist: pallet_whitelist = 23,
+
+		// Claims. Usable initially.
+		Claims: claims = 24,
+		// Vesting. Usable initially, but removed once all vesting is finished.
+		Vesting: pallet_vesting = 25,
+		// Cunning utilities. Usable initially.
+		Utility: pallet_utility = 26,
+
+		// Identity: pallet_identity = 28, (removed post 1.2.8)
+
+		// Proxy module. Late addition.
+		Proxy: pallet_proxy = 29,
+
+		// Multisig dispatch. Late addition.
+		Multisig: pallet_multisig = 30,
+
+		// Bounties modules.
+		Bounties: pallet_bounties = 34,
+		ChildBounties: pallet_child_bounties = 38,
+
+		// Election pallet. Only works with staking, but placed here to maintain indices.
+		ElectionProviderMultiPhase: pallet_election_provider_multi_phase = 36,
+
+		// Provides a semi-sorted list of nominators for staking.
+		VoterList: pallet_bags_list::<Instance1> = 37,
+
+		// Nomination pools: extension to staking.
+		NominationPools: pallet_nomination_pools = 39,
+
+		// Fast unstake pallet: extension to staking.
+		FastUnstake: pallet_fast_unstake = 40,
+
+		// Staking extension for delegation
+		DelegatedStaking: pallet_delegated_staking = 41,
+
+		// Parachains pallets. Start indices at 50 to leave room.
+		ParachainsOrigin: parachains_origin = 50,
+		Configuration: parachains_configuration = 51,
+		ParasShared: parachains_shared = 52,
+		ParaInclusion: parachains_inclusion = 53,
+		ParaInherent: parachains_paras_inherent = 54,
+		ParaScheduler: parachains_scheduler = 55,
+		Paras: parachains_paras = 56,
+		Initializer: parachains_initializer = 57,
+		Dmp: parachains_dmp = 58,
+		// Ump 59
+		Hrmp: parachains_hrmp = 60,
+		ParaSessionInfo: parachains_session_info = 61,
+		ParasDisputes: parachains_disputes = 62,
+		ParasSlashing: parachains_slashing = 63,
+		OnDemand: parachains_on_demand = 64,
+		CoretimeAssignmentProvider: parachains_assigner_coretime = 65,
+
+		// Parachain Onboarding Pallets. Start indices at 70 to leave room.
+		Registrar: paras_registrar = 70,
+		Slots: slots = 71,
+		Auctions: auctions = 72,
+		Crowdloan: crowdloan = 73,
+		Coretime: coretime = 74,
+
+		// State trie migration pallet, only temporary.
+		StateTrieMigration: pallet_state_trie_migration = 98,
+
+		// Pallet for sending XCM.
+		XcmPallet: pallet_xcm = 99,
+
+		// Generalized message queue
+		MessageQueue: pallet_message_queue = 100,
+
+		// Asset rate.
+		AssetRate: pallet_asset_rate = 101,
+
+		// BEEFY Bridges support.
+		Beefy: pallet_beefy = 200,
+		// MMR leaf construction must be after session in order to have a leaf's next_auth_set
+		// refer to block<N>. See issue #160 for details.
+		Mmr: pallet_mmr = 201,
+		BeefyMmrLeaf: pallet_beefy_mmr = 202,
+
+		// AHM
+		Sudo: pallet_sudo = 250,
+
+		// Relay Chain Migrator
+		// The pallet must be located below `MessageQueue` to get the XCM message acknowledgements
+		// from Asset Hub before we get the `RcMigrator` `on_initialize` executed.
+		RcMigrator: pallet_rc_migrator = 255,
+	}
+}
+
+#[cfg(feature = "zombie-bite-sudo")]
+impl pallet_sudo::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type WeightInfo = ();
 }
 
 /// The address format for describing accounts.
@@ -1740,7 +1943,7 @@ mod benches {
 	use super::*;
 
 	frame_benchmarking::define_benchmarks!(
-		// Polkadot
+		// Paseo
 		[polkadot_runtime_common::auctions, Auctions]
 		[polkadot_runtime_common::claims, Claims]
 		[polkadot_runtime_common::crowdloan, Crowdloan]
@@ -1787,15 +1990,14 @@ mod benches {
 		[pallet_referenda, Referenda]
 		[pallet_whitelist, Whitelist]
 		[pallet_asset_rate, AssetRate]
+		[pallet_rc_migrator, RcMigrator]
 		// XCM
 		[pallet_xcm, PalletXcmExtrinsicsBenchmark::<Runtime>]
 		[pallet_xcm_benchmarks::fungible, pallet_xcm_benchmarks::fungible::Pallet::<Runtime>]
 		[pallet_xcm_benchmarks::generic, pallet_xcm_benchmarks::generic::Pallet::<Runtime>]
-		// Sudo
-		[pallet_sudo, Sudo]
 	);
 
-	pub use frame_benchmarking::{BenchmarkBatch, BenchmarkError, BenchmarkList};
+	pub use frame_benchmarking::{BenchmarkBatch, BenchmarkError, BenchmarkList, Benchmarking};
 	pub use frame_support::traits::{StorageInfoTrait, WhitelistedStorageKeys};
 	pub use sp_storage::TrackedStorageKey;
 	// Trying to add benchmarks directly to some pallets caused cyclic dependency issues.
@@ -1808,11 +2010,13 @@ mod benches {
 	pub use pallet_nomination_pools_benchmarking::Pallet as NominationPoolsBench;
 	pub use pallet_offences_benchmarking::Pallet as OffencesBench;
 	pub use pallet_session_benchmarking::Pallet as SessionBench;
-	pub use pallet_xcm::benchmarking::Pallet as PalletXcmExtrinsicsBenchmark;
-
+	pub use pallet_xcm::benchmarking::{
+		Pallet as PalletXcmExtrinsiscsBenchmark, Pallet as PalletXcmExtrinsicsBenchmark,
+	};
 	use paseo_runtime_constants::system_parachain::AssetHubParaId;
+	use xcm_builder::MintLocation;
 	use xcm_config::{
-		AssetHubLocation, LocalCheckAccount, SovereignAccountOf, TokenLocation, XcmConfig,
+		AssetHubLocation, SovereignAccountOf, TeleportTracking, TokenLocation, XcmConfig,
 	};
 
 	impl pallet_session_benchmarking::Config for Runtime {}
@@ -1833,14 +2037,14 @@ mod benches {
 
 	impl pallet_xcm::benchmarking::Config for Runtime {
 		type DeliveryHelper = (
-			paseo_runtime_common::xcm_sender::ToParachainDeliveryHelper<
+			polkadot_runtime_common::xcm_sender::ToParachainDeliveryHelper<
 				XcmConfig,
 				ExistentialDepositAsset,
 				xcm_config::PriceForChildParachainDelivery,
 				AssetHubParaId,
 				Dmp,
 			>,
-			paseo_runtime_common::xcm_sender::ToParachainDeliveryHelper<
+			polkadot_runtime_common::xcm_sender::ToParachainDeliveryHelper<
 				XcmConfig,
 				ExistentialDepositAsset,
 				xcm_config::PriceForChildParachainDelivery,
@@ -1891,7 +2095,7 @@ mod benches {
 	impl pallet_xcm_benchmarks::Config for Runtime {
 		type XcmConfig = XcmConfig;
 		type AccountIdConverter = SovereignAccountOf;
-		type DeliveryHelper = paseo_runtime_common::xcm_sender::ToParachainDeliveryHelper<
+		type DeliveryHelper = polkadot_runtime_common::xcm_sender::ToParachainDeliveryHelper<
 			XcmConfig,
 			ExistentialDepositAsset,
 			xcm_config::PriceForChildParachainDelivery,
@@ -1917,6 +2121,7 @@ mod benches {
 			Asset { id: AssetId(TokenLocation::get()), fun: Fungible(UNITS) }
 		));
 		pub const TrustedReserve: Option<(Location, Asset)> = None;
+		pub LocalCheckAccount: (AccountId, MintLocation) = TeleportTracking::get().unwrap();
 	}
 
 	impl pallet_xcm_benchmarks::fungible::Config for Runtime {
@@ -2670,7 +2875,7 @@ sp_api::impl_runtime_apis! {
 	#[cfg(feature = "try-runtime")]
 	impl frame_try_runtime::TryRuntime<Block> for Runtime {
 		fn on_runtime_upgrade(checks: frame_try_runtime::UpgradeCheckSelect) -> (Weight, Weight) {
-			log::info!(target: LOG_TARGET, "try-runtime::on_runtime_upgrade polkadot.");
+			log::info!(target: LOG_TARGET, "try-runtime::on_runtime_upgrade paseo.");
 			let weight = Executive::try_runtime_upgrade(checks).unwrap();
 			(weight, BlockWeights::get().max_block)
 		}
@@ -2980,12 +3185,12 @@ mod multiplier_tests {
 		);
 
 		// Values are within 0.1%
-		assert_relative_eq!(to_stakers as f64, (27_693 * UNITS) as f64, max_relative = 0.001);
-		assert_relative_eq!(to_treasury as f64, (4_887 * UNITS) as f64, max_relative = 0.001);
-		// Total per day is ~32,580 PAS
+		assert_relative_eq!(to_stakers as f64, (279_477 * UNITS) as f64, max_relative = 0.001);
+		assert_relative_eq!(to_treasury as f64, (49_320 * UNITS) as f64, max_relative = 0.001);
+		// Total per day is ~328,797 PAS
 		assert_relative_eq!(
 			(to_stakers as f64 + to_treasury as f64),
-			(32_580 * UNITS) as f64,
+			(328_797 * UNITS) as f64,
 			max_relative = 0.001
 		);
 	}
@@ -2999,8 +3204,16 @@ mod multiplier_tests {
 			2 * MILLISECONDS_PER_DAY,
 		);
 
-		assert_relative_eq!(to_stakers as f64, (27_693 * UNITS) as f64 * 2.0, max_relative = 0.001);
-		assert_relative_eq!(to_treasury as f64, (4_887 * UNITS) as f64 * 2.0, max_relative = 0.001);
+		assert_relative_eq!(
+			to_stakers as f64,
+			(279_477 * UNITS) as f64 * 2.0,
+			max_relative = 0.001
+		);
+		assert_relative_eq!(
+			to_treasury as f64,
+			(49_320 * UNITS) as f64 * 2.0,
+			max_relative = 0.001
+		);
 	}
 
 	#[test]
@@ -3011,8 +3224,8 @@ mod multiplier_tests {
 			(36525 * MILLISECONDS_PER_DAY) / 100, // 1 year
 		);
 
-		// Our yearly emissions is about 12M PAS:
-		let yearly_emission = 11_909_325 * UNITS;
+		// Our yearly emissions is about 120M PAS:
+		let yearly_emission = 120_093_259 * UNITS;
 		assert_relative_eq!(
 			to_stakers as f64 + to_treasury as f64,
 			yearly_emission as f64,
@@ -3035,13 +3248,13 @@ mod multiplier_tests {
 			456,                                 // ignored
 			(36525 * MILLISECONDS_PER_DAY) / 10, // 10 years
 		);
-		let initial_ti: i128 = 1_487_502_468_008_283_162;
+		let initial_ti: i128 = 15_011_657_390_566_252_333;
 		let projected_total_issuance = (to_stakers as i128 + to_treasury as i128) + initial_ti;
 
-		// In 2034, there will be about 267 million PAS in existence.
+		// In 2034, there will be about 2.7 billion PAS in existence.
 		assert_relative_eq!(
 			projected_total_issuance as f64,
-			(267_750_000 * UNITS) as f64,
+			(2_700_000_000 * UNITS) as f64,
 			max_relative = 0.001
 		);
 	}
@@ -3055,7 +3268,7 @@ mod multiplier_tests {
 			(36525 * MILLISECONDS_PER_DAY) / 100, // 1 year
 		);
 		let yearly_emission = to_stakers + to_treasury;
-		let mut ti: i128 = 1_487_502_468_008_283_162;
+		let mut ti: i128 = 15_011_657_390_566_252_333;
 
 		for y in 0..10 {
 			let new_ti = ti + yearly_emission as i128;
@@ -3167,7 +3380,6 @@ mod multiplier_tests {
 		}
 	}
 }
-
 #[cfg(all(test, feature = "try-runtime"))]
 mod remote_tests {
 	use super::*;
@@ -3201,7 +3413,7 @@ mod remote_tests {
 	#[tokio::test]
 	async fn dispatch_all_proposals() {
 		if var("RUN_OPENGOV_TEST").is_err() {
-			return
+			return;
 		}
 
 		sp_tracing::try_init_simple();
@@ -3247,7 +3459,7 @@ mod remote_tests {
 	#[tokio::test]
 	async fn run_migrations() {
 		if var("RUN_MIGRATION_TESTS").is_err() {
-			return
+			return;
 		}
 
 		sp_tracing::try_init_simple();
@@ -3307,9 +3519,6 @@ mod remote_tests {
 					// timestamp now
 					hex!("f0c365c3cf59d671eb72da0e7a4113c49f1f0515f462cdcf84e0f1d6045dfcbb")
 						.to_vec(),
-					// para-ids
-					hex!("cd710b30bd2eab0352ddcc26417aa1940b76934f4cc08dee01012d059e1b83ee")
-						.to_vec(),
 				],
 				..Default::default()
 			}))
@@ -3331,7 +3540,7 @@ mod remote_tests {
 			let (staking, leftover) = <Runtime as pallet_staking::Config>::EraPayout::era_payout(
 				total_staked,
 				total_issuance,
-				average_era_duration_millis.into(),
+				average_era_duration_millis,
 			);
 			use ss58_registry::TokenRegistry;
 			let token: ss58_registry::Token = TokenRegistry::Dot.into();
