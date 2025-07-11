@@ -113,8 +113,8 @@ use frame_system::{
 };
 use pallet_nfts::PalletFeatures;
 use parachains_common::{
-	message_queue::*, AccountId, AuraId, AssetIdForTrustBackedAssets,
-	Balance, BlockNumber, Hash, Header, Nonce, Signature,
+	message_queue::*, AccountId, AssetIdForTrustBackedAssets, AuraId, Balance, BlockNumber, Hash,
+	Header, Nonce, Signature,
 };
 
 use sp_runtime::RuntimeDebug;
@@ -508,8 +508,7 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 					RuntimeCall::Assets { .. } |
 						RuntimeCall::Utility { .. } |
 						RuntimeCall::Multisig { .. } |
-						RuntimeCall::Nfts { .. } |
-						RuntimeCall::Uniques { .. }
+						RuntimeCall::Nfts { .. } | RuntimeCall::Uniques { .. }
 				)
 			},
 			ProxyType::AssetOwner => matches!(
@@ -1929,10 +1928,8 @@ impl pallet_state_trie_migration::Config for Runtime {
 	type SignedDepositBase = MigrationSignedDepositBase;
 	// An origin that can control the whole pallet: Should be a Fellowship member or the controller
 	// of the migration.
-	type ControlOrigin = EitherOfDiverse<
-		EnsureRoot<AccountId>,
-        EnsureSignedBy<MigController, AccountId>,
-	>;
+	type ControlOrigin =
+		EitherOfDiverse<EnsureRoot<AccountId>, EnsureSignedBy<MigController, AccountId>>;
 	type SignedFilter = EnsureSignedBy<MigController, AccountId>;
 
 	// Replace this with weight based on your runtime.
@@ -1948,10 +1945,10 @@ ord_parameter_types! {
 
 #[cfg(test)]
 mod tests {
-	use std::any::TypeId;
 	use super::*;
 	use sp_runtime::traits::Zero;
 	use sp_weights::WeightToFee;
+	use std::any::TypeId;
 	use system_parachains_constants::paseo::fee;
 
 	/// We can fit at least 1000 transfers in a block.

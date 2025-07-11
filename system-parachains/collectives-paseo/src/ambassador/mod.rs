@@ -229,7 +229,7 @@ impl pallet_core_fellowship::Config<AmbassadorCoreInstance> for Runtime {
 	type PromoteOrigin = PromoteOrigin;
 	type FastPromoteOrigin = frame_support::traits::NeverEnsureOrigin<u16>;
 	type EvidenceSize = ConstU32<65536>;
-	// TODO https://github.com/polkadot-fellows/runtimes/issues/370
+	// TO-old-DO https://github.com/polkadot-fellows/runtimes/issues/370
 	type MaxRank = ConstU32<9>;
 }
 

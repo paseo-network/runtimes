@@ -1,17 +1,16 @@
-# Runtimes
+🚧 This is a work in progress fork of the Paseo Relay- and Asset Hub runtime for the Asset Hub Migration (project name *Plaza*).
 
-Runtimes for Polkadot's community testnet.
+**Next Step:**
 
-## Structure
+- [ ] Update to stable 2503 ([#1](https://github.com/paritytech/paseo-ahm/pull/1))
 
-```pre
-├── relay
-│   ├── paseo
-└── system-parachains
-    ├── asset-hub-paseo
-    │    ├── bp-asset-hub-paseo
-    ├── bridge-hub-paseo
-    │    ├── bp-bridge-hub-paseo
-    ├── people-paseo
-    ├── coretime-paseo
-```
+#### Testing
+
+- [ ] Setup CI checks
+- [ ] Test ZombieBite / ZombieNet
+- [ ] Integrate Chopstick tests
+
+### TODO guideline
+
+If you add a TODO then you must include the GitHub handle of the person who has to resolve it, example: `TODO @ggwpez cleanup`. Please include context if you tag someone else.   
+Ideally, we have all resolved before going live.
