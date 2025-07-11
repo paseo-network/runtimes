@@ -159,6 +159,7 @@ class RuntimeTransposer:
 # Hardcoded list of paths that should always be reverted - take care here not to miss true differences
 DEFAULT_REVERT_PATHS = [
     "relay/paseo/src/genesis_config_presets.rs",
+    "relay/paseo/src/governance/tracks.rs",
 ]
 
 def setup_transposer(source_root: str, target_root: str) -> RuntimeTransposer:
@@ -179,7 +180,8 @@ def setup_transposer(source_root: str, target_root: str) -> RuntimeTransposer:
         (r"paseo_parachain_primitives", "polkadot_parachain_primitives"),
         (r"// <https://research.web3.foundation/en/latest/paseo/BABE/Babe/#6-practical-results>", "// <https://research.web3.foundation/en/latest/polkadot/BABE/Babe/#6-practical-results>"),
         (r"type LeaseOffset = LeaseOffset;", "type LeaseOffset = ();"),
-        (r"PaseoXcm", "PolkadotXcm")
+        (r"PaseoXcm", "PolkadotXcm"),
+        (r"Parity Technologies and the various Paseo contributors", "Parity Technologies and the various Polkadot contributors"),
     ])
 
     # File-specific substitutions
@@ -202,6 +204,14 @@ def setup_transposer(source_root: str, target_root: str) -> RuntimeTransposer:
     transposer.add_substitutions(r"relay/polkadot/src/lib.rs", [
         (r"paseo\.subsquare\.io/referenda/1139", "polkadot.subsquare.io/referenda/1139"),
         (r"let fixed_total_issuance: i128 = 15_011_657_390_566_252_333;", "let fixed_total_issuance: i128 = 1_487_502_468_008_283_162;"),
+    ])
+
+    transposer.add_substitutions(r"relay/polkadot/src/governance/mod.rs", [
+        ("pub type TreasurySpender.*", '// We just allow `Root` to spend money from the treasury, this should prevent bad actors from\n// stealing "money".\npub type TreasurySpender = EnsureRootWithSuccess<AccountId, MaxBalance>;'),
+    ])
+
+    transposer.add_substitutions(r"relay/polkadot/src/weights/mod.rs", [
+        (r"pub mod pallet_staking;", "pub mod pallet_staking;\npub mod pallet_sudo;")
     ])
 
     return transposer
