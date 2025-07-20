@@ -1,20 +1,20 @@
 // Copyright (C) Parity Technologies (UK) Ltd.
-// This file is part of Polkadot.
+// This file is part of Paseo.
 
-// Polkadot is free software: you can redistribute it and/or modify
+// Paseo is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 
-// Polkadot is distributed in the hope that it will be useful,
+// Paseo is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
 // You should have received a copy of the GNU General Public License
-// along with Polkadot.  If not, see <http://www.gnu.org/licenses/>.
+// along with Paseo.  If not, see <http://www.gnu.org/licenses/>.
 
-//! Module with configuration which reflects AssetHubPolkadot runtime setup.
+//! Module with configuration which reflects AssetHubPaseo runtime setup.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -75,5 +75,5 @@ pub fn build_congestion_message<RuntimeCall>(
 	]
 }
 
-/// Identifier of AssetHubPolkadot in the Polkadot relay chain.
+/// Identifier of AssetHubPaseo in the Paseo relay chain.
 pub const ASSET_HUB_PASEO_PARACHAIN_ID: u32 = 1000;

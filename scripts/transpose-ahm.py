@@ -7,6 +7,7 @@ import argparse
 from pathlib import Path
 from typing import Dict, List, Tuple
 from git import Repo
+
 class RuntimeTransposer:
     def __init__(self, source_root: str, target_root: str):
         self.source_root = Path(source_root)
@@ -160,31 +161,47 @@ class RuntimeTransposer:
 DEFAULT_REVERT_PATHS = [
     "relay/paseo/src/genesis_config_presets.rs",
     "relay/paseo/src/governance/tracks.rs",
+    "system-parachains/asset-hub-paseo/src/genesis_config_presets.rs",
 ]
 
 def setup_transposer(source_root: str, target_root: str) -> RuntimeTransposer:
     """Set up the transposer with all substitutions configured."""
     transposer = RuntimeTransposer(source_root, target_root)
 
+    """
+    Global
+    """
     transposer.add_global_substitutions([
         (r"Polkadot", "Paseo"),
         (r"polkadot", "paseo"),
         (r"POLKADOT", "PASEO"),
         (r"\bDOT\b", "PAS"),
         # Revert specific patterns that should remain as polkadot
+        (r"paseo-sdk", "polkadot-sdk"),
         (r"paseo-runtime-common", "polkadot-runtime-common"),
         (r"paseo_runtime_common", "polkadot_runtime_common"),
         (r"paseo-primitives", "polkadot-primitives"),
         (r"paseo_primitives", "polkadot_primitives"),
         (r"paseo-parachain-primitives", "polkadot-parachain-primitives"),
         (r"paseo_parachain_primitives", "polkadot_parachain_primitives"),
+        (r"paseo-core-primitives", "polkadot-core-primitives"),
+        (r"paseo_core_primitives", "polkadot_core_primitives"),
+        (r"system-parachains-common", "system-parachains-constants"),
+        (r"system_parachains_common", "system_parachains_constants"),
+        (r"collectives_paseo_runtime_constants", "collectives_polkadot_runtime_constants"),
         (r"// <https://research.web3.foundation/en/latest/paseo/BABE/Babe/#6-practical-results>", "// <https://research.web3.foundation/en/latest/polkadot/BABE/Babe/#6-practical-results>"),
         (r"type LeaseOffset = LeaseOffset;", "type LeaseOffset = ();"),
         (r"PaseoXcm", "PolkadotXcm"),
         (r"Parity Technologies and the various Paseo contributors", "Parity Technologies and the various Polkadot contributors"),
+        (r" \(previously known as Statemint\)", ""),
+        (r"AssetHubPaseoAuraId as AuraId", "AuraId"),
+        (r"ed25519", "sr25519"),
     ])
 
-    # File-specific substitutions
+
+    """
+    Relay
+    """
     transposer.add_substitutions(r"relay/polkadot/Cargo\.toml", [
         ("version.workspace = true", 'version = "1.6.0"'),
         ("\n\n# just for use with zombie-bite to test migration\npallet-sudo = { workspace = true, optional = true }", ''),
@@ -214,6 +231,38 @@ def setup_transposer(source_root: str, target_root: str) -> RuntimeTransposer:
         (r"pub mod pallet_staking;", "pub mod pallet_staking;\npub mod pallet_sudo;")
     ])
 
+    """
+    Asset Hub
+    """
+    transposer.add_substitutions(r"system-parachains/asset-hubs/asset-hub-polkadot/Cargo\.toml", [
+        (r"system-parachains-common", "system-parachains-constants"),
+        ("bp-asset-hub-kusama = { workspace = true }\n",""),
+        ("bp-bridge-hub-paseo = { workspace = true }", "bp-bridge-hub-paseo = { workspace = true }\nbp-bridge-hub-polkadot = { workspace = true }"),
+        ("kusama-runtime-constants = { workspace = true }\n", ""),
+        ("pallet-timestamp = { workspace = true }", "pallet-sudo = { workspace = true }\npallet-timestamp = { workspace = true }\nsp-debug-derive = { workspace = true }"),
+        ("collectives-paseo-runtime-constants", "collectives-polkadot-runtime-constants"),
+        (r"fast-runtime = \[\]", 'fast-runtime = ["paseo-runtime-constants/fast-runtime"]\nforce-debug = ["sp-debug-derive/force-debug"]'),
+    ]) 
+
+    transposer.add_substitutions(r"system-parachains/asset-hubs/asset-hub-polkadot/src/lib\.rs", [
+        (r'Cow::Borrowed\("statemint"\)', 'Cow::Borrowed("asset-hub-paseo")'),
+        (r"//! ## Renaming\n.*\n.*\n.*\n.*\n.*\n", ""),
+    ])
+
+    transposer.add_substitutions(r"system-parachains/asset-hubs/asset-hub-polkadot/tests/snowbridge\.rs", [
+        (r"NetworkId::Ethereum { chain_id: 11155111", "NetworkId::Ethereum { chain_id: 1"),
+    ])
+
+    transposer.add_substitutions(r"system-parachains/asset-hubs/asset-hub-polkadot/tests/tests\.rs", [
+        (r"bp_bridge_hub_paseo::WITH_BRIDGE_PASEO", "bp_bridge_hub_polkadot::WITH_BRIDGE_POLKADOT"),
+    ])
+
+    transposer.add_substitutions(r"system-parachains/asset-hubs/asset-hub-polkadot/src/lib\.rs", [
+    
+	(r'.*ensure_key_ss58\(\).*\n.*\n.*\n.*\n.*\n.*\n.*}', '	fn ensure_key_ss58() {\n		use frame_support::traits::SortedMembers;\n		use sp_core::crypto::Ss58Codec;\n		let acc =\n			AccountId::from_ss58check("5F4EbSkZz18X36xhbsjvDNs6NuZ82HyYtq5UiJ1h9SBHJXZD").unwrap();\n		assert_eq!(acc, MigController::sorted_members()[0]);\n	}\n\n	#[test]\n	fn aura_uses_sr25519_for_authority_id() {\n		// Ensure that AuthorityId configuration is the expected.\n		assert_eq!(\n			TypeId::of::<<Runtime as pallet_aura::Config>::AuthorityId>(),\n			TypeId::of::<sp_consensus_aura::sr25519::AuthorityId>(),\n		);\n	}'),
+    ])
+
+
     return transposer
 
 def run_copy_and_transform(args):
@@ -223,8 +272,10 @@ def run_copy_and_transform(args):
     # Print git info for the source root
     transposer.print_git_info()
 
-    # Copy the runtime
-    transposer.copy_directory(args.source_dir, args.target_dir)
+    # Copy multiple directories
+    for source_dir, target_dir in args.copy_pairs:
+        print(f"\nCopying {source_dir} -> {target_dir}")
+        transposer.copy_directory(source_dir, target_dir)
 
     # Combine hardcoded and command-line revert paths
     all_revert_paths = DEFAULT_REVERT_PATHS.copy()
@@ -236,18 +287,25 @@ def run_copy_and_transform(args):
         print("\nCopy and transform complete\nThe following paths will be reverted after you inspect the diff:")
         for path in all_revert_paths:
             print(f"  - {path}")
-    else:
-        print("\nNo paths will be reverted after diff inspection.")
 
-    # Prompt user to inspect git diff before reverting
-    input("\nHit enter if you're happy to revert these files, or Ctrl+C to abort...\n")
-    
-    # Revert all paths
-    if all_revert_paths:
+        input("\nHit enter if you're happy to revert these files, or Ctrl+C to abort...\n")
         transposer.revert_paths(all_revert_paths)
+    else:
+        print("\nNo paths were reverted")
+
+def parse_copy_pairs(copy_pairs_str):
+    """Parse copy pairs from command line arguments."""
+    pairs = []
+    for pair_str in copy_pairs_str:
+        if ':' not in pair_str:
+            print(f"Error: Copy pair must be in format 'source:target', got: {pair_str}")
+            sys.exit(1)
+        source, target = pair_str.split(':', 1)
+        pairs.append((source.strip(), target.strip()))
+    return pairs
 
 def run_revert_only(args):
-    """Run only the revert operation."""
+    """Revert files without copying again."""
     transposer = RuntimeTransposer(args.source_root, args.target_root)
     
     # Combine hardcoded and command-line revert paths
@@ -266,8 +324,9 @@ def main():
     
     # Copy and transform command
     copy_parser = subparsers.add_parser("copy", help="Copy and transform files")
-    copy_parser.add_argument("--source-dir", default="relay/polkadot", help="Source directory to copy from")
-    copy_parser.add_argument("--target-dir", default="relay/paseo", help="Target directory to copy to")
+    copy_parser.add_argument("--copy-pairs", nargs="+", metavar="SOURCE:TARGET", 
+                           default=["relay/polkadot:relay/paseo", "system-parachains/asset-hubs/asset-hub-polkadot:system-parachains/asset-hub-paseo"],
+                           help="Source:target directory pairs to copy (e.g., 'relay/polkadot:relay/paseo' 'system-parachains/asset-hub-polkadot:system-parachains/asset-hub-paseo')")
     copy_parser.add_argument("--revert-paths", nargs="*", help="Additional paths to revert after copy (hardcoded paths are always reverted)")
     copy_parser.set_defaults(func=run_copy_and_transform)
     
@@ -282,7 +341,13 @@ def main():
         parser.print_help()
         sys.exit(1)
     
+    # Parse copy pairs if this is the copy command
+    if args.command == "copy":
+        args.copy_pairs = parse_copy_pairs(args.copy_pairs)
+    
     args.func(args)
+
+    # TODO run zepter, taplo and fmt
 
 if __name__ == "__main__":
     main()

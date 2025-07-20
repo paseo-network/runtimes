@@ -112,8 +112,8 @@ pub fn call_allowed_status(call: &<Runtime as frame_system::Config>::RuntimeCall
 		// DelegatedStaking has on calls
 		// ParachainsOrigin has no calls
 		Configuration(..) => (ON, ON), /* TODO allow this to be called by fellow origin during the migration https://github.com/paseo-fellows/runtimes/pull/559#discussion_r1928794490 */
-		ParasShared(..) => (OFF, OFF), /* Has no calls but a call enum https://github.com/paritytech/paseo-sdk/blob/ee803b74056fac5101c06ec5998586fa6eaac470/paseo/runtime/parachains/src/shared.rs#L185-L186 */
-		ParaInclusion(..) => (OFF, OFF), /* Has no calls but a call enum https://github.com/paritytech/paseo-sdk/blob/74ec1ee226ace087748f38dfeffc869cd5534ac8/paseo/runtime/parachains/src/inclusion/mod.rs#L352-L353 */
+		ParasShared(..) => (OFF, OFF), /* Has no calls but a call enum https://github.com/paritytech/polkadot-sdk/blob/ee803b74056fac5101c06ec5998586fa6eaac470/paseo/runtime/parachains/src/shared.rs#L185-L186 */
+		ParaInclusion(..) => (OFF, OFF), /* Has no calls but a call enum https://github.com/paritytech/polkadot-sdk/blob/74ec1ee226ace087748f38dfeffc869cd5534ac8/paseo/runtime/parachains/src/inclusion/mod.rs#L352-L353 */
 		ParaInherent(..) => (ON, ON),    // only inherents
 		// ParaScheduler has no calls
 		Paras(..) => (ON, ON),
