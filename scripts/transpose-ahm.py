@@ -4,6 +4,8 @@ import os
 import re
 import sys
 import argparse
+import subprocess
+import toml
 from pathlib import Path
 from typing import Dict, List, Tuple
 from git import Repo
@@ -63,6 +65,123 @@ class RuntimeTransposer:
                     print(f"Warning: File does not exist in target: {path}")
             except Exception as e:
                 print(f"Error reverting {path}: {e}")
+
+    def clear_feature_dependencies(self, target_dirs: List[str]):
+        """Clear dependencies from specific features managed by zepter in Cargo.toml files while preserving formatting."""
+        
+        # Features that zepter manages (from .config/zepter.yaml)
+        zepter_features = {'try-runtime', 'runtime-benchmarks', 'std', 'ahm-kusama', 'stable2503'}
+        
+        for target_dir in target_dirs:
+            cargo_toml_path = self.target_root / target_dir / "Cargo.toml"
+            
+            if not cargo_toml_path.exists():
+                print(f"Warning: Cargo.toml not found in {target_dir}")
+                continue
+                
+            try:
+                # Read the TOML content
+                with open(cargo_toml_path, 'r') as f:
+                    lines = f.readlines()
+                
+                modified = False
+                in_features_section = False
+                i = 0
+                
+                while i < len(lines):
+                    line = lines[i].strip()
+                    
+                    # Check if we're entering the [features] section
+                    if line == '[features]':
+                        in_features_section = True
+                        i += 1
+                        continue
+                    
+                    # Check if we're entering a different section
+                    if line.startswith('[') and line != '[features]':
+                        in_features_section = False
+                        i += 1
+                        continue
+                    
+                    # If we're in the features section and this line defines a feature
+                    if in_features_section and '=' in line and not line.startswith('#'):
+                        # Extract feature name (part before =)
+                        feature_name = line.split('=')[0].strip()
+                        
+                        # Only clear features that zepter manages
+                        if feature_name in zepter_features:
+                            # Check if this is a multiline feature definition
+                            original_line = lines[i]
+                            if '[' in original_line and not original_line.strip().endswith(']'):
+                                # This is a multiline feature, find the end
+                                start_line = i
+                                bracket_count = original_line.count('[') - original_line.count(']')
+                                
+                                # Look for the closing bracket
+                                j = i + 1
+                                while j < len(lines) and bracket_count > 0:
+                                    bracket_count += lines[j].count('[') - lines[j].count(']')
+                                    j += 1
+                                
+                                # Replace all lines from start_line to j-1 with single line
+                                lines[start_line] = f'{feature_name} = []\n'
+                                # Remove the continuation lines
+                                for k in range(j - 1, start_line, -1):
+                                    del lines[k]
+                                modified = True
+                            else:
+                                # Single line feature, just replace it
+                                lines[i] = f'{feature_name} = []\n'
+                                modified = True
+                    
+                    i += 1
+                
+                # Write back the modified content if changes were made
+                if modified:
+                    with open(cargo_toml_path, 'w') as f:
+                        f.writelines(lines)
+                    print(f"Cleared zepter-managed feature dependencies in: {target_dir}/Cargo.toml")
+                else:
+                    print(f"No zepter-managed features found to clear in: {target_dir}/Cargo.toml")
+                    
+            except Exception as e:
+                print(f"Error processing {target_dir}/Cargo.toml: {e}")
+
+    def run_post_processing_commands(self):
+        """Run zepter, taplo, and cargo format commands."""
+        commands = [
+            ("zepter", ["zepter"]),
+            ("taplo format", ["taplo", "format", "--config", ".config/taplo.toml"]),
+            # fmt is a mess right now
+            # ("cargo format", ["cargo", "+nightly-2025-06-27", "fmt"])
+        ]
+        
+        for name, cmd in commands:
+            print(f"\nRunning {name}...")
+            try:
+                result = subprocess.run(
+                    cmd,
+                    cwd=self.target_root,
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+                print(f"{name} completed successfully")
+                if result.stdout:
+                    print(f"Output: {result.stdout}")
+            except subprocess.CalledProcessError as e:
+                if name == "cargo format" and "toolchain 'nightly-2025-06-27' is not installed" in str(e.stderr):
+                    print(f"Error: Rust nightly-2025-06-27 toolchain is not installed.")
+                    print(f"Please install it with: rustup toolchain install nightly-2025-06-27")
+                    print(f"Skipping cargo format...")
+                else:
+                    print(f"Error running {name}: {e}")
+                    if e.stdout:
+                        print(f"Stdout: {e.stdout}")
+                    if e.stderr:
+                        print(f"Stderr: {e.stderr}")
+            except FileNotFoundError:
+                print(f"Error: {cmd[0]} command not found. Please ensure it's installed and in PATH.")
 
     def _get_substitutions(self, file_path: str) -> List[Tuple[str, str]]:
         """Get all substitutions that apply to a given file path."""
@@ -207,6 +326,7 @@ def setup_transposer(source_root: str, target_root: str) -> RuntimeTransposer:
         ("\n\n# just for use with zombie-bite to test migration\npallet-sudo = { workspace = true, optional = true }", ''),
         ("pallet-session = { workspace = true }", "pallet-session = { workspace = true }\npallet-sudo = { workspace = true }"),
         (r"fast-runtime = \[\]", 'fast-runtime = ["paseo-runtime-constants/fast-runtime"]\n\nzombie-bite-sudo = ["dep:pallet-sudo"]'),
+        (r'"dep:pallet-sudo"', ""),
     ])
 
     transposer.add_substitutions(r"relay/polkadot/constants/src/lib.rs", [
@@ -293,6 +413,14 @@ def run_copy_and_transform(args):
     else:
         print("\nNo paths were reverted")
 
+    # Clear feature dependencies from Cargo.toml files in target directories
+    target_dirs = [target_dir for _, target_dir in args.copy_pairs]
+    print(f"\nClearing feature dependencies from Cargo.toml files in: {target_dirs}")
+    transposer.clear_feature_dependencies(target_dirs)
+
+    # Run post-processing commands
+    transposer.run_post_processing_commands()
+
 def parse_copy_pairs(copy_pairs_str):
     """Parse copy pairs from command line arguments."""
     pairs = []
@@ -346,8 +474,6 @@ def main():
         args.copy_pairs = parse_copy_pairs(args.copy_pairs)
     
     args.func(args)
-
-    # TODO run zepter, taplo and fmt
 
 if __name__ == "__main__":
     main()
