@@ -222,6 +222,7 @@ sp-version = { version = "39.0.0", default-features = false }
 sp-weights = { version = "31.1.0", default-features = false }
 substrate-wasm-builder = { version = "26.0.1" }
 system-parachains-constants = { path = "system-parachains/constants", default-features = false }
+system-parachains-common = { path = "system-parachains/common", default-features = false }
 tokio = { version = "1.36.0" }
 xcm = { version = "16.2.0", default-features = false, package = "staging-xcm" }
 xcm-builder = { version = "20.1.1", default-features = false, package = "staging-xcm-builder" }
@@ -261,6 +262,7 @@ members = [
 	"system-parachains/bridge-hub-paseo/primitives",
 	"system-parachains/collectives-paseo",
 	"system-parachains/collectives-paseo/constants",
+	"system-parachains/common",
 	"system-parachains/constants",
 	"system-parachains/coretime-paseo",
 	"system-parachains/people-paseo",

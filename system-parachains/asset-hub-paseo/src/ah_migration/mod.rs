@@ -26,8 +26,40 @@ use pallet_ah_migrator::LOG_TARGET;
 use polkadot_runtime_common::impls::{LocatableAssetConverter, VersionedLocatableAsset};
 use sp_core::Get;
 use sp_runtime::traits::{Convert, TryConvert};
-use system_parachains_constants::pay::VersionedLocatableAccount;
+use system_parachains_common::pay::VersionedLocatableAccount;
 use xcm::latest::prelude::*;
+
+impl From<pallet_rc_migrator::types::PortableHoldReason> for RuntimeHoldReason {
+	fn from(reason: pallet_rc_migrator::types::PortableHoldReason) -> Self {
+		use pallet_rc_migrator::types::PortableHoldReason;
+		use RuntimeHoldReason::*;
+
+		match reason {
+			PortableHoldReason::Preimage(preimage) => Preimage(preimage),
+			PortableHoldReason::Staking(staking) => match staking {
+				pallet_staking::HoldReason::Staking =>
+					Staking(pallet_staking_async::HoldReason::Staking),
+			},
+			PortableHoldReason::StateTrieMigration(state_trie_migration) =>
+				StateTrieMigration(state_trie_migration),
+			PortableHoldReason::DelegatedStaking(delegated_staking) =>
+				DelegatedStaking(delegated_staking),
+			PortableHoldReason::Session(session) => Session(session),
+			PortableHoldReason::XcmPallet(xcm_pallet) => PolkadotXcm(xcm_pallet),
+		}
+	}
+}
+
+impl From<pallet_rc_migrator::types::PortableFreezeReason> for RuntimeFreezeReason {
+	fn from(reason: pallet_rc_migrator::types::PortableFreezeReason) -> Self {
+		use pallet_rc_migrator::types::PortableFreezeReason;
+
+		match reason {
+			PortableFreezeReason::NominationPools(nomination_pools) =>
+				RuntimeFreezeReason::NominationPools(nomination_pools),
+		}
+	}
+}
 
 /// Treasury accounts migrating to the new treasury account address (same account address that was
 /// used on the Relay Chain).
@@ -72,83 +104,6 @@ impl Get<(AccountId, Vec<xcm::v4::Location>)> for TreasuryAccounts {
 				),
 			],
 		)
-	}
-}
-
-/// Relay Chain Hold Reason
-#[derive(
-	Encode,
-	DecodeWithMemTracking,
-	Decode,
-	Clone,
-	PartialEq,
-	Eq,
-	RuntimeDebug,
-	TypeInfo,
-	MaxEncodedLen,
-)]
-pub enum RcHoldReason {
-	#[codec(index = 10)]
-	Preimage(pallet_preimage::HoldReason),
-	// TODO: integrate with the related sdk upgrade and remove two last variants.
-	// DelegatedStaking,
-	// Staking,
-	#[codec(index = 98)]
-	StateTrieMigration(pallet_state_trie_migration::HoldReason),
-	#[codec(index = 41)]
-	DelegatedStaking(pallet_delegated_staking::HoldReason),
-}
-
-impl Default for RcHoldReason {
-	fn default() -> Self {
-		RcHoldReason::Preimage(pallet_preimage::HoldReason::Preimage)
-	}
-}
-
-/// Relay Chain Freeze Reason
-#[derive(
-	Encode,
-	DecodeWithMemTracking,
-	Decode,
-	Clone,
-	PartialEq,
-	Eq,
-	RuntimeDebug,
-	TypeInfo,
-	MaxEncodedLen,
-)]
-pub enum RcFreezeReason {
-	#[codec(index = 39u8)]
-	NominationPools(pallet_nomination_pools::FreezeReason),
-}
-
-impl Default for RcFreezeReason {
-	fn default() -> Self {
-		RcFreezeReason::NominationPools(pallet_nomination_pools::FreezeReason::PoolMinBalance)
-	}
-}
-
-pub struct RcToAhHoldReason;
-impl Convert<RcHoldReason, RuntimeHoldReason> for RcToAhHoldReason {
-	fn convert(rc_hold_reason: RcHoldReason) -> RuntimeHoldReason {
-		match rc_hold_reason {
-			RcHoldReason::Preimage(inner) => RuntimeHoldReason::Preimage(inner),
-			RcHoldReason::StateTrieMigration(inner) => RuntimeHoldReason::StateTrieMigration(inner),
-			RcHoldReason::DelegatedStaking(inner) => RuntimeHoldReason::DelegatedStaking(inner),
-		}
-	}
-}
-
-pub struct RcToAhFreezeReason;
-impl Convert<RcFreezeReason, RuntimeFreezeReason> for RcToAhFreezeReason {
-	fn convert(reason: RcFreezeReason) -> RuntimeFreezeReason {
-		match reason {
-			RcFreezeReason::NominationPools(
-				pallet_nomination_pools::FreezeReason::PoolMinBalance,
-			) => RuntimeFreezeReason::NominationPools(
-				pallet_nomination_pools::FreezeReason::PoolMinBalance,
-			),
-		}
 	}
 }
 
@@ -204,9 +159,9 @@ impl TryConvert<RcPalletsOrigin, OriginCaller> for RcToAhPalletsOrigin {
 /// Relay Chain Runtime Call.
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub enum RcRuntimeCall {
-	// TODO: variant set code for Relay Chain
-	// TODO: variant set code for Parachains
-	// TODO: whitelisted caller
+	// TODO: @muharem variant set code for Relay Chain
+	// TODO: @muharem variant set code for Parachains
+	// TODO: @muharem whitelisted caller
 	#[codec(index = 0u8)]
 	System(frame_system::Call<Runtime>),
 	#[codec(index = 19u8)]

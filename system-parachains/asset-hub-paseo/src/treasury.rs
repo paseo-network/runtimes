@@ -16,7 +16,7 @@
 use crate::*;
 use frame_support::traits::{tokens::UnityOrOuterConversion, FromContains};
 use polkadot_runtime_common::impls::{ContainsParts, VersionedLocatableAsset};
-use system_parachains_constants::pay::{LocalPay, VersionedLocatableAccount};
+use system_parachains_common::pay::{LocalPay, VersionedLocatableAccount};
 
 parameter_types! {
 	pub const SpendPeriod: BlockNumber = 24 * RC_DAYS;
@@ -44,7 +44,7 @@ impl pallet_treasury::Config for Runtime {
 	type AssetKind = VersionedLocatableAsset;
 	type Beneficiary = VersionedLocatableAccount;
 	type BeneficiaryLookup = IdentityLookup<Self::Beneficiary>;
-	type Paymaster = system_parachains_constants::pay::LocalPay<
+	type Paymaster = system_parachains_common::pay::LocalPay<
 		NativeAndAssets,
 		TreasuryAccount,
 		xcm_config::LocationToAccountId,
@@ -52,7 +52,7 @@ impl pallet_treasury::Config for Runtime {
 	type BalanceConverter = AssetRateWithNative;
 	type PayoutPeriod = PayoutSpendPeriod;
 	#[cfg(feature = "runtime-benchmarks")]
-	type BenchmarkHelper = system_parachains_constants::pay::benchmarks::LocalPayArguments<
+	type BenchmarkHelper = system_parachains_common::pay::benchmarks::LocalPayArguments<
 		xcm_config::TrustBackedAssetsPalletIndex,
 	>;
 	type BlockNumberProvider = RelaychainDataProvider<Runtime>;

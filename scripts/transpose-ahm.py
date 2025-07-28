@@ -186,8 +186,8 @@ def setup_transposer(source_root: str, target_root: str) -> RuntimeTransposer:
         (r"paseo_parachain_primitives", "polkadot_parachain_primitives"),
         (r"paseo-core-primitives", "polkadot-core-primitives"),
         (r"paseo_core_primitives", "polkadot_core_primitives"),
-        (r"system-parachains-common", "system-parachains-constants"),
-        (r"system_parachains_common", "system_parachains_constants"),
+        # (r"system-parachains-common", "system-parachains-constants"),
+        # (r"system_parachains_common", "system_parachains_constants"),
         (r"collectives_paseo_runtime_constants", "collectives_polkadot_runtime_constants"),
         (r"// <https://research.web3.foundation/en/latest/paseo/BABE/Babe/#6-practical-results>", "// <https://research.web3.foundation/en/latest/polkadot/BABE/Babe/#6-practical-results>"),
         (r"type LeaseOffset = LeaseOffset;", "type LeaseOffset = ();"),
@@ -206,7 +206,7 @@ def setup_transposer(source_root: str, target_root: str) -> RuntimeTransposer:
         ("version.workspace = true", 'version = "1.6.0"'),
         ("\n\n# just for use with zombie-bite to test migration\npallet-sudo = { workspace = true, optional = true }", ''),
         ("pallet-session = { workspace = true }", "pallet-session = { workspace = true }\npallet-sudo = { workspace = true }"),
-        (r"fast-runtime = \[\]", 'fast-runtime = ["paseo-runtime-constants/fast-runtime"]'),
+        (r"fast-runtime = \[\]", 'fast-runtime = ["paseo-runtime-constants/fast-runtime"]\n\nzombie-bite-sudo = ["dep:pallet-sudo"]'),
     ])
 
     transposer.add_substitutions(r"relay/polkadot/constants/src/lib.rs", [
@@ -235,7 +235,7 @@ def setup_transposer(source_root: str, target_root: str) -> RuntimeTransposer:
     Asset Hub
     """
     transposer.add_substitutions(r"system-parachains/asset-hubs/asset-hub-polkadot/Cargo\.toml", [
-        (r"system-parachains-common", "system-parachains-constants"),
+        # (r"system-parachains-common", "system-parachains-constants"),
         ("bp-asset-hub-kusama = { workspace = true }\n",""),
         ("bp-bridge-hub-paseo = { workspace = true }", "bp-bridge-hub-paseo = { workspace = true }\nbp-bridge-hub-polkadot = { workspace = true }"),
         ("kusama-runtime-constants = { workspace = true }\n", ""),
@@ -257,9 +257,9 @@ def setup_transposer(source_root: str, target_root: str) -> RuntimeTransposer:
         (r"bp_bridge_hub_paseo::WITH_BRIDGE_PASEO", "bp_bridge_hub_polkadot::WITH_BRIDGE_POLKADOT"),
     ])
 
+    # This one is pretty horrible... would look better if we supported multiline replacements properly
     transposer.add_substitutions(r"system-parachains/asset-hubs/asset-hub-polkadot/src/lib\.rs", [
-    
-	(r'.*ensure_key_ss58\(\).*\n.*\n.*\n.*\n.*\n.*\n.*}', '	fn ensure_key_ss58() {\n		use frame_support::traits::SortedMembers;\n		use sp_core::crypto::Ss58Codec;\n		let acc =\n			AccountId::from_ss58check("5F4EbSkZz18X36xhbsjvDNs6NuZ82HyYtq5UiJ1h9SBHJXZD").unwrap();\n		assert_eq!(acc, MigController::sorted_members()[0]);\n	}\n\n	#[test]\n	fn aura_uses_sr25519_for_authority_id() {\n		// Ensure that AuthorityId configuration is the expected.\n		assert_eq!(\n			TypeId::of::<<Runtime as pallet_aura::Config>::AuthorityId>(),\n			TypeId::of::<sp_consensus_aura::sr25519::AuthorityId>(),\n		);\n	}'),
+        (r'.*ensure_key_ss58\(\).*\n.*\n.*\n.*\n.*\n.*\n.*}', '	fn ensure_key_ss58() {\n		use frame_support::traits::SortedMembers;\n		use sp_core::crypto::Ss58Codec;\n		let acc =\n			AccountId::from_ss58check("5F4EbSkZz18X36xhbsjvDNs6NuZ82HyYtq5UiJ1h9SBHJXZD").unwrap();\n		assert_eq!(acc, MigController::sorted_members()[0]);\n	}\n\n	#[test]\n	fn aura_uses_sr25519_for_authority_id() {\n		// Ensure that AuthorityId configuration is the expected.\n		assert_eq!(\n			TypeId::of::<<Runtime as pallet_aura::Config>::AuthorityId>(),\n			TypeId::of::<sp_consensus_aura::sr25519::AuthorityId>(),\n		);\n	}'),
     ])
 
 
@@ -325,7 +325,7 @@ def main():
     # Copy and transform command
     copy_parser = subparsers.add_parser("copy", help="Copy and transform files")
     copy_parser.add_argument("--copy-pairs", nargs="+", metavar="SOURCE:TARGET", 
-                           default=["relay/polkadot:relay/paseo", "system-parachains/asset-hubs/asset-hub-polkadot:system-parachains/asset-hub-paseo"],
+                           default=["relay/polkadot:relay/paseo", "system-parachains/asset-hubs/asset-hub-polkadot:system-parachains/asset-hub-paseo", "system-parachains/common:system-parachains/common"],
                            help="Source:target directory pairs to copy (e.g., 'relay/polkadot:relay/paseo' 'system-parachains/asset-hub-polkadot:system-parachains/asset-hub-paseo')")
     copy_parser.add_argument("--revert-paths", nargs="*", help="Additional paths to revert after copy (hardcoded paths are always reverted)")
     copy_parser.set_defaults(func=run_copy_and_transform)
