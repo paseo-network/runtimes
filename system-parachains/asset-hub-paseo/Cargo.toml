@@ -369,6 +369,7 @@ std = [
 	"sp-transaction-pool/std",
 	"sp-version/std",
 	"sp-weights/std",
+	"substrate-wasm-builder",
 	"system-parachains-common/std",
 	"system-parachains-constants/std",
 	"xcm-builder/std",
