@@ -339,47 +339,47 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 			ProxyType::NonTransfer => !matches!(c, RuntimeCall::Balances { .. }),
 			ProxyType::CancelProxy => matches!(
 				c,
-				RuntimeCall::Proxy(pallet_proxy::Call::reject_announcement { .. }) |
-					RuntimeCall::Utility { .. } |
-					RuntimeCall::Multisig { .. }
+				RuntimeCall::Proxy(pallet_proxy::Call::reject_announcement { .. })
+					| RuntimeCall::Utility { .. }
+					| RuntimeCall::Multisig { .. }
 			),
 			ProxyType::Collator => matches!(
 				c,
-				RuntimeCall::CollatorSelection { .. } |
-					RuntimeCall::Utility { .. } |
-					RuntimeCall::Multisig { .. }
+				RuntimeCall::CollatorSelection { .. }
+					| RuntimeCall::Utility { .. }
+					| RuntimeCall::Multisig { .. }
 			),
 			ProxyType::Alliance => matches!(
 				c,
-				RuntimeCall::AllianceMotion { .. } |
-					RuntimeCall::Alliance { .. } |
-					RuntimeCall::Utility { .. } |
-					RuntimeCall::Multisig { .. }
+				RuntimeCall::AllianceMotion { .. }
+					| RuntimeCall::Alliance { .. }
+					| RuntimeCall::Utility { .. }
+					| RuntimeCall::Multisig { .. }
 			),
 			ProxyType::Fellowship => matches!(
 				c,
-				RuntimeCall::FellowshipCollective { .. } |
-					RuntimeCall::FellowshipReferenda { .. } |
-					RuntimeCall::FellowshipCore { .. } |
-					RuntimeCall::FellowshipSalary { .. } |
-					RuntimeCall::Utility { .. } |
-					RuntimeCall::Multisig { .. }
+				RuntimeCall::FellowshipCollective { .. }
+					| RuntimeCall::FellowshipReferenda { .. }
+					| RuntimeCall::FellowshipCore { .. }
+					| RuntimeCall::FellowshipSalary { .. }
+					| RuntimeCall::Utility { .. }
+					| RuntimeCall::Multisig { .. }
 			),
 			ProxyType::Ambassador => matches!(
 				c,
-				RuntimeCall::AmbassadorCollective { .. } |
-					RuntimeCall::AmbassadorReferenda { .. } |
-					RuntimeCall::AmbassadorCore { .. } |
-					RuntimeCall::AmbassadorSalary { .. } |
-					RuntimeCall::Utility { .. } |
-					RuntimeCall::Multisig { .. }
+				RuntimeCall::AmbassadorCollective { .. }
+					| RuntimeCall::AmbassadorReferenda { .. }
+					| RuntimeCall::AmbassadorCore { .. }
+					| RuntimeCall::AmbassadorSalary { .. }
+					| RuntimeCall::Utility { .. }
+					| RuntimeCall::Multisig { .. }
 			),
 			ProxyType::Secretary => matches!(
 				c,
-				RuntimeCall::SecretaryCollective { .. } |
-					RuntimeCall::SecretarySalary { .. } |
-					RuntimeCall::Utility { .. } |
-					RuntimeCall::Multisig { .. }
+				RuntimeCall::SecretaryCollective { .. }
+					| RuntimeCall::SecretarySalary { .. }
+					| RuntimeCall::Utility { .. }
+					| RuntimeCall::Multisig { .. }
 			),
 		}
 	}
@@ -708,6 +708,12 @@ impl pallet_asset_rate::Config for Runtime {
 	type BenchmarkHelper = polkadot_runtime_common::impls::benchmarks::AssetRateArguments;
 }
 
+impl pallet_sudo::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type WeightInfo = pallet_sudo::weights::SubstrateWeight<Runtime>;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime
@@ -776,6 +782,9 @@ construct_runtime!(
 		SecretaryCollective: pallet_ranked_collective::<Instance3> = 80,
 		// pub type SecretarySalaryInstance = pallet_salary::Instance3;
 		SecretarySalary: pallet_salary::<Instance3> = 81,
+
+		// Sudo.
+		Sudo: pallet_sudo = 255,
 	}
 );
 
@@ -1374,13 +1383,13 @@ fn scheduler_weight_is_sane() {
 	type W = <Runtime as pallet_scheduler::Config>::WeightInfo;
 
 	fn lookup_weight(s: u32) -> Weight {
-		W::service_agendas_base() +
-			W::service_agenda_base(
+		W::service_agendas_base()
+			+ W::service_agenda_base(
 				<Runtime as pallet_scheduler::Config>::MaxScheduledPerBlock::get(),
-			) + W::service_task_base() +
-			W::service_task_fetched(s) +
-			W::service_task_named() +
-			W::service_task_periodic()
+			) + W::service_task_base()
+			+ W::service_task_fetched(s)
+			+ W::service_task_named()
+			+ W::service_task_periodic()
 	}
 
 	let limit = Perbill::from_percent(90) * MaximumSchedulerWeight::get();
