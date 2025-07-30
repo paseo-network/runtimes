@@ -130,7 +130,7 @@ pub fn transfer_token_to_ethereum_insufficient_fund() {
 fn change_ethereum_gateway_by_governance_works() {
 	change_storage_constant_by_governance_works::<Runtime, EthereumGatewayAddress, H160>(
 		collator_session_keys(),
-		bp_bridge_hub_paseo::BRIDGE_HUB_POLKAPAS_PARACHAIN_ID,
+		bp_bridge_hub_paseo::BRIDGE_HUB_POLKADOT_PARACHAIN_ID,
 		GovernanceOrigin::Location(GovernanceLocation::get()),
 		|| (EthereumGatewayAddress::key().to_vec(), EthereumGatewayAddress::get()),
 		|_| [1; 20].into(),

@@ -42,8 +42,8 @@ use parachains_common::xcm_config::{
 	AllSiblingSystemParachains, ConcreteAssetFromSystem, ParentRelayOrSiblingParachains,
 	RelayOrOtherSystemParachains,
 };
-use polkadot_parachain_primitives::primitives::Sibling;
 use paseo_runtime_constants::system_parachain;
+use polkadot_parachain_primitives::primitives::Sibling;
 use snowbridge_inbound_queue_primitives::EthereumLocationsConverterFor;
 use sp_runtime::traits::{AccountIdConversion, ConvertInto, TryConvertInto};
 use system_parachains_constants::TREASURY_PALLET_ID;
@@ -440,7 +440,7 @@ impl xcm_executor::Config for XcmConfig {
 	type UniversalLocation = UniversalLocation;
 	type Barrier = Barrier;
 	type Weigher = WeightInfoBounds<
-		crate::weights::xcm::AssetHubPolkadotXcmWeight<RuntimeCall>,
+		crate::weights::xcm::AssetHubPaseoXcmWeight<RuntimeCall>,
 		RuntimeCall,
 		MaxInstructions,
 	>;
@@ -551,7 +551,7 @@ impl pallet_xcm::Config for Runtime {
 	type XcmTeleportFilter = Everything;
 	type XcmReserveTransferFilter = Everything;
 	type Weigher = WeightInfoBounds<
-		crate::weights::xcm::AssetHubPolkadotXcmWeight<RuntimeCall>,
+		crate::weights::xcm::AssetHubPaseoXcmWeight<RuntimeCall>,
 		RuntimeCall,
 		MaxInstructions,
 	>;
@@ -719,8 +719,7 @@ pub mod bridging {
 			}
 		}
 		impl<AssetsAllowedNetworks: Contains<Location>, OriginLocation: Get<Location>>
-			ContainsPair<Asset, Location>
-			for RemoteAssetFromLocation<AssetsAllowedNetworks, OriginLocation>
+			ContainsPair<Asset, Location> for RemoteAssetFromLocation<AssetsAllowedNetworks, OriginLocation>
 		{
 			fn contains(asset: &Asset, origin: &Location) -> bool {
 				<Self as ContainsPair<Location, Location>>::contains(&asset.id.0, origin)

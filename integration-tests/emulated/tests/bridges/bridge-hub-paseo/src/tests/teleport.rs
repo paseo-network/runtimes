@@ -42,12 +42,7 @@ fn teleport_via_transfer_assets_from_and_to_relay() {
 
 	let amount = POLKADOT_ED * 1000;
 
-	test_parachain_is_trusted_teleporter_for_relay!(
-		BridgeHubPaseo,
-		Paseo,
-		amount,
-		transfer_assets
-	);
+	test_parachain_is_trusted_teleporter_for_relay!(BridgeHubPaseo, Paseo, amount, transfer_assets);
 }
 
 #[test]
@@ -74,7 +69,7 @@ fn teleport_via_limited_teleport_assets_from_and_to_relay() {
 
 #[test]
 fn teleport_via_limited_teleport_assets_from_and_to_other_system_parachains_works() {
-	let amount = ASSET_HUB_POLKAPAS_ED * 1000;
+	let amount = ASSET_HUB_POLKADOT_ED * 1000;
 	let native_asset: Assets = (Parent, amount).into();
 
 	test_parachain_is_trusted_teleporter!(
@@ -97,7 +92,7 @@ fn teleport_via_limited_teleport_assets_from_and_to_other_system_parachains_work
 
 #[test]
 fn teleport_via_transfer_assets_from_and_to_other_system_parachains_works() {
-	let amount = ASSET_HUB_POLKAPAS_ED * 1000;
+	let amount = ASSET_HUB_POLKADOT_ED * 1000;
 	let native_asset: Assets = (Parent, amount).into();
 
 	test_parachain_is_trusted_teleporter!(

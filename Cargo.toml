@@ -43,199 +43,199 @@ people-paseo-emulated-chain = { path = "integration-tests/emulated/chains/parach
 paseo-emulated-chain = { path = "integration-tests/emulated/chains/relays/paseo" }
 assert_matches = { version = "1.5.0" }
 approx = { version = "0.5.1" }
-asset-test-utils = { version = "23.0.0" }
-assets-common = { version = "0.21.0", default-features = false }
-authority-discovery-primitives = { version = "36.0.0", default-features = false, package = "sp-authority-discovery" }
-babe-primitives = { version = "0.42.1", default-features = false, package = "sp-consensus-babe" }
-beefy-primitives = { version = "24.1.0", default-features = false, package = "sp-consensus-beefy" }
-binary-merkle-tree = { version = "16.0.0", default-features = false }
-bp-bridge-hub-cumulus = { version = "0.21.0", default-features = false }
-bp-header-chain = { version = "0.20.1", default-features = false }
-bp-messages = { version = "0.20.1", default-features = false }
-bp-parachains = { version = "0.20.0", default-features = false }
-bp-paseo-core = { version = "0.20.1", default-features = false }
-bp-polkadot-core = { version = "0.20.1", default-features = false }
-bp-relayers = { version = "0.20.1", default-features = false }
-bp-runtime = { version = "0.20.1", default-features = false }
-bp-xcm-bridge-hub = { version = "0.6.1", default-features = false }
-bp-xcm-bridge-hub-router = { version = "0.17.0", default-features = false }
-bridge-hub-common = { version = "0.13.1", default-features = false }
-bridge-hub-test-utils = { version = "0.22.0" }
-bridge-runtime-common = { version = "0.21.0", default-features = false }
+asset-test-utils = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+assets-common = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+authority-discovery-primitives = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false, package = "sp-authority-discovery" }
+babe-primitives = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false, package = "sp-consensus-babe" }
+beefy-primitives = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false, package = "sp-consensus-beefy" }
+binary-merkle-tree = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+bp-bridge-hub-cumulus = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+bp-header-chain = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+bp-messages = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+bp-parachains = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+bp-paseo-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+bp-polkadot-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+bp-relayers = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+bp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+bp-xcm-bridge-hub = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+bp-xcm-bridge-hub-router = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+bridge-hub-common = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+bridge-hub-test-utils = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+bridge-runtime-common = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
 clap = { version = "4.5.0" }
 codec = { package = "parity-scale-codec", version = "3.6.9", default-features = false }
 collectives-paseo-emulated-chain = { path = "integration-tests/emulated/chains/parachains/collectives/collectives-paseo" }
 coretime-paseo-emulated-chain = { path = "integration-tests/emulated/chains/parachains/coretime/coretime-paseo" }
-cumulus-pallet-aura-ext = { version = "0.20.0", default-features = false }
-cumulus-pallet-parachain-system = { version = "0.20.0", default-features = false }
-cumulus-pallet-session-benchmarking = { version = "21.0.0", default-features = false }
-cumulus-pallet-xcm = { version = "0.19.1", default-features = false }
-cumulus-pallet-xcmp-queue = { version = "0.20.0", default-features = false }
-cumulus-primitives-aura = { version = "0.17.0", default-features = false }
-cumulus-primitives-core = { version = "0.18.1", default-features = false }
-cumulus-primitives-utility = { version = "0.20.0", default-features = false }
-emulated-integration-tests-common = { version = "20.1.0" }
+cumulus-pallet-aura-ext = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+cumulus-pallet-session-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+cumulus-pallet-xcm = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+cumulus-pallet-xcmp-queue = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+cumulus-primitives-aura = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+cumulus-primitives-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+cumulus-primitives-utility = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+emulated-integration-tests-common = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
 enumflags2 = { version = "0.7.7" }
-frame-benchmarking = { version = "40.2.0", default-features = false }
-frame-election-provider-support = { version = "40.1.1", default-features = false }
-frame-executive = { version = "40.0.1", default-features = false }
-frame-support = { version = "40.1.0", default-features = false }
-frame-system = { version = "40.1.0", default-features = false }
-frame-system-benchmarking = { version = "40.0.0", default-features = false }
-frame-system-rpc-runtime-api = { version = "36.0.0", default-features = false }
-frame-try-runtime = { version = "0.46.0", default-features = false }
-grandpa = { version = "0.34.0", package = "sc-consensus-grandpa" }
+frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+frame-election-provider-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+frame-executive = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+frame-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+frame-system-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+frame-try-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+grandpa = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false, package = "sc-consensus-grandpa" }
 hex-literal = { version = "0.4.1" }
 log = { version = "0.4.21", default-features = false }
-pallet-alliance = { version = "39.1.0", default-features = false }
-pallet-asset-conversion = { version = "22.0.0", default-features = false }
-pallet-asset-conversion-tx-payment = { version = "22.0.0", default-features = false }
-pallet-asset-rate = { version = "19.0.0", default-features = false }
-pallet-asset-tx-payment = { version = "40.0.0", default-features = false }
-pallet-assets = { version = "42.0.0", default-features = false }
-pallet-aura = { version = "39.0.0", default-features = false }
-pallet-authority-discovery = { version = "40.0.0", default-features = false }
-pallet-authorship = { version = "40.0.0", default-features = false }
-pallet-babe = { version = "40.0.0", default-features = false }
-pallet-bags-list = { version = "39.1.0", default-features = false }
-pallet-balances = { version = "41.1.0", default-features = false }
-pallet-beefy = { version = "41.1.1", default-features = false }
-pallet-beefy-mmr = { version = "41.0.0", default-features = false }
-pallet-bounties = { version = "39.0.0", default-features = false }
-pallet-bridge-grandpa = { version = "0.20.0", default-features = false }
-pallet-bridge-messages = { version = "0.20.1", default-features = false }
-pallet-bridge-parachains = { version = "0.20.0", default-features = false }
-pallet-bridge-relayers = { version = "0.20.0", default-features = false }
-pallet-broker = { version = "0.19.2", default-features = false }
-pallet-child-bounties = { version = "39.0.0", default-features = false }
-pallet-collator-selection = { version = "21.0.0", default-features = false }
-pallet-collective = { version = "40.1.0", default-features = false }
-pallet-conviction-voting = { version = "40.1.0", default-features = false }
-pallet-core-fellowship = { version = "24.1.0", default-features = false }
-pallet-election-provider-multi-phase = { version = "39.2.0", default-features = false }
-pallet-election-provider-support-benchmarking = { version = "39.0.0", default-features = false }
-pallet-fast-unstake = { version = "39.0.0", default-features = false }
-pallet-glutton = { version = "26.0.0", default-features = false }
-pallet-grandpa = { version = "40.0.0", default-features = false }
-pallet-identity = { version = "40.1.0", default-features = false }
-pallet-indices = { version = "40.0.0", default-features = false }
-pallet-insecure-randomness-collective-flip = { version = "28.0.0", default-features = false }
-pallet-membership = { version = "40.0.0", default-features = false }
-pallet-message-queue = { version = "43.1.0", default-features = false }
-pallet-mmr = { version = "40.0.0", default-features = false }
-pallet-multisig = { version = "40.1.0", default-features = false }
-pallet-nft-fractionalization = { version = "23.0.0", default-features = false }
-pallet-nfts = { version = "34.1.0", default-features = false }
-pallet-nfts-runtime-api = { version = "26.0.0", default-features = false }
-pallet-nis = { version = "40.0.0", default-features = false }
-pallet-migrations = { version = "10.1.0", default-features = false }
-pallet-nomination-pools = { version = "38.1.0", default-features = false }
-pallet-nomination-pools-benchmarking = { version = "38.0.0", default-features = false }
-pallet-nomination-pools-runtime-api = { version = "36.0.0", default-features = false }
-pallet-offences = { version = "39.0.0", default-features = false }
-pallet-offences-benchmarking = { version = "40.0.0", default-features = false }
-pallet-parameters = { version = "0.11.0", default-features = false }
-pallet-preimage = { version = "40.0.0", default-features = false }
-pallet-proxy = { version = "40.1.0", default-features = false }
-pallet-ranked-collective = { version = "40.1.0", default-features = false }
-pallet-recovery = { version = "40.0.0", default-features = false }
-pallet-referenda = { version = "40.1.0", default-features = false }
-pallet-revive = { version = "0.6.1", default-features = false }
-pallet-salary = { version = "25.0.0", default-features = false }
-pallet-scheduler = { version = "41.2.0", default-features = false }
-pallet-session = { version = "40.0.1", default-features = false }
-pallet-session-benchmarking = { version = "40.0.0", default-features = false }
-pallet-society = { version = "40.1.0", default-features = false }
-pallet-staking = { version = "40.1.1", default-features = false }
-pallet-delegated-staking = { version = "7.0.0", default-features = false }
-pallet-staking-reward-curve = { version = "12.0.0" }
-pallet-staking-reward-fn = { version = "22.0.1", default-features = false }
-pallet-staking-runtime-api = { version = "26.0.0", default-features = false }
-pallet-state-trie-migration = { version = "44.1.0", default-features = false }
-pallet-sudo = { version = "40.0.0", default-features = false }
-pallet-timestamp = { version = "39.0.0", default-features = false }
-pallet-transaction-payment = { version = "40.0.0", default-features = false }
-pallet-transaction-payment-rpc-runtime-api = { version = "40.0.0", default-features = false }
-pallet-treasury = { version = "39.0.0", default-features = false }
-pallet-uniques = { version = "40.1.0", default-features = false }
-pallet-utility = { version = "40.0.0", default-features = false }
-pallet-vesting = { version = "40.1.0", default-features = false }
-pallet-whitelist = { version = "39.0.0", default-features = false }
-pallet-xcm = { version = "19.1.2", default-features = false }
-pallet-xcm-benchmarks = { version = "20.0.0", default-features = false }
-pallet-xcm-bridge-hub = { version = "0.16.3", default-features = false }
-pallet-xcm-bridge-hub-router = { version = "0.18.0", default-features = false }
-parachain-info = { version = "0.20.0", default-features = false, package = "staging-parachain-info" }
-parachains-common = { version = "21.0.0", default-features = false }
-parachains-runtimes-test-utils = { version = "22.0.0" }
+pallet-alliance = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-asset-conversion = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-asset-conversion-tx-payment = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-asset-rate = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-asset-tx-payment = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-assets = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-aura = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-authority-discovery = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-authorship = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-babe = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-bags-list = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-beefy = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-beefy-mmr = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-bounties = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-bridge-grandpa = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-bridge-messages = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-bridge-parachains = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-bridge-relayers = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-broker = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-child-bounties = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-collator-selection = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-collective = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-conviction-voting = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-core-fellowship = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-election-provider-multi-phase = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-election-provider-support-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-fast-unstake = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-glutton = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-grandpa = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-identity = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-indices = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-insecure-randomness-collective-flip = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-membership = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-message-queue = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-mmr = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-multisig = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-nft-fractionalization = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-nfts = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-nfts-runtime-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-nis = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-migrations = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-nomination-pools = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-nomination-pools-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-nomination-pools-runtime-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-offences = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-offences-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-parameters = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-preimage = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-proxy = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-ranked-collective = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-recovery = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-referenda = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-revive = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-salary = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-scheduler = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-session = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-session-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-society = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-staking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-delegated-staking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-staking-reward-curve = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-staking-reward-fn = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-staking-runtime-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-state-trie-migration = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-sudo = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-timestamp = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-transaction-payment = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-treasury = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-uniques = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-utility = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-vesting = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-whitelist = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-xcm = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-xcm-benchmarks = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-xcm-bridge-hub = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+pallet-xcm-bridge-hub-router = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+parachain-info = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false, package = "staging-parachain-info" }
+parachains-common = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+parachains-runtimes-test-utils = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
 paste = { version = "1.0.14" }
-penpal-runtime = { version = "0.29.0" }
+penpal-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
 people-kusama-emulated-chain = { path = "integration-tests/emulated/chains/parachains/people/people-kusama" }
 people-kusama-runtime = { path = "system-parachains/people/people-kusama" }
-polkadot-core-primitives = { version = "17.1.0", default-features = false }
-polkadot-parachain-primitives = { version = "16.1.0", default-features = false }
-polkadot-primitives = { version = "18.1.0", default-features = false }
-polkadot-runtime-common = { version = "19.1.0", default-features = false }
-paseo-runtime-common = { version = "19.1.0", default-features = false }
+polkadot-core-primitives = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+polkadot-parachain-primitives = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+polkadot-primitives = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+polkadot-runtime-common = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+paseo-runtime-common = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
 primitive-types = { version = "0.12.2", default-features = false }
-frame-metadata-hash-extension = { version = "0.8.0", default-features = false }
-remote-externalities = { version = "0.50.0", package = "frame-remote-externalities" }
-runtime-parachains = { version = "19.1.0", default-features = false, package = "polkadot-runtime-parachains" }
-sc-chain-spec = { version = "42.0.0" }
-sc-network = { version = "0.49.2" }
+frame-metadata-hash-extension = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+remote-externalities = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false, package = "frame-remote-externalities" }
+runtime-parachains = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false, package = "polkadot-runtime-parachains" }
+sc-chain-spec = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+sc-network = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
 scale-info = { version = "2.10.0", default-features = false }
 separator = { version = "0.4.1" }
 serde = { version = "1.0.196" }
 serde_json = { version = "1.0.113", default-features = false }
 smallvec = { version = "1.13.1" }
-snowbridge-beacon-primitives = { version = "0.13.1", default-features = false }
-snowbridge-core = { version = "0.13.2", default-features = false }
-snowbridge-merkle-tree = { version = "0.2.0", default-features = false }
-snowbridge-outbound-queue-runtime-api = { version = "0.13.0", default-features = false }
-snowbridge-pallet-ethereum-client = { version = "0.13.0", default-features = false }
-snowbridge-outbound-queue-primitives = { version = "0.2.2", default-features = false }
-snowbridge-pallet-inbound-queue = { version = "0.13.2", default-features = false }
-snowbridge-pallet-inbound-queue-fixtures = { version = "0.21.0" }
-snowbridge-pallet-ethereum-client-fixtures = { version = "0.21.1" }
-snowbridge-pallet-outbound-queue = { version = "0.13.0", default-features = false }
-snowbridge-pallet-system = { version = "0.13.3", default-features = false }
-snowbridge-inbound-queue-primitives = { version = "0.2.2", default-features = false }
-snowbridge-runtime-common = { version = "0.13.0", default-features = false }
-snowbridge-runtime-test-common = { version = "0.15.0" }
-snowbridge-system-runtime-api = { version = "0.13.0", default-features = false }
-sp-api = { version = "36.0.1", default-features = false }
-sp-application-crypto = { version = "40.1.0", default-features = false }
-sp-arithmetic = { version = "26.1.0", default-features = false }
-sp-block-builder = { version = "36.0.0", default-features = false }
-sp-consensus-aura = { version = "0.42.0", default-features = false }
-sp-core = { version = "36.1.0", default-features = false }
-sp-debug-derive = { version = "14.0.0", default-features = false }
-sp-genesis-builder = { version = "0.17.0", default-features = false }
-sp-inherents = { version = "36.0.0", default-features = false }
-sp-io = { version = "40.0.1", default-features = false }
-sp-keyring = { version = "41.0.0" }
-sp-npos-elections = { version = "36.2.0", default-features = false }
-sp-offchain = { version = "36.0.0", default-features = false }
-sp-runtime = { version = "41.1.0", default-features = false }
-sp-session = { version = "38.1.0", default-features = false }
-sp-staking = { version = "38.0.0", default-features = false }
-sp-std = { version = "14.0.0", default-features = false }
-sp-state-machine = { version = "0.45.0", default-features = false }
-sp-storage = { version = "22.0.0", default-features = false }
-sp-tracing = { version = "17.1.0", default-features = false }
-sp-transaction-pool = { version = "36.0.0", default-features = false }
-sp-trie = { version = "39.1.0", default-features = false }
-sp-version = { version = "39.0.0", default-features = false }
-sp-weights = { version = "31.1.0", default-features = false }
-substrate-wasm-builder = { version = "26.0.1" }
+snowbridge-beacon-primitives = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+snowbridge-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+snowbridge-merkle-tree = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+snowbridge-outbound-queue-runtime-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+snowbridge-pallet-ethereum-client = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+snowbridge-outbound-queue-primitives = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+snowbridge-pallet-inbound-queue = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+snowbridge-pallet-inbound-queue-fixtures = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+snowbridge-pallet-ethereum-client-fixtures = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+snowbridge-pallet-outbound-queue = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+snowbridge-pallet-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+snowbridge-inbound-queue-primitives = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+snowbridge-runtime-common = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+snowbridge-runtime-test-common = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+snowbridge-system-runtime-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+sp-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+sp-application-crypto = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+sp-arithmetic = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+sp-block-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+sp-consensus-aura = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+sp-debug-derive = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+sp-genesis-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+sp-inherents = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+sp-keyring = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+sp-npos-elections = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+sp-offchain = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+sp-session = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+sp-staking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+sp-std = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+sp-state-machine = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+sp-storage = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+sp-tracing = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+sp-transaction-pool = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+sp-trie = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+sp-version = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+sp-weights = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+substrate-wasm-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
 system-parachains-constants = { path = "system-parachains/constants", default-features = false }
 system-parachains-common = { path = "system-parachains/common", default-features = false }
 tokio = { version = "1.36.0" }
-xcm = { version = "16.2.0", default-features = false, package = "staging-xcm" }
-xcm-builder = { version = "20.1.1", default-features = false, package = "staging-xcm-builder" }
-xcm-emulator = { version = "0.19.3" }
-xcm-executor = { version = "19.1.2", default-features = false, package = "staging-xcm-executor" }
-xcm-runtime-apis = { version = "0.7.1", default-features = false }
+xcm = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false, package = "staging-xcm" }
+xcm-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false, package = "staging-xcm-builder" }
+xcm-emulator = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
+xcm-executor = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false, package = "staging-xcm-executor" }
+xcm-runtime-apis = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
 anyhow = { version = "1.0.82" }
 subxt = { version = "0.38.1" }
 tracing-subscriber = { version = "0.3.18" }

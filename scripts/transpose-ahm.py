@@ -305,8 +305,6 @@ def setup_transposer(source_root: str, target_root: str) -> RuntimeTransposer:
         (r"paseo_parachain_primitives", "polkadot_parachain_primitives"),
         (r"paseo-core-primitives", "polkadot-core-primitives"),
         (r"paseo_core_primitives", "polkadot_core_primitives"),
-        # (r"system-parachains-common", "system-parachains-constants"),
-        # (r"system_parachains_common", "system_parachains_constants"),
         (r"collectives_paseo_runtime_constants", "collectives_polkadot_runtime_constants"),
         (r"// <https://research.web3.foundation/en/latest/paseo/BABE/Babe/#6-practical-results>", "// <https://research.web3.foundation/en/latest/polkadot/BABE/Babe/#6-practical-results>"),
         (r"type LeaseOffset = LeaseOffset;", "type LeaseOffset = ();"),
@@ -355,7 +353,6 @@ def setup_transposer(source_root: str, target_root: str) -> RuntimeTransposer:
     Asset Hub
     """
     transposer.add_substitutions(r"system-parachains/asset-hubs/asset-hub-polkadot/Cargo\.toml", [
-        # (r"system-parachains-common", "system-parachains-constants"),
         ("bp-asset-hub-kusama = { workspace = true }\n",""),
         ("bp-bridge-hub-paseo = { workspace = true }", "bp-bridge-hub-paseo = { workspace = true }\nbp-bridge-hub-polkadot = { workspace = true }"),
         ("kusama-runtime-constants = { workspace = true }\n", ""),

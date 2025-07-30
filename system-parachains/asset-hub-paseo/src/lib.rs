@@ -76,8 +76,8 @@ use core::cmp::Ordering;
 use cumulus_pallet_parachain_system::RelayNumberMonotonicallyIncreases;
 use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
 use governance::{pallet_custom_origins, Treasurer, TreasurySpender};
-use polkadot_core_primitives::AccountIndex;
 use paseo_runtime_constants::time::{DAYS as RC_DAYS, HOURS as RC_HOURS, MINUTES as RC_MINUTES};
+use polkadot_core_primitives::AccountIndex;
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, ConstU128, OpaqueMetadata};
 use sp_runtime::{
@@ -119,8 +119,8 @@ use frame_system::{
 };
 use pallet_nfts::PalletFeatures;
 use parachains_common::{
-	message_queue::*, AccountId, AuraId, AssetIdForTrustBackedAssets,
-	Balance, BlockNumber, Hash, Header, Nonce, Signature,
+	message_queue::*, AccountId, AssetIdForTrustBackedAssets, AuraId, Balance, BlockNumber, Hash,
+	Header, Nonce, Signature,
 };
 
 use cumulus_pallet_parachain_system::RelaychainDataProvider;
@@ -575,8 +575,7 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 					RuntimeCall::Assets { .. } |
 						RuntimeCall::Utility { .. } |
 						RuntimeCall::Multisig { .. } |
-						RuntimeCall::Nfts { .. } |
-						RuntimeCall::Uniques { .. }
+						RuntimeCall::Nfts { .. } | RuntimeCall::Uniques { .. }
 				)
 			},
 			ProxyType::AssetOwner => matches!(
@@ -667,10 +666,9 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 					c,
 					//RuntimeCall::Staking(..) |
 					RuntimeCall::Session(..) |
-						RuntimeCall::Utility(..) |
-						RuntimeCall::NominationPools(..) /*RuntimeCall::FastUnstake(..) |
-					                                   *RuntimeCall::VoterList(..)
-					                                   */
+						RuntimeCall::Utility(..) | RuntimeCall::NominationPools(..) /*RuntimeCall::FastUnstake(..) |
+					                                                             *RuntimeCall::VoterList(..)
+					                                                             */
 				)
 			},
 			ProxyType::NominationPools => {

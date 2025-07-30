@@ -210,8 +210,8 @@ impl multi_block::Config for Runtime {
 	type AreWeDone = multi_block::RevertToSignedIfNotQueuedOf<Self>;
 	type OnRoundRotation = multi_block::CleanRound<Self>;
 	// Note: these pallets are currently not "easily" benchmark-able in CIs. They provide a set of
-	// weights for paseo/kusama/westend. Using the paseo-variant is good enough for now.
-	type WeightInfo = multi_block::weights::paseo::MultiBlockWeightInfo<Self>;
+	// weights for polkadot/kusama/westend. Using the polkadot-variant is good enough for now.
+	type WeightInfo = multi_block::weights::polkadot::MultiBlockWeightInfo<Self>;
 }
 
 impl multi_block::verifier::Config for Runtime {
@@ -221,7 +221,7 @@ impl multi_block::verifier::Config for Runtime {
 	type MaxBackersPerWinnerFinal = MaxBackersPerWinnerFinal;
 	type SolutionDataProvider = MultiBlockElectionSigned;
 	type SolutionImprovementThreshold = ();
-	type WeightInfo = multi_block::weights::paseo::MultiBlockVerifierWeightInfo<Self>;
+	type WeightInfo = multi_block::weights::polkadot::MultiBlockVerifierWeightInfo<Self>;
 }
 
 parameter_types! {
@@ -244,7 +244,7 @@ impl multi_block::signed::Config for Runtime {
 	type RewardBase = RewardBase;
 	type MaxSubmissions = MaxSubmissions;
 	type EstimateCallFee = TransactionPayment;
-	type WeightInfo = multi_block::weights::paseo::MultiBlockSignedWeightInfo<Self>;
+	type WeightInfo = multi_block::weights::polkadot::MultiBlockSignedWeightInfo<Self>;
 }
 
 parameter_types! {
@@ -258,7 +258,7 @@ impl multi_block::unsigned::Config for Runtime {
 	type OffchainSolver = SequentialPhragmen<AccountId, SolutionAccuracyOf<Runtime>>;
 	type MinerTxPriority = MinerTxPriority;
 	type OffchainRepeat = OffchainRepeat;
-	type WeightInfo = multi_block::weights::paseo::MultiBlockUnsignedWeightInfo<Self>;
+	type WeightInfo = multi_block::weights::polkadot::MultiBlockUnsignedWeightInfo<Self>;
 }
 
 parameter_types! {
