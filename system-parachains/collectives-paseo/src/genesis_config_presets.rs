@@ -99,8 +99,7 @@ fn collectives_paseo_live_config(para_id: ParaId) -> serde_json::Value {
 			// BestValidator
 			(
 				// Stash
-				// TODO: set correct stash
-				hex!("fa981a07aa770cc65ba4edf414e2956f7a702cf4fdfd09a9ba3bc445e79e7928").into(),
+				hex!("548479101af891b02dadd4577fc80d27f57525b2b4f668d7e9489c779aa7ef0a").into(),
 				// Aura key
 				hex!("fa981a07aa770cc65ba4edf414e2956f7a702cf4fdfd09a9ba3bc445e79e7928")
 					.unchecked_into(),
