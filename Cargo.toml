@@ -6,12 +6,12 @@ repository = "https://github.com/paseo-network/runtimes.git"
 license = "GPL-3.0-only"                                     # TO-old-DO <https://github.com/paseo-fellows/runtimes/issues/29>
 
 [workspace.dependencies]
-kusama-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.6.0", package = "kusama-runtime-constants", default-features = false }
-bp-bridge-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.6.0", package = "bp-bridge-hub-kusama", default-features = false }
-bp-bridge-hub-polkadot = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.6.0", package = "bp-bridge-hub-polkadot", default-features = false }
-bp-asset-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.6.0", package = "bp-asset-hub-kusama", default-features = false }
-collectives-polkadot-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.6.0", package = "collectives-polkadot-runtime-constants", default-features = false }
-pallet-remote-proxy = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.6.0", package = "pallet-remote-proxy", default-features = false }
+kusama-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", rev = "7de1771fd", default-features = false }
+bp-bridge-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", rev = "7de1771fd", default-features = false }
+bp-bridge-hub-polkadot = { git = "https://github.com/polkadot-fellows/runtimes", rev = "7de1771fd", default-features = false }
+bp-asset-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", rev = "7de1771fd", default-features = false }
+collectives-polkadot-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", rev = "7de1771fd", default-features = false }
+pallet-remote-proxy = { git = "https://github.com/polkadot-fellows/runtimes", rev = "7de1771fd", default-features = false }
 pallet-ah-migrator = { git = "https://github.com/polkadot-fellows/runtimes", rev = "7de1771fd", default-features = false }
 pallet-ah-ops = { git = "https://github.com/polkadot-fellows/runtimes", rev = "7de1771fd", default-features = false }
 pallet-election-provider-multi-block = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }

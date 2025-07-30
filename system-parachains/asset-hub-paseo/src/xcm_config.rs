@@ -32,7 +32,7 @@ use frame_support::{
 	parameter_types,
 	traits::{
 		tokens::imbalance::{ResolveAssetTo, ResolveTo},
-		ConstU32, Contains, ContainsPair, Disabled, Equals, Everything, FromContains, Nothing,
+		ConstU32, Contains, ContainsPair, Disabled, Equals, Everything, FromContains,
 		PalletInfoAccess,
 	},
 };
@@ -45,8 +45,7 @@ use parachains_common::xcm_config::{
 use paseo_runtime_constants::system_parachain;
 use polkadot_parachain_primitives::primitives::Sibling;
 use snowbridge_inbound_queue_primitives::EthereumLocationsConverterFor;
-use sp_runtime::traits::{AccountIdConversion, ConvertInto, TryConvertInto};
-use system_parachains_constants::TREASURY_PALLET_ID;
+use sp_runtime::traits::TryConvertInto;
 use xcm::latest::prelude::*;
 use xcm_builder::{
 	AccountId32Aliases, AliasChildLocation, AllowExplicitUnpaidExecutionFrom,
@@ -609,7 +608,7 @@ pub mod bridging {
 		/// governance `set_storage` call.
 		pub storage XcmBridgeHubRouterByteFee: Balance = bp_bridge_hub_paseo::estimate_paseo_to_kusama_byte_fee();
 
-		pub SiblingBridgeHubParaId: u32 = bp_bridge_hub_paseo::BRIDGE_HUB_PASEO_PARACHAIN_ID;
+		pub SiblingBridgeHubParaId: u32 = bp_bridge_hub_paseo::BRIDGE_HUB_POLKADOT_PARACHAIN_ID;
 		pub SiblingBridgeHub: Location = Location::new(1, Parachain(SiblingBridgeHubParaId::get()));
 		/// Router expects payment with this `AssetId`.
 		/// (`AssetId` has to be aligned with `BridgeTable`)
@@ -631,7 +630,7 @@ pub mod bridging {
 				1,
 				[
 					Parachain(SiblingBridgeHubParaId::get()),
-					PalletInstance(bp_bridge_hub_paseo::WITH_BRIDGE_PASEO_TO_KUSAMA_MESSAGES_PALLET_INDEX),
+					PalletInstance(bp_bridge_hub_paseo::WITH_BRIDGE_POLKADOT_TO_KUSAMA_MESSAGES_PALLET_INDEX),
 				]
 			);
 
@@ -640,7 +639,7 @@ pub mod bridging {
 				2,
 				[
 					GlobalConsensus(KusamaNetwork::get()),
-					Parachain(kusama_runtime_constants::system_parachain::ASSET_HUB_ID),
+					Parachain(paseo_runtime_constants::system_parachain::ASSET_HUB_ID),
 				],
 			);
 			pub KsmLocation: Location = Location::new(2, GlobalConsensus(KusamaNetwork::get()));

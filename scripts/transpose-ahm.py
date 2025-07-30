@@ -310,7 +310,7 @@ def setup_transposer(source_root: str, target_root: str) -> RuntimeTransposer:
         (r"// <https://research.web3.foundation/en/latest/paseo/BABE/Babe/#6-practical-results>", "// <https://research.web3.foundation/en/latest/polkadot/BABE/Babe/#6-practical-results>"),
         (r"type LeaseOffset = LeaseOffset;", "type LeaseOffset = ();"),
         (r"PaseoXcm", "PolkadotXcm"),
-        (r"PolkadotXcmWeight", "PaseoXcmWeight"),
+        (r"HubPolkadotXcmWeight", "HubPaseoXcmWeight"),
         (r"Parity Technologies and the various Paseo contributors", "Parity Technologies and the various Polkadot contributors"),
         (r" \(previously known as Statemint\)", ""),
         (r"AssetHubPaseoAuraId as AuraId", "AuraId"),
