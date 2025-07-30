@@ -216,6 +216,7 @@ std = [
 	"sp-genesis-builder/std",
 	"sp-inherents/std",
 	"sp-io/std",
+	"sp-keyring/std",
 	"sp-npos-elections/std",
 	"sp-offchain/std",
 	"sp-runtime/std",

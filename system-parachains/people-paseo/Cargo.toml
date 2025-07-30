@@ -125,6 +125,7 @@ std = [
 	"pallet-xcm/std",
 	"parachain-info/std",
 	"parachains-common/std",
+	"parachains-runtimes-test-utils/std",
 	"paseo-runtime-constants/std",
 	"polkadot-parachain-primitives/std",
 	"polkadot-runtime-common/std",

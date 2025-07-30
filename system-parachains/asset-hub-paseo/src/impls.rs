@@ -15,7 +15,7 @@
 
 use crate::*;
 
-// TO-old-DO:move implementations to the polkadot-sdk.
+// TODO: move implementations to the polkadot-sdk.
 pub mod tx_payment {
 	use super::*;
 	use core::marker::PhantomData;

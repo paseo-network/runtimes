@@ -54,7 +54,7 @@ parameter_types! {
 	/// the context".
 	pub const TokenLocation: Location = Here.into_location();
 	/// The Paseo network ID. This is named.
-	pub const ThisNetwork: NetworkId = NetworkId::Paseo;
+	pub const ThisNetwork: NetworkId = NetworkId::Polkadot;
 	/// Our location in the universe of consensus systems.
 	pub UniversalLocation: InteriorLocation = [GlobalConsensus(ThisNetwork::get())].into();
 	/// The Checking Account, which holds any native assets that have been teleported out and not back in (yet).

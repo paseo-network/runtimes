@@ -271,6 +271,7 @@ try-runtime = [
 	"system-parachains-common/try-runtime",
 ]
 std = [
+	"asset-test-utils/std",
 	"assets-common/std",
 	"bp-asset-hub-paseo/std",
 	"bp-bridge-hub-kusama/std",
@@ -343,6 +344,7 @@ std = [
 	"pallet-xcm/std",
 	"parachain-info/std",
 	"parachains-common/std",
+	"parachains-runtimes-test-utils/std",
 	"paseo-runtime-constants/std",
 	"polkadot-core-primitives/std",
 	"polkadot-parachain-primitives/std",

@@ -150,6 +150,7 @@ class RuntimeTransposer:
     def run_post_processing_commands(self):
         """Run zepter, taplo, and cargo format commands."""
         commands = [
+            # This often fails due to a timing issue, depending on how fast your lockfile updates and how long you take to inspect the diffs 
             ("zepter", ["zepter"]),
             ("taplo format", ["taplo", "format", "--config", ".config/taplo.toml"]),
             # fmt is a mess right now
@@ -309,10 +310,14 @@ def setup_transposer(source_root: str, target_root: str) -> RuntimeTransposer:
         (r"// <https://research.web3.foundation/en/latest/paseo/BABE/Babe/#6-practical-results>", "// <https://research.web3.foundation/en/latest/polkadot/BABE/Babe/#6-practical-results>"),
         (r"type LeaseOffset = LeaseOffset;", "type LeaseOffset = ();"),
         (r"PaseoXcm", "PolkadotXcm"),
+        (r"PolkadotXcmWeight", "PaseoXcmWeight"),
         (r"Parity Technologies and the various Paseo contributors", "Parity Technologies and the various Polkadot contributors"),
         (r" \(previously known as Statemint\)", ""),
         (r"AssetHubPaseoAuraId as AuraId", "AuraId"),
         (r"ed25519", "sr25519"),
+        (r"NetworkId::Paseo", "NetworkId::Polkadot"), # this is perverse, but what they have already deployed
+        (r"multi_block::weights::paseo", "multi_block::weights::polkadot"),
+        (r"paseo/kusama/westend. Using the paseo-variant", "polkadot/kusama/westend. Using the polkadot-variant"),
     ])
 
 

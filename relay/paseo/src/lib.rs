@@ -170,7 +170,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: alloc::borrow::Cow::Borrowed("paseo"),
-	impl_name: alloc::borrow::Cow::Borrowed("parity-paseo"), // TODO check
+	impl_name: alloc::borrow::Cow::Borrowed("parity-paseo"),
 	authoring_version: 0,
 	spec_version: 1_006_001,
 	impl_version: 0,
@@ -298,7 +298,7 @@ parameter_types! {
 	pub EpochDuration: u64 = prod_or_fast!(
 		EPOCH_DURATION_IN_SLOTS as u64,
 		2 * MINUTES as u64,
-		"DOT_EPOCH_DURATION" // TODO check
+		"DOT_EPOCH_DURATION"
 	);
 	pub const ExpectedBlockTime: Moment = MILLISECS_PER_BLOCK;
 	pub ReportLongevity: u64 =
@@ -1134,7 +1134,8 @@ impl InstanceFilter<RuntimeCall> for TransparentProxyType<ProxyType> {
 				matches!(
 					c,
 					RuntimeCall::Staking(..) |
-						RuntimeCall::Session(..) | RuntimeCall::Utility(..) |
+						RuntimeCall::Session(..) |
+						RuntimeCall::Utility(..) |
 						RuntimeCall::FastUnstake(..) |
 						RuntimeCall::VoterList(..) |
 						RuntimeCall::NominationPools(..)
@@ -3388,7 +3389,8 @@ mod remote_tests {
 	use std::env::var;
 
 	async fn remote_ext_test_setup() -> RemoteExternalities<Block> {
-		let transport: Transport = var("WS").unwrap_or("wss://rpc.paseo.io:443".to_string()).into();
+		let transport: Transport =
+			var("WS").unwrap_or("wss://rpc.paseo.io:443".to_string()).into();
 		let maybe_state_snapshot: Option<SnapshotConfig> = var("SNAP").map(|s| s.into()).ok();
 		Builder::<Block>::default()
 			.mode(if let Some(state_snapshot) = maybe_state_snapshot {
@@ -3469,7 +3471,8 @@ mod remote_tests {
 	#[ignore = "this test is meant to be executed manually"]
 	async fn try_fast_unstake_all() {
 		sp_tracing::try_init_simple();
-		let transport: Transport = var("WS").unwrap_or("wss://rpc.paseo.io:443".to_string()).into();
+		let transport: Transport =
+			var("WS").unwrap_or("wss://rpc.paseo.io:443".to_string()).into();
 		let maybe_state_snapshot: Option<SnapshotConfig> = var("SNAP").map(|s| s.into()).ok();
 		let mut ext = Builder::<Block>::default()
 			.mode(if let Some(state_snapshot) = maybe_state_snapshot {
