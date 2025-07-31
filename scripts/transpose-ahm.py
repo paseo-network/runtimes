@@ -147,17 +147,61 @@ class RuntimeTransposer:
             except Exception as e:
                 print(f"Error processing {target_dir}/Cargo.toml: {e}")
 
+    def update_fellows_dependencies(self):
+        """Update all polkadot-fellows/runtimes dependencies to the current HEAD of source repo."""
+        try:
+            # Get the current HEAD commit from the source repository
+            repo = Repo(self.source_root)
+            current_commit = repo.head.commit.hexsha[:9]  # Use truncated SHA for readability
+            print(f"Updating polkadot-fellows/runtimes dependencies to: {current_commit}")
+            
+            # Path to the target Cargo.toml
+            cargo_toml_path = self.target_root / "Cargo.toml"
+            
+            if not cargo_toml_path.exists():
+                print(f"Warning: {cargo_toml_path} does not exist")
+                return
+            
+            # Read the file
+            with open(cargo_toml_path, 'r') as f:
+                content = f.read()
+            
+            # Pattern to match polkadot-fellows/runtimes dependencies with rev
+            pattern = r'(git = "https://github\.com/polkadot-fellows/runtimes"[^}]*rev = ")[^"]*(")'
+            
+            # Count matches before replacement
+            matches = re.findall(pattern, content)
+            if not matches:
+                print("No polkadot-fellows/runtimes dependencies with rev found")
+                return
+            
+            print(f"Found {len(matches)} polkadot-fellows/runtimes dependencies to update")
+            
+            # Replace all occurrences
+            updated_content = re.sub(pattern, rf'\1{current_commit}\2', content)
+            
+            # Write back to file
+            with open(cargo_toml_path, 'w') as f:
+                f.write(updated_content)
+            
+            print(f"Updated {len(matches)} dependencies to current HEAD: {current_commit}")
+            
+        except Exception as e:
+            print(f"Error updating fellows dependencies: {e}")
+
     def run_post_processing_commands(self):
         """Run zepter, taplo, and cargo format commands."""
-        commands = [
-            # This often fails due to a timing issue, depending on how fast your lockfile updates and how long you take to inspect the diffs 
-            ("zepter", ["zepter"]),
+        # Run zepter with exponential backoff retry logic
+        self._run_zepter_with_retry()
+        
+        # Run other commands normally
+        other_commands = [
             ("taplo format", ["taplo", "format", "--config", ".config/taplo.toml"]),
             # fmt is a mess right now
             # ("cargo format", ["cargo", "+nightly-2025-06-27", "fmt"])
         ]
         
-        for name, cmd in commands:
+        for name, cmd in other_commands:
             print(f"\nRunning {name}...")
             try:
                 result = subprocess.run(
@@ -183,6 +227,46 @@ class RuntimeTransposer:
                         print(f"Stderr: {e.stderr}")
             except FileNotFoundError:
                 print(f"Error: {cmd[0]} command not found. Please ensure it's installed and in PATH.")
+
+    def _run_zepter_with_retry(self):
+        """Run zepter with exponential backoff retry logic."""
+        import time
+        
+        delays = [10, 20, 40, 80, 160]  # delays in seconds
+        cmd = ["zepter"]
+        
+        for attempt, delay in enumerate(delays, 1):
+            print(f"\nRunning zepter (attempt {attempt}/{len(delays)})...")
+            try:
+                result = subprocess.run(
+                    cmd,
+                    cwd=self.target_root,
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+                print("zepter completed successfully")
+                if result.stdout:
+                    print(f"Output: {result.stdout}")
+                return  # Success, exit the retry loop
+                
+            except subprocess.CalledProcessError as e:
+                print(f"zepter failed on attempt {attempt}: {e}")
+                if e.stdout:
+                    print(f"Stdout: {e.stdout}")
+                if e.stderr:
+                    print(f"Stderr: {e.stderr}")
+                
+                if attempt < len(delays):
+                    print(f"Waiting {delay} seconds before retry...")
+                    time.sleep(delay)
+                else:
+                    print("zepter failed after all retry attempts, giving up")
+                    raise
+                    
+            except FileNotFoundError:
+                print("Error: zepter command not found. Please ensure it's installed and in PATH.")
+                raise
 
     def _get_substitutions(self, file_path: str) -> List[Tuple[str, str]]:
         """Get all substitutions that apply to a given file path."""
@@ -311,13 +395,16 @@ def setup_transposer(source_root: str, target_root: str) -> RuntimeTransposer:
         (r"type LeaseOffset = LeaseOffset;", "type LeaseOffset = ();"),
         (r"PaseoXcm", "PolkadotXcm"),
         (r"HubPolkadotXcmWeight", "HubPaseoXcmWeight"),
-        (r"Parity Technologies and the various Paseo contributors", "Parity Technologies and the various Polkadot contributors"),
+        (r"Parity Technologies and the various Paseo contributors", "Parity Technologies and the various Polkadot contributors"), # to maintain current licenses
         (r" \(previously known as Statemint\)", ""),
-        (r"AssetHubPaseoAuraId as AuraId", "AuraId"),
-        (r"ed25519", "sr25519"),
+        (r"AssetHubPaseoAuraId as AuraId", "AuraId"), # Paseo always uses sr, PAH used ed
+        (r"ed25519", "sr25519"), # Paseo always uses sr, PAH used ed
         (r"NetworkId::Paseo", "NetworkId::Polkadot"), # this is perverse, but what they have already deployed
         (r"multi_block::weights::paseo", "multi_block::weights::polkadot"),
         (r"paseo/kusama/westend. Using the paseo-variant", "polkadot/kusama/westend. Using the polkadot-variant"),
+        (r"kusama_runtime_constants", "paseo_runtime_constants"), # temp - should be removed
+        (r"BRIDGE_PASEO", "BRIDGE_POLKADOT"), # temp - should be removed
+        (r"BRIDGE_HUB_PASEO", "BRIDGE_HUB_POLKADOT"), # temp - should be removed
     ])
 
 
@@ -414,6 +501,10 @@ def run_copy_and_transform(args):
         transposer.revert_paths(all_revert_paths)
     else:
         print("\nNo paths were reverted")
+
+    # Update polkadot-fellows/runtimes dependencies to current HEAD
+    print("\nUpdating polkadot-fellows/runtimes dependencies...")
+    transposer.update_fellows_dependencies()
 
     # Clear feature dependencies from Cargo.toml files in target directories
     target_dirs = [target_dir for _, target_dir in args.copy_pairs]
