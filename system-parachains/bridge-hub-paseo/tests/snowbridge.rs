@@ -130,7 +130,7 @@ pub fn transfer_token_to_ethereum_insufficient_fund() {
 fn change_ethereum_gateway_by_governance_works() {
 	change_storage_constant_by_governance_works::<Runtime, EthereumGatewayAddress, H160>(
 		collator_session_keys(),
-		bp_bridge_hub_paseo::BRIDGE_HUB_POLKAPAS_PARACHAIN_ID,
+		bp_bridge_hub_paseo::BRIDGE_HUB_POLKADOT_PARACHAIN_ID,
 		GovernanceOrigin::Location(GovernanceLocation::get()),
 		|| (EthereumGatewayAddress::key().to_vec(), EthereumGatewayAddress::get()),
 		|_| [1; 20].into(),
@@ -163,8 +163,8 @@ fn test_xcm_fee_manager_from_components_bh_origin_in_waived_locations() {
 
 /// Fee is waived when origin is in waived location with Export message, but not to Ethereum.
 #[test]
-fn test_xcm_fee_manager_from_components_bh_origin_in_waived_locations_with_export_to_paseo_reason(
-) {
+fn test_xcm_fee_manager_from_components_bh_origin_in_waived_locations_with_export_to_paseo_reason()
+{
 	assert!(TestXcmFeeManager::is_waived(
 		Some(&Location::new(1, [Parachain(2)])),
 		FeeReason::Export { network: Polkadot, destination: Here }
@@ -245,7 +245,7 @@ fn ethereum_outbound_queue_processes_messages_before_message_queue_works() {
 	)
 }
 
-// TODO replace with snowbridge runtime common method in stable-2412 release.
+// TO-old-DO replace with snowbridge runtime common method in stable-2412 release.
 pub fn ethereum_extrinsic<Runtime>(
 	collator_session_key: CollatorSessionKeys<Runtime>,
 	runtime_para_id: u32,
