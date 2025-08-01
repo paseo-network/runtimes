@@ -1834,14 +1834,14 @@ mod benches {
 
 	impl pallet_xcm::benchmarking::Config for Runtime {
 		type DeliveryHelper = (
-			paseo_runtime_common::xcm_sender::ToParachainDeliveryHelper<
+			polkadot_runtime_common::xcm_sender::ToParachainDeliveryHelper<
 				XcmConfig,
 				ExistentialDepositAsset,
 				xcm_config::PriceForChildParachainDelivery,
 				AssetHubParaId,
 				Dmp,
 			>,
-			paseo_runtime_common::xcm_sender::ToParachainDeliveryHelper<
+			polkadot_runtime_common::xcm_sender::ToParachainDeliveryHelper<
 				XcmConfig,
 				ExistentialDepositAsset,
 				xcm_config::PriceForChildParachainDelivery,
@@ -1892,7 +1892,7 @@ mod benches {
 	impl pallet_xcm_benchmarks::Config for Runtime {
 		type XcmConfig = XcmConfig;
 		type AccountIdConverter = SovereignAccountOf;
-		type DeliveryHelper = paseo_runtime_common::xcm_sender::ToParachainDeliveryHelper<
+		type DeliveryHelper = polkadot_runtime_common::xcm_sender::ToParachainDeliveryHelper<
 			XcmConfig,
 			ExistentialDepositAsset,
 			xcm_config::PriceForChildParachainDelivery,
