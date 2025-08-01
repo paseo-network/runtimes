@@ -22,8 +22,10 @@ jobs:
             "https://api.github.com/orgs/paseo-network/teams/paseo-core/memberships/${{ github.event.comment.user.login }}")
           
           if [ "$(echo "$response" | jq -r '.state // empty')" == "active" ]; then
+            echo "Allowed team member"
             echo "is_allowed=true" >> $GITHUB_OUTPUT
           else
+            echo "Not allowed, not a team member"
             echo "is_allowed=false" >> $GITHUB_OUTPUT
           fi
 
