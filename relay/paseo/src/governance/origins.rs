@@ -44,7 +44,7 @@ pub mod pallet_custom_origins {
 	pub enum Origin {
 		/// Origin able to cancel slashes and manage minimum commission.
 		StakingAdmin,
-		/// Origin for spending up to $10,000,000 DOT from the treasury as well as generally
+		/// Origin for spending up to $10,000,000 PAS from the treasury as well as generally
 		/// administering it.
 		Treasurer,
 		/// Origin for managing the composition of the fellowship.
@@ -67,7 +67,7 @@ pub mod pallet_custom_origins {
 		SmallSpender,
 		/// Origin able to spend around $100,000 from the treasury at once.
 		MediumSpender,
-		/// Origin able to spend up to $1,000,000 DOT from the treasury at once.
+		/// Origin able to spend up to $1,000,000 PAS from the treasury at once.
 		BigSpender,
 		/// Origin able to dispatch a whitelisted call.
 		WhitelistedCaller,

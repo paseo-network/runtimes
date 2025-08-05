@@ -60,13 +60,13 @@ impl Chain for BridgeHubPaseo {
 }
 
 impl Parachain for BridgeHubPaseo {
-	const PARACHAIN_ID: u32 = BRIDGE_HUB_POLKAPAS_PARACHAIN_ID;
+	const PARACHAIN_ID: u32 = BRIDGE_HUB_POLKADOT_PARACHAIN_ID;
 	const MAX_HEADER_SIZE: u32 = MAX_BRIDGE_HUB_HEADER_SIZE;
 }
 
 impl ChainWithMessages for BridgeHubPaseo {
 	const WITH_CHAIN_MESSAGES_PALLET_NAME: &'static str =
-		WITH_BRIDGE_HUB_POLKAPAS_MESSAGES_PALLET_NAME;
+		WITH_BRIDGE_HUB_POLKADOT_MESSAGES_PALLET_NAME;
 	const MAX_UNREWARDED_RELAYERS_IN_CONFIRMATION_TX: MessageNonce =
 		MAX_UNREWARDED_RELAYERS_IN_CONFIRMATION_TX;
 	/// This constant limits the maximum number of messages in `receive_messages_proof`.
@@ -77,17 +77,17 @@ impl ChainWithMessages for BridgeHubPaseo {
 }
 
 /// Identifier of BridgeHubPaseo in the Paseo relay chain.
-pub const BRIDGE_HUB_POLKAPAS_PARACHAIN_ID: u32 = 1002;
+pub const BRIDGE_HUB_POLKADOT_PARACHAIN_ID: u32 = 1002;
 
 /// Name of the With-BridgeHubPaseo messages pallet instance that is deployed at bridged chains.
-pub const WITH_BRIDGE_HUB_POLKAPAS_MESSAGES_PALLET_NAME: &str = "BridgePaseoMessages";
+pub const WITH_BRIDGE_HUB_POLKADOT_MESSAGES_PALLET_NAME: &str = "BridgePaseoMessages";
 
 /// Name of the With-BridgeHubPaseo bridge-relayers pallet instance that is deployed at bridged
 /// chains.
-pub const WITH_BRIDGE_HUB_POLKAPAS_RELAYERS_PALLET_NAME: &str = "BridgeRelayers";
+pub const WITH_BRIDGE_HUB_POLKADOT_RELAYERS_PALLET_NAME: &str = "BridgeRelayers";
 
 /// Pallet index of `BridgeKusamaMessages: pallet_bridge_messages::<Instance1>`.
-pub const WITH_BRIDGE_POLKAPAS_TO_KUSAMA_MESSAGES_PALLET_INDEX: u8 = 53;
+pub const WITH_BRIDGE_POLKADOT_TO_KUSAMA_MESSAGES_PALLET_INDEX: u8 = 53;
 
 decl_bridge_finality_runtime_apis!(bridge_hub_paseo);
 decl_bridge_messages_runtime_apis!(bridge_hub_paseo, LegacyLaneId);
@@ -117,11 +117,11 @@ pub fn estimate_paseo_to_kusama_message_fee(
 	// 1) an approximate cost of XCM execution (`ExportMessage` and surroundings) at Paseo bridge
 	//    Hub;
 	//
-	// 2) the approximate cost of Paseo -> Kusama message delivery transaction on Kusama Bridge
-	//    Hub, converted into KSMs using 1:5 conversion rate;
+	// 2) the approximate cost of Paseo -> Kusama message delivery transaction on Kusama Bridge Hub,
+	//    converted into KSMs using 1:5 conversion rate;
 	//
-	// 3) the approximate cost of Paseo -> Kusama message confirmation transaction on Paseo
-	//    Bridge Hub.
+	// 3) the approximate cost of Paseo -> Kusama message confirmation transaction on Paseo Bridge
+	//    Hub.
 	BridgeHubPaseoBaseXcmFeeInDots::get()
 		.saturating_add(convert_from_uksm_to_udot(bridge_hub_kusama_base_delivery_fee_in_uksms))
 		.saturating_add(BridgeHubPaseoBaseConfirmationFeeInDots::get())
@@ -131,8 +131,8 @@ pub fn estimate_paseo_to_kusama_message_fee(
 /// message from Paseo Bridge Hub to Kusama Bridge Hub.
 pub fn estimate_paseo_to_kusama_byte_fee() -> Balance {
 	// the sender pays for the same byte twice:
-	// 1) the first part comes from the HRMP, when message travels from Paseo Asset Hub to
-	//    Paseo Bridge Hub;
+	// 1) the first part comes from the HRMP, when message travels from Paseo Asset Hub to Paseo
+	//    Bridge Hub;
 	// 2) the second part is the payment for bytes of the message delivery transaction, which is
 	//    "mined" at Kusama Bridge Hub. Hence, we need to use byte fees from that chain and convert
 	//    it to PASs here.
@@ -145,7 +145,7 @@ fn convert_from_uksm_to_udot(price_in_uksm: Balance) -> Balance {
 	let dot_to_ksm_economic_rate = FixedU128::from_rational(5, 1);
 	// tokens have different nominals and we need to take that into account
 	let nominal_ratio = FixedU128::from_rational(
-			paseo_runtime_constants::currency::UNITS,
+		paseo_runtime_constants::currency::UNITS,
 		kusama_runtime_constants::currency::UNITS,
 	);
 
@@ -230,7 +230,7 @@ pub mod bp_paseo {
 	}
 
 	impl ChainWithGrandpa for Paseo {
-		const WITH_CHAIN_GRANDPA_PALLET_NAME: &'static str = WITH_POLKAPAS_GRANDPA_PALLET_NAME;
+		const WITH_CHAIN_GRANDPA_PALLET_NAME: &'static str = WITH_POLKADOT_GRANDPA_PALLET_NAME;
 		const MAX_AUTHORITIES_COUNT: u32 = MAX_AUTHORITIES_COUNT;
 		const REASONABLE_HEADERS_IN_JUSTIFICATION_ANCESTRY: u32 =
 			REASONABLE_HEADERS_IN_JUSTIFICATION_ANCESTRY;
@@ -241,9 +241,9 @@ pub mod bp_paseo {
 	/// Name of the parachains pallet in the Paseo runtime.
 	pub const PARAS_PALLET_NAME: &str = "Paras";
 	/// Name of the With-Paseo GRANDPA pallet instance that is deployed at bridged chains.
-	pub const WITH_POLKAPAS_GRANDPA_PALLET_NAME: &str = "BridgePaseoGrandpa";
+	pub const WITH_POLKADOT_GRANDPA_PALLET_NAME: &str = "BridgePaseoGrandpa";
 	/// Name of the With-Paseo parachains pallet instance that is deployed at bridged chains.
-	pub const WITH_POLKAPAS_BRIDGE_PARACHAINS_PALLET_NAME: &str = "BridgePaseoParachains";
+	pub const WITH_POLKADOT_BRIDGE_PARACHAINS_PALLET_NAME: &str = "BridgePaseoParachains";
 
 	/// Maximal size of encoded `bp_parachains::ParaStoredHeaderData` structure among all Paseo
 	/// parachains.
@@ -266,10 +266,8 @@ mod tests {
 
 		let price_in_ksm =
 			FixedU128::from_rational(price_in_uksm, kusama_runtime_constants::currency::UNITS);
-		let price_in_dot = FixedU128::from_rational(
-			same_price_in_udot,
-			paseo_runtime_constants::currency::UNITS,
-		);
+		let price_in_dot =
+			FixedU128::from_rational(same_price_in_udot, paseo_runtime_constants::currency::UNITS);
 		assert_eq!(price_in_dot / FixedU128::saturating_from_integer(5), price_in_ksm);
 	}
 }
