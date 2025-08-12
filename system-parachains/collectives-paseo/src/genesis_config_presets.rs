@@ -107,7 +107,6 @@ fn collectives_paseo_live_config(para_id: ParaId) -> serde_json::Value {
 			// FaradayNodes
 			(
 				// Stash
-				// TODO: set correct stash
 				hex!("6cf32a1c4d1e6e527d46fcbf4bc7ad8c0ae03778cf6a0dfa6f0aed0cea438473").into(),
 				// Aura key
 				hex!("6cf32a1c4d1e6e527d46fcbf4bc7ad8c0ae03778cf6a0dfa6f0aed0cea438473")
@@ -137,12 +136,10 @@ pub fn preset_names() -> Vec<PresetId> {
 pub fn get_preset(id: &PresetId) -> Option<Vec<u8>> {
 	let patch = match id.as_ref() {
 		"live" => collectives_paseo_live_config(1001.into()),
-		sp_genesis_builder::DEV_RUNTIME_PRESET => {
-			collectives_polkadot_development_genesis(1001.into())
-		},
-		sp_genesis_builder::LOCAL_TESTNET_RUNTIME_PRESET => {
-			collectives_polkadot_local_testnet_genesis(1001.into())
-		},
+		sp_genesis_builder::DEV_RUNTIME_PRESET =>
+			collectives_polkadot_development_genesis(1001.into()),
+		sp_genesis_builder::LOCAL_TESTNET_RUNTIME_PRESET =>
+			collectives_polkadot_local_testnet_genesis(1001.into()),
 		_ => return None,
 	};
 	Some(
