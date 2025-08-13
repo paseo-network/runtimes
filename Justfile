@@ -4,5 +4,5 @@ default: fmt
 fmt:
 	#!/usr/bin/env bash
 
-	cargo +nightly-2024-09-11 fmt --all
+	cargo +nightly-2025-01-30 fmt --all
 	taplo format --check --config .config/taplo.toml
