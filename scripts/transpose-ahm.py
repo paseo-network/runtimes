@@ -231,6 +231,9 @@ class RuntimeTransposer:
     def _run_zepter_with_retry(self):
         """Run zepter with exponential backoff retry logic."""
         import time
+
+        # Always do a 'cargo fetch' first do update the lockfile
+        subprocess.run(["cargo", "fetch"], cwd=self.target_root)
         
         delays = [10, 20, 40, 80, 160]  # delays in seconds
         cmd = ["zepter"]
