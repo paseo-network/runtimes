@@ -3,15 +3,15 @@ version = "1.0.0"
 authors = ["Paseo Core Team"]
 edition = "2021"
 repository = "https://github.com/paseo-network/runtimes.git"
-license = "GPL-3.0-only"                                        # TODO <https://github.com/paseo-fellows/runtimes/issues/29>
+license = "GPL-3.0-only"                                     # TODO <https://github.com/paseo-fellows/runtimes/issues/29>
 
 [workspace.dependencies]
-kusama-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.6.0", package = "kusama-runtime-constants", default-features = false  }
-bp-bridge-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.6.0", package = "bp-bridge-hub-kusama", default-features = false  }
-bp-bridge-hub-polkadot = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.6.0", package = "bp-bridge-hub-polkadot", default-features = false  }
-bp-asset-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.6.0", package = "bp-asset-hub-kusama", default-features = false  }
-collectives-polkadot-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.6.0", package = "collectives-polkadot-runtime-constants", default-features = false  }
-pallet-remote-proxy = {  git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.6.0", package = "pallet-remote-proxy", default-features = false   }
+kusama-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.6.0", package = "kusama-runtime-constants", default-features = false }
+bp-bridge-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.6.0", package = "bp-bridge-hub-kusama", default-features = false }
+bp-bridge-hub-polkadot = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.6.0", package = "bp-bridge-hub-polkadot", default-features = false }
+bp-asset-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.6.0", package = "bp-asset-hub-kusama", default-features = false }
+collectives-polkadot-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.6.0", package = "collectives-polkadot-runtime-constants", default-features = false }
+pallet-remote-proxy = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v1.6.0", package = "pallet-remote-proxy", default-features = false }
 
 # Local dependencies
 
@@ -24,16 +24,16 @@ collectives-paseo-runtime = { path = "system-parachains/collectives-paseo" }
 collectives-paseo-runtime-constants = { path = "system-parachains/collectives-paseo/constants" }
 
 # Polkadot SDK
-bp-bridge-hub-paseo = { path = "system-parachains/bridge-hub-paseo/primitives", default-features = false}
-bp-asset-hub-paseo = { path = "system-parachains/asset-hub-paseo/primitives", default-features = false}
-paseo-runtime = { path = "relay/paseo", default-features = false}
-integration-tests-helpers = { path = "integration-tests/emulated/helpers"}
-paseo-system-emulated-network = { path = "integration-tests/emulated/networks/paseo-system"}
-asset-hub-paseo-emulated-chain = { path = "integration-tests/emulated/chains/parachains/assets/asset-hub-paseo"}
-bridge-hub-paseo-emulated-chain = { path = "integration-tests/emulated/chains/parachains/bridges/bridge-hub-paseo"}
-penpal-emulated-chain = { path = "integration-tests/emulated/chains/parachains/testing/penpal"}
-people-paseo-emulated-chain = { path = "integration-tests/emulated/chains/parachains/people/people-paseo"}
-paseo-emulated-chain = { path = "integration-tests/emulated/chains/relays/paseo"}
+bp-bridge-hub-paseo = { path = "system-parachains/bridge-hub-paseo/primitives", default-features = false }
+bp-asset-hub-paseo = { path = "system-parachains/asset-hub-paseo/primitives", default-features = false }
+paseo-runtime = { path = "relay/paseo", default-features = false }
+integration-tests-helpers = { path = "integration-tests/emulated/helpers" }
+paseo-system-emulated-network = { path = "integration-tests/emulated/networks/paseo-system" }
+asset-hub-paseo-emulated-chain = { path = "integration-tests/emulated/chains/parachains/assets/asset-hub-paseo" }
+bridge-hub-paseo-emulated-chain = { path = "integration-tests/emulated/chains/parachains/bridges/bridge-hub-paseo" }
+penpal-emulated-chain = { path = "integration-tests/emulated/chains/parachains/testing/penpal" }
+people-paseo-emulated-chain = { path = "integration-tests/emulated/chains/parachains/people/people-paseo" }
+paseo-emulated-chain = { path = "integration-tests/emulated/chains/relays/paseo" }
 assert_matches = { version = "1.5.0" }
 approx = { version = "0.5.1" }
 asset-test-utils = { version = "23.0.0" }
