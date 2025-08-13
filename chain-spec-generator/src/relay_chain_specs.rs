@@ -15,8 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Paseo.  If not, see <http://www.gnu.org/licenses/>.
 
-use sc_chain_spec::NoExtension;
-use sc_chain_spec::{ChainSpec, ChainType};
+use sc_chain_spec::{ChainSpec, ChainType, NoExtension};
 
 pub type PaseoChainSpec = sc_chain_spec::GenericChainSpec<NoExtension>;
 

@@ -27,12 +27,12 @@ use frame_support::{
 };
 use frame_system::EnsureRoot;
 use pallet_xcm::XcmPassthrough;
+use paseo_runtime_constants::{
+	currency::CENTS, system_parachain::*, xcm::body::FELLOWSHIP_ADMIN_INDEX,
+};
 use polkadot_runtime_common::{
 	xcm_sender::{ChildParachainRouter, ExponentialPrice},
 	ToAuthor,
-};
-use paseo_runtime_constants::{
-	currency::CENTS, system_parachain::*, xcm::body::FELLOWSHIP_ADMIN_INDEX,
 };
 use sp_core::ConstU32;
 use xcm::latest::prelude::*;
@@ -154,7 +154,7 @@ pub type TrustedTeleporters = (
 	xcm_builder::Case<DotForBridgeHub>,
 	xcm_builder::Case<DotForCoretime>,
 	xcm_builder::Case<DotForPeople>,
-	xcm_builder::Case<PassetHubLocation>
+	xcm_builder::Case<PassetHubLocation>,
 );
 
 pub struct Fellows;
@@ -337,8 +337,8 @@ impl pallet_xcm::Config for Runtime {
 
 #[cfg(test)]
 mod tests {
-	use std::any::TypeId;
 	use super::*;
+	use std::any::TypeId;
 
 	#[test]
 	fn ensure_trusted_teleporters() {
@@ -348,11 +348,11 @@ mod tests {
 			xcm_builder::Case<DotForBridgeHub>,
 			xcm_builder::Case<DotForCoretime>,
 			xcm_builder::Case<DotForPeople>,
-			xcm_builder::Case<PassetHubLocation>
+			xcm_builder::Case<PassetHubLocation>,
 		);
 		assert_eq!(
-				TypeId::of::<<XcmConfig as xcm_executor::Config>::IsTeleporter>(),
-				TypeId::of::<TrustedTeleporters>(),
-			);
+			TypeId::of::<<XcmConfig as xcm_executor::Config>::IsTeleporter>(),
+			TypeId::of::<TrustedTeleporters>(),
+		);
 	}
 }

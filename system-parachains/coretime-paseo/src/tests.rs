@@ -66,7 +66,7 @@ fn advance_to(b: BlockNumber) {
 #[test]
 fn bulk_revenue_is_burnt() {
 	const ALICE: [u8; 32] = [1u8; 32];
-	
+
 	ExtBuilder::<Runtime>::default()
 		.with_collators(vec![AccountId::from(ALICE)])
 		.with_session_keys(vec![(

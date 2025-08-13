@@ -37,14 +37,12 @@ use asset_test_utils::{
 use codec::{Decode, Encode};
 use core::ops::Mul;
 use frame_support::{assert_ok, traits::fungibles::InspectEnumerable};
-use parachains_common::{
-	AccountId, AuraId, AssetIdForTrustBackedAssets, Balance,
-};
+use parachains_common::{AccountId, AssetIdForTrustBackedAssets, AuraId, Balance};
 use sp_consensus_aura::SlotDuration;
 use sp_core::crypto::Ss58Codec;
 use sp_runtime::traits::MaybeEquivalence;
-use system_parachains_constants::{
-	paseo::consensus::RELAY_CHAIN_SLOT_DURATION_MILLIS, paseo::fee::WeightToFee,
+use system_parachains_constants::paseo::{
+	consensus::RELAY_CHAIN_SLOT_DURATION_MILLIS, fee::WeightToFee,
 };
 use xcm::latest::prelude::{Assets as XcmAssets, *};
 use xcm_builder::WithLatestLocationConverter;

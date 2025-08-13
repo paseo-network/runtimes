@@ -33,9 +33,10 @@ pub fn invulnerables() -> Vec<(parachains_common::AccountId, AuraId)> {
 
 /// Invulnerable Collators
 pub fn invulnerables_tot() -> Vec<(parachains_common::AccountId, AuraId)> {
-	Vec::from([
-		(get_account_id_from_seed::<sr25519::Public>("Alice"), get_from_seed::<AuraId>("Alice"))
-	])
+	Vec::from([(
+		get_account_id_from_seed::<sr25519::Public>("Alice"),
+		get_from_seed::<AuraId>("Alice"),
+	)])
 }
 
 /// Test accounts

@@ -21,10 +21,13 @@ use crate::*;
 use alloc::format;
 use babe_primitives::AuthorityId as BabeId;
 use pallet_staking::{Forcing, StakerStatus};
-use polkadot_primitives::{
-	node_features::FeatureIndex, AccountPublic, AssignmentId, AsyncBackingParams, ExecutorParam::{MaxMemoryPages, PvfExecTimeout}, PvfExecKind
-};
 use paseo_runtime_constants::currency::UNITS as PAS;
+use polkadot_primitives::{
+	node_features::FeatureIndex,
+	AccountPublic, AssignmentId, AsyncBackingParams,
+	ExecutorParam::{MaxMemoryPages, PvfExecTimeout},
+	PvfExecKind,
+};
 use runtime_parachains::configuration::HostConfiguration;
 use sp_core::{sr25519, Pair, Public};
 use sp_genesis_builder::PresetId;
@@ -90,11 +93,13 @@ fn testnet_accounts() -> Vec<AccountId> {
 fn default_parachains_host_configuration() -> HostConfiguration<polkadot_primitives::BlockNumber> {
 	use polkadot_primitives::{MAX_CODE_SIZE, MAX_POV_SIZE};
 
-	let executor_parameteres = ExecutorParams::from(&[
-		MaxMemoryPages(8192),
-		PvfExecTimeout(PvfExecKind::Backing, 2500),
-		PvfExecTimeout(PvfExecKind::Approval, 15000),
-	][..]);
+	let executor_parameteres = ExecutorParams::from(
+		&[
+			MaxMemoryPages(8192),
+			PvfExecTimeout(PvfExecKind::Backing, 2500),
+			PvfExecTimeout(PvfExecKind::Approval, 15000),
+		][..],
+	);
 
 	runtime_parachains::configuration::HostConfiguration {
 		validation_upgrade_cooldown: 2u32,

@@ -17,8 +17,8 @@
 //! Genesis configs presets for the PeoplePolkadot runtime
 
 use crate::*;
-use sp_genesis_builder::PresetId;
 use sp_core::sr25519;
+use sp_genesis_builder::PresetId;
 use system_parachains_constants::genesis_presets::*;
 
 const PEOPLE_POLKADOT_ED: Balance = ExistentialDeposit::get();

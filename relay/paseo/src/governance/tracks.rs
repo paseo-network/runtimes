@@ -350,15 +350,11 @@ mod tests {
 		let root_track = TRACKS_DATA.get(0).unwrap();
 		assert_eq!(root_track.id, 0);
 		// Ensure Root track decision deposit is 1M.
-		assert_eq!(root_track.info.decision_deposit, 1000*GRAND);
+		assert_eq!(root_track.info.decision_deposit, 1000 * GRAND);
 		// Ensure Root track is configured with a linear curve set at 100%
 		// for both support and approval.
-		assert_eq!(
-			root_track.info.min_approval, Linear100Percent::get()
-		);
-		assert_eq!(
-			root_track.info.min_support, Linear100Percent::get()
-		);
+		assert_eq!(root_track.info.min_approval, Linear100Percent::get());
+		assert_eq!(root_track.info.min_support, Linear100Percent::get());
 	}
 
 	#[test]
