@@ -1,18 +1,18 @@
 // Copyright (C) Parity Technologies (UK) Ltd.
-// This file is part of Polkadot.
+// This file is part of Paseo.
 
-// Polkadot is free software: you can redistribute it and/or modify
+// Paseo is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 
-// Polkadot is distributed in the hope that it will be useful,
+// Paseo is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
 // You should have received a copy of the GNU General Public License
-// along with Polkadot.  If not, see <http://www.gnu.org/licenses/>.
+// along with Paseo.  If not, see <http://www.gnu.org/licenses/>.
 
 mod pallet_xcm_benchmarks_fungible;
 mod pallet_xcm_benchmarks_generic;
@@ -27,7 +27,7 @@ use xcm::{
 	DoubleEncoded,
 };
 
-/// Types of asset supported by the Polkadot runtime.
+/// Types of asset supported by the Paseo runtime.
 pub enum AssetTypes {
 	/// An asset backed by `pallet-balances`.
 	Balances,
@@ -49,7 +49,7 @@ trait WeighAssets {
 	fn weigh_assets(&self, balances_weight: Weight) -> Weight;
 }
 
-// Polkadot only knows about one asset, the balances pallet.
+// Paseo only knows about one asset, the balances pallet.
 const MAX_ASSETS: u64 = 1;
 
 impl WeighAssets for AssetFilter {
@@ -64,7 +64,7 @@ impl WeighAssets for AssetFilter {
 					AssetTypes::Unknown => Weight::MAX,
 				})
 				.fold(Weight::zero(), |acc, x| acc.saturating_add(x)),
-			// We don't support any NFTs on Polkadot, so these two variants will always match
+			// We don't support any NFTs on Paseo, so these two variants will always match
 			// only 1 kind of fungible asset.
 			Self::Wild(AllOf { .. } | AllOfCounted { .. }) => balances_weight,
 			Self::Wild(AllCounted(count)) =>
@@ -152,7 +152,7 @@ impl<RuntimeCall> XcmWeightInfo<RuntimeCall> for PolkadotXcmWeight<RuntimeCall> 
 		assets.weigh_assets(XcmBalancesWeight::<Runtime>::deposit_reserve_asset())
 	}
 	fn exchange_asset(_give: &AssetFilter, _receive: &Assets, _maximal: &bool) -> Weight {
-		// Polkadot does not currently support exchange asset operations
+		// Paseo does not currently support exchange asset operations
 		Weight::MAX
 	}
 	fn initiate_reserve_withdraw(
@@ -229,27 +229,27 @@ impl<RuntimeCall> XcmWeightInfo<RuntimeCall> for PolkadotXcmWeight<RuntimeCall> 
 		XcmGeneric::<Runtime>::clear_transact_status()
 	}
 	fn universal_origin(_: &Junction) -> Weight {
-		// Polkadot does not currently support universal origin operations
+		// Paseo does not currently support universal origin operations
 		Weight::MAX
 	}
 	fn export_message(_: &NetworkId, _: &Junctions, _: &Xcm<()>) -> Weight {
-		// Polkadot relay should not support export message operations
+		// Paseo relay should not support export message operations
 		Weight::MAX
 	}
 	fn lock_asset(_: &Asset, _: &Location) -> Weight {
-		// Polkadot does not currently support asset locking operations
+		// Paseo does not currently support asset locking operations
 		Weight::MAX
 	}
 	fn unlock_asset(_: &Asset, _: &Location) -> Weight {
-		// Polkadot does not currently support asset locking operations
+		// Paseo does not currently support asset locking operations
 		Weight::MAX
 	}
 	fn note_unlockable(_: &Asset, _: &Location) -> Weight {
-		// Polkadot does not currently support asset locking operations
+		// Paseo does not currently support asset locking operations
 		Weight::MAX
 	}
 	fn request_unlock(_: &Asset, _: &Location) -> Weight {
-		// Polkadot does not currently support asset locking operations
+		// Paseo does not currently support asset locking operations
 		Weight::MAX
 	}
 	fn set_fees_mode(_: &bool) -> Weight {
