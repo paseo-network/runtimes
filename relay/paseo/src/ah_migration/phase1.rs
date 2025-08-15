@@ -143,6 +143,10 @@ pub fn call_allowed_status(call: &<Runtime as frame_system::Config>::RuntimeCall
 		MessageQueue(..) => (ON, ON), // TODO: @muharem think about this
 		AssetRate(..) => (OFF, OFF),
 		Beefy(..) => (OFF, ON), /* TODO @claravanstaden @bkontur */
+		// Sudo
+		Sudo(..) => (ON, ON),
+		ParaSudoWrapper(..) => (OFF, OFF),
+		// RcMigrator
 		RcMigrator(..) => (ON, ON),
 		// Exhaustive match. Compiler ensures that we did not miss any.
 	}
