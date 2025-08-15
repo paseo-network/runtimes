@@ -35,7 +35,7 @@ frame-metadata-hash-extension = { workspace = true }
 frame-support = { workspace = true }
 sp-staking = { workspace = true }
 frame-system = { workspace = true }
-frame-system-benchmarking = { optional = true, workspace = true }
+frame-system-benchmarking = { workspace = true }
 frame-system-rpc-runtime-api = { workspace = true }
 frame-try-runtime = { optional = true, workspace = true }
 pallet-asset-conversion-tx-payment = { workspace = true }
@@ -60,7 +60,7 @@ pallet-preimage = { workspace = true }
 pallet-proxy = { workspace = true }
 pallet-referenda = { workspace = true }
 pallet-scheduler = { workspace = true }
-pallet-nomination-pools-benchmarking = { optional = true, workspace = true }
+pallet-nomination-pools-benchmarking = { workspace = true }
 pallet-staking-async = { workspace = true }
 pallet-staking-async-rc-client = { workspace = true }
 pallet-election-provider-multi-block = { workspace = true }
@@ -103,7 +103,7 @@ pallet-delegated-staking = { workspace = true }
 
 # Polkadot
 pallet-xcm = { workspace = true }
-pallet-xcm-benchmarks = { optional = true, workspace = true }
+pallet-xcm-benchmarks = { workspace = true }
 polkadot-core-primitives = { workspace = true }
 polkadot-parachain-primitives = { workspace = true }
 polkadot-runtime-common = { workspace = true }
@@ -291,7 +291,7 @@ std = [
 	"frame-executive/std",
 	"frame-metadata-hash-extension/std",
 	"frame-support/std",
-	"frame-system-benchmarking?/std",
+	"frame-system-benchmarking/std",
 	"frame-system-rpc-runtime-api/std",
 	"frame-system/std",
 	"frame-try-runtime?/std",
@@ -318,7 +318,7 @@ std = [
 	"pallet-multisig/std",
 	"pallet-nfts-runtime-api/std",
 	"pallet-nfts/std",
-	"pallet-nomination-pools-benchmarking?/std",
+	"pallet-nomination-pools-benchmarking/std",
 	"pallet-nomination-pools/std",
 	"pallet-preimage/std",
 	"pallet-proxy/std",
@@ -339,7 +339,7 @@ std = [
 	"pallet-utility/std",
 	"pallet-vesting/std",
 	"pallet-whitelist/std",
-	"pallet-xcm-benchmarks?/std",
+	"pallet-xcm-benchmarks/std",
 	"pallet-xcm-bridge-hub-router/std",
 	"pallet-xcm/std",
 	"parachain-info/std",
