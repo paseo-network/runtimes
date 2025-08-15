@@ -36,11 +36,9 @@ pub type BridgeHubPaseoChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
 
 pub type CoretimePaseoChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
 
-
 pub type PeoplePaseoChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
 
-pub fn asset_hub_paseo_local_testnet_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String>
-{
+pub fn asset_hub_paseo_local_testnet_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String> {
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("ss58Format".into(), 0.into());
 	properties.insert("tokenSymbol".into(), "PAS".into());
@@ -61,10 +59,8 @@ pub fn asset_hub_paseo_local_testnet_config() -> Result<Box<dyn sc_chain_spec::C
 	))
 }
 
-
-
-pub fn bridge_hub_paseo_local_testnet_config(
-) -> Result<Box<dyn sc_chain_spec::ChainSpec>, String> {
+pub fn bridge_hub_paseo_local_testnet_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String>
+{
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("ss58Format".into(), 0.into());
 	properties.insert("tokenSymbol".into(), "PAS".into());
@@ -72,8 +68,7 @@ pub fn bridge_hub_paseo_local_testnet_config(
 
 	Ok(Box::new(
 		BridgeHubPaseoChainSpec::builder(
-			bridge_hub_paseo_runtime::WASM_BINARY
-				.expect("BridgeHubPaseo wasm not available!"),
+			bridge_hub_paseo_runtime::WASM_BINARY.expect("BridgeHubPaseo wasm not available!"),
 			Extensions { relay_chain: "paseo-local".into(), para_id: 1002 },
 		)
 		.with_name("Paseo Bridge Hub Local")
@@ -86,8 +81,7 @@ pub fn bridge_hub_paseo_local_testnet_config(
 	))
 }
 
-pub fn people_paseo_local_testnet_config(
-) -> Result<Box<dyn sc_chain_spec::ChainSpec>, String> {
+pub fn people_paseo_local_testnet_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String> {
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("ss58Format".into(), 0.into());
 	properties.insert("tokenSymbol".into(), "PAS".into());
@@ -129,8 +123,7 @@ pub fn coretime_paseo_local_testnet_config() -> Result<Box<dyn sc_chain_spec::Ch
 	))
 }
 
-pub fn coretime_paseo_tot_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String>
-{
+pub fn coretime_paseo_tot_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String> {
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("ss58Format".into(), 0.into());
 	properties.insert("tokenSymbol".into(), "PAS".into());

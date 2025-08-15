@@ -46,14 +46,19 @@ pub use emulated_integration_tests_common::{
 	ASSETS_PALLET_ID, PROOF_SIZE_THRESHOLD, REF_TIME_THRESHOLD, XCM_V4,
 };
 pub use integration_tests_helpers::common::snowbridge::{MIN_ETHER_BALANCE, WETH};
+pub use parachains_common::{AccountId, Balance};
 pub use paseo_system_emulated_network::{
 	asset_hub_paseo_emulated_chain::{
 		genesis::{AssetHubPaseoAssetOwner, ED as ASSET_HUB_POLKAPAS_ED},
 		AssetHubPaseoParaPallet as AssetHubPaseoPallet,
 	},
 	bridge_hub_paseo_emulated_chain::{
-		genesis::ED as BRIDGE_HUB_POLKADOT_ED,
-		BridgeHubPaseoParaPallet as BridgeHubPaseoPallet,
+		genesis::ED as BRIDGE_HUB_POLKADOT_ED, BridgeHubPaseoParaPallet as BridgeHubPaseoPallet,
+	},
+	paseo_emulated_chain::{
+		genesis::ED as POLKADOT_ED,
+		paseo_runtime::{xcm_config::UniversalLocation as PaseoRelayUniversalLocation, Dmp},
+		PaseoRelayPallet as PaseoPallet,
 	},
 	penpal_emulated_chain::{
 		penpal_runtime::xcm_config::{
@@ -62,22 +67,13 @@ pub use paseo_system_emulated_network::{
 		},
 		PenpalAssetOwner, PenpalBParaPallet as PenpalBPallet,
 	},
-	paseo_emulated_chain::{
-		genesis::ED as POLKADOT_ED,
-		paseo_runtime::{xcm_config::UniversalLocation as PaseoRelayUniversalLocation, Dmp},
-		PaseoRelayPallet as PaseoPallet,
-	},
-	AssetHubPaseoPara as AssetHubPaseo,
-	AssetHubPaseoParaReceiver as AssetHubPaseoReceiver,
-	AssetHubPaseoParaSender as AssetHubPaseoSender,
-	BridgeHubPaseoPara as BridgeHubPaseo,
+	AssetHubPaseoPara as AssetHubPaseo, AssetHubPaseoParaReceiver as AssetHubPaseoReceiver,
+	AssetHubPaseoParaSender as AssetHubPaseoSender, BridgeHubPaseoPara as BridgeHubPaseo,
 	BridgeHubPaseoParaReceiver as BridgeHubPaseoReceiver,
-	BridgeHubPaseoParaSender as BridgeHubPaseoSender, PenpalBPara as PenpalB,
+	BridgeHubPaseoParaSender as BridgeHubPaseoSender, PaseoRelay as Paseo,
+	PaseoRelayReceiver as PaseoReceiver, PaseoRelaySender as PaseoSender, PenpalBPara as PenpalB,
 	PenpalBParaReceiver as PenpalBReceiver, PenpalBParaSender as PenpalBSender,
-	PaseoRelay as Paseo, PaseoRelayReceiver as PaseoReceiver,
-	PaseoRelaySender as PaseoSender,
 };
-pub use parachains_common::{AccountId, Balance};
 
 pub const ASSET_ID: u32 = 1;
 pub const ASSET_MIN_BALANCE: u128 = 1000;

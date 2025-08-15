@@ -136,6 +136,7 @@ runtime-benchmarks = [
 	"pallet-nfts/runtime-benchmarks",
 	"pallet-proxy/runtime-benchmarks",
 	"pallet-state-trie-migration/runtime-benchmarks",
+	"pallet-sudo/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"pallet-transaction-payment/runtime-benchmarks",
 	"pallet-uniques/runtime-benchmarks",
@@ -145,9 +146,9 @@ runtime-benchmarks = [
 	"pallet-xcm-bridge-hub-router/runtime-benchmarks",
 	"pallet-xcm/runtime-benchmarks",
 	"parachains-common/runtime-benchmarks",
+	"paseo-runtime-constants/runtime-benchmarks",
 	"polkadot-parachain-primitives/runtime-benchmarks",
 	"polkadot-runtime-common/runtime-benchmarks",
-	"paseo-runtime-constants/runtime-benchmarks",
 	"snowbridge-inbound-queue-primitives/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"system-parachains-constants/runtime-benchmarks",
@@ -155,8 +156,7 @@ runtime-benchmarks = [
 	"xcm-executor/runtime-benchmarks",
 	"xcm-runtime-apis/runtime-benchmarks",
 	"xcm/runtime-benchmarks",
-	"pallet-sudo/runtime-benchmarks"
-	]
+]
 try-runtime = [
 	"cumulus-pallet-aura-ext/try-runtime",
 	"cumulus-pallet-parachain-system/try-runtime",
@@ -178,8 +178,8 @@ try-runtime = [
 	"pallet-nfts/try-runtime",
 	"pallet-proxy/try-runtime",
 	"pallet-session/try-runtime",
-	"pallet-sudo/try-runtime",
 	"pallet-state-trie-migration/try-runtime",
+	"pallet-sudo/try-runtime",
 	"pallet-timestamp/try-runtime",
 	"pallet-transaction-payment/try-runtime",
 	"pallet-uniques/try-runtime",
@@ -194,8 +194,8 @@ try-runtime = [
 std = [
 	"assets-common/std",
 	"bp-asset-hub-paseo/std",
-	"bp-bridge-hub-paseo/std",
 	"bp-bridge-hub-kusama/std",
+	"bp-bridge-hub-paseo/std",
 	"bp-bridge-hub-polkadot/std",
 	"codec/std",
 	"cumulus-pallet-aura-ext/std",
@@ -241,10 +241,10 @@ std = [
 	"pallet-xcm/std",
 	"parachain-info/std",
 	"parachains-common/std",
+	"paseo-runtime-constants/std",
 	"polkadot-core-primitives/std",
 	"polkadot-parachain-primitives/std",
 	"polkadot-runtime-common/std",
-	"paseo-runtime-constants/std",
 	"primitive-types/std",
 	"scale-info/std",
 	"serde_json/std",
@@ -253,6 +253,7 @@ std = [
 	"sp-block-builder/std",
 	"sp-consensus-aura/std",
 	"sp-core/std",
+	"sp-debug-derive/std",
 	"sp-genesis-builder/std",
 	"sp-inherents/std",
 	"sp-io/std",
@@ -269,7 +270,6 @@ std = [
 	"xcm-executor/std",
 	"xcm-runtime-apis/std",
 	"xcm/std",
-	"sp-debug-derive/std"
 ]
 
 # Enable metadata hash generation at compile time for the `CheckMetadataHash` extension.

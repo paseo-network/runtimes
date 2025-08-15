@@ -49,13 +49,11 @@ pub use paseo_system_emulated_network::{
 		genesis::ED as CORETIME_POLKADOT_ED, CoretimePaseoParaPallet as CoretimePolkadotPallet,
 	},
 	paseo_emulated_chain::{genesis::ED as POLKADOT_ED, PaseoRelayPallet as PaseoPallet},
-	AssetHubPaseoPara as AssetHubPolkadot,
-	AssetHubPaseoParaReceiver as AssetHubPolkadotReceiver,
+	AssetHubPaseoPara as AssetHubPolkadot, AssetHubPaseoParaReceiver as AssetHubPolkadotReceiver,
 	AssetHubPaseoParaSender as AssetHubPolkadotSender, CoretimePaseoPara as CoretimePolkadot,
 	CoretimePaseoParaReceiver as CoretimePolkadotReceiver,
-	CoretimePaseoParaSender as CoretimePolkadotSender, PenpalAPara as PenpalA,
-	PaseoRelay as Paseo, PaseoRelayReceiver as PaseoReceiver,
-	PaseoRelaySender as PaseoSender,
+	CoretimePaseoParaSender as CoretimePolkadotSender, PaseoRelay as Paseo,
+	PaseoRelayReceiver as PaseoReceiver, PaseoRelaySender as PaseoSender, PenpalAPara as PenpalA,
 };
 
 #[cfg(test)]

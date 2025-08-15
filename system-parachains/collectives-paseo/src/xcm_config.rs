@@ -31,8 +31,8 @@ use parachains_common::xcm_config::{
 	AllSiblingSystemParachains, ConcreteAssetFromSystem, ParentRelayOrSiblingParachains,
 	RelayOrOtherSystemParachains,
 };
-use polkadot_parachain_primitives::primitives::Sibling;
 use paseo_runtime_constants::xcm::body::FELLOWSHIP_ADMIN_INDEX;
+use polkadot_parachain_primitives::primitives::Sibling;
 use sp_runtime::traits::AccountIdConversion;
 use system_parachains_constants::{paseo::locations::AssetHubLocation, TREASURY_PALLET_ID};
 use xcm::latest::prelude::*;

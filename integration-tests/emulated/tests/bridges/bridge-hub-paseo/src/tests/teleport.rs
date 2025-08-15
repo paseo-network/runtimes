@@ -42,12 +42,7 @@ fn teleport_via_transfer_assets_from_and_to_relay() {
 
 	let amount = POLKADOT_ED * 1000;
 
-	test_parachain_is_trusted_teleporter_for_relay!(
-		BridgeHubPaseo,
-		Paseo,
-		amount,
-		transfer_assets
-	);
+	test_parachain_is_trusted_teleporter_for_relay!(BridgeHubPaseo, Paseo, amount, transfer_assets);
 }
 
 #[test]

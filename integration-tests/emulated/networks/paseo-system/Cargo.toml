@@ -27,7 +27,7 @@ runtime-benchmarks = [
 	"bridge-hub-paseo-emulated-chain/runtime-benchmarks",
 	"collectives-paseo-emulated-chain/runtime-benchmarks",
 	"coretime-paseo-emulated-chain/runtime-benchmarks",
+	"paseo-emulated-chain/runtime-benchmarks",
 	"penpal-emulated-chain/runtime-benchmarks",
 	"people-paseo-emulated-chain/runtime-benchmarks",
-	"paseo-emulated-chain/runtime-benchmarks",
 ]

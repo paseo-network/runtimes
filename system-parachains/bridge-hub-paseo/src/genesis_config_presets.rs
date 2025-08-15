@@ -79,7 +79,7 @@ fn bridge_hub_paseo_genesis(
 }
 
 pub fn bridge_hub_paseo_local_testnet_genesis(para_id: ParaId) -> serde_json::Value {
-	bridge_hub_paseo_genesis(invulnerables(), testnet_accounts(), para_id,  vec![])
+	bridge_hub_paseo_genesis(invulnerables(), testnet_accounts(), para_id, vec![])
 }
 
 fn bridge_hub_paseo_development_genesis(para_id: ParaId) -> serde_json::Value {

@@ -19,9 +19,8 @@
 use crate::*;
 use alloc::vec::Vec;
 use hex_literal::hex;
-use sp_core::crypto::UncheckedInto;
+use sp_core::{crypto::UncheckedInto, sr25519};
 use sp_genesis_builder::PresetId;
-use sp_core::sr25519;
 use system_parachains_constants::genesis_presets::*;
 
 const CORETIME_POLKADOT_ED: Balance = ExistentialDeposit::get();
@@ -158,8 +157,7 @@ pub fn preset_names() -> Vec<PresetId> {
 pub fn get_preset(id: &PresetId) -> Option<Vec<u8>> {
 	let patch = match id.as_ref() {
 		"live" => coretime_paseo_live_genesis(1005.into()),
-		"tot" =>
-		coretime_paseo_tot_genesis(1005.into()),
+		"tot" => coretime_paseo_tot_genesis(1005.into()),
 		sp_genesis_builder::LOCAL_TESTNET_RUNTIME_PRESET =>
 			coretime_paseo_local_testnet_genesis(1005.into()),
 		_ => return None,
