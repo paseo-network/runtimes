@@ -575,7 +575,8 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 					RuntimeCall::Assets { .. } |
 						RuntimeCall::Utility { .. } |
 						RuntimeCall::Multisig { .. } |
-						RuntimeCall::Nfts { .. } | RuntimeCall::Uniques { .. }
+						RuntimeCall::Nfts { .. } |
+						RuntimeCall::Uniques { .. }
 				)
 			},
 			ProxyType::AssetOwner => matches!(
@@ -666,9 +667,10 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 					c,
 					//RuntimeCall::Staking(..) |
 					RuntimeCall::Session(..) |
-						RuntimeCall::Utility(..) | RuntimeCall::NominationPools(..) /*RuntimeCall::FastUnstake(..) |
-					                                                             *RuntimeCall::VoterList(..)
-					                                                             */
+						RuntimeCall::Utility(..) |
+						RuntimeCall::NominationPools(..) /*RuntimeCall::FastUnstake(..) |
+					                                   *RuntimeCall::VoterList(..)
+					                                   */
 				)
 			},
 			ProxyType::NominationPools => {
@@ -1195,6 +1197,12 @@ impl pallet_ah_migrator::Config for Runtime {
 	type DmpQueuePriorityPattern = DmpQueuePriorityPattern;
 }
 
+impl pallet_sudo::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type WeightInfo = weights::pallet_sudo::WeightInfo<Runtime>;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime
@@ -1268,9 +1276,12 @@ construct_runtime!(
 		MultiBlockElectionUnsigned: pallet_election_provider_multi_block::unsigned = 87,
 		MultiBlockElectionSigned: pallet_election_provider_multi_block::signed = 88,
 
-		// Asset Hub Migration in the 250s
-		AhOps: pallet_ah_ops = 254,
-		AhMigrator: pallet_ah_migrator = 255,
+		// Asset Hub Migration in the 240s
+		AhOps: pallet_ah_ops = 248,
+		AhMigrator: pallet_ah_migrator = 249,
+
+		// Sudo
+		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 255,
 	}
 );
 

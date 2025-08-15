@@ -106,6 +106,7 @@ pub fn call_allowed_status(call: &<Runtime as frame_system::Config>::RuntimeCall
 		Staking(..) => OFF,
 		StakingRcClient(..) => ON,     // Keep on for incoming RC calls over XCM
 		StateTrieMigration(..) => OFF, // Deprecated
+		Sudo(..) => ON,
 		System(..) => ON,
 		Timestamp(..) => ON,
 		ToKusamaXcmRouter(..) => ON, // Allow to report bridge congestion
