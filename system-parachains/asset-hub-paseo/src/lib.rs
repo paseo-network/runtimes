@@ -575,7 +575,8 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 					RuntimeCall::Assets { .. } |
 						RuntimeCall::Utility { .. } |
 						RuntimeCall::Multisig { .. } |
-						RuntimeCall::Nfts { .. } | RuntimeCall::Uniques { .. }
+						RuntimeCall::Nfts { .. } |
+						RuntimeCall::Uniques { .. }
 				)
 			},
 			ProxyType::AssetOwner => matches!(
@@ -666,9 +667,10 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 					c,
 					//RuntimeCall::Staking(..) |
 					RuntimeCall::Session(..) |
-						RuntimeCall::Utility(..) | RuntimeCall::NominationPools(..) /*RuntimeCall::FastUnstake(..) |
-					                                                             *RuntimeCall::VoterList(..)
-					                                                             */
+						RuntimeCall::Utility(..) |
+						RuntimeCall::NominationPools(..) /*RuntimeCall::FastUnstake(..) |
+					                                   *RuntimeCall::VoterList(..)
+					                                   */
 				)
 			},
 			ProxyType::NominationPools => {
@@ -1276,9 +1278,12 @@ construct_runtime!(
 		// Sudo
 		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 251,
 
-		// Asset Hub Migration in the 250s
-		AhOps: pallet_ah_ops = 254,
-		AhMigrator: pallet_ah_migrator = 255,
+		// Asset Hub Migration in the 240s
+		AhOps: pallet_ah_ops = 248,
+		AhMigrator: pallet_ah_migrator = 249,
+
+		// Sudo
+		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 255,
 	}
 );
 

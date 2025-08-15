@@ -145,7 +145,7 @@ pub fn call_allowed_status(call: &<Runtime as frame_system::Config>::RuntimeCall
 		Beefy(..) => (OFF, ON), /* TODO @claravanstaden @bkontur */
 		// Sudo
 		Sudo(..) => (ON, ON),
-		ParaSudoWrapper(..) => (OFF, OFF),
+		ParaSudoWrapper(..) => (OFF, ON),
 		// RcMigrator
 		RcMigrator(..) => (ON, ON),
 		// Exhaustive match. Compiler ensures that we did not miss any.
