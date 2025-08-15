@@ -549,7 +549,7 @@ def main():
     # Copy and transform command
     copy_parser = subparsers.add_parser("copy", help="Copy and transform files")
     copy_parser.add_argument("--copy-pairs", nargs="+", metavar="SOURCE:TARGET", 
-                           default=["relay/polkadot:relay/paseo", "system-parachains/asset-hubs/asset-hub-polkadot:system-parachains/asset-hub-paseo", "system-parachains/common:system-parachains/common"],
+                           default=["relay/polkadot:relay/paseo", "system-parachains/asset-hubs/asset-hub-polkadot:system-parachains/asset-hub-paseo"],
                            help="Source:target directory pairs to copy (e.g., 'relay/polkadot:relay/paseo' 'system-parachains/asset-hub-polkadot:system-parachains/asset-hub-paseo')")
     copy_parser.add_argument("--revert-paths", nargs="*", help="Additional paths to revert after copy (hardcoded paths are always reverted)")
     copy_parser.set_defaults(func=run_copy_and_transform)
