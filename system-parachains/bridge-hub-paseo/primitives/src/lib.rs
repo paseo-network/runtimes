@@ -117,11 +117,11 @@ pub fn estimate_paseo_to_kusama_message_fee(
 	// 1) an approximate cost of XCM execution (`ExportMessage` and surroundings) at Paseo bridge
 	//    Hub;
 	//
-	// 2) the approximate cost of Paseo -> Kusama message delivery transaction on Kusama Bridge Hub,
-	//    converted into KSMs using 1:5 conversion rate;
+	// 2) the approximate cost of Paseo -> Kusama message delivery transaction on Kusama Bridge
+	//    Hub, converted into KSMs using 1:5 conversion rate;
 	//
-	// 3) the approximate cost of Paseo -> Kusama message confirmation transaction on Paseo Bridge
-	//    Hub.
+	// 3) the approximate cost of Paseo -> Kusama message confirmation transaction on Paseo
+	//    Bridge Hub.
 	BridgeHubPaseoBaseXcmFeeInDots::get()
 		.saturating_add(convert_from_uksm_to_udot(bridge_hub_kusama_base_delivery_fee_in_uksms))
 		.saturating_add(BridgeHubPaseoBaseConfirmationFeeInDots::get())
@@ -131,8 +131,8 @@ pub fn estimate_paseo_to_kusama_message_fee(
 /// message from Paseo Bridge Hub to Kusama Bridge Hub.
 pub fn estimate_paseo_to_kusama_byte_fee() -> Balance {
 	// the sender pays for the same byte twice:
-	// 1) the first part comes from the HRMP, when message travels from Paseo Asset Hub to Paseo
-	//    Bridge Hub;
+	// 1) the first part comes from the HRMP, when message travels from Paseo Asset Hub to
+	//    Paseo Bridge Hub;
 	// 2) the second part is the payment for bytes of the message delivery transaction, which is
 	//    "mined" at Kusama Bridge Hub. Hence, we need to use byte fees from that chain and convert
 	//    it to PASs here.
@@ -266,8 +266,10 @@ mod tests {
 
 		let price_in_ksm =
 			FixedU128::from_rational(price_in_uksm, kusama_runtime_constants::currency::UNITS);
-		let price_in_dot =
-			FixedU128::from_rational(same_price_in_udot, paseo_runtime_constants::currency::UNITS);
+		let price_in_dot = FixedU128::from_rational(
+			same_price_in_udot,
+			paseo_runtime_constants::currency::UNITS,
+		);
 		assert_eq!(price_in_dot / FixedU128::saturating_from_integer(5), price_in_ksm);
 	}
 }
