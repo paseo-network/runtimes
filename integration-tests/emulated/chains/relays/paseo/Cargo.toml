@@ -33,8 +33,8 @@ paseo-runtime = { workspace = true }
 runtime-benchmarks = [
 	"pallet-staking/runtime-benchmarks",
 	"parachains-common/runtime-benchmarks",
+	"polkadot-primitives/runtime-benchmarks",
 	"paseo-runtime-constants/runtime-benchmarks",
 	"paseo-runtime/runtime-benchmarks",
-	"polkadot-primitives/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 ]
