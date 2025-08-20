@@ -233,7 +233,7 @@ parameter_types! {
 
 impl multi_block::unsigned::Config for Runtime {
 	type MinerPages = MinerPages;
-	type OffchainStorage = ConstBool<true>;
+	type OffchainStorage = ConstBool<OffchainMinerStorage>;
 	type OffchainSolver = SequentialPhragmen<AccountId, SolutionAccuracyOf<Runtime>, Balancing>;
 	type MinerTxPriority = MinerTxPriority;
 	type OffchainRepeat = OffchainRepeat;
