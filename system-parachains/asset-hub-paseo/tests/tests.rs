@@ -469,7 +469,7 @@ fn receive_reserve_asset_deposited_ksm_from_asset_hub_kusama_fees_paid_by_pool_s
                 bridging_to_asset_hub_kusama()
             },
             (
-                [PalletInstance(bp_bridge_hub_paseo::WITH_BRIDGE_POLKADOT_TO_KUSAMA_MESSAGES_PALLET_INDEX)].into(),
+                [PalletInstance(bp_bridge_hub_polkadot::WITH_BRIDGE_POLKADOT_TO_KUSAMA_MESSAGES_PALLET_INDEX)].into(),
                 GlobalConsensus(Kusama),
                 [Parachain(1000)].into()
             ),

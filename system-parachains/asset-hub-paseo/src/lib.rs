@@ -1197,6 +1197,12 @@ impl pallet_ah_migrator::Config for Runtime {
 	type DmpQueuePriorityPattern = DmpQueuePriorityPattern;
 }
 
+impl pallet_sudo::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type WeightInfo = (); // TODO @ggwpez weights::pallet_sudo::WeightInfo<Runtime>;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime
@@ -1271,9 +1277,12 @@ construct_runtime!(
 		// Sudo
 		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 251,
 
-		// Asset Hub Migration in the 250s
-		AhOps: pallet_ah_ops = 254,
-		AhMigrator: pallet_ah_migrator = 255,
+		// Asset Hub Migration in the 240s
+		AhOps: pallet_ah_ops = 248,
+		AhMigrator: pallet_ah_migrator = 249,
+
+		// Sudo
+		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 255,
 	}
 );
 

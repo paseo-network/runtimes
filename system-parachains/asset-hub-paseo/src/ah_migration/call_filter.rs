@@ -122,9 +122,10 @@ pub fn call_allowed_status(
 		Staking(..) => OFF,
 		StakingRcClient(..) => ON,     // Keep on for incoming RC calls over XCM
 		StateTrieMigration(..) => OFF, // Deprecated
-		System(..) => ON,              // remark plus root calls
-		Timestamp(..) => ON,           // only `set` inherit
-		ToKusamaXcmRouter(..) => ON,   // Allow to report bridge congestion
+		Sudo(..) => ON,
+		System(..) => ON,            // remark plus root calls
+		Timestamp(..) => ON,         // only `set` inherit
+		ToKusamaXcmRouter(..) => ON, // Allow to report bridge congestion
 		Treasury(..) => OFF,
 		Uniques(..) => OFF,
 		Utility(..) => ON, // batching etc, just convenience
@@ -192,6 +193,7 @@ pub fn call_allowed_before_migration(
 		Session(..) |
 		StakingRcClient(..) |
 		StateTrieMigration(..) |
+		Sudo(..) |
 		System(..) |
 		Timestamp(..) |
 		ToKusamaXcmRouter(..) |

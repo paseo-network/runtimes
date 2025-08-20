@@ -134,6 +134,9 @@ pub fn call_allowed_status(call: &<Runtime as frame_system::Config>::RuntimeCall
 		XcmPallet(..) => (ON, ON),            // during migration can only send XCMs to other
 		MessageQueue(..) => (ON, ON),         // contains non-permissioned service calls
 		AssetRate(..) => (OFF, OFF),
+		// Sudo
+		Sudo(..) => (ON, ON),
+		ParaSudoWrapper(..) => (OFF, ON),
 		Beefy(..) => (ON, ON), // For reporting equivocation proofs; security relevant
 		RcMigrator(..) => (ON, ON), // Required for the migration, only permissioned calls
 	}
