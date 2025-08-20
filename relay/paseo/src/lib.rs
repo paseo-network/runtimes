@@ -20,6 +20,9 @@
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
 #![recursion_limit = "512"]
 
+#![cfg(not(feature = "paseo"))]
+compile_error!("Paseo feature must be enabled");
+
 extern crate alloc;
 
 use alloc::{
