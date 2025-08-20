@@ -33,7 +33,7 @@ use core::marker::PhantomData;
 /// Weight functions for `cumulus_pallet_parachain_system`.
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> cumulus_pallet_parachain_system::WeightInfo for WeightInfo<T> {
-	/// Storage: `ParachainSystem::LastDmqMqcHead` (r:1 w:1)
+    /// Storage: `ParachainSystem::LastDmqMqcHead` (r:1 w:1)
 	/// Proof: `ParachainSystem::LastDmqMqcHead` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
 	/// Storage: `MessageQueue::BookStateFor` (r:1 w:1)
 	/// Proof: `MessageQueue::BookStateFor` (`max_values`: None, `max_size`: Some(52), added: 2527, mode: `MaxEncodedLen`)
@@ -48,11 +48,11 @@ impl<T: frame_system::Config> cumulus_pallet_parachain_system::WeightInfo for We
 		// Proof Size summary in bytes:
 		//  Measured:  `12`
 		//  Estimated: `3517`
-		// Minimum execution time: 3_406_000 picoseconds.
-		Weight::from_parts(3_080_438_489, 0)
+		// Minimum execution time: 2_114_000 picoseconds.
+		Weight::from_parts(75_911_589, 0)
 			.saturating_add(Weight::from_parts(0, 3517))
-			// Standard Error: 420_038
-			.saturating_add(Weight::from_parts(133_036_608, 0).saturating_mul(n.into()))
+			// Standard Error: 332_418
+			.saturating_add(Weight::from_parts(123_387_447, 0).saturating_mul(n.into()))
 			.saturating_add(T::DbWeight::get().reads(3))
 			.saturating_add(T::DbWeight::get().writes(4))
 			.saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(n.into())))
