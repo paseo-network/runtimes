@@ -39,7 +39,7 @@ parameter_types! {
 	pub Pages: u32 = 32;
 
 	/// Verify all solutions.
-	pub storage SignedValidationPhase: u32 = prod_or_fast!(Pages::get() * 8, Pages::get());
+	pub storage SignedValidationPhase: u32 = prod_or_fast!(Pages::get() * MaxSubmissions::get(), Pages::get() * 1);
 
 	/// 20 mins for signed phase.
 	pub storage SignedPhase: u32 = prod_or_fast!(
