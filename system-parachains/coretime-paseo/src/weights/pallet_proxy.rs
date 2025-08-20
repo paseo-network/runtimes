@@ -33,16 +33,18 @@ use core::marker::PhantomData;
 /// Weight functions for `pallet_proxy`.
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_proxy::WeightInfo for WeightInfo<T> {
-	/// Storage: `Proxy::Proxies` (r:1 w:0)
+    /// Storage: `Proxy::Proxies` (r:1 w:0)
 	/// Proof: `Proxy::Proxies` (`max_values`: None, `max_size`: Some(1241), added: 3716, mode: `MaxEncodedLen`)
 	/// The range of component `p` is `[1, 31]`.
-	fn proxy(_p: u32, ) -> Weight {
+	fn proxy(p: u32, ) -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `127 + p * (37 ±0)`
 		//  Estimated: `4706`
-		// Minimum execution time: 20_428_000 picoseconds.
-		Weight::from_parts(24_628_659, 0)
+		// Minimum execution time: 10_345_000 picoseconds.
+		Weight::from_parts(13_685_547, 0)
 			.saturating_add(Weight::from_parts(0, 4706))
+			// Standard Error: 17_877
+			.saturating_add(Weight::from_parts(174_486, 0).saturating_mul(p.into()))
 			.saturating_add(T::DbWeight::get().reads(1))
 	}
 	/// Storage: `Proxy::Proxies` (r:1 w:0)

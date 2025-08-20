@@ -205,13 +205,15 @@ impl<T: frame_system::Config> pallet_collator_selection::WeightInfo for WeightIn
 	/// Storage: `CollatorSelection::LastAuthoredBlock` (r:0 w:1)
 	/// Proof: `CollatorSelection::LastAuthoredBlock` (`max_values`: None, `max_size`: Some(44), added: 2519, mode: `MaxEncodedLen`)
 	/// The range of component `c` is `[3, 100]`.
-	fn leave_intent(_c: u32, ) -> Weight {
+	fn leave_intent(c: u32, ) -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `347 + c * (48 ±0)`
 		//  Estimated: `6287`
-		// Minimum execution time: 42_229_000 picoseconds.
-		Weight::from_parts(67_539_916, 0)
+		// Minimum execution time: 26_279_000 picoseconds.
+		Weight::from_parts(31_081_235, 0)
 			.saturating_add(Weight::from_parts(0, 6287))
+			// Standard Error: 13_845
+			.saturating_add(Weight::from_parts(441_889, 0).saturating_mul(c.into()))
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(2))
 	}
