@@ -53,9 +53,6 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-#![cfg(not(feature = "paseo"))]
-compile_error!("Paseo feature must be enabled");
-
 extern crate alloc;
 
 // Genesis preset configurations.

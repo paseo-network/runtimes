@@ -20,9 +20,6 @@
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
 #![recursion_limit = "512"]
 
-#![cfg(not(feature = "paseo"))]
-compile_error!("Paseo feature must be enabled");
-
 extern crate alloc;
 
 use alloc::{
@@ -659,10 +656,7 @@ impl pallet_bags_list::Config<VoterBagsListInstance> for Runtime {
 	type WeightInfo = weights::pallet_bags_list::WeightInfo<Runtime>;
 	type BagThresholds = BagThresholds;
 	type Score = sp_npos_elections::VoteWeight;
-	#[cfg(any(feature = "paseo", feature = "runtime-benchmarks"))]
 	type MaxAutoRebagPerBlock = ConstU32<5>;
-	#[cfg(not(any(feature = "paseo", feature = "runtime-benchmarks")))]
-	type MaxAutoRebagPerBlock = ConstU32<0>;
 }
 
 /// Defines how much should the inflation be for an era given its duration.
@@ -1525,10 +1519,7 @@ impl pallet_staking_async_ah_client::Config for Runtime {
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type SessionInterface = Self;
 	type SendToAssetHub = StakingXcmToAssetHub;
-	#[cfg(feature = "paseo")]
 	type MinimumValidatorSetSize = ConstU32<100>;
-	#[cfg(not(feature = "paseo"))]
-	type MinimumValidatorSetSize = ConstU32<400>;
 	type UnixTime = Timestamp;
 	type PointsPerBlock = ConstU32<20>;
 	type MaxOffenceBatchSize = ConstU32<50>;
