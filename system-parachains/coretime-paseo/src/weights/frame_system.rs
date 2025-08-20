@@ -109,11 +109,11 @@ impl<T: frame_system::Config> frame_system::WeightInfo for WeightInfo<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
-		// Minimum execution time: 5_501_000 picoseconds.
-		Weight::from_parts(338_896, 0)
+		// Minimum execution time: 2_714_000 picoseconds.
+		Weight::from_parts(2_855_000, 0)
 			.saturating_add(Weight::from_parts(0, 0))
-			// Standard Error: 7_075
-			.saturating_add(Weight::from_parts(940_772, 0).saturating_mul(i.into()))
+			// Standard Error: 3_704
+			.saturating_add(Weight::from_parts(603_137, 0).saturating_mul(i.into()))
 			.saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(i.into())))
 	}
 	/// Storage: `Skipped::Metadata` (r:0 w:0)

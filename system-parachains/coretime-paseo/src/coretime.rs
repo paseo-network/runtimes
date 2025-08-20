@@ -374,7 +374,7 @@ impl<Balance: FixedPointOperand, MinPrice: Get<Balance>, TargetPrice: Get<Balanc
 		CenterTargetPrice::<Balance>::leadin_factor_at(when)
 	}
 
-	fn adapt_price(performance: SalePerformance<Balance>) -> AdaptedPrices<Balance> {
+	fn adapt_price(_performance: SalePerformance<Balance>) -> AdaptedPrices<Balance> {
 		let end_price = MinPrice::get();
 		let target_price = TargetPrice::get();
 
