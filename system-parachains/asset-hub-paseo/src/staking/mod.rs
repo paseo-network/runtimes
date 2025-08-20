@@ -231,6 +231,14 @@ parameter_types! {
     pub storage OffchainMinerStorage: bool = true;
 }
 
+pub struct Balancing;
+impl Get<Option<sp_npos_elections::BalancingConfig>> for Balancing {
+	fn get() -> Option<sp_npos_elections::BalancingConfig> {
+		Some(sp_npos_elections::BalancingConfig { iterations: 10, tolerance: 0 })
+	}
+}
+
+
 impl multi_block::unsigned::Config for Runtime {
 	type MinerPages = MinerPages;
 	type OffchainStorage = ConstBool<OffchainMinerStorage>;
