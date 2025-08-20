@@ -1277,12 +1277,10 @@ construct_runtime!(
 		// Sudo
 		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 251,
 
-		// Asset Hub Migration in the 240s
-		AhOps: pallet_ah_ops = 248,
-		AhMigrator: pallet_ah_migrator = 249,
+		AhOps: pallet_ah_ops = 250,
+		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 251,
 
-		// Sudo
-		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 255,
+		AhMigrator: pallet_ah_migrator = 255,
 	}
 );
 
