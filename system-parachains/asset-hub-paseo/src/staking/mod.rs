@@ -31,6 +31,7 @@ use sp_arithmetic::FixedU128;
 use sp_runtime::{
 	transaction_validity::TransactionPriority, FixedPointNumber, SaturatedConversion,
 };
+use sp_core::Get;
 use sp_staking::SessionIndex;
 use xcm::v5::prelude::*;
 
@@ -241,7 +242,7 @@ impl Get<Option<sp_npos_elections::BalancingConfig>> for Balancing {
 
 impl multi_block::unsigned::Config for Runtime {
 	type MinerPages = MinerPages;
-	type OffchainStorage = ConstBool<OffchainMinerStorage>;
+	type OffchainStorage = OffchainMinerStorage;
 	type OffchainSolver = SequentialPhragmen<AccountId, SolutionAccuracyOf<Runtime>, Balancing>;
 	type MinerTxPriority = MinerTxPriority;
 	type OffchainRepeat = OffchainRepeat;
