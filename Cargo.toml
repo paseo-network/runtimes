@@ -6,20 +6,20 @@ repository = "https://github.com/paseo-network/runtimes.git"
 license = "GPL-3.0-only"
 
 [workspace.dependencies]
-kusama-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", rev = "d02ca02ff", default-features = false }
-bp-bridge-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", rev = "d02ca02ff", default-features = false }
-bp-bridge-hub-polkadot = { git = "https://github.com/polkadot-fellows/runtimes", rev = "d02ca02ff", default-features = false }
-bp-asset-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", rev = "d02ca02ff", default-features = false }
-collectives-polkadot-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", rev = "d02ca02ff", default-features = false }
-pallet-remote-proxy = { git = "https://github.com/polkadot-fellows/runtimes", rev = "d02ca02ff", default-features = false }
-pallet-ah-migrator = { git = "https://github.com/polkadot-fellows/runtimes", rev = "d02ca02ff", default-features = false }
-pallet-ah-ops = { git = "https://github.com/polkadot-fellows/runtimes", rev = "d02ca02ff", default-features = false }
+kusama-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", rev = "da6470680", default-features = false }
+bp-bridge-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", rev = "da6470680", default-features = false }
+bp-bridge-hub-polkadot = { git = "https://github.com/polkadot-fellows/runtimes", rev = "da6470680", default-features = false }
+bp-asset-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", rev = "da6470680", default-features = false }
+collectives-polkadot-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", rev = "da6470680", default-features = false }
+pallet-remote-proxy = { git = "https://github.com/polkadot-fellows/runtimes", rev = "da6470680", default-features = false }
+pallet-ah-migrator = { git = "https://github.com/polkadot-fellows/runtimes", rev = "da6470680", default-features = false }
+pallet-ah-ops = { git = "https://github.com/polkadot-fellows/runtimes", rev = "da6470680", default-features = false }
 pallet-election-provider-multi-block = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
-pallet-rc-migrator = { git = "https://github.com/polkadot-fellows/runtimes", rev = "d02ca02ff", default-features = false }
+pallet-rc-migrator = { git = "https://github.com/polkadot-fellows/runtimes", rev = "da6470680", default-features = false }
 pallet-staking-async = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
 pallet-staking-async-rc-client = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
 pallet-staking-async-ah-client = { git = "https://github.com/paritytech/polkadot-sdk", branch = "oty-2503-paseo", default-features = false }
-system-parachains-common = { git = "https://github.com/polkadot-fellows/runtimes", rev = "d02ca02ff", default-features = false }
+system-parachains-common = { git = "https://github.com/polkadot-fellows/runtimes", rev = "da6470680", default-features = false }
 
 # Local dependencies
 

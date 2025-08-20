@@ -804,16 +804,7 @@ impl pallet_treasury::Config for Runtime {
 	type AssetKind = VersionedLocatableAsset;
 	type Beneficiary = VersionedLocation;
 	type BeneficiaryLookup = IdentityLookup<Self::Beneficiary>;
-	type Paymaster = PayOverXcm<
-		TreasuryInteriorLocation,
-		crate::xcm_config::XcmRouter,
-		crate::XcmPallet,
-		ConstU32<{ 6 * HOURS }>,
-		Self::Beneficiary,
-		Self::AssetKind,
-		LocatableAssetConverter,
-		VersionedLocationConverter,
-	>;
+	type Paymaster = TreasuryPaymaster;
 	type BalanceConverter = AssetRateWithNative;
 	type PayoutPeriod = PayoutSpendPeriod;
 	type BlockNumberProvider = System;
@@ -1726,6 +1717,9 @@ impl pallet_rc_migrator::Config for Runtime {
 	>;
 	type Currency = Balances;
 	type CheckingAccount = xcm_config::CheckAccount;
+	type TreasuryBlockNumberProvider = System;
+	type TreasuryPaymaster = TreasuryPaymaster;
+	type SessionDuration = EpochDuration; // Session == Epoch
 	type SendXcm = xcm_config::XcmRouterWithoutException;
 	type MaxRcWeight = RcMigratorMaxWeight;
 	type MaxAhWeight = AhMigratorMaxWeight;
@@ -1736,7 +1730,7 @@ impl pallet_rc_migrator::Config for Runtime {
 	type RcPostMigrationCalls = ahm_phase1::CallsEnabledAfterMigration;
 	type StakingDelegationReason = ahm_phase1::StakingDelegationReason;
 	type OnDemandPalletId = OnDemandPalletId;
-	type UnprocessedMsgBuffer = ConstU32<5>;
+	type UnprocessedMsgBuffer = ConstU32<50>;
 	type XcmResponseTimeout = XcmResponseTimeout;
 	type MessageQueue = MessageQueue;
 	type AhUmpQueuePriorityPattern = AhUmpQueuePriorityPattern;

@@ -1299,7 +1299,7 @@ dependencies = [
 [[package]]
 name = "bp-asset-hub-kusama"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?rev=d02ca02ff#d02ca02ffdedfe00245e298950446aaaca4df329"
+source = "git+https://github.com/polkadot-fellows/runtimes?rev=da6470680#da6470680833349e2a4d542fba4358c8f0f17300"
 dependencies = [
  "bp-xcm-bridge-hub-router",
  "frame-support",
@@ -1307,7 +1307,7 @@ dependencies = [
  "scale-info",
  "sp-core",
  "staging-xcm 16.2.0",
- "system-parachains-constants 1.0.0 (git+https://github.com/polkadot-fellows/runtimes?rev=d02ca02ff)",
+ "system-parachains-constants 1.0.0 (git+https://github.com/polkadot-fellows/runtimes?rev=da6470680)",
 ]
 
 [[package]]
@@ -1341,7 +1341,7 @@ dependencies = [
 [[package]]
 name = "bp-bridge-hub-kusama"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?rev=d02ca02ff#d02ca02ffdedfe00245e298950446aaaca4df329"
+source = "git+https://github.com/polkadot-fellows/runtimes?rev=da6470680#da6470680833349e2a4d542fba4358c8f0f17300"
 dependencies = [
  "bp-bridge-hub-cumulus",
  "bp-header-chain",
@@ -1354,7 +1354,7 @@ dependencies = [
  "sp-api",
  "sp-runtime",
  "sp-std 14.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=oty-2503-paseo)",
- "system-parachains-constants 1.0.0 (git+https://github.com/polkadot-fellows/runtimes?rev=d02ca02ff)",
+ "system-parachains-constants 1.0.0 (git+https://github.com/polkadot-fellows/runtimes?rev=da6470680)",
 ]
 
 [[package]]
@@ -1380,7 +1380,7 @@ dependencies = [
 [[package]]
 name = "bp-bridge-hub-polkadot"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?rev=d02ca02ff#d02ca02ffdedfe00245e298950446aaaca4df329"
+source = "git+https://github.com/polkadot-fellows/runtimes?rev=da6470680#da6470680833349e2a4d542fba4358c8f0f17300"
 dependencies = [
  "bp-bridge-hub-cumulus",
  "bp-header-chain",
@@ -1395,7 +1395,7 @@ dependencies = [
  "sp-runtime",
  "sp-std 14.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=oty-2503-paseo)",
  "staging-xcm 16.2.0",
- "system-parachains-constants 1.0.0 (git+https://github.com/polkadot-fellows/runtimes?rev=d02ca02ff)",
+ "system-parachains-constants 1.0.0 (git+https://github.com/polkadot-fellows/runtimes?rev=da6470680)",
 ]
 
 [[package]]
@@ -2221,7 +2221,7 @@ version = "1.0.0"
 [[package]]
 name = "collectives-polkadot-runtime-constants"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?rev=d02ca02ff#d02ca02ffdedfe00245e298950446aaaca4df329"
+source = "git+https://github.com/polkadot-fellows/runtimes?rev=da6470680#da6470680833349e2a4d542fba4358c8f0f17300"
 
 [[package]]
 name = "colorchoice"
@@ -5393,7 +5393,7 @@ checksum = "c33070833c9ee02266356de0c43f723152bd38bd96ddf52c82b3af10c9138b28"
 [[package]]
 name = "kusama-runtime-constants"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?rev=d02ca02ff#d02ca02ffdedfe00245e298950446aaaca4df329"
+source = "git+https://github.com/polkadot-fellows/runtimes?rev=da6470680#da6470680833349e2a4d542fba4358c8f0f17300"
 dependencies = [
  "frame-support",
  "pallet-remote-proxy",
@@ -6755,12 +6755,11 @@ checksum = "b15813163c1d831bf4a13c3610c05c0d03b39feb07f7e09fa234dac9b15aaf39"
 [[package]]
 name = "pallet-ah-migrator"
 version = "0.1.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?rev=d02ca02ff#d02ca02ffdedfe00245e298950446aaaca4df329"
+source = "git+https://github.com/polkadot-fellows/runtimes?rev=da6470680#da6470680833349e2a4d542fba4358c8f0f17300"
 dependencies = [
  "assets-common",
  "collectives-polkadot-runtime-constants",
  "cumulus-primitives-core",
- "frame-benchmarking",
  "frame-election-provider-support",
  "frame-support",
  "frame-system",
@@ -6799,7 +6798,6 @@ dependencies = [
  "polkadot-runtime-constants",
  "polkadot-runtime-parachains",
  "scale-info",
- "serde",
  "sp-application-crypto",
  "sp-core",
  "sp-io",
@@ -6815,10 +6813,9 @@ dependencies = [
 [[package]]
 name = "pallet-ah-ops"
 version = "0.1.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?rev=d02ca02ff#d02ca02ffdedfe00245e298950446aaaca4df329"
+source = "git+https://github.com/polkadot-fellows/runtimes?rev=da6470680#da6470680833349e2a4d542fba4358c8f0f17300"
 dependencies = [
  "cumulus-primitives-core",
- "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -6876,7 +6873,6 @@ name = "pallet-asset-conversion-tx-payment"
 version = "22.0.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=oty-2503-paseo#d007f7be5782a6c3f595f3a0fd45bd08a2edb79e"
 dependencies = [
- "frame-benchmarking",
  "frame-support",
  "frame-system",
  "pallet-asset-conversion",
@@ -7007,18 +7003,13 @@ source = "git+https://github.com/paritytech/polkadot-sdk?branch=oty-2503-paseo#9
 dependencies = [
  "aquamarine",
  "docify",
- "frame-benchmarking",
  "frame-election-provider-support",
  "frame-support",
  "frame-system",
  "log",
- "pallet-balances",
  "parity-scale-codec",
  "scale-info",
- "sp-core",
- "sp-io",
  "sp-runtime",
- "sp-tracing",
 ]
 
 [[package]]
@@ -7049,7 +7040,6 @@ dependencies = [
  "pallet-session",
  "parity-scale-codec",
  "scale-info",
- "serde",
  "sp-consensus-beefy",
  "sp-runtime",
  "sp-session",
@@ -7061,9 +7051,7 @@ name = "pallet-beefy-mmr"
 version = "41.0.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=oty-2503-paseo#d007f7be5782a6c3f595f3a0fd45bd08a2edb79e"
 dependencies = [
- "array-bytes",
  "binary-merkle-tree",
- "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -7072,7 +7060,6 @@ dependencies = [
  "pallet-session",
  "parity-scale-codec",
  "scale-info",
- "serde",
  "sp-api",
  "sp-consensus-beefy",
  "sp-core",
@@ -7086,7 +7073,6 @@ name = "pallet-bounties"
 version = "39.0.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=oty-2503-paseo#9eca8162dc12b26be093e773d885d7563c61daa2"
 dependencies = [
- "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -7202,7 +7188,6 @@ name = "pallet-child-bounties"
 version = "39.0.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=oty-2503-paseo#9eca8162dc12b26be093e773d885d7563c61daa2"
 dependencies = [
- "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -7257,12 +7242,10 @@ version = "40.1.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=oty-2503-paseo#9eca8162dc12b26be093e773d885d7563c61daa2"
 dependencies = [
  "assert_matches",
- "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
  "scale-info",
- "serde",
  "sp-io",
  "sp-runtime",
 ]
@@ -7305,13 +7288,11 @@ name = "pallet-election-provider-multi-block"
 version = "0.9.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=oty-2503-paseo#d007f7be5782a6c3f595f3a0fd45bd08a2edb79e"
 dependencies = [
- "frame-benchmarking",
  "frame-election-provider-support",
  "frame-support",
  "frame-system",
  "log",
  "parity-scale-codec",
- "rand 0.8.5",
  "scale-info",
  "sp-arithmetic 26.1.0",
  "sp-core",
@@ -7347,7 +7328,6 @@ name = "pallet-election-provider-support-benchmarking"
 version = "27.0.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=oty-2503-paseo#d007f7be5782a6c3f595f3a0fd45bd08a2edb79e"
 dependencies = [
- "frame-benchmarking",
  "frame-election-provider-support",
  "frame-system",
  "parity-scale-codec",
@@ -7378,7 +7358,6 @@ name = "pallet-grandpa"
 version = "40.0.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=oty-2503-paseo#d007f7be5782a6c3f595f3a0fd45bd08a2edb79e"
 dependencies = [
- "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -7416,7 +7395,6 @@ name = "pallet-im-online"
 version = "39.1.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=oty-2503-paseo#d007f7be5782a6c3f595f3a0fd45bd08a2edb79e"
 dependencies = [
- "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -7435,7 +7413,6 @@ name = "pallet-indices"
 version = "40.0.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=oty-2503-paseo#9eca8162dc12b26be093e773d885d7563c61daa2"
 dependencies = [
- "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -7512,7 +7489,6 @@ version = "34.1.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=oty-2503-paseo#d007f7be5782a6c3f595f3a0fd45bd08a2edb79e"
 dependencies = [
  "enumflags2",
- "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -7540,14 +7516,12 @@ dependencies = [
  "frame-support",
  "frame-system",
  "log",
- "pallet-balances",
  "parity-scale-codec",
  "scale-info",
  "sp-core",
  "sp-io",
  "sp-runtime",
  "sp-staking",
- "sp-tracing",
 ]
 
 [[package]]
@@ -7590,7 +7564,6 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "scale-info",
- "serde",
  "sp-runtime",
  "sp-staking",
 ]
@@ -7665,9 +7638,8 @@ dependencies = [
 [[package]]
 name = "pallet-rc-migrator"
 version = "0.1.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?rev=d02ca02ff#d02ca02ffdedfe00245e298950446aaaca4df329"
+source = "git+https://github.com/polkadot-fellows/runtimes?rev=da6470680#da6470680833349e2a4d542fba4358c8f0f17300"
 dependencies = [
- "frame-benchmarking",
  "frame-election-provider-support",
  "frame-support",
  "frame-system",
@@ -7704,7 +7676,6 @@ dependencies = [
  "polkadot-runtime-constants",
  "polkadot-runtime-parachains",
  "scale-info",
- "serde",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -7736,7 +7707,7 @@ dependencies = [
 [[package]]
 name = "pallet-remote-proxy"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?rev=d02ca02ff#d02ca02ffdedfe00245e298950446aaaca4df329"
+source = "git+https://github.com/polkadot-fellows/runtimes?rev=da6470680#da6470680833349e2a4d542fba4358c8f0f17300"
 dependencies = [
  "cumulus-pallet-parachain-system",
  "cumulus-primitives-core",
@@ -7925,7 +7896,6 @@ name = "pallet-staking-async"
 version = "0.1.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=oty-2503-paseo#9eca8162dc12b26be093e773d885d7563c61daa2"
 dependencies = [
- "frame-benchmarking",
  "frame-election-provider-support",
  "frame-support",
  "frame-system",
@@ -7948,7 +7918,6 @@ name = "pallet-staking-async-ah-client"
 version = "0.1.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=oty-2503-paseo#9eca8162dc12b26be093e773d885d7563c61daa2"
 dependencies = [
- "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -8016,7 +7985,6 @@ name = "pallet-state-trie-migration"
 version = "44.1.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=oty-2503-paseo#9eca8162dc12b26be093e773d885d7563c61daa2"
 dependencies = [
- "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -8113,7 +8081,6 @@ name = "pallet-uniques"
 version = "40.1.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=oty-2503-paseo#d007f7be5782a6c3f595f3a0fd45bd08a2edb79e"
 dependencies = [
- "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -8971,7 +8938,7 @@ dependencies = [
 [[package]]
 name = "polkadot-runtime-constants"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?rev=d02ca02ff#d02ca02ffdedfe00245e298950446aaaca4df329"
+source = "git+https://github.com/polkadot-fellows/runtimes?rev=da6470680#da6470680833349e2a4d542fba4358c8f0f17300"
 dependencies = [
  "frame-support",
  "pallet-remote-proxy",
@@ -12752,7 +12719,7 @@ dependencies = [
 [[package]]
 name = "system-parachains-common"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?rev=d02ca02ff#d02ca02ffdedfe00245e298950446aaaca4df329"
+source = "git+https://github.com/polkadot-fellows/runtimes?rev=da6470680#da6470680833349e2a4d542fba4358c8f0f17300"
 dependencies = [
  "frame-support",
  "pallet-treasury",
@@ -12785,7 +12752,7 @@ dependencies = [
 [[package]]
 name = "system-parachains-constants"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?rev=d02ca02ff#d02ca02ffdedfe00245e298950446aaaca4df329"
+source = "git+https://github.com/polkadot-fellows/runtimes?rev=da6470680#da6470680833349e2a4d542fba4358c8f0f17300"
 dependencies = [
  "frame-support",
  "kusama-runtime-constants",

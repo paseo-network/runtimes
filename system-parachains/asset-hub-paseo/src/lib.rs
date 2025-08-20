@@ -526,14 +526,14 @@ pub enum ProxyType {
 	///
 	/// Contains the `NominationPools` and `Utility` pallets.
 	NominationPools,
-	/// Placeholder variant for old migrated `Auction` proxy type from the Relay chain.
+	/// To be used with the remote proxy pallet to manage parachain lease auctions on the relay.
 	///
-	/// Cannot do anything.
-	OldAuction,
-	/// Placeholder variant for old migrated `ParaRegistration` proxy type from the Relay chain.
+	/// This variant cannot do anything on Asset Hub itself.
+	Auction,
+	/// To be used with the remote proxy pallet to manage parachain registration on the relay.
 	///
-	/// Cannot do anything.
-	OldParaRegistration,
+	/// This variant cannot do anything on Asset Hub itself.
+	ParaRegistration,
 }
 impl Default for ProxyType {
 	fn default() -> Self {
@@ -545,7 +545,7 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 	fn filter(&self, c: &RuntimeCall) -> bool {
 		match self {
 			ProxyType::Any => true,
-			ProxyType::OldAuction | ProxyType::OldParaRegistration => false,
+			ProxyType::Auction | ProxyType::ParaRegistration => false,
 			ProxyType::NonTransfer => !matches!(
 				c,
 				RuntimeCall::Balances { .. } |
@@ -554,7 +554,7 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 					RuntimeCall::Uniques { .. } |
 					RuntimeCall::Scheduler(..) |
 					RuntimeCall::Treasury(..) |
-					//RuntimeCall::Bounties(..) | # TODO: @ggwpez more
+					RuntimeCall::Bounties(..) |
 					RuntimeCall::ChildBounties(..) |
 					// We allow calling `vest` and merging vesting schedules, but obviously not
 					// vested transfers.
@@ -649,9 +649,7 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 					RuntimeCall::Utility { .. } |
 					RuntimeCall::Multisig { .. }
 			),
-
 			// New variants introduced by the Asset Hub Migration from the Relay Chain.
-			// TODO: @ggwpez Uncomment once all these pallets are deployed.
 			ProxyType::Governance => matches!(
 				c,
 				RuntimeCall::Treasury(..) |
@@ -665,16 +663,15 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 			ProxyType::Staking => {
 				matches!(
 					c,
-					//RuntimeCall::Staking(..) |
-					RuntimeCall::Session(..) |
+					RuntimeCall::Staking(..) |
+						RuntimeCall::Session(..) |
 						RuntimeCall::Utility(..) |
-						RuntimeCall::NominationPools(..) /*RuntimeCall::FastUnstake(..) |
-					                                   *RuntimeCall::VoterList(..)
-					                                   */
+						RuntimeCall::NominationPools(..) |
+						RuntimeCall::VoterList(..)
 				)
 			},
 			ProxyType::NominationPools => {
-				matches!(c, /* RuntimeCall::NominationPools(..) | */ RuntimeCall::Utility(..))
+				matches!(c, RuntimeCall::NominationPools(..) | RuntimeCall::Utility(..))
 			},
 		}
 	}
@@ -1178,6 +1175,8 @@ impl pallet_ah_migrator::Config for Runtime {
 		EnsureXcm<IsVoiceOfBody<FellowshipLocation, FellowsBodyId>>,
 	>;
 	type Currency = Balances;
+	type TreasuryBlockNumberProvider = RelaychainDataProvider<Runtime>;
+	type TreasuryPaymaster = treasury::TreasuryPaymaster;
 	type Assets = NativeAndAssets;
 	type CheckingAccount = xcm_config::CheckingAccount;
 	type RcProxyType = ah_migration::RcProxyType;
@@ -1191,16 +1190,11 @@ impl pallet_ah_migrator::Config for Runtime {
 	type AhWeightInfo = weights::pallet_ah_migrator::WeightInfo<Runtime>;
 	type TreasuryAccounts = ah_migration::TreasuryAccounts;
 	type RcToAhTreasurySpend = ah_migration::RcToAhTreasurySpend;
+	type AhPreMigrationCalls = ah_migration::call_filter::CallsEnabledBeforeMigration;
 	type AhIntraMigrationCalls = ah_migration::call_filter::CallsEnabledDuringMigration;
 	type AhPostMigrationCalls = ah_migration::call_filter::CallsEnabledAfterMigration;
 	type MessageQueue = MessageQueue;
 	type DmpQueuePriorityPattern = DmpQueuePriorityPattern;
-}
-
-impl pallet_sudo::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type RuntimeCall = RuntimeCall;
-	type WeightInfo = weights::pallet_sudo::WeightInfo<Runtime>;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -1267,7 +1261,6 @@ construct_runtime!(
 		// Staking in the 80s
 		Staking: pallet_staking_async = 89,
 		NominationPools: pallet_nomination_pools = 80,
-		FastUnstake: pallet_fast_unstake = 81,
 		VoterList: pallet_bags_list::<Instance1> = 82,
 		DelegatedStaking: pallet_delegated_staking = 83,
 		StakingRcClient: pallet_staking_async_rc_client = 84,
@@ -1278,12 +1271,9 @@ construct_runtime!(
 		// Sudo
 		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 251,
 
-		// Asset Hub Migration in the 240s
-		AhOps: pallet_ah_ops = 248,
-		AhMigrator: pallet_ah_migrator = 249,
-
-		// Sudo
-		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 255,
+		// Asset Hub Migration in the 250s
+		AhOps: pallet_ah_ops = 254,
+		AhMigrator: pallet_ah_migrator = 255,
 	}
 );
 
@@ -1454,7 +1444,6 @@ mod benches {
 		// Staking
 		[pallet_staking_async, Staking]
 		// TODO @ggwpez [pallet_nomination_pools, NominationPools] Does not work since it depends on pallet-staking being deployed, but we only have pallet-staking-async :(
-		[pallet_fast_unstake, FastUnstake]
 		[pallet_bags_list, VoterList]
 		// DelegatedStaking has no calls
 		// TODO @ggwpez [pallet_staking_async_rc_client, StakingRcClient]
