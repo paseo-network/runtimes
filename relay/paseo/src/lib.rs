@@ -1526,7 +1526,7 @@ impl pallet_staking_async_ah_client::Config for Runtime {
 	type SessionInterface = Self;
 	type SendToAssetHub = StakingXcmToAssetHub;
 	#[cfg(feature = "paseo")]
-	type MinimumValidatorSetSize = ConstU32<50>;
+	type MinimumValidatorSetSize = ConstU32<100>;
 	#[cfg(not(feature = "paseo"))]
 	type MinimumValidatorSetSize = ConstU32<400>;
 	type UnixTime = Timestamp;
