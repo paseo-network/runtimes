@@ -38,7 +38,7 @@ parameter_types! {
 	/// Number of election pages that we operate upon. 32 * 6s block = 192s = 3.2min snapshots
 	pub Pages: u32 = 32;
 
-	/// Verify 8 solutions at most.
+	/// Verify all solutions.
 	pub storage SignedValidationPhase: u32 = prod_or_fast!(Pages::get() * 8, Pages::get());
 
 	/// 20 mins for signed phase.
