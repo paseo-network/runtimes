@@ -228,6 +228,7 @@ impl multi_block::signed::Config for Runtime {
 parameter_types! {
 	/// Priority of the offchain miner transactions.
 	pub MinerTxPriority: TransactionPriority = TransactionPriority::max_value() / 2;
+    pub storage OffchainMinerStorage: bool = true;
 }
 
 impl multi_block::unsigned::Config for Runtime {
