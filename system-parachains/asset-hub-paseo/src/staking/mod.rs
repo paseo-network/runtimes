@@ -28,10 +28,10 @@ use pallet_election_provider_multi_block::{self as multi_block, SolutionAccuracy
 use pallet_staking_async::UseValidatorsMap;
 use pallet_staking_async_rc_client as rc_client;
 use sp_arithmetic::FixedU128;
+use sp_core::Get;
 use sp_runtime::{
 	transaction_validity::TransactionPriority, FixedPointNumber, SaturatedConversion,
 };
-use sp_core::Get;
 use sp_staking::SessionIndex;
 use xcm::v5::prelude::*;
 
@@ -222,7 +222,7 @@ impl multi_block::signed::Config for Runtime {
 parameter_types! {
 	/// Priority of the offchain miner transactions.
 	pub MinerTxPriority: TransactionPriority = TransactionPriority::max_value() / 2;
-    pub storage OffchainMinerStorage: bool = true;
+	pub storage OffchainMinerStorage: bool = true;
 }
 
 pub struct Balancing;
@@ -231,7 +231,6 @@ impl Get<Option<sp_npos_elections::BalancingConfig>> for Balancing {
 		Some(sp_npos_elections::BalancingConfig { iterations: 10, tolerance: 0 })
 	}
 }
-
 
 impl multi_block::unsigned::Config for Runtime {
 	type MinerPages = MinerPages;
@@ -324,8 +323,8 @@ impl pallet_staking_async::Config for Runtime {
 	type BondingDuration = BondingDuration;
 	type SlashDeferDuration = SlashDeferDuration;
 	type AdminOrigin = EitherOfDiverse<
-			EitherOf<EnsureRoot<AccountId>, StakingAdmin>,
-			EnsureSignedBy<StakingMiner, AccountId>
+		EitherOf<EnsureRoot<AccountId>, StakingAdmin>,
+		EnsureSignedBy<StakingMiner, AccountId>,
 	>;
 	type EraPayout = EraPayout;
 	type MaxExposurePageSize = MaxExposurePageSize;
