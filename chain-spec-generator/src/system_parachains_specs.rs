@@ -185,3 +185,24 @@ pub fn collectives_paseo_local_config() -> Result<Box<dyn sc_chain_spec::ChainSp
 		.build(),
 	))
 }
+
+pub fn collectives_paseo_live_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String> {
+	let mut properties = sc_chain_spec::Properties::new();
+	properties.insert("ss58Format".into(), 0.into());
+	properties.insert("tokenSymbol".into(), "PAS".into());
+	properties.insert("tokenDecimals".into(), 10.into());
+
+	Ok(Box::new(
+		CollectivesPaseoChainSpec::builder(
+			collectives_paseo_runtime::WASM_BINARY.expect("Collectives wasm not available!"),
+			Extensions { relay_chain: "collectives-local".into(), para_id: 1001 },
+		)
+		.with_name("Paseo Collectives")
+		.with_id("paseo-collectives")
+		.with_chain_type(sc_chain_spec::ChainType::Live)
+		.with_genesis_config_preset_name("live")
+		.with_protocol_id("col-pas")
+		.with_properties(properties)
+		.build(),
+	))
+}
