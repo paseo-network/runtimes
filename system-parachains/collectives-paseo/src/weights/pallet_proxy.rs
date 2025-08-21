@@ -117,15 +117,17 @@ impl<T: frame_system::Config> pallet_proxy::WeightInfo for WeightInfo<T> {
 	/// Proof: `System::Account` (`max_values`: None, `max_size`: Some(128), added: 2603, mode: `MaxEncodedLen`)
 	/// The range of component `a` is `[0, 31]`.
 	/// The range of component `p` is `[1, 31]`.
-	fn announce(a: u32, _p: u32, ) -> Weight {
+	fn announce(a: u32, p: u32, ) -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `420 + a * (68 ±0) + p * (37 ±0)`
 		//  Estimated: `5698`
-		// Minimum execution time: 52_368_000 picoseconds.
-		Weight::from_parts(65_099_432, 0)
+		// Minimum execution time: 30_025_000 picoseconds.
+		Weight::from_parts(29_656_817, 0)
 			.saturating_add(Weight::from_parts(0, 5698))
-			// Standard Error: 36_636
-			.saturating_add(Weight::from_parts(179_835, 0).saturating_mul(a.into()))
+			// Standard Error: 24_733
+			.saturating_add(Weight::from_parts(534_538, 0).saturating_mul(a.into()))
+			// Standard Error: 25_554
+			.saturating_add(Weight::from_parts(264_455, 0).saturating_mul(p.into()))
 			.saturating_add(T::DbWeight::get().reads(3))
 			.saturating_add(T::DbWeight::get().writes(2))
 	}
@@ -147,13 +149,15 @@ impl<T: frame_system::Config> pallet_proxy::WeightInfo for WeightInfo<T> {
 	/// Storage: `Proxy::Proxies` (r:1 w:1)
 	/// Proof: `Proxy::Proxies` (`max_values`: None, `max_size`: Some(1241), added: 3716, mode: `MaxEncodedLen`)
 	/// The range of component `p` is `[1, 31]`.
-	fn remove_proxy(_p: u32, ) -> Weight {
+	fn remove_proxy(p: u32, ) -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `161 + p * (37 ±0)`
 		//  Estimated: `4706`
-		// Minimum execution time: 36_598_000 picoseconds.
-		Weight::from_parts(44_876_863, 0)
+		// Minimum execution time: 27_441_000 picoseconds.
+		Weight::from_parts(32_168_049, 0)
 			.saturating_add(Weight::from_parts(0, 4706))
+			// Standard Error: 6_687
+			.saturating_add(Weight::from_parts(148_230, 0).saturating_mul(p.into()))
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
@@ -175,13 +179,15 @@ impl<T: frame_system::Config> pallet_proxy::WeightInfo for WeightInfo<T> {
 	/// Storage: `Proxy::Proxies` (r:1 w:1)
 	/// Proof: `Proxy::Proxies` (`max_values`: None, `max_size`: Some(1241), added: 3716, mode: `MaxEncodedLen`)
 	/// The range of component `p` is `[1, 31]`.
-	fn create_pure(_p: u32, ) -> Weight {
+	fn create_pure(p: u32, ) -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `173`
 		//  Estimated: `4706`
-		// Minimum execution time: 38_201_000 picoseconds.
-		Weight::from_parts(46_392_757, 0)
+		// Minimum execution time: 21_963_000 picoseconds.
+		Weight::from_parts(25_406_093, 0)
 			.saturating_add(Weight::from_parts(0, 4706))
+			// Standard Error: 18_123
+			.saturating_add(Weight::from_parts(258_227, 0).saturating_mul(p.into()))
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}

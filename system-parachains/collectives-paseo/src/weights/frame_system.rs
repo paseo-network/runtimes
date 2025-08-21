@@ -33,16 +33,16 @@ use core::marker::PhantomData;
 /// Weight functions for `frame_system`.
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> frame_system::WeightInfo for WeightInfo<T> {
-	/// The range of component `b` is `[0, 3932160]`.
+    /// The range of component `b` is `[0, 3932160]`.
 	fn remark(b: u32, ) -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
-		// Minimum execution time: 4_078_000 picoseconds.
-		Weight::from_parts(44_747_781, 0)
+		// Minimum execution time: 2_053_000 picoseconds.
+		Weight::from_parts(2_373_000, 0)
 			.saturating_add(Weight::from_parts(0, 0))
-			// Standard Error: 4
-			.saturating_add(Weight::from_parts(550, 0).saturating_mul(b.into()))
+			// Standard Error: 3
+			.saturating_add(Weight::from_parts(308, 0).saturating_mul(b.into()))
 	}
 	/// The range of component `b` is `[0, 3932160]`.
 	fn remark_with_event(b: u32, ) -> Weight {
