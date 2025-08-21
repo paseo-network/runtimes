@@ -106,6 +106,7 @@ fn bulk_revenue_is_burnt() {
 			let broker_balance_before = Balances::balance(&broker_account);
 			let burn_balance_before = Balances::balance(&coretime_burn_account);
 
+			// Purchase coretime.
 			assert_ok!(Broker::purchase(
 				RuntimeOrigin::signed(AccountId::from(ALICE)),
 				FixedTargetPrice::get()

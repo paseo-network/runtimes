@@ -708,6 +708,12 @@ impl pallet_asset_rate::Config for Runtime {
 	type BenchmarkHelper = polkadot_runtime_common::impls::benchmarks::AssetRateArguments;
 }
 
+impl pallet_sudo::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type WeightInfo = pallet_sudo::weights::SubstrateWeight<Runtime>;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime
@@ -776,6 +782,9 @@ construct_runtime!(
 		SecretaryCollective: pallet_ranked_collective::<Instance3> = 80,
 		// pub type SecretarySalaryInstance = pallet_salary::Instance3;
 		SecretarySalary: pallet_salary::<Instance3> = 81,
+
+		// Sudo.
+		Sudo: pallet_sudo = 255,
 	}
 );
 
