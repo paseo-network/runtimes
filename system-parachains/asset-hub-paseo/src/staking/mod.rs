@@ -323,7 +323,10 @@ impl pallet_staking_async::Config for Runtime {
 	type SessionsPerEra = SessionsPerEra;
 	type BondingDuration = BondingDuration;
 	type SlashDeferDuration = SlashDeferDuration;
-	type AdminOrigin = EitherOf<EnsureRoot<AccountId>, StakingAdmin>;
+	type AdminOrigin = EitherOfDiverse<
+			EitherOf<EnsureRoot<AccountId>, StakingAdmin>,
+			EnsureSignedBy<StakingMiner, AccountId>
+	>;
 	type EraPayout = EraPayout;
 	type MaxExposurePageSize = MaxExposurePageSize;
 	type ElectionProvider = MultiBlockElection;
