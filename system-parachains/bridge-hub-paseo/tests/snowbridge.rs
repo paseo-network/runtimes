@@ -130,7 +130,7 @@ pub fn transfer_token_to_ethereum_insufficient_fund() {
 fn change_ethereum_gateway_by_governance_works() {
 	change_storage_constant_by_governance_works::<Runtime, EthereumGatewayAddress, H160>(
 		collator_session_keys(),
-		bp_bridge_hub_paseo::BRIDGE_HUB_POLKAPAS_PARACHAIN_ID,
+		bp_bridge_hub_paseo::BRIDGE_HUB_POLKADOT_PARACHAIN_ID,
 		GovernanceOrigin::Location(GovernanceLocation::get()),
 		|| (EthereumGatewayAddress::key().to_vec(), EthereumGatewayAddress::get()),
 		|_| [1; 20].into(),
@@ -245,7 +245,7 @@ fn ethereum_outbound_queue_processes_messages_before_message_queue_works() {
 	)
 }
 
-// TODO replace with snowbridge runtime common method in stable-2412 release.
+// TO-old-DO replace with snowbridge runtime common method in stable-2412 release.
 pub fn ethereum_extrinsic<Runtime>(
 	collator_session_key: CollatorSessionKeys<Runtime>,
 	runtime_para_id: u32,

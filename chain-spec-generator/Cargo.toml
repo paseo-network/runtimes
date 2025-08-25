@@ -40,7 +40,12 @@ parachains-common = { workspace = true, default-features = true }
 cumulus-primitives-core = { workspace = true, default-features = true }
 
 [features]
-fast-runtime = ["paseo-runtime/fast-runtime"]
+fast-runtime = [
+	"asset-hub-paseo-runtime/fast-runtime",
+	"coretime-paseo-runtime/fast-runtime",
+	"paseo-runtime-constants/fast-runtime",
+	"paseo-runtime/fast-runtime",
+]
 runtime-benchmarks = [
 	"asset-hub-paseo-runtime/runtime-benchmarks",
 	"bridge-hub-paseo-runtime/runtime-benchmarks",

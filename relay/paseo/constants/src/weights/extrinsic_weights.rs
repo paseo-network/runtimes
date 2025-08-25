@@ -20,17 +20,17 @@
 //!
 //! SHORT-NAME: `extrinsic`, LONG-NAME: `ExtrinsicBase`, RUNTIME: `Development`
 //! WARMUPS: `10`, REPEAT: `100`
-//! WEIGHT-PATH: `runtime/polkadot/constants/src/weights/`
+//! WEIGHT-PATH: `runtime/paseo/constants/src/weights/`
 //! WEIGHT-METRIC: `Average`, WEIGHT-MUL: `1.0`, WEIGHT-ADD: `0`
 
 // Executed Command:
-//   ./target/production/polkadot
+//   ./target/production/paseo
 //   benchmark
 //   overhead
-//   --chain=polkadot-dev
+//   --chain=paseo-dev
 //   --execution=wasm
 //   --wasm-execution=compiled
-//   --weight-path=runtime/polkadot/constants/src/weights/
+//   --weight-path=runtime/paseo/constants/src/weights/
 //   --warmup=10
 //   --repeat=100
 //   --header=./file_header.txt

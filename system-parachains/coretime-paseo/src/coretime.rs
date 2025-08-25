@@ -101,7 +101,7 @@ fn burn_at_relay(stash: &AccountId, value: Balance) -> Result<(), XcmError> {
 
 	let withdrawn = AssetTransactor::withdraw_asset(&asset, &stash_location, None)?;
 
-	// TODO https://github.com/polkadot-fellows/runtimes/issues/404
+	// TO-old-DO https://github.com/polkadot-fellows/runtimes/issues/404
 	AssetTransactor::can_check_out(&dest, &asset, &dummy_xcm_context)?;
 
 	let parent_assets = Into::<Assets>::into(withdrawn)

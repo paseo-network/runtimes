@@ -91,7 +91,7 @@ pub mod fee {
 	impl WeightToFeePolynomial for WeightToFee {
 		type Balance = Balance;
 		fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
-			// in Polkadot, extrinsic base weight (smallest non-zero weight) is mapped to 1/10 CENT:
+			// in Paseo, extrinsic base weight (smallest non-zero weight) is mapped to 1/10 CENT:
 			let p = super::currency::CENTS;
 			let q = 10 * Balance::from(ExtrinsicBaseWeight::get().ref_time());
 			smallvec![WeightToFeeCoefficient {
@@ -111,7 +111,7 @@ pub mod xcm {
 		// Preallocated for the Root body.
 		#[allow(dead_code)]
 		const ROOT_INDEX: u32 = 0;
-		// The bodies corresponding to the Polkadot OpenGov Origins.
+		// The bodies corresponding to the Paseo OpenGov Origins.
 		pub const FELLOWSHIP_ADMIN_INDEX: u32 = 1;
 		// The body corresponding to the Treasurer OpenGov track.
 		#[deprecated = "Will be removed after August 2024; Use `xcm::latest::BodyId::Treasury` \
@@ -143,7 +143,7 @@ pub mod system_parachain {
 	/// PAssetHub (Interim AH + contracts) Chain ID.
 	pub const PASSET_HUB_ID: u32 = 1111;
 
-	// System parachains from Polkadot point of view.
+	// System parachains from Paseo point of view.
 	pub type SystemParachains = IsChildSystemParachain<ParaId>;
 
 	/// Coretime constants
