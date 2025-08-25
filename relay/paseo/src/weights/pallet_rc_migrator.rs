@@ -65,7 +65,7 @@ impl<T: frame_system::Config> pallet_rc_migrator::WeightInfo for WeightInfo<T> {
 		//  Measured:  `503`
 		//  Estimated: `6196`
 		// Minimum execution time: 66_870_000 picoseconds.
-		Weight::from_parts(69_352_000, 0)
+		Weight::from_parts(104_028_000, 0)
 			.saturating_add(Weight::from_parts(0, 6196))
 			.saturating_add(T::DbWeight::get().reads(7))
 			.saturating_add(T::DbWeight::get().writes(2))
@@ -77,7 +77,7 @@ impl<T: frame_system::Config> pallet_rc_migrator::WeightInfo for WeightInfo<T> {
 		//  Measured:  `4`
 		//  Estimated: `2693`
 		// Minimum execution time: 17_011_000 picoseconds.
-		Weight::from_parts(18_290_000, 0)
+		Weight::from_parts(27_435_000, 0)
 			.saturating_add(Weight::from_parts(0, 2693))
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
@@ -89,7 +89,7 @@ impl<T: frame_system::Config> pallet_rc_migrator::WeightInfo for WeightInfo<T> {
 		//  Measured:  `4`
 		//  Estimated: `2693`
 		// Minimum execution time: 16_120_000 picoseconds.
-		Weight::from_parts(17_420_000, 0)
+		Weight::from_parts(26_130_000, 0)
 			.saturating_add(Weight::from_parts(0, 2693))
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
@@ -101,7 +101,7 @@ impl<T: frame_system::Config> pallet_rc_migrator::WeightInfo for WeightInfo<T> {
 		//  Measured:  `4`
 		//  Estimated: `2693`
 		// Minimum execution time: 15_811_000 picoseconds.
-		Weight::from_parts(16_570_000, 0)
+		Weight::from_parts(24_855_000, 0)
 			.saturating_add(Weight::from_parts(0, 2693))
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
@@ -121,7 +121,7 @@ impl<T: frame_system::Config> pallet_rc_migrator::WeightInfo for WeightInfo<T> {
 		//  Measured:  `118`
 		//  Estimated: `3583`
 		// Minimum execution time: 334_992_000 picoseconds.
-		Weight::from_parts(343_002_000, 0)
+		Weight::from_parts(514_503_000, 0)
 			.saturating_add(Weight::from_parts(0, 3583))
 			.saturating_add(T::DbWeight::get().reads(5))
 			.saturating_add(T::DbWeight::get().writes(3))
@@ -133,27 +133,27 @@ impl<T: frame_system::Config> pallet_rc_migrator::WeightInfo for WeightInfo<T> {
 		//  Measured:  `4`
 		//  Estimated: `1493`
 		// Minimum execution time: 10_980_000 picoseconds.
-		Weight::from_parts(11_590_000, 0)
+		Weight::from_parts(17_385_000, 0)
 			.saturating_add(Weight::from_parts(0, 1493))
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
 	fn receive_query_response() -> Weight {
-		Weight::from_parts(10_000_000, 1000)
+		Weight::from_parts(15_000_000, 1000)
 	}
 	fn resend_xcm() -> Weight {
-		Weight::from_parts(10_000_000, 1000)
+		Weight::from_parts(15_000_000, 1000)
 	}
 	fn set_unprocessed_msg_buffer() -> Weight {
-		Weight::from_parts(10_000_000, 1000)
+		Weight::from_parts(15_000_000, 1000)
 	}
 	fn set_ah_ump_queue_priority() -> Weight {
-		Weight::from_parts(10_000_000, 1000)
+		Weight::from_parts(15_000_000, 1000)
 	}
 	fn force_ah_ump_queue_priority() -> Weight {
-		Weight::from_parts(10_000_000, 1000)
+		Weight::from_parts(15_000_000, 1000)
 	}
 	fn set_manager() -> Weight {
-		Weight::from_parts(10_000_000, 1000)
+		Weight::from_parts(15_000_000, 1000)
 	}
 }

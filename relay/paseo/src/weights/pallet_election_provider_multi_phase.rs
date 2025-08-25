@@ -65,7 +65,7 @@ impl<T: frame_system::Config> pallet_election_provider_multi_phase::WeightInfo f
 		//  Measured:  `851`
 		//  Estimated: `3481`
 		// Minimum execution time: 27_161_000 picoseconds.
-		Weight::from_parts(27_690_000, 0)
+		Weight::from_parts(41_535_000, 0)
 			.saturating_add(Weight::from_parts(0, 3481))
 			.saturating_add(T::DbWeight::get().reads(8))
 	}
@@ -78,7 +78,7 @@ impl<T: frame_system::Config> pallet_election_provider_multi_phase::WeightInfo f
 		//  Measured:  `43`
 		//  Estimated: `1528`
 		// Minimum execution time: 22_161_000 picoseconds.
-		Weight::from_parts(22_770_000, 0)
+		Weight::from_parts(34_155_000, 0)
 			.saturating_add(Weight::from_parts(0, 1528))
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(1))
@@ -92,7 +92,7 @@ impl<T: frame_system::Config> pallet_election_provider_multi_phase::WeightInfo f
 		//  Measured:  `43`
 		//  Estimated: `1528`
 		// Minimum execution time: 23_190_000 picoseconds.
-		Weight::from_parts(24_071_000, 0)
+		Weight::from_parts(36_106_500, 0)
 			.saturating_add(Weight::from_parts(0, 1528))
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(1))
@@ -106,7 +106,7 @@ impl<T: frame_system::Config> pallet_election_provider_multi_phase::WeightInfo f
 		//  Measured:  `174`
 		//  Estimated: `3593`
 		// Minimum execution time: 35_700_000 picoseconds.
-		Weight::from_parts(36_080_000, 0)
+		Weight::from_parts(54_120_000, 0)
 			.saturating_add(Weight::from_parts(0, 3593))
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(2))
@@ -118,7 +118,7 @@ impl<T: frame_system::Config> pallet_election_provider_multi_phase::WeightInfo f
 		//  Measured:  `174`
 		//  Estimated: `3593`
 		// Minimum execution time: 26_360_000 picoseconds.
-		Weight::from_parts(26_940_000, 0)
+		Weight::from_parts(40_410_000, 0)
 			.saturating_add(Weight::from_parts(0, 3593))
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
@@ -136,10 +136,10 @@ impl<T: frame_system::Config> pallet_election_provider_multi_phase::WeightInfo f
 		//  Measured:  `0`
 		//  Estimated: `0`
 		// Minimum execution time: 669_503_000 picoseconds.
-		Weight::from_parts(502_516_148, 0)
+		Weight::from_parts(753_774_222, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 			// Standard Error: 13_844
-			.saturating_add(Weight::from_parts(598_354, 0).saturating_mul(v.into()))
+			.saturating_add(Weight::from_parts(897_531, 0).saturating_mul(v.into()))
 			.saturating_add(T::DbWeight::get().writes(3))
 	}
 	/// Storage: `ElectionProviderMultiPhase::SignedSubmissionIndices` (r:1 w:1)
@@ -167,12 +167,12 @@ impl<T: frame_system::Config> pallet_election_provider_multi_phase::WeightInfo f
 		//  Measured:  `266 + a * (768 ±0) + d * (48 ±0)`
 		//  Estimated: `3818 + a * (768 ±0) + d * (49 ±0)`
 		// Minimum execution time: 510_853_000 picoseconds.
-		Weight::from_parts(40_874_506, 0)
+		Weight::from_parts(61_311_759, 0)
 			.saturating_add(Weight::from_parts(0, 3818))
 			// Standard Error: 21_226
-			.saturating_add(Weight::from_parts(752_863, 0).saturating_mul(a.into()))
+			.saturating_add(Weight::from_parts(1_129_294, 0).saturating_mul(a.into()))
 			// Standard Error: 31_817
-			.saturating_add(Weight::from_parts(327_387, 0).saturating_mul(d.into()))
+			.saturating_add(Weight::from_parts(491_080, 0).saturating_mul(d.into()))
 			.saturating_add(T::DbWeight::get().reads(7))
 			.saturating_add(T::DbWeight::get().writes(8))
 			.saturating_add(Weight::from_parts(0, 768).saturating_mul(a.into()))
@@ -195,7 +195,7 @@ impl<T: frame_system::Config> pallet_election_provider_multi_phase::WeightInfo f
 		//  Measured:  `1091`
 		//  Estimated: `2576`
 		// Minimum execution time: 52_700_000 picoseconds.
-		Weight::from_parts(53_521_000, 0)
+		Weight::from_parts(80_281_500, 0)
 			.saturating_add(Weight::from_parts(0, 2576))
 			.saturating_add(T::DbWeight::get().reads(5))
 			.saturating_add(T::DbWeight::get().writes(3))
@@ -223,16 +223,16 @@ impl<T: frame_system::Config> pallet_election_provider_multi_phase::WeightInfo f
 		//  Measured:  `148 + t * (32 ±0) + v * (553 ±0)`
 		//  Estimated: `1633 + t * (32 ±0) + v * (553 ±0)`
 		// Minimum execution time: 7_288_870_000 picoseconds.
-		Weight::from_parts(1_345_267_727, 0)
+		Weight::from_parts(2_017_901_590, 0)
 			.saturating_add(Weight::from_parts(0, 1633))
 			// Standard Error: 42_048
-			.saturating_add(Weight::from_parts(639_676, 0).saturating_mul(v.into()))
+			.saturating_add(Weight::from_parts(959_514, 0).saturating_mul(v.into()))
 			// Standard Error: 84_055
-			.saturating_add(Weight::from_parts(164_298, 0).saturating_mul(t.into()))
+			.saturating_add(Weight::from_parts(246_447, 0).saturating_mul(t.into()))
 			// Standard Error: 139_966
-			.saturating_add(Weight::from_parts(8_823_876, 0).saturating_mul(a.into()))
+			.saturating_add(Weight::from_parts(13_235_814, 0).saturating_mul(a.into()))
 			// Standard Error: 209_783
-			.saturating_add(Weight::from_parts(2_789_413, 0).saturating_mul(d.into()))
+			.saturating_add(Weight::from_parts(4_184_119, 0).saturating_mul(d.into()))
 			.saturating_add(T::DbWeight::get().reads(7))
 			.saturating_add(T::DbWeight::get().writes(1))
 			.saturating_add(Weight::from_parts(0, 32).saturating_mul(t.into()))
@@ -255,12 +255,12 @@ impl<T: frame_system::Config> pallet_election_provider_multi_phase::WeightInfo f
 		//  Measured:  `123 + t * (32 ±0) + v * (553 ±0)`
 		//  Estimated: `1608 + t * (32 ±0) + v * (553 ±0)`
 		// Minimum execution time: 6_399_226_000 picoseconds.
-		Weight::from_parts(6_447_197_000, 0)
+		Weight::from_parts(9_670_795_500, 0)
 			.saturating_add(Weight::from_parts(0, 1608))
 			// Standard Error: 39_924
-			.saturating_add(Weight::from_parts(7_123, 0).saturating_mul(v.into()))
+			.saturating_add(Weight::from_parts(10_684, 0).saturating_mul(v.into()))
 			// Standard Error: 118_311
-			.saturating_add(Weight::from_parts(6_438_605, 0).saturating_mul(a.into()))
+			.saturating_add(Weight::from_parts(9_657_907, 0).saturating_mul(a.into()))
 			.saturating_add(T::DbWeight::get().reads(4))
 			.saturating_add(Weight::from_parts(0, 32).saturating_mul(t.into()))
 			.saturating_add(Weight::from_parts(0, 553).saturating_mul(v.into()))

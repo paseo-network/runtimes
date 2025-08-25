@@ -55,7 +55,7 @@ impl<T: frame_system::Config> polkadot_runtime_common :: paras_registrar::Weight
 		//  Measured:  `59`
 		//  Estimated: `3524`
 		// Minimum execution time: 34_310_000 picoseconds.
-		Weight::from_parts(34_700_000, 0)
+		Weight::from_parts(52_050_000, 0)
 			.saturating_add(Weight::from_parts(0, 3524))
 			.saturating_add(T::DbWeight::get().reads(3))
 			.saturating_add(T::DbWeight::get().writes(2))
@@ -83,7 +83,7 @@ impl<T: frame_system::Config> polkadot_runtime_common :: paras_registrar::Weight
 		//  Measured:  `315`
 		//  Estimated: `3780`
 		// Minimum execution time: 9_863_445_000 picoseconds.
-		Weight::from_parts(9_971_145_000, 0)
+		Weight::from_parts(14_956_717_500, 0)
 			.saturating_add(Weight::from_parts(0, 3780))
 			.saturating_add(T::DbWeight::get().reads(7))
 			.saturating_add(T::DbWeight::get().writes(8))
@@ -111,7 +111,7 @@ impl<T: frame_system::Config> polkadot_runtime_common :: paras_registrar::Weight
 		//  Measured:  `232`
 		//  Estimated: `3697`
 		// Minimum execution time: 9_852_845_000 picoseconds.
-		Weight::from_parts(9_932_996_000, 0)
+		Weight::from_parts(14_899_494_000, 0)
 			.saturating_add(Weight::from_parts(0, 3697))
 			.saturating_add(T::DbWeight::get().reads(7))
 			.saturating_add(T::DbWeight::get().writes(8))
@@ -135,7 +135,7 @@ impl<T: frame_system::Config> polkadot_runtime_common :: paras_registrar::Weight
 		//  Measured:  `462`
 		//  Estimated: `3927`
 		// Minimum execution time: 85_000_000 picoseconds.
-		Weight::from_parts(86_290_000, 0)
+		Weight::from_parts(129_435_000, 0)
 			.saturating_add(Weight::from_parts(0, 3927))
 			.saturating_add(T::DbWeight::get().reads(6))
 			.saturating_add(T::DbWeight::get().writes(4))
@@ -167,7 +167,7 @@ impl<T: frame_system::Config> polkadot_runtime_common :: paras_registrar::Weight
 		//  Measured:  `830`
 		//  Estimated: `6770`
 		// Minimum execution time: 185_790_000 picoseconds.
-		Weight::from_parts(192_090_000, 0)
+		Weight::from_parts(288_135_000, 0)
 			.saturating_add(Weight::from_parts(0, 6770))
 			.saturating_add(T::DbWeight::get().reads(14))
 			.saturating_add(T::DbWeight::get().writes(8))
@@ -196,10 +196,10 @@ impl<T: frame_system::Config> polkadot_runtime_common :: paras_registrar::Weight
 		//  Measured:  `201`
 		//  Estimated: `3666`
 		// Minimum execution time: 50_360_000 picoseconds.
-		Weight::from_parts(51_130_000, 0)
+		Weight::from_parts(76_695_000, 0)
 			.saturating_add(Weight::from_parts(0, 3666))
 			// Standard Error: 2
-			.saturating_add(Weight::from_parts(3_163, 0).saturating_mul(b.into()))
+			.saturating_add(Weight::from_parts(4_744, 0).saturating_mul(b.into()))
 			.saturating_add(T::DbWeight::get().reads(9))
 			.saturating_add(T::DbWeight::get().writes(7))
 	}
@@ -211,10 +211,10 @@ impl<T: frame_system::Config> polkadot_runtime_common :: paras_registrar::Weight
 		//  Measured:  `0`
 		//  Estimated: `0`
 		// Minimum execution time: 8_650_000 picoseconds.
-		Weight::from_parts(8_720_000, 0)
+		Weight::from_parts(13_080_000, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 			// Standard Error: 1
-			.saturating_add(Weight::from_parts(1_407, 0).saturating_mul(b.into()))
+			.saturating_add(Weight::from_parts(2_110, 0).saturating_mul(b.into()))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
 }

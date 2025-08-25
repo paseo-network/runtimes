@@ -58,7 +58,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `16867 + n * (584 ±0)`
 		//  Estimated: `990 + n * (2603 ±0)`
 		// Minimum execution time: 17_000_000 picoseconds.
-		Weight::from_parts(1_209_456, 0)
+		Weight::from_parts(1_814_184, 0)
 			.saturating_add(Weight::from_parts(0, 990))
 			// Standard Error: 52_135
 			.saturating_add(Weight::from_parts(12_733_708, 0).saturating_mul(n.into()))
@@ -80,7 +80,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `34309 + n * (1050 ±0)`
 		//  Estimated: `990 + n * (3774 ±0)`
 		// Minimum execution time: 73_000_000 picoseconds.
-		Weight::from_parts(80_000_000, 0)
+		Weight::from_parts(120_000_000, 0)
 			.saturating_add(Weight::from_parts(0, 990))
 			// Standard Error: 73_945
 			.saturating_add(Weight::from_parts(76_965_383, 0).saturating_mul(n.into()))
@@ -96,7 +96,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `16867 + n * (584 ±0)`
 		//  Estimated: `990 + n * (2603 ±0)`
 		// Minimum execution time: 26_000_000 picoseconds.
-		Weight::from_parts(24_804_997, 0)
+		Weight::from_parts(37_207_495, 0)
 			.saturating_add(Weight::from_parts(0, 990))
 			// Standard Error: 27_336
 			.saturating_add(Weight::from_parts(20_362_852, 0).saturating_mul(n.into()))
@@ -112,7 +112,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `43`
 		//  Estimated: `990 + n * (2531 ±0)`
 		// Minimum execution time: 8_000_000 picoseconds.
-		Weight::from_parts(3_676_051, 0)
+		Weight::from_parts(5_514_076, 0)
 			.saturating_add(Weight::from_parts(0, 990))
 			// Standard Error: 2_688
 			.saturating_add(Weight::from_parts(1_785_633, 0).saturating_mul(n.into()))
@@ -128,7 +128,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `109`
 		//  Estimated: `990 + n * (3716 ±0)`
 		// Minimum execution time: 9_000_000 picoseconds.
-		Weight::from_parts(2_817_412, 0)
+		Weight::from_parts(4_226_118, 0)
 			.saturating_add(Weight::from_parts(0, 990))
 			// Standard Error: 4_759
 			.saturating_add(Weight::from_parts(3_309_148, 0).saturating_mul(n.into()))
@@ -144,7 +144,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `16867 + n * (584 ±0)`
 		//  Estimated: `990 + n * (2603 ±0)`
 		// Minimum execution time: 19_000_000 picoseconds.
-		Weight::from_parts(12_384_963, 0)
+		Weight::from_parts(18_577_444, 0)
 			.saturating_add(Weight::from_parts(0, 990))
 			// Standard Error: 10_748
 			.saturating_add(Weight::from_parts(13_324_647, 0).saturating_mul(n.into()))
@@ -162,7 +162,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `204`
 		//  Estimated: `990 + n * (3532 ±0)`
 		// Minimum execution time: 12_000_000 picoseconds.
-		Weight::from_parts(3_815_323, 0)
+		Weight::from_parts(5_722_984, 0)
 			.saturating_add(Weight::from_parts(0, 990))
 			// Standard Error: 4_616
 			.saturating_add(Weight::from_parts(3_021_115, 0).saturating_mul(n.into()))
@@ -181,7 +181,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `264`
 		//  Estimated: `1489 + n * (3672 ±0)`
 		// Minimum execution time: 12_000_000 picoseconds.
-		Weight::from_parts(6_643_805, 0)
+		Weight::from_parts(9_965_707, 0)
 			.saturating_add(Weight::from_parts(0, 1489))
 			// Standard Error: 4_391
 			.saturating_add(Weight::from_parts(3_998_668, 0).saturating_mul(n.into()))
@@ -201,7 +201,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `42`
 		//  Estimated: `1489 + n * (2531 ±0)`
 		// Minimum execution time: 8_000_000 picoseconds.
-		Weight::from_parts(3_337_171, 0)
+		Weight::from_parts(5_005_756, 0)
 			.saturating_add(Weight::from_parts(0, 1489))
 			// Standard Error: 6_848
 			.saturating_add(Weight::from_parts(2_491_678, 0).saturating_mul(n.into()))
@@ -222,7 +222,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `0`
 		//  Estimated: `0`
 		// Minimum execution time: 35_000_000 picoseconds.
-		Weight::from_parts(40_000_000, 0)
+		Weight::from_parts(60_000_000, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 			.saturating_add(T::DbWeight::get().writes(33))
 	}
@@ -240,7 +240,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `144 + m * (1 ±0)`
 		//  Estimated: `3609 + m * (1 ±0)`
 		// Minimum execution time: 8_000_000 picoseconds.
-		Weight::from_parts(8_000_000, 0)
+		Weight::from_parts(12_000_000, 0)
 			.saturating_add(Weight::from_parts(0, 3609))
 			// Standard Error: 8
 			.saturating_add(Weight::from_parts(1_833, 0).saturating_mul(m.into()))
@@ -256,7 +256,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `0`
 		//  Estimated: `0`
 		// Minimum execution time: 6_000_000 picoseconds.
-		Weight::from_parts(7_000_000, 0)
+		Weight::from_parts(10_500_000, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 			// Standard Error: 5_956
 			.saturating_add(Weight::from_parts(1_248_838, 0).saturating_mul(n.into()))
@@ -276,7 +276,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `144 + m * (1 ±0)`
 		//  Estimated: `3609 + m * (1 ±0)`
 		// Minimum execution time: 7_000_000 picoseconds.
-		Weight::from_parts(7_000_000, 0)
+		Weight::from_parts(10_500_000, 0)
 			.saturating_add(Weight::from_parts(0, 3609))
 			// Standard Error: 8
 			.saturating_add(Weight::from_parts(1_856, 0).saturating_mul(m.into()))
@@ -292,7 +292,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `0`
 		//  Estimated: `0`
 		// Minimum execution time: 6_000_000 picoseconds.
-		Weight::from_parts(3_463_733, 0)
+		Weight::from_parts(5_195_599, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 			// Standard Error: 3_062
 			.saturating_add(Weight::from_parts(1_021_975, 0).saturating_mul(n.into()))
@@ -308,7 +308,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `16209 + n * (485 ±0)`
 		//  Estimated: `1489 + n * (2629 ±0)`
 		// Minimum execution time: 16_000_000 picoseconds.
-		Weight::from_parts(36_930_358, 0)
+		Weight::from_parts(55_395_537, 0)
 			.saturating_add(Weight::from_parts(0, 1489))
 			// Standard Error: 8_966
 			.saturating_add(Weight::from_parts(5_007_274, 0).saturating_mul(n.into()))
@@ -326,7 +326,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `109`
 		//  Estimated: `990 + n * (2544 ±0)`
 		// Minimum execution time: 8_000_000 picoseconds.
-		Weight::from_parts(9_000_000, 0)
+		Weight::from_parts(13_500_000, 0)
 			.saturating_add(Weight::from_parts(0, 990))
 			// Standard Error: 4_300
 			.saturating_add(Weight::from_parts(2_061_139, 0).saturating_mul(n.into()))
@@ -342,7 +342,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `0`
 		//  Estimated: `0`
 		// Minimum execution time: 26_000_000 picoseconds.
-		Weight::from_parts(29_000_000, 0)
+		Weight::from_parts(43_500_000, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 			// Standard Error: 40_484
 			.saturating_add(Weight::from_parts(21_227_919, 0).saturating_mul(n.into()))
@@ -356,7 +356,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `0`
 		//  Estimated: `0`
 		// Minimum execution time: 6_000_000 picoseconds.
-		Weight::from_parts(3_125_181, 0)
+		Weight::from_parts(4_687_771, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 			// Standard Error: 2_947
 			.saturating_add(Weight::from_parts(1_166_082, 0).saturating_mul(n.into()))
@@ -370,7 +370,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `0`
 		//  Estimated: `0`
 		// Minimum execution time: 7_000_000 picoseconds.
-		Weight::from_parts(2_503_595, 0)
+		Weight::from_parts(3_755_392, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 			// Standard Error: 6_148
 			.saturating_add(Weight::from_parts(2_154_128, 0).saturating_mul(n.into()))
@@ -384,7 +384,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `80`
 		//  Estimated: `990 + n * (2587 ±0)`
 		// Minimum execution time: 11_000_000 picoseconds.
-		Weight::from_parts(12_594_335, 0)
+		Weight::from_parts(18_891_502, 0)
 			.saturating_add(Weight::from_parts(0, 990))
 			// Standard Error: 42_852
 			.saturating_add(Weight::from_parts(5_324_762, 0).saturating_mul(n.into()))
@@ -400,7 +400,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `0`
 		//  Estimated: `0`
 		// Minimum execution time: 6_000_000 picoseconds.
-		Weight::from_parts(3_324_055, 0)
+		Weight::from_parts(4_986_082, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 			// Standard Error: 4_675
 			.saturating_add(Weight::from_parts(1_050_250, 0).saturating_mul(n.into()))
@@ -414,7 +414,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `0`
 		//  Estimated: `0`
 		// Minimum execution time: 9_000_000 picoseconds.
-		Weight::from_parts(87_407, 0)
+		Weight::from_parts(131_110, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 			// Standard Error: 44_241
 			.saturating_add(Weight::from_parts(4_257_705, 0).saturating_mul(n.into()))
@@ -430,7 +430,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `142`
 		//  Estimated: `1489 + n * (2595 ±0)`
 		// Minimum execution time: 9_000_000 picoseconds.
-		Weight::from_parts(3_965_017, 0)
+		Weight::from_parts(5_947_525, 0)
 			.saturating_add(Weight::from_parts(0, 1489))
 			// Standard Error: 9_028
 			.saturating_add(Weight::from_parts(2_776_513, 0).saturating_mul(n.into()))
@@ -448,7 +448,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `16867 + n * (584 ±0)`
 		//  Estimated: `990 + n * (2603 ±0)`
 		// Minimum execution time: 18_000_000 picoseconds.
-		Weight::from_parts(20_000_000, 0)
+		Weight::from_parts(30_000_000, 0)
 			.saturating_add(Weight::from_parts(0, 990))
 			// Standard Error: 51_019
 			.saturating_add(Weight::from_parts(13_337_869, 0).saturating_mul(n.into()))
@@ -464,7 +464,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `57 + n * (47 ±0)`
 		//  Estimated: `990 + n * (2566 ±0)`
 		// Minimum execution time: 8_000_000 picoseconds.
-		Weight::from_parts(6_136_012, 0)
+		Weight::from_parts(9_204_018, 0)
 			.saturating_add(Weight::from_parts(0, 990))
 			// Standard Error: 3_834
 			.saturating_add(Weight::from_parts(2_065_009, 0).saturating_mul(n.into()))
@@ -479,7 +479,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `0 + m * (49900 ±0)`
 		//  Estimated: `3469 + m * (48969 ±24)`
 		// Minimum execution time: 19_000_000 picoseconds.
-		Weight::from_parts(20_000_000, 0)
+		Weight::from_parts(30_000_000, 0)
 			.saturating_add(Weight::from_parts(0, 3469))
 			// Standard Error: 122_813
 			.saturating_add(Weight::from_parts(26_253_720, 0).saturating_mul(m.into()))
@@ -495,7 +495,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `0`
 		//  Estimated: `0`
 		// Minimum execution time: 13_000_000 picoseconds.
-		Weight::from_parts(5_131_873, 0)
+		Weight::from_parts(7_697_809, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 			// Standard Error: 85_675
 			.saturating_add(Weight::from_parts(8_240_026, 0).saturating_mul(n.into()))
@@ -509,7 +509,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `0`
 		//  Estimated: `0`
 		// Minimum execution time: 10_000_000 picoseconds.
-		Weight::from_parts(12_802_327, 0)
+		Weight::from_parts(19_203_490, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 			// Standard Error: 55_802
 			.saturating_add(Weight::from_parts(5_900_033, 0).saturating_mul(n.into()))
@@ -522,7 +522,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `109`
 		//  Estimated: `1486`
 		// Minimum execution time: 8_000_000 picoseconds.
-		Weight::from_parts(9_000_000, 0)
+		Weight::from_parts(13_500_000, 0)
 			.saturating_add(Weight::from_parts(0, 1486))
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
@@ -546,7 +546,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `1358`
 		//  Estimated: `4823`
 		// Minimum execution time: 27_000_000 picoseconds.
-		Weight::from_parts(30_000_000, 0)
+		Weight::from_parts(45_000_000, 0)
 			.saturating_add(Weight::from_parts(0, 4823))
 			.saturating_add(T::DbWeight::get().reads(6))
 			.saturating_add(T::DbWeight::get().writes(3))
@@ -560,7 +560,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `133`
 		//  Estimated: `1517`
 		// Minimum execution time: 8_000_000 picoseconds.
-		Weight::from_parts(10_000_000, 0)
+		Weight::from_parts(15_000_000, 0)
 			.saturating_add(Weight::from_parts(0, 1517))
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(1))
@@ -576,7 +576,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `336`
 		//  Estimated: `3517`
 		// Minimum execution time: 10_000_000 picoseconds.
-		Weight::from_parts(11_000_000, 0)
+		Weight::from_parts(16_500_000, 0)
 			.saturating_add(Weight::from_parts(0, 3517))
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(1))
@@ -588,7 +588,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `109`
 		//  Estimated: `1494`
 		// Minimum execution time: 5_000_000 picoseconds.
-		Weight::from_parts(6_000_000, 0)
+		Weight::from_parts(9_000_000, 0)
 			.saturating_add(Weight::from_parts(0, 1494))
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
@@ -600,7 +600,7 @@ impl<T: crate::ah_migration::weights::DbConfig> pallet_rc_migrator::weights_ah::
 		//  Measured:  `109`
 		//  Estimated: `1517`
 		// Minimum execution time: 5_000_000 picoseconds.
-		Weight::from_parts(6_000_000, 0)
+		Weight::from_parts(9_000_000, 0)
 			.saturating_add(Weight::from_parts(0, 1517))
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))

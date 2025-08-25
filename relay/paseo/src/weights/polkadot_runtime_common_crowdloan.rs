@@ -59,7 +59,7 @@ impl<T: frame_system::Config> polkadot_runtime_common :: crowdloan::WeightInfo f
 		//  Measured:  `401`
 		//  Estimated: `3866`
 		// Minimum execution time: 88_250_000 picoseconds.
-		Weight::from_parts(90_440_000, 0)
+		Weight::from_parts(135_660_000, 0)
 			.saturating_add(Weight::from_parts(0, 3866))
 			.saturating_add(T::DbWeight::get().reads(5))
 			.saturating_add(T::DbWeight::get().writes(3))
@@ -83,7 +83,7 @@ impl<T: frame_system::Config> polkadot_runtime_common :: crowdloan::WeightInfo f
 		//  Measured:  `498`
 		//  Estimated: `3963`
 		// Minimum execution time: 204_951_000 picoseconds.
-		Weight::from_parts(209_840_000, 0)
+		Weight::from_parts(314_760_000, 0)
 			.saturating_add(Weight::from_parts(0, 3963))
 			.saturating_add(T::DbWeight::get().reads(7))
 			.saturating_add(T::DbWeight::get().writes(4))
@@ -99,7 +99,7 @@ impl<T: frame_system::Config> polkadot_runtime_common :: crowdloan::WeightInfo f
 		//  Measured:  `688`
 		//  Estimated: `6196`
 		// Minimum execution time: 125_521_000 picoseconds.
-		Weight::from_parts(129_971_000, 0)
+		Weight::from_parts(194_956_500, 0)
 			.saturating_add(Weight::from_parts(0, 6196))
 			.saturating_add(T::DbWeight::get().reads(4))
 			.saturating_add(T::DbWeight::get().writes(4))
@@ -112,10 +112,10 @@ impl<T: frame_system::Config> polkadot_runtime_common :: crowdloan::WeightInfo f
 		//  Measured:  `126 + k * (189 ±0)`
 		//  Estimated: `139 + k * (189 ±0)`
 		// Minimum execution time: 123_351_000 picoseconds.
-		Weight::from_parts(127_601_000, 0)
+		Weight::from_parts(191_401_500, 0)
 			.saturating_add(Weight::from_parts(0, 139))
 			// Standard Error: 31_120
-			.saturating_add(Weight::from_parts(50_385_624, 0).saturating_mul(k.into()))
+			.saturating_add(Weight::from_parts(75_578_436, 0).saturating_mul(k.into()))
 			.saturating_add(T::DbWeight::get().reads(3))
 			.saturating_add(T::DbWeight::get().reads((2_u64).saturating_mul(k.into())))
 			.saturating_add(T::DbWeight::get().writes(2))
@@ -131,7 +131,7 @@ impl<T: frame_system::Config> polkadot_runtime_common :: crowdloan::WeightInfo f
 		//  Measured:  `515`
 		//  Estimated: `6196`
 		// Minimum execution time: 72_991_000 picoseconds.
-		Weight::from_parts(77_010_000, 0)
+		Weight::from_parts(115_515_000, 0)
 			.saturating_add(Weight::from_parts(0, 6196))
 			.saturating_add(T::DbWeight::get().reads(3))
 			.saturating_add(T::DbWeight::get().writes(3))
@@ -143,7 +143,7 @@ impl<T: frame_system::Config> polkadot_runtime_common :: crowdloan::WeightInfo f
 		//  Measured:  `235`
 		//  Estimated: `3700`
 		// Minimum execution time: 36_550_000 picoseconds.
-		Weight::from_parts(39_000_000, 0)
+		Weight::from_parts(58_500_000, 0)
 			.saturating_add(Weight::from_parts(0, 3700))
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
@@ -157,7 +157,7 @@ impl<T: frame_system::Config> polkadot_runtime_common :: crowdloan::WeightInfo f
 		//  Measured:  `413`
 		//  Estimated: `3878`
 		// Minimum execution time: 56_240_000 picoseconds.
-		Weight::from_parts(58_440_000, 0)
+		Weight::from_parts(87_660_000, 0)
 			.saturating_add(Weight::from_parts(0, 3878))
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(1))
@@ -171,7 +171,7 @@ impl<T: frame_system::Config> polkadot_runtime_common :: crowdloan::WeightInfo f
 		//  Measured:  `239`
 		//  Estimated: `3704`
 		// Minimum execution time: 37_040_000 picoseconds.
-		Weight::from_parts(39_940_000, 0)
+		Weight::from_parts(59_910_000, 0)
 			.saturating_add(Weight::from_parts(0, 3704))
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(1))
@@ -202,10 +202,10 @@ impl<T: frame_system::Config> polkadot_runtime_common :: crowdloan::WeightInfo f
 		//  Measured:  `164 + n * (356 ±0)`
 		//  Estimated: `5385 + n * (2832 ±0)`
 		// Minimum execution time: 171_810_000 picoseconds.
-		Weight::from_parts(11_620_710, 0)
+		Weight::from_parts(17_431_065, 0)
 			.saturating_add(Weight::from_parts(0, 5385))
 			// Standard Error: 46_028
-			.saturating_add(Weight::from_parts(71_378_960, 0).saturating_mul(n.into()))
+			.saturating_add(Weight::from_parts(107_068_440, 0).saturating_mul(n.into()))
 			.saturating_add(T::DbWeight::get().reads(5))
 			.saturating_add(T::DbWeight::get().reads((5_u64).saturating_mul(n.into())))
 			.saturating_add(T::DbWeight::get().writes(3))

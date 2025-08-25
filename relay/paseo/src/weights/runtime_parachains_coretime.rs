@@ -63,7 +63,7 @@ impl<T: frame_system::Config> runtime_parachains :: coretime::WeightInfo for Wei
 		//  Measured:  `2912`
 		//  Estimated: `6377`
 		// Minimum execution time: 108_741_000 picoseconds.
-		Weight::from_parts(109_641_000, 0)
+		Weight::from_parts(164_461_500, 0)
 			.saturating_add(Weight::from_parts(0, 6377))
 			.saturating_add(T::DbWeight::get().reads(8))
 			.saturating_add(T::DbWeight::get().writes(5))
@@ -79,7 +79,7 @@ impl<T: frame_system::Config> runtime_parachains :: coretime::WeightInfo for Wei
 		//  Measured:  `151`
 		//  Estimated: `1636`
 		// Minimum execution time: 14_940_000 picoseconds.
-		Weight::from_parts(15_100_000, 0)
+		Weight::from_parts(22_650_000, 0)
 			.saturating_add(Weight::from_parts(0, 1636))
 			.saturating_add(T::DbWeight::get().reads(3))
 			.saturating_add(T::DbWeight::get().writes(1))
@@ -94,10 +94,10 @@ impl<T: frame_system::Config> runtime_parachains :: coretime::WeightInfo for Wei
 		//  Measured:  `114`
 		//  Estimated: `3579`
 		// Minimum execution time: 16_440_000 picoseconds.
-		Weight::from_parts(16_875_340, 0)
+		Weight::from_parts(25_313_010, 0)
 			.saturating_add(Weight::from_parts(0, 3579))
 			// Standard Error: 226
-			.saturating_add(Weight::from_parts(11_711, 0).saturating_mul(s.into()))
+			.saturating_add(Weight::from_parts(17_566, 0).saturating_mul(s.into()))
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(2))
 	}
@@ -108,7 +108,7 @@ impl<T: frame_system::Config> runtime_parachains :: coretime::WeightInfo for Wei
 		//  Measured:  `4`
 		//  Estimated: `3469`
 		// Minimum execution time: 12_570_000 picoseconds.
-		Weight::from_parts(12_760_000, 0)
+		Weight::from_parts(19_140_000, 0)
 			.saturating_add(Weight::from_parts(0, 3469))
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))

@@ -53,7 +53,7 @@ impl<T: frame_system::Config> polkadot_runtime_common :: slots::WeightInfo for W
 		//  Measured:  `254`
 		//  Estimated: `3719`
 		// Minimum execution time: 35_750_000 picoseconds.
-		Weight::from_parts(36_110_000, 0)
+		Weight::from_parts(54_165_000, 0)
 			.saturating_add(Weight::from_parts(0, 3719))
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(2))
@@ -75,12 +75,12 @@ impl<T: frame_system::Config> polkadot_runtime_common :: slots::WeightInfo for W
 		//  Measured:  `553 + c * (20 ±0) + t * (234 ±0)`
 		//  Estimated: `4024 + c * (2496 ±0) + t * (2709 ±0)`
 		// Minimum execution time: 956_233_000 picoseconds.
-		Weight::from_parts(960_013_000, 0)
+		Weight::from_parts(1_440_019_500, 0)
 			.saturating_add(Weight::from_parts(0, 4024))
 			// Standard Error: 112_990
-			.saturating_add(Weight::from_parts(3_629_165, 0).saturating_mul(c.into()))
+			.saturating_add(Weight::from_parts(5_443_747, 0).saturating_mul(c.into()))
 			// Standard Error: 112_990
-			.saturating_add(Weight::from_parts(11_297_861, 0).saturating_mul(t.into()))
+			.saturating_add(Weight::from_parts(16_946_791, 0).saturating_mul(t.into()))
 			.saturating_add(T::DbWeight::get().reads(4))
 			.saturating_add(T::DbWeight::get().reads((1_u64).saturating_mul(c.into())))
 			.saturating_add(T::DbWeight::get().reads((2_u64).saturating_mul(t.into())))
@@ -99,7 +99,7 @@ impl<T: frame_system::Config> polkadot_runtime_common :: slots::WeightInfo for W
 		//  Measured:  `2726`
 		//  Estimated: `21814`
 		// Minimum execution time: 176_551_000 picoseconds.
-		Weight::from_parts(180_851_000, 0)
+		Weight::from_parts(271_276_500, 0)
 			.saturating_add(Weight::from_parts(0, 21814))
 			.saturating_add(T::DbWeight::get().reads(9))
 			.saturating_add(T::DbWeight::get().writes(9))
@@ -117,7 +117,7 @@ impl<T: frame_system::Config> polkadot_runtime_common :: slots::WeightInfo for W
 		//  Measured:  `546`
 		//  Estimated: `4011`
 		// Minimum execution time: 48_540_000 picoseconds.
-		Weight::from_parts(50_701_000, 0)
+		Weight::from_parts(76_051_500, 0)
 			.saturating_add(Weight::from_parts(0, 4011))
 			.saturating_add(T::DbWeight::get().reads(4))
 			.saturating_add(T::DbWeight::get().writes(2))
