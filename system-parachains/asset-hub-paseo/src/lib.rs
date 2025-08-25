@@ -1278,8 +1278,6 @@ construct_runtime!(
 		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 251,
 
 		AhOps: pallet_ah_ops = 250,
-		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 251,
-
 		AhMigrator: pallet_ah_migrator = 255,
 	}
 );
