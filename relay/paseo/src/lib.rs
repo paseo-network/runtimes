@@ -786,14 +786,14 @@ parameter_types! {
 }
 
 pub type TreasuryPaymaster = PayOverXcm<
-    TreasuryInteriorLocation,
-    crate::xcm_config::XcmRouter,
-    crate::XcmPallet,
-    ConstU32<{ 6 * HOURS }>,
-    <Runtime as pallet_treasury::Config>::Beneficiary,
-    <Runtime as pallet_treasury::Config>::AssetKind,
-    LocatableAssetConverter,
-    VersionedLocationConverter,
+	TreasuryInteriorLocation,
+	crate::xcm_config::XcmRouter,
+	crate::XcmPallet,
+	ConstU32<{ 6 * HOURS }>,
+	<Runtime as pallet_treasury::Config>::Beneficiary,
+	<Runtime as pallet_treasury::Config>::AssetKind,
+	LocatableAssetConverter,
+	VersionedLocationConverter,
 >;
 
 impl pallet_treasury::Config for Runtime {
