@@ -60,13 +60,13 @@ impl Chain for BridgeHubPaseo {
 }
 
 impl Parachain for BridgeHubPaseo {
-	const PARACHAIN_ID: u32 = BRIDGE_HUB_POLKAPAS_PARACHAIN_ID;
+	const PARACHAIN_ID: u32 = BRIDGE_HUB_POLKADOT_PARACHAIN_ID;
 	const MAX_HEADER_SIZE: u32 = MAX_BRIDGE_HUB_HEADER_SIZE;
 }
 
 impl ChainWithMessages for BridgeHubPaseo {
 	const WITH_CHAIN_MESSAGES_PALLET_NAME: &'static str =
-		WITH_BRIDGE_HUB_POLKAPAS_MESSAGES_PALLET_NAME;
+		WITH_BRIDGE_HUB_POLKADOT_MESSAGES_PALLET_NAME;
 	const MAX_UNREWARDED_RELAYERS_IN_CONFIRMATION_TX: MessageNonce =
 		MAX_UNREWARDED_RELAYERS_IN_CONFIRMATION_TX;
 	/// This constant limits the maximum number of messages in `receive_messages_proof`.
@@ -77,17 +77,17 @@ impl ChainWithMessages for BridgeHubPaseo {
 }
 
 /// Identifier of BridgeHubPaseo in the Paseo relay chain.
-pub const BRIDGE_HUB_POLKAPAS_PARACHAIN_ID: u32 = 1002;
+pub const BRIDGE_HUB_POLKADOT_PARACHAIN_ID: u32 = 1002;
 
 /// Name of the With-BridgeHubPaseo messages pallet instance that is deployed at bridged chains.
-pub const WITH_BRIDGE_HUB_POLKAPAS_MESSAGES_PALLET_NAME: &str = "BridgePaseoMessages";
+pub const WITH_BRIDGE_HUB_POLKADOT_MESSAGES_PALLET_NAME: &str = "BridgePaseoMessages";
 
 /// Name of the With-BridgeHubPaseo bridge-relayers pallet instance that is deployed at bridged
 /// chains.
-pub const WITH_BRIDGE_HUB_POLKAPAS_RELAYERS_PALLET_NAME: &str = "BridgeRelayers";
+pub const WITH_BRIDGE_HUB_POLKADOT_RELAYERS_PALLET_NAME: &str = "BridgeRelayers";
 
 /// Pallet index of `BridgeKusamaMessages: pallet_bridge_messages::<Instance1>`.
-pub const WITH_BRIDGE_POLKAPAS_TO_KUSAMA_MESSAGES_PALLET_INDEX: u8 = 53;
+pub const WITH_BRIDGE_POLKADOT_TO_KUSAMA_MESSAGES_PALLET_INDEX: u8 = 53;
 
 decl_bridge_finality_runtime_apis!(bridge_hub_paseo);
 decl_bridge_messages_runtime_apis!(bridge_hub_paseo, LegacyLaneId);
@@ -230,7 +230,7 @@ pub mod bp_paseo {
 	}
 
 	impl ChainWithGrandpa for Paseo {
-		const WITH_CHAIN_GRANDPA_PALLET_NAME: &'static str = WITH_POLKAPAS_GRANDPA_PALLET_NAME;
+		const WITH_CHAIN_GRANDPA_PALLET_NAME: &'static str = WITH_POLKADOT_GRANDPA_PALLET_NAME;
 		const MAX_AUTHORITIES_COUNT: u32 = MAX_AUTHORITIES_COUNT;
 		const REASONABLE_HEADERS_IN_JUSTIFICATION_ANCESTRY: u32 =
 			REASONABLE_HEADERS_IN_JUSTIFICATION_ANCESTRY;
@@ -241,9 +241,9 @@ pub mod bp_paseo {
 	/// Name of the parachains pallet in the Paseo runtime.
 	pub const PARAS_PALLET_NAME: &str = "Paras";
 	/// Name of the With-Paseo GRANDPA pallet instance that is deployed at bridged chains.
-	pub const WITH_POLKAPAS_GRANDPA_PALLET_NAME: &str = "BridgePaseoGrandpa";
+	pub const WITH_POLKADOT_GRANDPA_PALLET_NAME: &str = "BridgePaseoGrandpa";
 	/// Name of the With-Paseo parachains pallet instance that is deployed at bridged chains.
-	pub const WITH_POLKAPAS_BRIDGE_PARACHAINS_PALLET_NAME: &str = "BridgePaseoParachains";
+	pub const WITH_POLKADOT_BRIDGE_PARACHAINS_PALLET_NAME: &str = "BridgePaseoParachains";
 
 	/// Maximal size of encoded `bp_parachains::ParaStoredHeaderData` structure among all Paseo
 	/// parachains.

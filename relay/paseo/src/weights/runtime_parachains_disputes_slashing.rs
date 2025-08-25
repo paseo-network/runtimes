@@ -82,10 +82,10 @@ impl<T: frame_system::Config> runtime_parachains :: disputes :: slashing::Weight
 		//  Measured:  `2217 + n * (32 ±0)`
 		//  Estimated: `5630 + n * (33 ±0)`
 		// Minimum execution time: 135_431_000 picoseconds.
-		Weight::from_parts(195_928_771, 0)
+		Weight::from_parts(293_893_156, 0)
 			.saturating_add(Weight::from_parts(0, 5630))
 			// Standard Error: 3_277
-			.saturating_add(Weight::from_parts(165_167, 0).saturating_mul(n.into()))
+			.saturating_add(Weight::from_parts(247_750, 0).saturating_mul(n.into()))
 			.saturating_add(T::DbWeight::get().reads(16))
 			.saturating_add(T::DbWeight::get().writes(8))
 			.saturating_add(Weight::from_parts(0, 33).saturating_mul(n.into()))

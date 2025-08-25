@@ -55,7 +55,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 		//  Measured:  `101`
 		//  Estimated: `3593`
 		// Minimum execution time: 44_379_000 picoseconds.
-		Weight::from_parts(47_428_000, 3593)
+		Weight::from_parts(71_142_000, 3593)
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
@@ -66,7 +66,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 		//  Measured:  `101`
 		//  Estimated: `6196`
 		// Minimum execution time: 62_150_000 picoseconds.
-		Weight::from_parts(64_940_000, 6196)
+		Weight::from_parts(97_410_000, 6196)
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(2))
 	}
@@ -87,7 +87,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 		//  Measured:  `280`
 		//  Estimated: `6196`
 		// Minimum execution time: 151_769_000 picoseconds.
-		Weight::from_parts(165_179_000, 6196)
+		Weight::from_parts(247_768_500, 6196)
 			.saturating_add(T::DbWeight::get().reads(7))
 			.saturating_add(T::DbWeight::get().writes(4))
 	}
@@ -117,7 +117,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 		//  Measured:  `280`
 		//  Estimated: `3745`
 		// Minimum execution time: 102_300_000 picoseconds.
-		Weight::from_parts(112_331_000, 3745)
+		Weight::from_parts(168_496_500, 3745)
 			.saturating_add(T::DbWeight::get().reads(6))
 			.saturating_add(T::DbWeight::get().writes(3))
 	}
@@ -128,7 +128,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 		//  Measured:  `103`
 		//  Estimated: `3593`
 		// Minimum execution time: 44_780_000 picoseconds.
-		Weight::from_parts(47_240_000, 3593)
+		Weight::from_parts(70_860_000, 3593)
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
@@ -139,7 +139,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 		//  Measured:  `0`
 		//  Estimated: `3593`
 		// Minimum execution time: 32_450_000 picoseconds.
-		Weight::from_parts(34_940_000, 3593)
+		Weight::from_parts(52_410_000, 3593)
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
@@ -160,7 +160,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 		//  Measured:  `179`
 		//  Estimated: `3644`
 		// Minimum execution time: 95_710_000 picoseconds.
-		Weight::from_parts(101_710_000, 3644)
+		Weight::from_parts(152_565_000, 3644)
 			.saturating_add(T::DbWeight::get().reads(6))
 			.saturating_add(T::DbWeight::get().writes(3))
 	}
@@ -181,7 +181,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 		//  Measured:  `179`
 		//  Estimated: `3644`
 		// Minimum execution time: 98_880_000 picoseconds.
-		Weight::from_parts(110_030_000, 3644)
+		Weight::from_parts(165_045_000, 3644)
 			.saturating_add(T::DbWeight::get().reads(6))
 			.saturating_add(T::DbWeight::get().writes(3))
 	}
@@ -202,7 +202,7 @@ impl<T: frame_system::Config> WeightInfo<T> {
 		//  Measured:  `179`
 		//  Estimated: `3644`
 		// Minimum execution time: 120_899_000 picoseconds.
-		Weight::from_parts(131_730_000, 3644)
+		Weight::from_parts(197_595_000, 3644)
 			.saturating_add(T::DbWeight::get().reads(6))
 			.saturating_add(T::DbWeight::get().writes(3))
 	}

@@ -50,7 +50,7 @@ impl<T: frame_system::Config> frame_benchmarking :: baseline::WeightInfo for Wei
 		//  Measured:  `0`
 		//  Estimated: `0`
 		// Minimum execution time: 160_000 picoseconds.
-		Weight::from_parts(243_330, 0)
+		Weight::from_parts(364_995, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 	}
 	/// The range of component `i` is `[0, 1000000]`.
@@ -59,7 +59,7 @@ impl<T: frame_system::Config> frame_benchmarking :: baseline::WeightInfo for Wei
 		//  Measured:  `0`
 		//  Estimated: `0`
 		// Minimum execution time: 180_000 picoseconds.
-		Weight::from_parts(245_503, 0)
+		Weight::from_parts(368_255, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 	}
 	/// The range of component `i` is `[0, 1000000]`.
@@ -68,7 +68,7 @@ impl<T: frame_system::Config> frame_benchmarking :: baseline::WeightInfo for Wei
 		//  Measured:  `0`
 		//  Estimated: `0`
 		// Minimum execution time: 170_000 picoseconds.
-		Weight::from_parts(246_577, 0)
+		Weight::from_parts(369_866, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 	}
 	/// The range of component `i` is `[0, 1000000]`.
@@ -77,7 +77,7 @@ impl<T: frame_system::Config> frame_benchmarking :: baseline::WeightInfo for Wei
 		//  Measured:  `0`
 		//  Estimated: `0`
 		// Minimum execution time: 170_000 picoseconds.
-		Weight::from_parts(244_061, 0)
+		Weight::from_parts(366_092, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 	}
 	fn hashing() -> Weight {
@@ -85,7 +85,7 @@ impl<T: frame_system::Config> frame_benchmarking :: baseline::WeightInfo for Wei
 		//  Measured:  `0`
 		//  Estimated: `0`
 		// Minimum execution time: 28_594_660_000 picoseconds.
-		Weight::from_parts(28_723_550_000, 0)
+		Weight::from_parts(43_085_325_000, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 	}
 	/// The range of component `i` is `[0, 100]`.
@@ -94,9 +94,9 @@ impl<T: frame_system::Config> frame_benchmarking :: baseline::WeightInfo for Wei
 		//  Measured:  `0`
 		//  Estimated: `0`
 		// Minimum execution time: 210_000 picoseconds.
-		Weight::from_parts(2_240_097, 0)
+		Weight::from_parts(3_360_146, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 			// Standard Error: 11_999
-			.saturating_add(Weight::from_parts(49_555_084, 0).saturating_mul(i.into()))
+			.saturating_add(Weight::from_parts(74_332_626, 0).saturating_mul(i.into()))
 	}
 }

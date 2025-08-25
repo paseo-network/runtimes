@@ -50,9 +50,9 @@ impl<T: frame_system::Config> runtime_parachains :: initializer::WeightInfo for 
 		//  Measured:  `0`
 		//  Estimated: `0`
 		// Minimum execution time: 3_930_000 picoseconds.
-		Weight::from_parts(7_392_113, 0)
+		Weight::from_parts(11_088_169, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 			// Standard Error: 12
-			.saturating_add(Weight::from_parts(453, 0).saturating_mul(d.into()))
+			.saturating_add(Weight::from_parts(679, 0).saturating_mul(d.into()))
 	}
 }

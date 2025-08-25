@@ -55,7 +55,7 @@ impl<T: frame_system::Config> pallet_whitelist::WeightInfo for WeightInfo<T> {
 		//  Measured:  `80`
 		//  Estimated: `3556`
 		// Minimum execution time: 24_630_000 picoseconds.
-		Weight::from_parts(24_960_000, 0)
+		Weight::from_parts(37_440_000, 0)
 			.saturating_add(Weight::from_parts(0, 3556))
 			.saturating_add(T::DbWeight::get().reads(3))
 			.saturating_add(T::DbWeight::get().writes(2))
@@ -71,7 +71,7 @@ impl<T: frame_system::Config> pallet_whitelist::WeightInfo for WeightInfo<T> {
 		//  Measured:  `209`
 		//  Estimated: `3556`
 		// Minimum execution time: 24_791_000 picoseconds.
-		Weight::from_parts(25_510_000, 0)
+		Weight::from_parts(38_265_000, 0)
 			.saturating_add(Weight::from_parts(0, 3556))
 			.saturating_add(T::DbWeight::get().reads(3))
 			.saturating_add(T::DbWeight::get().writes(2))
@@ -90,10 +90,10 @@ impl<T: frame_system::Config> pallet_whitelist::WeightInfo for WeightInfo<T> {
 		//  Measured:  `285 + n * (1 ±0)`
 		//  Estimated: `3749 + n * (1 ±0)`
 		// Minimum execution time: 38_290_000 picoseconds.
-		Weight::from_parts(38_970_000, 0)
+		Weight::from_parts(58_455_000, 0)
 			.saturating_add(Weight::from_parts(0, 3749))
 			// Standard Error: 29
-			.saturating_add(Weight::from_parts(3_048, 0).saturating_mul(n.into()))
+			.saturating_add(Weight::from_parts(4_572, 0).saturating_mul(n.into()))
 			.saturating_add(T::DbWeight::get().reads(4))
 			.saturating_add(T::DbWeight::get().writes(3))
 			.saturating_add(Weight::from_parts(0, 1).saturating_mul(n.into()))
@@ -110,10 +110,10 @@ impl<T: frame_system::Config> pallet_whitelist::WeightInfo for WeightInfo<T> {
 		//  Measured:  `209`
 		//  Estimated: `3556`
 		// Minimum execution time: 29_220_000 picoseconds.
-		Weight::from_parts(29_829_534, 0)
+		Weight::from_parts(44_744_301, 0)
 			.saturating_add(Weight::from_parts(0, 3556))
 			// Standard Error: 7
-			.saturating_add(Weight::from_parts(1_371, 0).saturating_mul(n.into()))
+			.saturating_add(Weight::from_parts(2_056, 0).saturating_mul(n.into()))
 			.saturating_add(T::DbWeight::get().reads(3))
 			.saturating_add(T::DbWeight::get().writes(2))
 	}

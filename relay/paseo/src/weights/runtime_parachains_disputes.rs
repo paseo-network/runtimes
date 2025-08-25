@@ -51,7 +51,7 @@ impl<T: frame_system::Config> runtime_parachains :: disputes::WeightInfo for Wei
 		//  Measured:  `0`
 		//  Estimated: `0`
 		// Minimum execution time: 3_150_000 picoseconds.
-		Weight::from_parts(3_400_000, 0)
+		Weight::from_parts(5_100_000, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}

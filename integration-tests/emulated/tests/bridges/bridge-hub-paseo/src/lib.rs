@@ -49,7 +49,7 @@ pub use integration_tests_helpers::common::snowbridge::{MIN_ETHER_BALANCE, WETH}
 pub use parachains_common::{AccountId, Balance};
 pub use paseo_system_emulated_network::{
 	asset_hub_paseo_emulated_chain::{
-		genesis::{AssetHubPaseoAssetOwner, ED as ASSET_HUB_POLKAPAS_ED},
+		genesis::{AssetHubPaseoAssetOwner, ED as ASSET_HUB_POLKADOT_ED},
 		AssetHubPaseoParaPallet as AssetHubPaseoPallet,
 	},
 	bridge_hub_paseo_emulated_chain::{

@@ -110,14 +110,14 @@ impl<T: frame_system::Config> runtime_parachains :: inclusion::WeightInfo for We
 		//  Measured:  `1410 + c * (15992 ±0) + h * (92 ±0) + u * (65723 ±0)`
 		//  Estimated: `52183926175832032 + c * (17748 ±0) + h * (15130 ±720) + u * (41539 ±717)`
 		// Minimum execution time: 719_691_000 picoseconds.
-		Weight::from_parts(52_318_641, 0)
+		Weight::from_parts(78_477_961, 0)
 			.saturating_add(Weight::from_parts(0, 52183926175832032))
 			// Standard Error: 1_181_189
-			.saturating_add(Weight::from_parts(297_244_006, 0).saturating_mul(u.into()))
+			.saturating_add(Weight::from_parts(445_866_009, 0).saturating_mul(u.into()))
 			// Standard Error: 1_181_189
-			.saturating_add(Weight::from_parts(350_626_249, 0).saturating_mul(h.into()))
+			.saturating_add(Weight::from_parts(525_939_373, 0).saturating_mul(h.into()))
 			// Standard Error: 1_957_371
-			.saturating_add(Weight::from_parts(82_501_134, 0).saturating_mul(c.into()))
+			.saturating_add(Weight::from_parts(123_751_701, 0).saturating_mul(c.into()))
 			.saturating_add(T::DbWeight::get().reads(9))
 			.saturating_add(T::DbWeight::get().reads((1_u64).saturating_mul(u.into())))
 			.saturating_add(T::DbWeight::get().reads((3_u64).saturating_mul(h.into())))
