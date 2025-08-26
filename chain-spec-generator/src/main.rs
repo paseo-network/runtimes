@@ -54,6 +54,10 @@ fn main() -> Result<(), String> {
 				Box::new(|| system_parachains_specs::collectives_paseo_local_config()) as Box<_>,
 			),
 			(
+				"collectives-paseo-live",
+				Box::new(|| system_parachains_specs::collectives_paseo_live_config()) as Box<_>,
+			),
+			(
 				"coretime-paseo-local",
 				Box::new(system_parachains_specs::coretime_paseo_local_testnet_config) as Box<_>,
 			),
