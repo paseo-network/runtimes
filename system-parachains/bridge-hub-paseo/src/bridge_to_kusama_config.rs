@@ -43,8 +43,8 @@ use pallet_bridge_relayers::extension::{
 };
 use pallet_xcm_bridge_hub::{BridgeId, XcmAsPlainPayload};
 use parachains_common::xcm_config::{AllSiblingSystemParachains, RelayOrOtherSystemParachains};
-use paseo_runtime_constants as constants;
 use polkadot_parachain_primitives::primitives::Sibling;
+use paseo_runtime_constants as constants;
 use sp_runtime::traits::ConstU32;
 use xcm::latest::prelude::*;
 use xcm_builder::{BridgeBlobDispatcher, ParentIsPreset, SiblingParachainConvertsVia};
@@ -102,7 +102,7 @@ parameter_types! {
 	pub const ParachainPalletNameAtKusama: &'static str = bp_kusama::PARAS_PALLET_NAME;
 
 	// see the `FEE_BOOST_PER_MESSAGE` constant to get the meaning of this value
-	pub PriorityBoostPerMessage: u64 = 1_820_444_444_444;
+	pub PriorityBoostPerMessage: u64 = 3_641_799_307_958;
 }
 
 /// Proof of messages, coming from Kusama.
@@ -154,6 +154,7 @@ impl pallet_bridge_parachains::Config<BridgeParachainKusamaInstance> for Runtime
 		SingleParaStoredHeaderDataBuilder<bp_bridge_hub_kusama::BridgeHubKusama>;
 	type HeadsToKeep = ParachainHeadsToKeep;
 	type MaxParaHeadDataSize = MaxParaHeadDataSize;
+	type OnNewHead = ();
 }
 
 /// Add XCM messages support for exchanging messages with BridgeHubKusama.
