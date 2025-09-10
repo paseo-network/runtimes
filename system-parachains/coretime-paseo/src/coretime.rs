@@ -29,16 +29,11 @@ use frame_support::{
 };
 use frame_system::Pallet as System;
 use pallet_broker::{
-	AdaptPrice, AdaptedPrices, CenterTargetPrice, CoreAssignment, CoreIndex, CoretimeInterface,
-	PartsOf57600, RCBlockNumberOf, SalePerformance, TaskId,
+	CoreAssignment, CoreIndex, CoretimeInterface, PartsOf57600, RCBlockNumberOf, TaskId,
 };
 use parachains_common::{AccountId, Balance};
 use paseo_runtime_constants::{system_parachain::coretime, time::DAYS as RELAY_DAYS};
-use sp_core::Get;
-use sp_runtime::{
-	traits::{AccountIdConversion, MaybeConvert},
-	FixedPointOperand, FixedU64,
-};
+use sp_runtime::traits::{AccountIdConversion, MaybeConvert};
 use xcm::latest::prelude::*;
 use xcm_config::LocationToAccountId;
 use xcm_executor::traits::{ConvertLocation, TransactAsset};
@@ -172,8 +167,7 @@ impl CoretimeInterface for CoretimeAllocator {
 			),
 			Err(e) => log::error!(
 				target: "runtime::coretime",
-				"Failed to send request to update schedulable cores: {:?}",
-				e
+				"Failed to send request to update schedulable cores: {e:?}"
 			),
 		}
 	}
@@ -207,8 +201,7 @@ impl CoretimeInterface for CoretimeAllocator {
 			),
 			Err(e) => log::error!(
 				target: "runtime::coretime",
-				"Request for revenue info failed to send: {:?}",
-				e
+				"Request for revenue info failed to send: {e:?}"
 			),
 		}
 	}
@@ -287,8 +280,7 @@ impl CoretimeInterface for CoretimeAllocator {
 			),
 			Err(e) => log::error!(
 				target: "runtime::coretime",
-				"Core assignment failed to send: {:?}",
-				e
+				"Core assignment failed to send: {e:?}"
 			),
 		}
 	}
@@ -324,8 +316,7 @@ impl CoretimeInterface for CoretimeAllocator {
 parameter_types! {
 	pub const BrokerPalletId: PalletId = PalletId(*b"py/broke");
 	pub const MinimumCreditPurchase: Balance = UNITS / 10;
-	pub const MinimumEndPrice: Balance = 500 * UNITS;
-	pub const FixedTargetPrice: Balance = 5000 * UNITS;
+	pub const MinimumEndPrice: Balance = 10 * UNITS;
 }
 
 pub struct SovereignAccountOf;
@@ -351,64 +342,6 @@ impl pallet_broker::Config for Runtime {
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type SovereignAccountOf = SovereignAccountOf;
 	type MaxAutoRenewals = ConstU32<100>;
-	type PriceAdapter =
-		MinimumPriceWithFixedTargetPrice<Balance, MinimumEndPrice, FixedTargetPrice>;
+	type PriceAdapter = pallet_broker::MinimumPrice<Balance, MinimumEndPrice>;
 	type MinimumCreditPurchase = MinimumCreditPurchase;
-}
-
-/// `AdaptPrice` like `CenterTargetPrice`, but with an extra fixed target price and fixed floor
-/// price.
-///
-/// This price adapter behaves exactly like `CenterTargetPrice`, except that it takes a minimum
-/// price and a target price and makes sure that the returned `end_price` is never lower than that.
-///
-/// Target price is fixed and never adjusted based on the previous sale performance.
-pub struct MinimumPriceWithFixedTargetPrice<Balance, MinPrice, TargetPrice>(
-	core::marker::PhantomData<(Balance, MinPrice, TargetPrice)>,
-);
-
-impl<Balance: FixedPointOperand, MinPrice: Get<Balance>, TargetPrice: Get<Balance>>
-	AdaptPrice<Balance> for MinimumPriceWithFixedTargetPrice<Balance, MinPrice, TargetPrice>
-{
-	fn leadin_factor_at(when: FixedU64) -> FixedU64 {
-		CenterTargetPrice::<Balance>::leadin_factor_at(when)
-	}
-
-	fn adapt_price(_performance: SalePerformance<Balance>) -> AdaptedPrices<Balance> {
-		let end_price = MinPrice::get();
-		let target_price = TargetPrice::get();
-
-		AdaptedPrices { end_price, target_price }
-	}
-}
-#[cfg(test)]
-mod tests {
-	use super::*;
-	use pallet_broker::SaleInfoRecord;
-
-	#[test]
-	fn fixed_target_price_works() {
-		let paseo_end_price: Balance = 1005712197111515;
-		let paseo_sellout_price: Balance = 22197504910467441;
-
-		let sale_record = SaleInfoRecord {
-			sale_start: 0,
-			leadin_length: 0,
-			end_price: paseo_end_price,
-			region_begin: 0,
-			region_end: 1,
-			ideal_cores_sold: 0,
-			cores_offered: 0,
-			first_core: 0,
-			sellout_price: Some(paseo_sellout_price),
-			cores_sold: 0,
-		};
-		let performance = SalePerformance::from_sale(&sale_record);
-		let prices =
-			MinimumPriceWithFixedTargetPrice::<u128, MinimumEndPrice, FixedTargetPrice>::adapt_price(
-				performance,
-			);
-		assert_eq!(prices.end_price, MinimumEndPrice::get());
-		assert_eq!(prices.target_price, FixedTargetPrice::get());
-	}
 }
