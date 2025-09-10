@@ -154,7 +154,7 @@ pallet-uniques = { version = "42.0.0", default-features = false }
 pallet-utility = { version = "42.0.0", default-features = false }
 pallet-vesting = { version = "42.0.0", default-features = false }
 pallet-whitelist = { version = "41.0.0", default-features = false }
-pallet-xcm = { version = "22.0.1", default-features = false }
+pallet-xcm = { version = "22.0.0", default-features = false }
 pallet-xcm-benchmarks = { version = "22.0.0", default-features = false }
 pallet-xcm-bridge-hub = { version = "0.18.0", default-features = false }
 pallet-xcm-bridge-hub-router = { version = "0.20.0", default-features = false }
@@ -169,6 +169,7 @@ polkadot-core-primitives = { version = "19.0.0", default-features = false }
 polkadot-parachain-primitives = { version = "18.0.0", default-features = false }
 polkadot-primitives = { version = "20.0.0", default-features = false }
 polkadot-runtime-common = { version = "21.0.0", default-features = false }
+paseo-runtime-common = { version = "21.0.0", default-features = false }
 primitive-types = { version = "0.13.1", default-features = false }
 frame-metadata-hash-extension = { version = "0.10.0", default-features = false }
 remote-externalities = { version = "0.53.0", package = "frame-remote-externalities" }

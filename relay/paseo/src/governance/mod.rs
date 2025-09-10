@@ -57,9 +57,7 @@ parameter_types! {
 parameter_types! {
 	pub const MaxBalance: Balance = Balance::MAX;
 }
-// We just allow `Root` to spend money from the treasury, this should prevent bad actors from
-// stealing "money".
-pub type TreasurySpender = EnsureRootWithSuccess<AccountId, MaxBalance>;
+pub type TreasurySpender = EitherOf<EnsureRootWithSuccess<AccountId, MaxBalance>, Spender>;
 
 impl origins::pallet_custom_origins::Config for Runtime {}
 

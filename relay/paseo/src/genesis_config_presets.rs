@@ -21,13 +21,10 @@ use crate::*;
 use alloc::format;
 use babe_primitives::AuthorityId as BabeId;
 use pallet_staking::{Forcing, StakerStatus};
-use paseo_runtime_constants::currency::UNITS as PAS;
 use polkadot_primitives::{
-	node_features::FeatureIndex,
-	AccountPublic, AssignmentId, AsyncBackingParams,
-	ExecutorParam::{MaxMemoryPages, PvfExecTimeout},
-	PvfExecKind,
+	node_features::FeatureIndex, AccountPublic, AssignmentId, AsyncBackingParams,
 };
+use paseo_runtime_constants::currency::UNITS as PAS;
 use runtime_parachains::configuration::HostConfiguration;
 use sp_core::{sr25519, Pair, Public};
 use sp_genesis_builder::PresetId;
@@ -35,7 +32,7 @@ use sp_runtime::{traits::IdentifyAccount, Perbill};
 
 /// Helper function to generate a crypto pair from seed
 fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
-	TPublic::Pair::from_string(&format!("//{}", seed), None)
+	TPublic::Pair::from_string(&format!("//{seed}"), None)
 		.expect("static values are valid; qed")
 		.public()
 }
@@ -62,7 +59,7 @@ fn get_authority_keys_from_seed(
 	BeefyId,
 ) {
 	(
-		get_account_id_from_seed::<sr25519::Public>(&format!("{}//stash", seed)),
+		get_account_id_from_seed::<sr25519::Public>(&format!("{seed}//stash")),
 		get_account_id_from_seed::<sr25519::Public>(seed),
 		get_from_seed::<BabeId>(seed),
 		get_from_seed::<GrandpaId>(seed),
@@ -137,8 +134,8 @@ fn default_parachains_host_configuration() -> HostConfiguration<polkadot_primiti
 		dispute_post_conclusion_acceptance_period: 100u32,
 		minimum_backing_votes: 1,
 		node_features: NodeFeatures::from_element(
-			1u8 << (FeatureIndex::ElasticScalingMVP as usize) |
-				1u8 << (FeatureIndex::EnableAssignmentsV2 as usize),
+			(1u8 << (FeatureIndex::ElasticScalingMVP as usize)) |
+				(1u8 << (FeatureIndex::EnableAssignmentsV2 as usize)),
 		),
 		async_backing_params: AsyncBackingParams {
 			max_candidate_depth: 3,
