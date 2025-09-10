@@ -13,6 +13,167 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::*;
+
+mod aliases;
+mod asset_transfers;
 mod claim_assets;
+mod register_bridged_assets;
+mod send_xcm;
 mod snowbridge;
+mod snowbridge_common;
+mod snowbridge_v2_config;
+mod snowbridge_v2_inbound;
+mod snowbridge_v2_inbound_to_kusama;
+mod snowbridge_v2_outbound;
+mod snowbridge_v2_outbound_edge_case;
+mod snowbridge_v2_outbound_from_kusama;
+mod snowbridge_v2_rewards;
 mod teleport;
+
+pub(crate) fn asset_hub_kusama_location() -> Location {
+	Location::new(2, [GlobalConsensus(Kusama), Parachain(AssetHubKusama::para_id().into())])
+}
+
+pub(crate) fn bridge_hub_kusama_location() -> Location {
+	Location::new(2, [GlobalConsensus(Kusama), Parachain(BridgeHubKusama::para_id().into())])
+}
+
+// PAS and wPAS
+pub(crate) fn dot_at_ah_paseo() -> Location {
+	Parent.into()
+}
+pub(crate) fn bridged_dot_at_ah_kusama() -> Location {
+	Location::new(2, [GlobalConsensus(NetworkId::Paseo)])
+}
+
+// wKSM
+pub(crate) fn bridged_ksm_at_ah_paseo() -> Location {
+	Location::new(2, [GlobalConsensus(NetworkId::Kusama)])
+}
+
+// USDT and wUSDT
+pub(crate) fn usdt_at_ah_paseo() -> Location {
+	Location::new(0, [PalletInstance(ASSETS_PALLET_ID), GeneralIndex(USDT_ID.into())])
+}
+pub(crate) fn bridged_usdt_at_ah_kusama() -> Location {
+	Location::new(
+		2,
+		[
+			GlobalConsensus(NetworkId::Paseo),
+			Parachain(AssetHubPaseo::para_id().into()),
+			PalletInstance(ASSETS_PALLET_ID),
+			GeneralIndex(USDT_ID.into()),
+		],
+	)
+}
+
+// wETH has same relative location on both Kusama and Paseo AssetHubs
+pub(crate) fn weth_at_asset_hubs() -> Location {
+	Location::new(
+		2,
+		[
+			GlobalConsensus(NetworkId::Ethereum { chain_id: snowbridge::CHAIN_ID }),
+			AccountKey20 { network: None, key: WETH },
+		],
+	)
+}
+
+pub(crate) fn create_foreign_on_ah_kusama(id: Location, sufficient: bool) {
+	let owner = AssetHubKusama::account_id_of(ALICE);
+	AssetHubKusama::force_create_foreign_asset(id, owner, sufficient, ASSET_MIN_BALANCE, vec![]);
+}
+
+pub(crate) fn create_foreign_on_ah_paseo(
+	id: Location,
+	sufficient: bool,
+	prefund_accounts: Vec<(AccountId, u128)>,
+) {
+	let owner = AssetHubPaseo::account_id_of(ALICE);
+	let min = ASSET_MIN_BALANCE;
+	AssetHubPaseo::force_create_foreign_asset(id, owner, sufficient, min, prefund_accounts);
+}
+
+pub(crate) fn foreign_balance_on_ah_kusama(id: Location, who: &AccountId) -> u128 {
+	AssetHubKusama::execute_with(|| {
+		type Assets = <AssetHubKusama as AssetHubKusamaPallet>::ForeignAssets;
+		<Assets as Inspect<_>>::balance(id, who)
+	})
+}
+pub(crate) fn foreign_balance_on_ah_paseo(id: Location, who: &AccountId) -> u128 {
+	AssetHubPaseo::execute_with(|| {
+		type Assets = <AssetHubPaseo as AssetHubPaseoPallet>::ForeignAssets;
+		<Assets as Inspect<_>>::balance(id, who)
+	})
+}
+
+pub(crate) fn send_assets_from_asset_hub_paseo(
+	destination: Location,
+	assets: Assets,
+	fee_idx: u32,
+) -> DispatchResult {
+	let signed_origin =
+		<AssetHubPaseo as Chain>::RuntimeOrigin::signed(AssetHubPaseoSender::get());
+	let beneficiary: Location =
+		AccountId32Junction { network: None, id: AssetHubKusamaReceiver::get().into() }.into();
+
+	AssetHubPaseo::execute_with(|| {
+		<AssetHubPaseo as AssetHubPaseoPallet>::PolkadotXcm::limited_reserve_transfer_assets(
+			signed_origin,
+			bx!(destination.into()),
+			bx!(beneficiary.into()),
+			bx!(assets.into()),
+			fee_idx,
+			WeightLimit::Unlimited,
+		)
+	})
+}
+
+pub(crate) fn assert_bridge_hub_paseo_message_accepted(expected_processed: bool) {
+	BridgeHubPaseo::execute_with(|| {
+		type RuntimeEvent = <BridgeHubPaseo as Chain>::RuntimeEvent;
+
+		if expected_processed {
+			assert_expected_events!(
+				BridgeHubPaseo,
+				vec![
+					// pay for bridge fees
+					RuntimeEvent::Balances(pallet_balances::Event::Burned { .. }) => {},
+					// message exported
+					RuntimeEvent::BridgeKusamaMessages(
+						pallet_bridge_messages::Event::MessageAccepted { .. }
+					) => {},
+					// message processed successfully
+					RuntimeEvent::MessageQueue(
+						pallet_message_queue::Event::Processed { success: true, .. }
+					) => {},
+				]
+			);
+		} else {
+			assert_expected_events!(
+				BridgeHubPaseo,
+				vec![
+					RuntimeEvent::MessageQueue(pallet_message_queue::Event::Processed {
+						success: false,
+						..
+					}) => {},
+				]
+			);
+		}
+	});
+}
+
+pub(crate) fn assert_bridge_hub_kusama_message_received() {
+	BridgeHubKusama::execute_with(|| {
+		type RuntimeEvent = <BridgeHubKusama as Chain>::RuntimeEvent;
+		assert_expected_events!(
+			BridgeHubKusama,
+			vec![
+				// message sent to destination
+				RuntimeEvent::XcmpQueue(
+					cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }
+				) => {},
+			]
+		);
+	})
+}

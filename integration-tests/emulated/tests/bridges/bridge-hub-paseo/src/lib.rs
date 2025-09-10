@@ -35,6 +35,7 @@ pub use bp_messages::LegacyLaneId;
 // Cumulus
 pub use emulated_integration_tests_common::{
 	accounts::{ALICE, BOB},
+	create_pool_with_native_on,
 	impls::Inspect,
 	test_parachain_is_trusted_teleporter, test_parachain_is_trusted_teleporter_for_relay,
 	test_relay_is_trusted_teleporter,
@@ -65,13 +66,14 @@ pub use paseo_system_emulated_network::{
 			CustomizableAssetFromSystemAssetHub as PenpalCustomizableAssetFromSystemAssetHub,
 			UniversalLocation as PenpalUniversalLocation,
 		},
-		PenpalAssetOwner, PenpalBParaPallet as PenpalBPallet,
+		PenpalAParaPallet as PenpalAPallet, PenpalAssetOwner, PenpalBParaPallet as PenpalBPallet,
 	},
 	AssetHubPaseoPara as AssetHubPaseo, AssetHubPaseoParaReceiver as AssetHubPaseoReceiver,
 	AssetHubPaseoParaSender as AssetHubPaseoSender, BridgeHubPaseoPara as BridgeHubPaseo,
 	BridgeHubPaseoParaReceiver as BridgeHubPaseoReceiver,
-	BridgeHubPaseoParaSender as BridgeHubPaseoSender, PaseoRelay as Paseo,
-	PaseoRelayReceiver as PaseoReceiver, PaseoRelaySender as PaseoSender, PenpalBPara as PenpalB,
+	BridgeHubPaseoParaSender as BridgeHubPaseoSender, KusamaRelay as Kusama,
+	KusamaRelayReceiver as KusamaReceiver, PenpalAPara as PenpalA,
+	PenpalAParaReceiver as PenpalAReceiver, PenpalBPara as PenpalB,
 	PenpalBParaReceiver as PenpalBReceiver, PenpalBParaSender as PenpalBSender,
 };
 

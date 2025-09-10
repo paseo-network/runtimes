@@ -32,6 +32,7 @@ pub use xcm::{
 
 // Cumulus
 pub use asset_test_utils::xcm_helpers;
+pub use coretime_paseo_runtime::ExistentialDeposit as CoretimeExistentialDeposit;
 pub use emulated_integration_tests_common::{
 	xcm_emulator::{
 		assert_expected_events, bx, helpers::weight_within_threshold, Chain, Parachain as Para,
@@ -45,15 +46,22 @@ pub use paseo_system_emulated_network::{
 	asset_hub_paseo_emulated_chain::{
 		genesis::ED as ASSET_HUB_POLKADOT_ED, AssetHubPaseoParaPallet as AssetHubPaseoPallet,
 	},
+	bridge_hub_paseo_emulated_chain::BridgeHubPaseoParaPallet as BridgeHubPaseoPallet,
+	collectives_paseo_emulated_chain::CollectivesPaseoParaPallet as CollectivesPaseoPallet,
 	coretime_paseo_emulated_chain::{
-		genesis::ED as CORETIME_POLKADOT_ED, CoretimePaseoParaPallet as CoretimePolkadotPallet,
+		self, coretime_paseo_runtime, genesis::ED as CORETIME_POLKADOT_ED,
+		CoretimePaseoParaPallet as CoretimePaseoPallet,
 	},
+	penpal_emulated_chain::{PenpalAParaPallet as PenpalAPallet, PenpalAssetOwner},
+	people_paseo_emulated_chain::PeoplePaseoParaPallet as PeoplePaseoPallet,
 	paseo_emulated_chain::{genesis::ED as POLKADOT_ED, PaseoRelayPallet as PaseoPallet},
 	AssetHubPaseoPara as AssetHubPolkadot, AssetHubPaseoParaReceiver as AssetHubPolkadotReceiver,
 	AssetHubPaseoParaSender as AssetHubPolkadotSender, CoretimePaseoPara as CoretimePolkadot,
 	CoretimePaseoParaReceiver as CoretimePolkadotReceiver,
 	CoretimePaseoParaSender as CoretimePolkadotSender, PaseoRelay as Paseo,
 	PaseoRelayReceiver as PaseoReceiver, PaseoRelaySender as PaseoSender, PenpalAPara as PenpalA,
+	PeoplePolkadotPara as PeoplePolkadot, PolkadotRelay as Polkadot,
+	PolkadotRelayReceiver as PolkadotReceiver, PolkadotRelaySender as PolkadotSender,
 };
 
 #[cfg(test)]
