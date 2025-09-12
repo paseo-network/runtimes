@@ -69,10 +69,10 @@ fn send_assets_from_polkadot_chain_through_polkadot_ah_to_kusama_ah<F: FnOnce()>
 		// call transfer extrinsic on sender chain
 		send_fn();
 		// verify intermediary AH Polkadot hop
-			AssetHubPolkadot::execute_with(|| {
-				type RuntimeEvent = <AssetHubPolkadot as Chain>::RuntimeEvent;
+		AssetHubPolkadot::execute_with(|| {
+			type RuntimeEvent = <AssetHubPolkadot as Chain>::RuntimeEvent;
 			assert_expected_events!(
-					AssetHubPolkadot,
+				AssetHubPolkadot,
 				vec![
 					RuntimeEvent::Balances(pallet_balances::Event::Minted { .. }) => {},
 					RuntimeEvent::XcmpQueue(
@@ -448,7 +448,7 @@ fn send_dot_from_penpal_polkadot_through_asset_hub_polkadot_to_asset_hub_kusama(
 	let amount = ASSET_HUB_POLKADOT_ED * 10_000_000;
 	let sender = PenpalBSender::get();
 	let receiver = AssetHubKusamaReceiver::get();
-		let local_asset_hub = PenpalB::sibling_location_of(AssetHubPolkadot::para_id());
+	let local_asset_hub = PenpalB::sibling_location_of(AssetHubPolkadot::para_id());
 	let (dot_at_polkadot_parachains, dot_at_asset_hub_kusama) =
 		set_up_dot_for_penpal_polkadot_through_pah_to_kah(&sender, amount);
 
@@ -536,7 +536,7 @@ fn send_dot_from_penpal_polkadot_through_asset_hub_polkadot_to_asset_hub_kusama_
 	let amount = ASSET_HUB_POLKAPAS_ED * 10_000_000;
 	let sender = PenpalBSender::get();
 	let receiver = PenpalAReceiver::get();
-		let local_asset_hub = PenpalB::sibling_location_of(AssetHubPolkadot::para_id());
+	let local_asset_hub = PenpalB::sibling_location_of(AssetHubPolkadot::para_id());
 	// create foreign PAS on remote paras
 	let (dot_at_polkadot_parachains, dot_at_kusama_parachains) =
 		set_up_dot_for_penpal_polkadot_through_pah_to_kah(&sender, amount);
@@ -767,8 +767,7 @@ fn send_dot_from_polkadot_relay_through_asset_hub_polkadot_to_asset_hub_kusama_t
 			// send message over bridge
 			assert_ok!(Paseo::execute_with(|| {
 				Dmp::make_parachain_reachable(AssetHubPolkadot::para_id());
-				let signed_origin =
-					<Paseo as Chain>::RuntimeOrigin::signed(PaseoSender::get());
+				let signed_origin = <Paseo as Chain>::RuntimeOrigin::signed(PaseoSender::get());
 				<Paseo as PaseoPallet>::XcmPallet::execute(
 					signed_origin,
 					bx!(xcm::VersionedXcm::V5(kusama_xcm.into())),
@@ -968,8 +967,7 @@ fn send_back_ksm_from_penpal_polkadot_through_asset_hub_polkadot_to_asset_hub_ku
 }
 
 #[test]
-fn send_back_ksm_from_penpal_paseo_through_asset_hub_paseo_to_asset_hub_kusama_to_penpal_kusama(
-) {
+fn send_back_ksm_from_penpal_paseo_through_asset_hub_paseo_to_asset_hub_kusama_to_penpal_kusama() {
 	let ksm_at_paseo_parachains = bridged_ksm_at_ah_paseo();
 	let ksm_at_kusama_parachains = Location::parent();
 	let amount = ASSET_HUB_POLKAPAS_ED * 10_000_000;
@@ -982,7 +980,7 @@ fn send_back_ksm_from_penpal_paseo_through_asset_hub_paseo_to_asset_hub_kusama_t
 	let prefund_accounts = vec![(sov_penpal_on_pah.clone(), amount * 2)];
 	create_foreign_on_ah_paseo(ksm_at_paseo_parachains.clone(), true, prefund_accounts);
 	create_pool_with_native_on!(
-					AssetHubPolkadot,
+		AssetHubPolkadot,
 		ksm_at_paseo_parachains.clone(),
 		true,
 		AssetHubKusamaSender::get()
@@ -1154,8 +1152,7 @@ fn send_back_ksm_from_penpal_paseo_through_asset_hub_paseo_to_asset_hub_kusama_t
 }
 
 #[test]
-fn send_back_ksm_from_penpal_paseo_through_asset_hub_paseo_to_asset_hub_kusama_to_kusama_relay(
-) {
+fn send_back_ksm_from_penpal_paseo_through_asset_hub_paseo_to_asset_hub_kusama_to_kusama_relay() {
 	let ksm_at_paseo_parachains = bridged_ksm_at_ah_paseo();
 	let ksm_at_kusama_parachains = Location::parent();
 	let amount = ASSET_HUB_POLKAPAS_ED * 10_000_000;
@@ -1168,7 +1165,7 @@ fn send_back_ksm_from_penpal_paseo_through_asset_hub_paseo_to_asset_hub_kusama_t
 	let prefund_accounts = vec![(sov_penpal_on_pah.clone(), amount * 2)];
 	create_foreign_on_ah_paseo(ksm_at_paseo_parachains.clone(), true, prefund_accounts);
 	create_pool_with_native_on!(
-					AssetHubPolkadot,
+		AssetHubPolkadot,
 		ksm_at_paseo_parachains.clone(),
 		true,
 		AssetHubKusamaSender::get()

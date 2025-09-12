@@ -127,8 +127,8 @@ use system_parachains_constants::{
 	},
 	paseo::{
 		consensus::{
-			UNINCLUDED_SEGMENT_CAPACITY, BLOCK_PROCESSING_VELOCITY,
-			RELAY_CHAIN_SLOT_DURATION_MILLIS,
+			BLOCK_PROCESSING_VELOCITY, RELAY_CHAIN_SLOT_DURATION_MILLIS,
+			UNINCLUDED_SEGMENT_CAPACITY,
 		},
 		currency::*,
 		fee::WeightToFee,

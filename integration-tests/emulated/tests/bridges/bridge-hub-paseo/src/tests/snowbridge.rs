@@ -68,10 +68,7 @@ pub fn send_inbound_message(fixture: EventFixture) -> DispatchResult {
 	)
 	.unwrap();
 
-	EthereumInboundQueue::submit(
-		RuntimeOrigin::signed(BridgeHubPaseoSender::get()),
-		fixture.event,
-	)
+	EthereumInboundQueue::submit(RuntimeOrigin::signed(BridgeHubPaseoSender::get()), fixture.event)
 }
 
 /// Tests the registering of a token as an asset on AssetHub.
@@ -88,7 +85,7 @@ fn register_token_from_ethereum_to_asset_hub() {
 		type RuntimeEvent = <BridgeHubPaseo as Chain>::RuntimeEvent;
 
 		assert_ok!(<BridgeHubPaseo as Chain>::System::set_storage(
-				<BridgeHubPaseo as Chain>::RuntimeOrigin::root(),
+			<BridgeHubPaseo as Chain>::RuntimeOrigin::root(),
 			vec![(EthereumGatewayAddress::key().to_vec(), H160(GATEWAY_ADDRESS).encode())],
 		));
 		// Construct RegisterToken message and sent to inbound queue
@@ -236,7 +233,7 @@ fn send_weth_from_ethereum_to_asset_hub() {
 		type RuntimeEvent = <BridgeHubPaseo as Chain>::RuntimeEvent;
 
 		assert_ok!(<BridgeHubPaseo as Chain>::System::set_storage(
-				<BridgeHubPaseo as Chain>::RuntimeOrigin::root(),
+			<BridgeHubPaseo as Chain>::RuntimeOrigin::root(),
 			vec![(EthereumGatewayAddress::key().to_vec(), H160(GATEWAY_ADDRESS).encode())],
 		));
 
@@ -263,9 +260,7 @@ fn send_weth_from_ethereum_to_asset_hub() {
 			chain_id: CHAIN_ID,
 			command: Command::SendToken {
 				token: WETH.into(),
-				destination: Destination::AccountId32 {
-					id: AssetHubPaseoReceiver::get().into(),
-				},
+				destination: Destination::AccountId32 { id: AssetHubPaseoReceiver::get().into() },
 				amount: TOKEN_AMOUNT,
 				fee: XCM_FEE,
 			},
@@ -346,7 +341,7 @@ fn send_token_from_ethereum_to_asset_hub_and_back_works(
 		);
 
 		assert_ok!(<BridgeHubPaseo as Chain>::System::set_storage(
-				<BridgeHubPaseo as Chain>::RuntimeOrigin::root(),
+			<BridgeHubPaseo as Chain>::RuntimeOrigin::root(),
 			vec![(EthereumGatewayAddress::key().to_vec(), H160(GATEWAY_ADDRESS).encode())],
 		));
 
@@ -356,9 +351,7 @@ fn send_token_from_ethereum_to_asset_hub_and_back_works(
 			chain_id: CHAIN_ID,
 			command: Command::SendToken {
 				token: token_address,
-				destination: Destination::AccountId32 {
-					id: AssetHubPaseoReceiver::get().into(),
-				},
+				destination: Destination::AccountId32 { id: AssetHubPaseoReceiver::get().into() },
 				amount,
 				fee: XCM_FEE,
 			},
@@ -413,26 +406,24 @@ fn send_token_back_to_ethereum(asset_location: Location, amount: u128) {
 			[AccountKey20 { network: None, key: ETHEREUM_DESTINATION_ADDRESS }],
 		));
 
-		let free_balance_before =
-			<AssetHubPaseo as AssetHubPaseoPallet>::Balances::free_balance(
-				AssetHubPaseoReceiver::get(),
-			);
+		let free_balance_before = <AssetHubPaseo as AssetHubPaseoPallet>::Balances::free_balance(
+			AssetHubPaseoReceiver::get(),
+		);
 		// Send the Token back to Ethereum
 		assert_ok!(
- 			<AssetHubPaseo as AssetHubPaseoPallet>::PolkadotXcm::limited_reserve_transfer_assets(
- 				RuntimeOrigin::signed(AssetHubPaseoReceiver::get()),
- 				Box::new(destination),
- 				Box::new(beneficiary),
- 				Box::new(versioned_assets),
- 				0,
- 				Unlimited,
- 			)
- 		);
+			<AssetHubPaseo as AssetHubPaseoPallet>::PolkadotXcm::limited_reserve_transfer_assets(
+				RuntimeOrigin::signed(AssetHubPaseoReceiver::get()),
+				Box::new(destination),
+				Box::new(beneficiary),
+				Box::new(versioned_assets),
+				0,
+				Unlimited,
+			)
+		);
 
-		let free_balance_after =
-			<AssetHubPaseo as AssetHubPaseoPallet>::Balances::free_balance(
-				AssetHubPaseoReceiver::get(),
-			);
+		let free_balance_after = <AssetHubPaseo as AssetHubPaseoPallet>::Balances::free_balance(
+			AssetHubPaseoReceiver::get(),
+		);
 		// Assert at least DefaultBridgeHubEthereumBaseFee charged from the sender
 		let free_balance_diff = free_balance_before - free_balance_after;
 		assert!(free_balance_diff > AH_BASE_FEE);
@@ -484,7 +475,7 @@ fn register_weth_token_in_asset_hub_fail_for_insufficient_fee() {
 		type RuntimeEvent = <BridgeHubPaseo as Chain>::RuntimeEvent;
 
 		assert_ok!(<BridgeHubPaseo as Chain>::System::set_storage(
-				<BridgeHubPaseo as Chain>::RuntimeOrigin::root(),
+			<BridgeHubPaseo as Chain>::RuntimeOrigin::root(),
 			vec![(EthereumGatewayAddress::key().to_vec(), H160(GATEWAY_ADDRESS).encode())],
 		));
 
@@ -525,7 +516,7 @@ fn send_token_from_ethereum_to_asset_hub_fail_for_insufficient_fund() {
 
 	BridgeHubPaseo::execute_with(|| {
 		assert_ok!(<BridgeHubPaseo as Chain>::System::set_storage(
-				<BridgeHubPaseo as Chain>::RuntimeOrigin::root(),
+			<BridgeHubPaseo as Chain>::RuntimeOrigin::root(),
 			vec![(EthereumGatewayAddress::key().to_vec(), H160(GATEWAY_ADDRESS).encode())],
 		));
 
@@ -660,8 +651,7 @@ fn send_token_from_ethereum_to_asset_hub_with_fee(account_id: [u8; 32], fee: u12
 	BridgeHubPaseo::execute_with(|| {
 		type RuntimeEvent = <BridgeHubPaseo as Chain>::RuntimeEvent;
 
-		type EthereumInboundQueue =
-			<BridgeHubPaseo as BridgeHubPaseoPallet>::EthereumInboundQueue;
+		type EthereumInboundQueue = <BridgeHubPaseo as BridgeHubPaseoPallet>::EthereumInboundQueue;
 		let message_id: H256 = [0; 32].into();
 		let message = VersionedMessage::V1(MessageV1 {
 			chain_id: CHAIN_ID,
@@ -828,14 +818,16 @@ fn transfer_relay_token() {
 			[AccountKey20 { network: None, key: ETHEREUM_DESTINATION_ADDRESS }],
 		));
 
-		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::PolkadotXcm::limited_reserve_transfer_assets(
-			RuntimeOrigin::signed(AssetHubPaseoSender::get()),
-			Box::new(destination),
-			Box::new(beneficiary),
-			Box::new(versioned_assets),
-			0,
-			Unlimited,
-		));
+		assert_ok!(
+			<AssetHubPaseo as AssetHubPaseoPallet>::PolkadotXcm::limited_reserve_transfer_assets(
+				RuntimeOrigin::signed(AssetHubPaseoSender::get()),
+				Box::new(destination),
+				Box::new(beneficiary),
+				Box::new(versioned_assets),
+				0,
+				Unlimited,
+			)
+		);
 
 		let events = AssetHubPaseo::events();
 		// Check that the native asset transferred to some reserved account(sovereign of Ethereum)
@@ -866,9 +858,7 @@ fn transfer_relay_token() {
 			chain_id: CHAIN_ID,
 			command: Command::SendNativeToken {
 				token_id: expected_token_id,
-				destination: Destination::AccountId32 {
-					id: AssetHubPaseoReceiver::get().into(),
-				},
+				destination: Destination::AccountId32 { id: AssetHubPaseoReceiver::get().into() },
 				amount: TOKEN_AMOUNT,
 				fee: XCM_FEE,
 			},
@@ -943,12 +933,10 @@ fn transfer_ah_token() {
 		],
 	);
 
-	let asset_id_after_reanchored = Location::new(
-		1,
-		[GlobalConsensus(Polkadot), Parachain(AssetHubPaseo::para_id().into())],
-	)
-	.appended_with(asset_id.clone().interior)
-	.unwrap();
+	let asset_id_after_reanchored =
+		Location::new(1, [GlobalConsensus(Polkadot), Parachain(AssetHubPaseo::para_id().into())])
+			.appended_with(asset_id.clone().interior)
+			.unwrap();
 
 	let token_id = TokenIdOf::convert_location(&asset_id_after_reanchored).unwrap();
 
@@ -995,14 +983,16 @@ fn transfer_ah_token() {
 			[AccountKey20 { network: None, key: ETHEREUM_DESTINATION_ADDRESS }],
 		));
 
-		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::PolkadotXcm::limited_reserve_transfer_assets(
-			RuntimeOrigin::signed(AssetHubPaseoSender::get()),
-			Box::new(VersionedLocation::from(ethereum_destination)),
-			Box::new(beneficiary),
-			Box::new(versioned_assets),
-			0,
-			Unlimited,
-		));
+		assert_ok!(
+			<AssetHubPaseo as AssetHubPaseoPallet>::PolkadotXcm::limited_reserve_transfer_assets(
+				RuntimeOrigin::signed(AssetHubPaseoSender::get()),
+				Box::new(VersionedLocation::from(ethereum_destination)),
+				Box::new(beneficiary),
+				Box::new(versioned_assets),
+				0,
+				Unlimited,
+			)
+		);
 
 		assert_expected_events!(
 			AssetHubPaseo,
@@ -1036,9 +1026,7 @@ fn transfer_ah_token() {
 			chain_id: CHAIN_ID,
 			command: Command::SendNativeToken {
 				token_id,
-				destination: Destination::AccountId32 {
-					id: AssetHubPaseoReceiver::get().into(),
-				},
+				destination: Destination::AccountId32 { id: AssetHubPaseoReceiver::get().into() },
 				amount: TOKEN_AMOUNT / 10,
 				fee: XCM_FEE,
 			},
@@ -1104,10 +1092,8 @@ fn send_weth_from_ethereum_to_ahp_to_ahk_and_back() {
 	BridgeHubKusama::fund_para_sovereign(AssetHubKusama::para_id(), INITIAL_FUND);
 	BridgeHubPaseo::fund_para_sovereign(AssetHubPaseo::para_id(), INITIAL_FUND);
 
-	let asset_hub_paseo_location = Location::new(
-		2,
-		[GlobalConsensus(Paseo), Parachain(AssetHubPaseo::para_id().into())],
-	);
+	let asset_hub_paseo_location =
+		Location::new(2, [GlobalConsensus(Paseo), Parachain(AssetHubPaseo::para_id().into())]);
 	// set XCM versions
 	BridgeHubPaseo::force_xcm_version(asset_hub_paseo_location.clone(), XCM_VERSION);
 	BridgeHubPaseo::force_xcm_version(asset_hub_kusama_location(), XCM_VERSION);
@@ -1264,15 +1250,15 @@ fn send_weth_from_ethereum_to_ahp_to_ahk_and_back() {
 
 	assert_ok!(AssetHubPaseo::execute_with(|| {
 		<AssetHubPaseo as AssetHubPaseoPallet>::PolkadotXcm::transfer_assets_using_type_and_then(
- 			<AssetHubPaseo as Chain>::RuntimeOrigin::signed(sender),
- 			bx!(asset_hub_kusama_location().into()),
- 			bx!(assets.into()),
- 			bx!(TransferType::LocalReserve),
- 			bx!(fees_asset.into()),
- 			bx!(TransferType::LocalReserve),
- 			bx!(VersionedXcm::from(custom_xcm_on_dest)),
- 			WeightLimit::Unlimited,
- 		)
+			<AssetHubPaseo as Chain>::RuntimeOrigin::signed(sender),
+			bx!(asset_hub_kusama_location().into()),
+			bx!(assets.into()),
+			bx!(TransferType::LocalReserve),
+			bx!(fees_asset.into()),
+			bx!(TransferType::LocalReserve),
+			bx!(VersionedXcm::from(custom_xcm_on_dest)),
+			WeightLimit::Unlimited,
+		)
 	}));
 
 	AssetHubPaseo::execute_with(|| {
@@ -1319,10 +1305,8 @@ fn send_weth_from_ethereum_to_ahp_to_ahk_and_back() {
 		);
 	});
 
-	let beneficiary = Location::new(
-		0,
-		[AccountId32 { network: None, id: AssetHubPaseoReceiver::get().into() }],
-	);
+	let beneficiary =
+		Location::new(0, [AccountId32 { network: None, id: AssetHubPaseoReceiver::get().into() }]);
 	let fee = bridged_dot_at_asset_hub_kusama_for_later.clone();
 	let fees_asset: AssetId = fee.clone().into();
 	let custom_xcm_on_dest =

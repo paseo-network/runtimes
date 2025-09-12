@@ -112,8 +112,7 @@ pub(crate) fn send_assets_from_asset_hub_paseo(
 	assets: Assets,
 	fee_idx: u32,
 ) -> DispatchResult {
-	let signed_origin =
-		<AssetHubPaseo as Chain>::RuntimeOrigin::signed(AssetHubPaseoSender::get());
+	let signed_origin = <AssetHubPaseo as Chain>::RuntimeOrigin::signed(AssetHubPaseoSender::get());
 	let beneficiary: Location =
 		AccountId32Junction { network: None, id: AssetHubKusamaReceiver::get().into() }.into();
 

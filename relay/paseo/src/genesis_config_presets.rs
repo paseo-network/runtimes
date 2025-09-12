@@ -21,13 +21,13 @@ use crate::*;
 use alloc::format;
 use babe_primitives::AuthorityId as BabeId;
 use pallet_staking::{Forcing, StakerStatus};
+use paseo_runtime_constants::currency::UNITS as PAS;
 use polkadot_primitives::{
 	node_features::FeatureIndex,
 	AccountPublic, AssignmentId, AsyncBackingParams,
 	ExecutorParam::{MaxMemoryPages, PvfExecTimeout},
 	PvfExecKind,
 };
-use paseo_runtime_constants::currency::UNITS as PAS;
 use runtime_parachains::configuration::HostConfiguration;
 use sp_core::{sr25519, Pair, Public};
 use sp_genesis_builder::PresetId;

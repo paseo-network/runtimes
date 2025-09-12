@@ -21,10 +21,10 @@ use alloc::vec::Vec;
 use sp_core::sr25519;
 use sp_genesis_builder::PresetId;
 use system_parachains_constants::genesis_presets::*;
-use AuraId;
 use xcm::latest::prelude::*;
 use xcm_builder::GlobalConsensusConvertsFor;
 use xcm_executor::traits::ConvertLocation;
+use AuraId;
 
 const ASSET_HUB_PASEO_ED: Balance = ExistentialDeposit::get();
 
@@ -147,8 +147,7 @@ pub fn preset_names() -> Vec<PresetId> {
 /// Provides the JSON representation of predefined genesis config for given `id`.
 pub fn get_preset(id: &PresetId) -> Option<Vec<u8>> {
 	let patch = match id.as_ref() {
-		sp_genesis_builder::DEV_RUNTIME_PRESET =>
-			asset_hub_paseo_development_genesis(1000.into()),
+		sp_genesis_builder::DEV_RUNTIME_PRESET => asset_hub_paseo_development_genesis(1000.into()),
 		sp_genesis_builder::LOCAL_TESTNET_RUNTIME_PRESET =>
 			asset_hub_paseo_local_testnet_genesis(1000.into()),
 		_ => return None,

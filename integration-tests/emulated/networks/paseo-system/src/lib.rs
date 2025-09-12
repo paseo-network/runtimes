@@ -17,17 +17,17 @@ pub use asset_hub_paseo_emulated_chain;
 pub use bridge_hub_paseo_emulated_chain;
 pub use collectives_paseo_emulated_chain;
 pub use coretime_paseo_emulated_chain;
+pub use paseo_emulated_chain;
 pub use penpal_emulated_chain;
 pub use people_paseo_emulated_chain;
-pub use paseo_emulated_chain;
 
 use asset_hub_paseo_emulated_chain::AssetHubPaseo;
 use bridge_hub_paseo_emulated_chain::BridgeHubPaseo;
 use collectives_paseo_emulated_chain::CollectivesPaseo;
 use coretime_paseo_emulated_chain::CoretimePaseo;
+use paseo_emulated_chain::Paseo;
 use penpal_emulated_chain::{PenpalA, PenpalB};
 use people_paseo_emulated_chain::PeoplePaseo;
-use paseo_emulated_chain::Paseo;
 
 // Cumulus
 use emulated_integration_tests_common::{

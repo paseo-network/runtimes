@@ -24,9 +24,9 @@ default = ["std"]
 std = [
 	"frame-support/std",
 	"parachains-common/std",
+	"paseo-runtime-constants/std",
 	"polkadot-core-primitives/std",
 	"polkadot-primitives/std",
-	"paseo-runtime-constants/std",
 	"sp-core/std",
 	"sp-runtime/std",
 	"xcm/std",
@@ -34,8 +34,8 @@ std = [
 runtime-benchmarks = [
 	"frame-support/runtime-benchmarks",
 	"parachains-common/runtime-benchmarks",
-	"polkadot-primitives/runtime-benchmarks",
 	"paseo-runtime-constants/runtime-benchmarks",
+	"polkadot-primitives/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"xcm/runtime-benchmarks",
 ]

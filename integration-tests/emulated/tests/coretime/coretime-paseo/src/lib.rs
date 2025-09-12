@@ -52,16 +52,16 @@ pub use paseo_system_emulated_network::{
 		self, coretime_paseo_runtime, genesis::ED as CORETIME_POLKADOT_ED,
 		CoretimePaseoParaPallet as CoretimePaseoPallet,
 	},
+	paseo_emulated_chain::{genesis::ED as POLKADOT_ED, PaseoRelayPallet as PaseoPallet},
 	penpal_emulated_chain::{PenpalAParaPallet as PenpalAPallet, PenpalAssetOwner},
 	people_paseo_emulated_chain::PeoplePaseoParaPallet as PeoplePaseoPallet,
-	paseo_emulated_chain::{genesis::ED as POLKADOT_ED, PaseoRelayPallet as PaseoPallet},
 	AssetHubPaseoPara as AssetHubPolkadot, AssetHubPaseoParaReceiver as AssetHubPolkadotReceiver,
 	AssetHubPaseoParaSender as AssetHubPolkadotSender, CoretimePaseoPara as CoretimePolkadot,
 	CoretimePaseoParaReceiver as CoretimePolkadotReceiver,
-	CoretimePaseoParaSender as CoretimePolkadotSender, PaseoRelay as Paseo,
-	PaseoRelayReceiver as PaseoReceiver, PaseoRelaySender as PaseoSender, PenpalAPara as PenpalA,
-	PeoplePaseoPara as PeoplePolkadot, PaseoRelay as Polkadot,
-	PaseoRelayReceiver as PolkadotReceiver, PaseoRelaySender as PolkadotSender,
+	CoretimePaseoParaSender as CoretimePolkadotSender, PaseoRelay as Paseo, PaseoRelay as Polkadot,
+	PaseoRelayReceiver as PaseoReceiver, PaseoRelayReceiver as PolkadotReceiver,
+	PaseoRelaySender as PaseoSender, PaseoRelaySender as PolkadotSender, PenpalAPara as PenpalA,
+	PeoplePaseoPara as PeoplePolkadot,
 };
 
 #[cfg(test)]
