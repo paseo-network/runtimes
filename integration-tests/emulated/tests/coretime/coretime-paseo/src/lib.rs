@@ -60,8 +60,8 @@ pub use paseo_system_emulated_network::{
 	CoretimePaseoParaReceiver as CoretimePolkadotReceiver,
 	CoretimePaseoParaSender as CoretimePolkadotSender, PaseoRelay as Paseo,
 	PaseoRelayReceiver as PaseoReceiver, PaseoRelaySender as PaseoSender, PenpalAPara as PenpalA,
-	PeoplePolkadotPara as PeoplePolkadot, PolkadotRelay as Polkadot,
-	PolkadotRelayReceiver as PolkadotReceiver, PolkadotRelaySender as PolkadotSender,
+	PeoplePaseoPara as PeoplePolkadot, PaseoRelay as Polkadot,
+	PaseoRelayReceiver as PolkadotReceiver, PaseoRelaySender as PolkadotSender,
 };
 
 #[cfg(test)]

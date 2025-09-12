@@ -71,8 +71,7 @@ pub use paseo_system_emulated_network::{
 	AssetHubPaseoPara as AssetHubPaseo, AssetHubPaseoParaReceiver as AssetHubPaseoReceiver,
 	AssetHubPaseoParaSender as AssetHubPaseoSender, BridgeHubPaseoPara as BridgeHubPaseo,
 	BridgeHubPaseoParaReceiver as BridgeHubPaseoReceiver,
-	BridgeHubPaseoParaSender as BridgeHubPaseoSender, KusamaRelay as Kusama,
-	KusamaRelayReceiver as KusamaReceiver, PenpalAPara as PenpalA,
+	BridgeHubPaseoParaSender as BridgeHubPaseoSender,
 	PenpalAParaReceiver as PenpalAReceiver, PenpalBPara as PenpalB,
 	PenpalBParaReceiver as PenpalBReceiver, PenpalBParaSender as PenpalBSender,
 };
