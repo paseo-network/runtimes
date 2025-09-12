@@ -22,7 +22,10 @@ use alloc::format;
 use babe_primitives::AuthorityId as BabeId;
 use pallet_staking::{Forcing, StakerStatus};
 use polkadot_primitives::{
-	node_features::FeatureIndex, AccountPublic, AssignmentId, AsyncBackingParams,
+	node_features::FeatureIndex,
+	AccountPublic, AssignmentId, AsyncBackingParams,
+	ExecutorParam::{MaxMemoryPages, PvfExecTimeout},
+	PvfExecKind,
 };
 use paseo_runtime_constants::currency::UNITS as PAS;
 use runtime_parachains::configuration::HostConfiguration;
