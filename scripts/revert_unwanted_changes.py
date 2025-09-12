@@ -15,6 +15,7 @@ def log(message):
 
 def get_changed_files():
     """Get the list of changed *.rs and *.toml files using git, including their status."""
+    # Get modified/deleted files
     result = subprocess.run(['git', 'diff', '--name-status', '*.rs', '*.toml'], capture_output=True, text=True, check=True)
     file_entries = result.stdout.strip().split('\n')
     files = []
@@ -22,13 +23,38 @@ def get_changed_files():
         if entry:
             status, file_path = entry.split('\t', 1)
             files.append((status, file_path))
+
+    # Get untracked files
+    result = subprocess.run(['git', 'ls-files', '--others', '--exclude-standard', '*.rs', '*.toml'], capture_output=True, text=True, check=True)
+    untracked = result.stdout.strip().split('\n')
+    for file_path in untracked:
+        if file_path:
+            files.append(('A', file_path))  # Treat untracked as Added
+
     log(f"Changed .rs and .toml files with status: {files}")
     return files
 
 def get_file_diff(file_path):
     """Get the diff for a specific file."""
-    result = subprocess.run(['git', 'diff', file_path], capture_output=True, text=True, check=True)
-    return result.stdout
+    # Check if file is tracked
+    result = subprocess.run(['git', 'ls-files', file_path], capture_output=True, text=True)
+    is_tracked = bool(result.stdout.strip())
+
+    if is_tracked:
+        # Get normal diff for tracked files
+        result = subprocess.run(['git', 'diff', file_path], capture_output=True, text=True, check=True)
+        return result.stdout
+    else:
+        # For untracked files, create a diff as if all lines were added
+        if os.path.exists(file_path):
+            with open(file_path, 'r') as f:
+                lines = f.readlines()
+            # Format as a git diff with all lines as additions
+            diff = f"--- /dev/null\n+++ b/{file_path}\n"
+            for line in lines:
+                diff += f"+{line}"
+            return diff
+        return ""
 
 def load_replacements(replacements_file):
     """Load replacements and other configurations from the JSON configuration file."""
