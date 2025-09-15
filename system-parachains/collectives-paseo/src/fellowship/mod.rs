@@ -41,10 +41,10 @@ pub use origins::{
 };
 use pallet_ranked_collective::EnsureOfRank;
 use pallet_xcm::{EnsureXcm, IsVoiceOfBody};
-use paseo_runtime_constants::{currency::GRAND, time::HOURS, xcm::body::FELLOWSHIP_ADMIN_INDEX};
 use polkadot_runtime_common::impls::{
 	LocatableAssetConverter, VersionedLocatableAsset, VersionedLocationConverter,
 };
+use paseo_runtime_constants::{currency::GRAND, time::HOURS, xcm::body::FELLOWSHIP_ADMIN_INDEX};
 use sp_arithmetic::Permill;
 use sp_core::{ConstU128, ConstU32};
 use sp_runtime::traits::{
@@ -210,7 +210,7 @@ impl pallet_core_fellowship::Config<FellowshipCoreInstance> for Runtime {
 	>;
 	type FastPromoteOrigin = EnsureCanFastPromoteTo;
 	type EvidenceSize = ConstU32<65536>;
-	type MaxRank = ConstU32<9>;
+	type MaxRank = ConstU16<9>;
 }
 
 pub type FellowshipSalaryInstance = pallet_salary::Instance1;
