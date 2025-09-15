@@ -172,8 +172,7 @@ impl CoretimeInterface for CoretimeAllocator {
 			),
 			Err(e) => log::error!(
 				target: "runtime::coretime",
-				"Failed to send request to update schedulable cores: {:?}",
-				e
+				"Failed to send request to update schedulable cores: {e:?}"
 			),
 		}
 	}
@@ -207,8 +206,7 @@ impl CoretimeInterface for CoretimeAllocator {
 			),
 			Err(e) => log::error!(
 				target: "runtime::coretime",
-				"Request for revenue info failed to send: {:?}",
-				e
+				"Request for revenue info failed to send: {e:?}"
 			),
 		}
 	}
@@ -287,8 +285,7 @@ impl CoretimeInterface for CoretimeAllocator {
 			),
 			Err(e) => log::error!(
 				target: "runtime::coretime",
-				"Core assignment failed to send: {:?}",
-				e
+				"Core assignment failed to send: {e:?}"
 			),
 		}
 	}
