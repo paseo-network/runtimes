@@ -59,7 +59,7 @@ fn network_export_table_works() {
 				.into(),
 				None,
 			),
-			// From Ethereum with the Sepolia chain ID instead of Mainnet, not matched.
+			// From Ethereum with the Mainnet chain ID instead of Sepolia, not matched.
 			(Ethereum { chain_id: 1}, Here, None),
 		];
 

@@ -48,6 +48,7 @@ decl_test_parachains! {
 			ForeignAssets: asset_hub_paseo_runtime::ForeignAssets,
 			PoolAssets: asset_hub_paseo_runtime::PoolAssets,
 			AssetConversion: asset_hub_paseo_runtime::AssetConversion,
+			SnowbridgeSystemFrontend: asset_hub_paseo_runtime::SnowbridgeSystemFrontend,
 		}
 	},
 }
@@ -57,5 +58,5 @@ impl_accounts_helpers_for_parachain!(AssetHubPaseo);
 impl_assert_events_helpers_for_parachain!(AssetHubPaseo);
 impl_assets_helpers_for_system_parachain!(AssetHubPaseo, Paseo);
 impl_assets_helpers_for_parachain!(AssetHubPaseo);
-impl_foreign_assets_helpers_for_parachain!(AssetHubPaseo, xcm::v4::Location);
+impl_foreign_assets_helpers_for_parachain!(AssetHubPaseo, xcm::latest::Location);
 impl_xcm_helpers_for_parachain!(AssetHubPaseo);

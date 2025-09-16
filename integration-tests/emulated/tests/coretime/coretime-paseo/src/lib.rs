@@ -32,6 +32,7 @@ pub use xcm::{
 
 // Cumulus
 pub use asset_test_utils::xcm_helpers;
+pub use coretime_paseo_runtime::ExistentialDeposit as CoretimeExistentialDeposit;
 pub use emulated_integration_tests_common::{
 	xcm_emulator::{
 		assert_expected_events, bx, helpers::weight_within_threshold, Chain, Parachain as Para,
@@ -43,16 +44,25 @@ pub use emulated_integration_tests_common::{
 pub use parachains_common::{AccountId, Balance};
 pub use paseo_system_emulated_network::{
 	asset_hub_paseo_emulated_chain::{
-		genesis::ED as ASSET_HUB_POLKADOT_ED, AssetHubPaseoParaPallet as AssetHubPaseoPallet,
+		genesis::ED as ASSET_HUB_POLKADOT_ED, AssetHubPaseoParaPallet as AssetHubPolkadotPallet,
 	},
+	bridge_hub_paseo_emulated_chain::BridgeHubPaseoParaPallet as BridgeHubPolkadotPallet,
+	collectives_paseo_emulated_chain::CollectivesPaseoParaPallet as CollectivesPolkadotPallet,
 	coretime_paseo_emulated_chain::{
-		genesis::ED as CORETIME_POLKADOT_ED, CoretimePaseoParaPallet as CoretimePolkadotPallet,
+		self, coretime_paseo_runtime, genesis::ED as CORETIME_POLKADOT_ED,
+		CoretimePaseoParaPallet as CoretimePolkadotPallet,
 	},
+	penpal_emulated_chain::{PenpalAParaPallet as PenpalAPallet, PenpalAssetOwner},
+	people_paseo_emulated_chain::PeoplePaseoParaPallet as PeoplePolkadotPallet,
 	paseo_emulated_chain::{genesis::ED as POLKADOT_ED, PaseoRelayPallet as PaseoPallet},
-	AssetHubPaseoPara as AssetHubPolkadot, AssetHubPaseoParaReceiver as AssetHubPolkadotReceiver,
-	AssetHubPaseoParaSender as AssetHubPolkadotSender, CoretimePaseoPara as CoretimePolkadot,
+	AssetHubPaseoPara as AssetHubPolkadot,
+	AssetHubPaseoParaReceiver as AssetHubPolkadotReceiver,
+	AssetHubPaseoParaSender as AssetHubPolkadotSender,
+	BridgeHubPaseoPara as BridgeHubPolkadot, CollectivesPaseoPara as CollectivesPolkadot,
+	CoretimePaseoPara as CoretimePolkadot,
 	CoretimePaseoParaReceiver as CoretimePolkadotReceiver,
-	CoretimePaseoParaSender as CoretimePolkadotSender, PaseoRelay as Paseo,
+	CoretimePaseoParaSender as CoretimePolkadotSender,
+	PeoplePaseoPara as PeoplePolkadot, PaseoRelay as Paseo,
 	PaseoRelayReceiver as PaseoReceiver, PaseoRelaySender as PaseoSender, PenpalAPara as PenpalA,
 };
 

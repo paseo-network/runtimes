@@ -176,6 +176,6 @@ pub mod locations {
 
 		pub GovernanceLocation: Location = Location::parent();
 
-		pub EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 1 };
+		pub EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 11155111 };
 	}
 }
