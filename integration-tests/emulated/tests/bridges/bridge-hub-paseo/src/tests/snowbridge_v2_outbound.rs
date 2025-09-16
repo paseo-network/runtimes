@@ -83,7 +83,7 @@ fn send_weth_from_asset_hub_to_ethereum() {
 
 		// Send the Weth back to Ethereum
 		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::PolkadotXcm::execute(
-				RuntimeOrigin::signed(AssetHubPaseoReceiver::get()),
+			RuntimeOrigin::signed(AssetHubPaseoReceiver::get()),
 			bx!(xcm),
 			Weight::from(EXECUTION_WEIGHT),
 		));
@@ -258,7 +258,7 @@ pub fn add_tip_from_asset_hub_user_origin() {
 
 		// Send the Weth back to Ethereum
 		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::PolkadotXcm::execute(
-				RuntimeOrigin::signed(AssetHubPaseoReceiver::get()),
+			RuntimeOrigin::signed(AssetHubPaseoReceiver::get()),
 			bx!(xcm),
 			Weight::from(EXECUTION_WEIGHT),
 		));
@@ -284,13 +284,11 @@ pub fn add_tip_from_asset_hub_user_origin() {
 	AssetHubPaseo::execute_with(|| {
 		type RuntimeOrigin = <AssetHubPaseo as Chain>::RuntimeOrigin;
 
-		assert_ok!(
-			<AssetHubPaseo as AssetHubPaseoPallet>::SnowbridgeSystemFrontend::add_tip(
-				RuntimeOrigin::signed(relayer.clone()),
-				tip_message_id.clone(),
-				xcm::prelude::Asset::from((pas, 1_000_000_000u128)),
-			)
-		);
+		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::SnowbridgeSystemFrontend::add_tip(
+			RuntimeOrigin::signed(relayer.clone()),
+			tip_message_id.clone(),
+			xcm::prelude::Asset::from((pas, 1_000_000_000u128)),
+		));
 	});
 
 	BridgeHubPaseo::execute_with(|| {
@@ -338,13 +336,11 @@ pub fn tip_to_invalid_nonce_is_added_to_lost_tips() {
 	AssetHubPaseo::execute_with(|| {
 		type RuntimeOrigin = <AssetHubPaseo as Chain>::RuntimeOrigin;
 
-		assert_ok!(
-			<AssetHubPaseo as AssetHubPaseoPallet>::SnowbridgeSystemFrontend::add_tip(
-				RuntimeOrigin::signed(relayer.clone()),
-				tip_message_id.clone(),
-				xcm::prelude::Asset::from((pas, 1_000_000_000u128)),
-			)
-		);
+		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::SnowbridgeSystemFrontend::add_tip(
+			RuntimeOrigin::signed(relayer.clone()),
+			tip_message_id.clone(),
+			xcm::prelude::Asset::from((pas, 1_000_000_000u128)),
+		));
 	});
 
 	BridgeHubPaseo::execute_with(|| {
@@ -360,9 +356,8 @@ pub fn tip_to_invalid_nonce_is_added_to_lost_tips() {
 			"tip added event found"
 		);
 
-		let relayer_lost_tip = LostTips::<bridge_hub_paseo_runtime::Runtime>::get::<
-			sp_runtime::AccountId32,
-		>(relayer);
+		let relayer_lost_tip =
+			LostTips::<bridge_hub_paseo_runtime::Runtime>::get::<sp_runtime::AccountId32>(relayer);
 		// Assert a tip was added to storage.
 		assert!(relayer_lost_tip > 0);
 	});
@@ -517,7 +512,7 @@ fn send_weth_and_dot_from_asset_hub_to_ethereum() {
 		]));
 
 		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::PolkadotXcm::execute(
-				RuntimeOrigin::signed(AssetHubPaseoReceiver::get()),
+			RuntimeOrigin::signed(AssetHubPaseoReceiver::get()),
 			bx!(xcms),
 			Weight::from(EXECUTION_WEIGHT),
 		));
@@ -1025,7 +1020,9 @@ fn export_message_from_asset_hub_to_ethereum_is_banned_when_set_operating_mode_i
 		assert_ok!(
 			<AssetHubPaseo as AssetHubPaseoPallet>::SnowbridgeSystemFrontend::set_operating_mode(
 				RuntimeOrigin::root(),
-				BasicOperatingMode::Halted));
+				BasicOperatingMode::Halted
+			)
+		);
 	});
 
 	AssetHubPaseo::execute_with(|| {

@@ -237,7 +237,8 @@ fn asset_hub_root_aliases_anything() {
 		let target =
 			Location::new(1, X3([Parachain(42), PalletInstance(8), GeneralIndex(9)].into()));
 		assert!(<XcmConfig as xcm_executor::Config>::Aliasers::contains(&origin, &target));
-		let target = Location::new(2, X1([GlobalConsensus(Ethereum { chain_id: 11155111 })].into()));
+		let target =
+			Location::new(2, X1([GlobalConsensus(Ethereum { chain_id: 11155111 })].into()));
 		assert!(<XcmConfig as xcm_executor::Config>::Aliasers::contains(&origin, &target));
 		let target = Location::new(2, X2([GlobalConsensus(Kusama), Parachain(1000)].into()));
 		assert!(<XcmConfig as xcm_executor::Config>::Aliasers::contains(&origin, &target));
@@ -257,7 +258,8 @@ fn asset_hub_root_aliases_anything() {
 
 		// Other root locations cannot alias anything.
 		let origin = Location::new(1, Here);
-		let target = Location::new(2, X1([GlobalConsensus(Ethereum { chain_id: 11155111 })].into()));
+		let target =
+			Location::new(2, X1([GlobalConsensus(Ethereum { chain_id: 11155111 })].into()));
 		assert!(!<XcmConfig as xcm_executor::Config>::Aliasers::contains(&origin, &target));
 		let target = Location::new(2, X2([GlobalConsensus(Kusama), Parachain(1000)].into()));
 		assert!(!<XcmConfig as xcm_executor::Config>::Aliasers::contains(&origin, &target));

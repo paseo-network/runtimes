@@ -254,15 +254,15 @@ pub fn exploit_v2_route_with_legacy_v1_transfer_will_fail() {
 
 	assert_ok!(AssetHubPaseo::execute_with(|| {
 		<AssetHubPaseo as AssetHubPaseoPallet>::PolkadotXcm::transfer_assets_using_type_and_then(
- 			<AssetHubPaseo as Chain>::RuntimeOrigin::signed(AssetHubPaseoSender::get()),
- 			bx!(eth_location().into()),
- 			bx!(assets.into()),
- 			bx!(TransferType::DestinationReserve),
- 			bx!(AssetId(eth_location()).into()),
- 			bx!(TransferType::DestinationReserve),
- 			bx!(VersionedXcm::from(custom_xcm_on_dest)),
- 			Unlimited,
- 		)
+			<AssetHubPaseo as Chain>::RuntimeOrigin::signed(AssetHubPaseoSender::get()),
+			bx!(eth_location().into()),
+			bx!(assets.into()),
+			bx!(TransferType::DestinationReserve),
+			bx!(AssetId(eth_location()).into()),
+			bx!(TransferType::DestinationReserve),
+			bx!(VersionedXcm::from(custom_xcm_on_dest)),
+			Unlimited,
+		)
 	}));
 
 	BridgeHubPaseo::execute_with(|| {

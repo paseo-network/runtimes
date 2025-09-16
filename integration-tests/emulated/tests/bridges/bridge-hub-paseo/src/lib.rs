@@ -50,12 +50,13 @@ pub use integration_tests_helpers::common::snowbridge::{MIN_ETHER_BALANCE, WETH}
 pub use parachains_common::{AccountId, Balance};
 pub use paseo_system_emulated_network::{
 	asset_hub_paseo_emulated_chain::{
-		genesis::{AssetHubPaseoAssetOwner, PenpalATeleportableAssetLocation, ED as ASSET_HUB_POLKADOT_ED},
+		genesis::{
+			AssetHubPaseoAssetOwner, PenpalATeleportableAssetLocation, ED as ASSET_HUB_POLKADOT_ED,
+		},
 		AssetHubPaseoParaPallet as AssetHubPaseoPallet,
 	},
 	bridge_hub_paseo_emulated_chain::{
-		genesis::ED as BRIDGE_HUB_POLKADOT_ED,
-		BridgeHubPaseoParaPallet as BridgeHubPaseoPallet,
+		genesis::ED as BRIDGE_HUB_POLKADOT_ED, BridgeHubPaseoParaPallet as BridgeHubPaseoPallet,
 	},
 	paseo_emulated_chain::{
 		genesis::ED as POLKADOT_ED,
@@ -73,9 +74,8 @@ pub use paseo_system_emulated_network::{
 	AssetHubPaseoParaSender as AssetHubPaseoSender, BridgeHubPaseoPara as BridgeHubPaseo,
 	BridgeHubPaseoParaReceiver as BridgeHubPaseoReceiver,
 	BridgeHubPaseoParaSender as BridgeHubPaseoSender, PaseoRelay as Paseo,
-	PenpalAPara as PenpalA,
-	PenpalAParaReceiver as PenpalAReceiver,
-	PaseoRelayReceiver as PaseoReceiver, PaseoRelaySender as PaseoSender, PenpalBPara as PenpalB,
+	PaseoRelayReceiver as PaseoReceiver, PaseoRelaySender as PaseoSender, PenpalAPara as PenpalA,
+	PenpalAParaReceiver as PenpalAReceiver, PenpalBPara as PenpalB,
 	PenpalBParaReceiver as PenpalBReceiver, PenpalBParaSender as PenpalBSender,
 };
 

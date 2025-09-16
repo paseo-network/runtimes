@@ -36,7 +36,6 @@ pub(crate) fn usdt_at_ah_paseo() -> Location {
 	Location::new(0, [PalletInstance(ASSETS_PALLET_ID), GeneralIndex(USDT_ID.into())])
 }
 
-
 pub(crate) fn weth_at_asset_hubs() -> Location {
 	Location::new(
 		2,

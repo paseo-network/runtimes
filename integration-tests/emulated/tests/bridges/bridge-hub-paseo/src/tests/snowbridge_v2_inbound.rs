@@ -357,8 +357,7 @@ fn register_and_send_multiple_tokens_v2() {
 	let eth_token_deposit = 9_000_000_000_000u128;
 
 	let pas_asset = Location::new(1, Here);
-	let pas_fee: Asset =
-		(pas_asset, bp_asset_hub_paseo::CreateForeignAssetDeposit::get()).into();
+	let pas_fee: Asset = (pas_asset, bp_asset_hub_paseo::CreateForeignAssetDeposit::get()).into();
 
 	// Used to pay the asset creation deposit.
 	let eth_asset_value = eth_token_deposit + TOKEN_AMOUNT;
@@ -957,13 +956,11 @@ pub fn add_tip_from_asset_hub_user_origin() {
 	AssetHubPaseo::execute_with(|| {
 		type RuntimeOrigin = <AssetHubPaseo as Chain>::RuntimeOrigin;
 
-		assert_ok!(
-			<AssetHubPaseo as AssetHubPaseoPallet>::SnowbridgeSystemFrontend::add_tip(
-				RuntimeOrigin::signed(relayer.clone()),
-				tip_message_id.clone(),
-				xcm::prelude::Asset::from((pas, 1_000_000_000u128)),
-			)
-		);
+		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::SnowbridgeSystemFrontend::add_tip(
+			RuntimeOrigin::signed(relayer.clone()),
+			tip_message_id.clone(),
+			xcm::prelude::Asset::from((pas, 1_000_000_000u128)),
+		));
 	});
 
 	BridgeHubPaseo::execute_with(|| {

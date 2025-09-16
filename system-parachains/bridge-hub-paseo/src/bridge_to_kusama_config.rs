@@ -43,8 +43,8 @@ use pallet_bridge_relayers::extension::{
 };
 use pallet_xcm_bridge_hub::{BridgeId, XcmAsPlainPayload};
 use parachains_common::xcm_config::{AllSiblingSystemParachains, RelayOrOtherSystemParachains};
-use polkadot_parachain_primitives::primitives::Sibling;
 use paseo_runtime_constants as constants;
+use polkadot_parachain_primitives::primitives::Sibling;
 use sp_runtime::traits::ConstU32;
 use xcm::latest::prelude::*;
 use xcm_builder::{BridgeBlobDispatcher, ParentIsPreset, SiblingParachainConvertsVia};
