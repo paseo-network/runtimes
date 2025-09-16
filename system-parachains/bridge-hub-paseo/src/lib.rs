@@ -673,7 +673,7 @@ mod benches {
 				ExistentialDepositAsset,
 				PriceForParentDelivery,
 			>,
-			paseo_runtime_common::xcm_sender::ToParachainDeliveryHelper<
+			polkadot_runtime_common::xcm_sender::ToParachainDeliveryHelper<
 				xcm_config::XcmConfig,
 				ExistentialDepositAsset,
 				PriceForSiblingParachainDelivery,
@@ -907,22 +907,22 @@ mod benches {
 	use pallet_bridge_parachains::benchmarking::Config as BridgeParachainsConfig;
 
 	impl BridgeParachainsConfig<bridge_to_kusama_config::BridgeParachainKusamaInstance> for Runtime {
-		fn parachains() -> Vec<bp_paseo_core::parachains::ParaId> {
+		fn parachains() -> Vec<bp_polkadot_core::parachains::ParaId> {
 			use bp_runtime::Parachain;
-			vec![bp_paseo_core::parachains::ParaId(
+			vec![bp_polkadot_core::parachains::ParaId(
 				bp_bridge_hub_kusama::BridgeHubKusama::PARACHAIN_ID,
 			)]
 		}
 
 		fn prepare_parachain_heads_proof(
-			parachains: &[bp_paseo_core::parachains::ParaId],
+			parachains: &[bp_polkadot_core::parachains::ParaId],
 			parachain_head_size: u32,
 			proof_params: bp_runtime::UnverifiedStorageProofParams,
 		) -> (
 			bp_parachains::RelayBlockNumber,
 			bp_parachains::RelayBlockHash,
-			bp_paseo_core::parachains::ParaHeadsProof,
-			Vec<(bp_paseo_core::parachains::ParaId, bp_paseo_core::parachains::ParaHash)>,
+			bp_polkadot_core::parachains::ParaHeadsProof,
+			Vec<(bp_polkadot_core::parachains::ParaId, bp_polkadot_core::parachains::ParaHash)>,
 		) {
 			prepare_parachain_heads_proof::<
 				Runtime,
