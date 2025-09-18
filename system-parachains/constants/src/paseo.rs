@@ -169,7 +169,7 @@ pub mod locations {
 	use xcm::latest::prelude::{Junction::*, Location, NetworkId};
 
 	parameter_types! {
-	pub RelayChainLocation: Location = Location::parent();
+		pub RelayChainLocation: Location = Location::parent();
 		pub AssetHubLocation: Location =
 			Location::new(1, Parachain(paseo_runtime_constants::system_parachain::ASSET_HUB_ID));
 		pub PeopleLocation: Location =

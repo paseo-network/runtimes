@@ -41,7 +41,7 @@ use polkadot_parachain_primitives::primitives::Sibling;
 use sp_runtime::traits::AccountIdConversion;
 pub use system_parachains_constants::paseo::locations::GovernanceLocation;
 use system_parachains_constants::{
-	paseo::locations::{AssetHubLocation, AssetHubPlurality, EthereumNetwork},
+	paseo::locations::{AssetHubLocation, AssetHubPlurality, EthereumNetwork, RelayChainLocation},
 	TREASURY_PALLET_ID,
 };
 use xcm::latest::prelude::*;
@@ -125,9 +125,9 @@ pub type XcmOriginToTransactDispatchOrigin = (
 	// Native converter for sibling Parachains; will convert to a `SiblingPara` origin when
 	// recognized.
 	SiblingParachainAsNative<cumulus_pallet_xcm::Origin, RuntimeOrigin>,
-	// Superuser converter for the AssetHub location. This will allow it to issue a
+	// Superuser converter for the AssetHub and Relaychain locations. This will allow it to issue a
 	// transaction from the Root origin.
-	LocationAsSuperuser<Equals<AssetHubLocation>, RuntimeOrigin>,
+	LocationAsSuperuser<(Equals<AssetHubLocation>, Equals<RelayChainLocation>), RuntimeOrigin>,
 	// Native signed account converter; this just converts an `AccountId32` origin into a normal
 	// `RuntimeOrigin::Signed` origin of the same 32-byte value.
 	SignedAccountId32AsNative<RelayNetwork, RuntimeOrigin>,
