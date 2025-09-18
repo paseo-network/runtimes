@@ -165,17 +165,35 @@ pub mod fee {
 }
 
 pub mod locations {
-	use frame_support::parameter_types;
+	use frame_support::{parameter_types, traits::Contains};
 	use xcm::latest::prelude::{Junction::*, Location, NetworkId};
 
 	parameter_types! {
+		pub RelayChainLocation: Location = Location::parent();
 		pub AssetHubLocation: Location =
 			Location::new(1, Parachain(paseo_runtime_constants::system_parachain::ASSET_HUB_ID));
 		pub PeopleLocation: Location =
 			Location::new(1, Parachain(paseo_runtime_constants::system_parachain::PEOPLE_ID));
 
-		pub GovernanceLocation: Location = Location::parent();
+		pub GovernanceLocation: Location = Location::new(1, Parachain(paseo_runtime_constants::system_parachain::ASSET_HUB_ID));
 
 		pub EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 11155111 };
+	}
+
+	/// `Contains` implementation for the asset hub location pluralities.
+	pub struct AssetHubPlurality;
+	impl Contains<Location> for AssetHubPlurality {
+		fn contains(loc: &Location) -> bool {
+			matches!(
+				loc.unpack(),
+				(
+					1,
+					[
+						Parachain(paseo_runtime_constants::system_parachain::ASSET_HUB_ID),
+						Plurality { .. }
+					]
+				)
+			)
+		}
 	}
 }

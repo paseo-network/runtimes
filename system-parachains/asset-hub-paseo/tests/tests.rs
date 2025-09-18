@@ -20,9 +20,8 @@
 use asset_hub_paseo_runtime::{
 	xcm_config::{
 		bridging::{self, XcmBridgeHubRouterFeeAssetId},
-		CheckingAccount, DotLocation, GovernanceLocation, LocationToAccountId,
-		RelayTreasuryLocation, RelayTreasuryPalletAccount, StakingPot,
-		TrustBackedAssetsPalletLocation, XcmConfig,
+		CheckingAccount, DotLocation, LocationToAccountId, RelayTreasuryLocation,
+		RelayTreasuryPalletAccount, StakingPot, TrustBackedAssetsPalletLocation, XcmConfig,
 	},
 	AllPalletsWithoutSystem, AssetDeposit, Assets, Balances, Block, ExistentialDeposit,
 	ForeignAssets, ForeignAssetsInstance, MetadataDepositBase, MetadataDepositPerByte,
@@ -548,7 +547,7 @@ fn change_xcm_bridge_hub_router_base_fee_by_governance_works() {
 	>(
 		collator_session_keys(),
 		1000,
-		GovernanceOrigin::Location(GovernanceLocation::get()),
+		GovernanceOrigin::Origin(RuntimeOrigin::root()),
 		|| {
 			log::error!(
 				target: "bridges::estimate",
@@ -580,7 +579,7 @@ fn change_xcm_bridge_hub_router_byte_fee_by_governance_works() {
 	>(
 		collator_session_keys(),
 		1000,
-		GovernanceOrigin::Location(GovernanceLocation::get()),
+		GovernanceOrigin::Origin(RuntimeOrigin::root()),
 		|| {
 			(
 				bridging::XcmBridgeHubRouterByteFee::key().to_vec(),
@@ -614,7 +613,7 @@ fn change_xcm_bridge_hub_ethereum_base_fee_by_governance_works() {
 	>(
 		collator_session_keys(),
 		1000,
-		GovernanceOrigin::Location(GovernanceLocation::get()),
+		GovernanceOrigin::Origin(RuntimeOrigin::root()),
 		|| {
 			(
 				bridging::to_ethereum::BridgeHubEthereumBaseFee::key().to_vec(),
@@ -897,55 +896,4 @@ fn authorized_aliases_work() {
 				&local_alice
 			));
 		})
-}
-
-#[test]
-fn governance_authorize_upgrade_works() {
-	use paseo_runtime_constants::system_parachain::{ASSET_HUB_ID, COLLECTIVES_ID};
-
-	// no - random para
-	assert_err!(
-		parachains_runtimes_test_utils::test_cases::can_governance_authorize_upgrade::<
-			Runtime,
-			RuntimeOrigin,
-		>(GovernanceOrigin::Location(Location::new(1, Parachain(12334)))),
-		Either::Right(InstructionError { index: 0, error: XcmError::Barrier })
-	);
-	// no - AssetHub
-	assert_err!(
-		parachains_runtimes_test_utils::test_cases::can_governance_authorize_upgrade::<
-			Runtime,
-			RuntimeOrigin,
-		>(GovernanceOrigin::Location(Location::new(1, Parachain(ASSET_HUB_ID)))),
-		Either::Right(InstructionError { index: 0, error: XcmError::Barrier })
-	);
-	// no - Collectives
-	assert_err!(
-		parachains_runtimes_test_utils::test_cases::can_governance_authorize_upgrade::<
-			Runtime,
-			RuntimeOrigin,
-		>(GovernanceOrigin::Location(Location::new(1, Parachain(COLLECTIVES_ID)))),
-		Either::Right(InstructionError { index: 0, error: XcmError::Barrier })
-	);
-	// no - Collectives Voice of Fellows plurality
-	assert_err!(
-		parachains_runtimes_test_utils::test_cases::can_governance_authorize_upgrade::<
-			Runtime,
-			RuntimeOrigin,
-		>(GovernanceOrigin::LocationAndDescendOrigin(
-			Location::new(1, Parachain(COLLECTIVES_ID)),
-			Plurality { id: BodyId::Technical, part: BodyPart::Voice }.into()
-		)),
-		Either::Right(InstructionError { index: 2, error: XcmError::BadOrigin })
-	);
-
-	// ok - relaychain
-	assert_ok!(parachains_runtimes_test_utils::test_cases::can_governance_authorize_upgrade::<
-		Runtime,
-		RuntimeOrigin,
-	>(GovernanceOrigin::Location(Location::parent())));
-	assert_ok!(parachains_runtimes_test_utils::test_cases::can_governance_authorize_upgrade::<
-		Runtime,
-		RuntimeOrigin,
-	>(GovernanceOrigin::Location(GovernanceLocation::get())));
 }

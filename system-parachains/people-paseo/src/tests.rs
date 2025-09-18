@@ -152,14 +152,6 @@ fn governance_authorize_upgrade_works() {
 		>(GovernanceOrigin::Location(Location::new(1, Parachain(12334)))),
 		Either::Right(InstructionError { index: 0, error: XcmError::Barrier })
 	);
-	// no - AssetHub
-	assert_err!(
-		parachains_runtimes_test_utils::test_cases::can_governance_authorize_upgrade::<
-			Runtime,
-			RuntimeOrigin,
-		>(GovernanceOrigin::Location(Location::new(1, Parachain(ASSET_HUB_ID)))),
-		Either::Right(InstructionError { index: 0, error: XcmError::Barrier })
-	);
 	// no - Collectives
 	assert_err!(
 		parachains_runtimes_test_utils::test_cases::can_governance_authorize_upgrade::<
@@ -180,13 +172,18 @@ fn governance_authorize_upgrade_works() {
 		Either::Right(InstructionError { index: 2, error: XcmError::BadOrigin })
 	);
 
-	// ok - relaychain
+	// ok - AssetHub
 	assert_ok!(parachains_runtimes_test_utils::test_cases::can_governance_authorize_upgrade::<
 		Runtime,
 		RuntimeOrigin,
-	>(GovernanceOrigin::Location(Location::parent())));
+	>(GovernanceOrigin::Location(Location::new(1, Parachain(ASSET_HUB_ID)))));
 	assert_ok!(parachains_runtimes_test_utils::test_cases::can_governance_authorize_upgrade::<
 		Runtime,
 		RuntimeOrigin,
 	>(GovernanceOrigin::Location(GovernanceLocation::get())));
+	// ok - relay
+	assert_ok!(parachains_runtimes_test_utils::test_cases::can_governance_authorize_upgrade::<
+		Runtime,
+		RuntimeOrigin,
+	>(GovernanceOrigin::Location(Location::parent())));
 }
