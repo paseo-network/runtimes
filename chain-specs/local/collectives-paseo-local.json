@@ -10,7 +10,7 @@
     "tokenDecimals": 10,
     "tokenSymbol": "PAS"
   },
-  "relay_chain": "collectives-local",
+  "relay_chain": "paseo-local",
   "para_id": 1001,
   "codeSubstitutes": {},
   "genesis": {
