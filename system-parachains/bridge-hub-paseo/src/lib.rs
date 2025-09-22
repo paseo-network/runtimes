@@ -587,11 +587,11 @@ impl Default for ProxyType {
 }
 
 impl InstanceFilter<RuntimeCall> for ProxyType {
-	fn filter(&self, c: &RuntimeCall) -> bool {
+	fn filter(&self, _c: &RuntimeCall) -> bool {
 		true
 	}
 
-	fn is_superset(&self, o: &Self) -> bool {
+	fn is_superset(&self, _o: &Self) -> bool {
 		true
 	}
 }
