@@ -63,7 +63,7 @@ use frame_support::{
 	parameter_types,
 	traits::{
 		tokens::imbalance::ResolveTo, ConstBool, ConstU32, ConstU64, ConstU8, EitherOfDiverse,
-		Everything, TransformOrigin, InstanceFilter
+		Everything, InstanceFilter, TransformOrigin,
 	},
 	weights::{ConstantMultiplier, Weight},
 	PalletId,
