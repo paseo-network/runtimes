@@ -60,7 +60,7 @@ impl Chain for BridgeHubPaseo {
 }
 
 impl Parachain for BridgeHubPaseo {
-	const PARACHAIN_ID: u32 = BRIDGE_HUB_POLKAPAS_PARACHAIN_ID;
+	const PARACHAIN_ID: u32 = BRIDGE_HUB_POLKADOT_PARACHAIN_ID;
 	const MAX_HEADER_SIZE: u32 = MAX_BRIDGE_HUB_HEADER_SIZE;
 }
 
@@ -77,7 +77,7 @@ impl ChainWithMessages for BridgeHubPaseo {
 }
 
 /// Identifier of BridgeHubPaseo in the Paseo relay chain.
-pub const BRIDGE_HUB_POLKAPAS_PARACHAIN_ID: u32 = 1002;
+pub const BRIDGE_HUB_POLKADOT_PARACHAIN_ID: u32 = 1002;
 
 /// Name of the With-BridgeHubPaseo messages pallet instance that is deployed at bridged chains.
 pub const WITH_BRIDGE_HUB_POLKAPAS_MESSAGES_PALLET_NAME: &str = "BridgePaseoMessages";
@@ -87,7 +87,7 @@ pub const WITH_BRIDGE_HUB_POLKAPAS_MESSAGES_PALLET_NAME: &str = "BridgePaseoMess
 pub const WITH_BRIDGE_HUB_POLKAPAS_RELAYERS_PALLET_NAME: &str = "BridgeRelayers";
 
 /// Pallet index of `BridgeKusamaMessages: pallet_bridge_messages::<Instance1>`.
-pub const WITH_BRIDGE_POLKAPAS_TO_KUSAMA_MESSAGES_PALLET_INDEX: u8 = 53;
+pub const WITH_BRIDGE_POLKADOT_TO_KUSAMA_MESSAGES_PALLET_INDEX: u8 = 53;
 
 decl_bridge_finality_runtime_apis!(bridge_hub_paseo);
 decl_bridge_messages_runtime_apis!(bridge_hub_paseo, LegacyLaneId);
@@ -96,7 +96,7 @@ frame_support::parameter_types! {
 	/// The XCM fee that is paid for executing XCM program (with `ExportMessage` instruction) at the Paseo
 	/// BridgeHub.
 	/// (initially was calculated by test `BridgeHubPaseo::can_calculate_weight_for_paid_export_message_with_reserve_transfer` + `33%`)
-	pub const BridgeHubPaseoBaseXcmFeeInDots: Balance = 88_797_450;
+	pub const BridgeHubPaseoBaseXcmFeeInDots: Balance = 114_080_750;
 
 	/// Transaction fee that is paid at the Paseo BridgeHub for delivering single inbound message.
 	/// (initially was calculated by test `BridgeHubPaseo::can_calculate_fee_for_standalone_message_delivery_transaction` + `33%`)
@@ -166,8 +166,10 @@ pub mod snowbridge {
 	parameter_types! {
 		/// Should match the `ForeignAssets::create` index on Asset Hub.
 		pub const CreateAssetCall: [u8;2] = [53, 0];
-		/// The pallet index of the Ethereum inbound queue pallet in the Bridge Hub runtime.
+		/// The pallet index of the Ethereum inbound queue pallet in the BridgeHub runtime.
 		pub const InboundQueuePalletInstance: u8 = 80;
+		/// The pallet index of the Ethereum inbound queue v2 pallet in the BridgeHub runtime.
+		pub const InboundQueueV2PalletInstance: u8 = 91;
 		/// Default pricing parameters used to calculate bridging fees. Initialized to unit values,
 		/// as it is intended that these parameters should be updated with more
 		/// accurate values prior to bridge activation. This can be performed

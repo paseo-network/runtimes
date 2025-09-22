@@ -19,12 +19,11 @@ use crate::*;
 
 use bridge_hub_paseo_runtime::ExistentialDeposit;
 use integration_tests_helpers::test_chain_can_claim_assets;
-use xcm_executor::traits::DropAssets;
 
 #[test]
 fn assets_can_be_claimed() {
 	let amount = ExistentialDeposit::get();
 	let assets: Assets = (Parent, amount).into();
 
-	test_chain_can_claim_assets!(AssetHubPaseo, RuntimeCall, PaseoId.into(), assets, amount);
+	test_chain_can_claim_assets!(AssetHubPaseo, RuntimeCall, NetworkId::Polkadot, assets, amount);
 }
