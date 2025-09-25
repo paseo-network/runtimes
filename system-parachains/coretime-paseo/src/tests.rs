@@ -15,9 +15,9 @@
 // limitations under the License.
 
 use crate::{
-	coretime::{BrokerPalletId, CoretimeBurnAccount, FixedTargetPrice},
+	coretime::{BrokerPalletId, CoretimeBurnAccount},
 	xcm_config::LocationToAccountId,
-	GovernanceLocation, *,
+	*,
 };
 use coretime::CoretimeAllocator;
 use cumulus_pallet_parachain_system::ValidationData;
@@ -31,7 +31,7 @@ use frame_support::{
 };
 use pallet_broker::{ConfigRecordOf, RCBlockNumberOf, SaleInfo};
 use parachains_runtimes_test_utils::{ExtBuilder, GovernanceOrigin};
-use paseo_runtime_constants::system_parachain::coretime::TIMESLICE_PERIOD;
+use polkadot_runtime_constants::system_parachain::coretime::TIMESLICE_PERIOD;
 use sp_core::crypto::Ss58Codec;
 use sp_runtime::{traits::AccountIdConversion, Either};
 use xcm_runtime_apis::conversions::LocationToAccountHelper;
@@ -40,7 +40,7 @@ const ALICE: [u8; 32] = [1u8; 32];
 
 // We track the relay chain block number via the RelayChainDataProvider, but `set_block_number` is
 // not currently available in tests (only runtime-benchmarks).
-// See https://github.com/paritytech/paseo-sdk/pull/8537
+// See https://github.com/paritytech/polkadot-sdk/pull/8537
 fn set_relay_block_number(b: BlockNumber) {
 	let mut validation_data = ValidationData::<Runtime>::get().unwrap_or_else(||
 			// PersistedValidationData does not impl default in non-std
@@ -65,8 +65,6 @@ fn advance_to(b: BlockNumber) {
 
 #[test]
 fn bulk_revenue_is_burnt() {
-	const ALICE: [u8; 32] = [1u8; 32];
-
 	ExtBuilder::<Runtime>::default()
 		.with_collators(vec![AccountId::from(ALICE)])
 		.with_session_keys(vec![(
@@ -97,10 +95,7 @@ fn bulk_revenue_is_burnt() {
 			let broker_account = BrokerPalletId::get().into_account_truncating();
 			let coretime_burn_account = CoretimeBurnAccount::get();
 			let treasury_account = xcm_config::RelayTreasuryPalletAccount::get();
-			assert_ok!(Balances::mint_into(
-				&AccountId::from(ALICE),
-				FixedTargetPrice::get() + 1000 * UNITS
-			));
+			assert_ok!(Balances::mint_into(&AccountId::from(ALICE), 200 * UNITS));
 			let alice_balance_before = Balances::balance(&AccountId::from(ALICE));
 			let treasury_balance_before = Balances::balance(&treasury_account);
 			let broker_balance_before = Balances::balance(&broker_account);
@@ -109,7 +104,7 @@ fn bulk_revenue_is_burnt() {
 			// Purchase coretime.
 			assert_ok!(Broker::purchase(
 				RuntimeOrigin::signed(AccountId::from(ALICE)),
-				FixedTargetPrice::get()
+				100 * UNITS
 			));
 
 			// Alice decreases.
@@ -254,9 +249,9 @@ fn xcm_payment_api_works() {
 
 #[test]
 fn governance_authorize_upgrade_works() {
-	use paseo_runtime_constants::system_parachain::{ASSET_HUB_ID, COLLECTIVES_ID};
+	use polkadot_runtime_constants::system_parachain::COLLECTIVES_ID;
 
-	// no - random para
+	// no - random non-system para
 	assert_err!(
 		parachains_runtimes_test_utils::test_cases::can_governance_authorize_upgrade::<
 			Runtime,
@@ -264,6 +259,15 @@ fn governance_authorize_upgrade_works() {
 		>(GovernanceOrigin::Location(Location::new(1, Parachain(12334)))),
 		Either::Right(InstructionError { index: 0, error: XcmError::Barrier })
 	);
+	// no - random system para
+	assert_err!(
+		parachains_runtimes_test_utils::test_cases::can_governance_authorize_upgrade::<
+			Runtime,
+			RuntimeOrigin,
+		>(GovernanceOrigin::Location(Location::new(1, Parachain(1765)))),
+		Either::Right(InstructionError { index: 0, error: XcmError::Barrier })
+	);
+
 	// no - Collectives
 	assert_err!(
 		parachains_runtimes_test_utils::test_cases::can_governance_authorize_upgrade::<
@@ -284,19 +288,15 @@ fn governance_authorize_upgrade_works() {
 		Either::Right(InstructionError { index: 2, error: XcmError::BadOrigin })
 	);
 
+	// ok - relaychain
+	assert_ok!(parachains_runtimes_test_utils::test_cases::can_governance_authorize_upgrade::<
+		Runtime,
+		RuntimeOrigin,
+	>(GovernanceOrigin::Location(RelayChainLocation::get())));
+
 	// ok - AssetHub
 	assert_ok!(parachains_runtimes_test_utils::test_cases::can_governance_authorize_upgrade::<
 		Runtime,
 		RuntimeOrigin,
-	>(GovernanceOrigin::Location(Location::new(1, Parachain(ASSET_HUB_ID)))));
-	assert_ok!(parachains_runtimes_test_utils::test_cases::can_governance_authorize_upgrade::<
-		Runtime,
-		RuntimeOrigin,
-	>(GovernanceOrigin::Location(GovernanceLocation::get())));
-
-	// ok - RelayChain
-	assert_ok!(parachains_runtimes_test_utils::test_cases::can_governance_authorize_upgrade::<
-		Runtime,
-		RuntimeOrigin,
-	>(GovernanceOrigin::Location(Location::parent())));
+	>(GovernanceOrigin::Location(AssetHubLocation::get())));
 }

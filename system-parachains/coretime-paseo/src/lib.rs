@@ -42,7 +42,7 @@ use frame_support::{
 	genesis_builder_helper::{build_state, get_preset},
 	parameter_types,
 	traits::{
-		tokens::imbalance::ResolveTo, ConstBool, ConstU32, ConstU64, ConstU8, Contains,
+		tokens::imbalance::ResolveTo, ConstBool, ConstU32, ConstU64, ConstU8, Contains, EitherOf,
 		EitherOfDiverse, EverythingBut, InstanceFilter, TransformOrigin,
 	},
 	weights::{ConstantMultiplier, Weight},
@@ -72,13 +72,13 @@ use sp_runtime::{
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use system_parachains_constants::{
-	paseo::{consensus::*, currency::*, fee::WeightToFee},
+	polkadot::{consensus::*, currency::*, fee::WeightToFee},
 	AVERAGE_ON_INITIALIZE_RATIO, HOURS, MAXIMUM_BLOCK_WEIGHT, NORMAL_DISPATCH_RATIO, SLOT_DURATION,
 };
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 use xcm::prelude::*;
 use xcm_config::{
-	DotRelayLocation, FellowshipLocation, GovernanceLocation, StakingPot,
+	AssetHubLocation, DotRelayLocation, FellowshipLocation, RelayChainLocation, StakingPot,
 	XcmOriginToTransactDispatchOrigin,
 };
 use xcm_runtime_apis::{
@@ -158,8 +158,8 @@ impl_opaque_keys! {
 
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: Cow::Borrowed("coretime-paseo"),
-	impl_name: Cow::Borrowed("coretime-paseo"),
+	spec_name: Cow::Borrowed("coretime-polkadot"),
+	impl_name: Cow::Borrowed("coretime-polkadot"),
 	authoring_version: 1,
 	spec_version: 1_007_001,
 	impl_version: 0,
@@ -475,7 +475,10 @@ parameter_types! {
 /// We allow Root and the `StakingAdmin` to execute privileged collator selection operations.
 pub type CollatorSelectionUpdateOrigin = EitherOfDiverse<
 	EnsureRoot<AccountId>,
-	EnsureXcm<IsVoiceOfBody<GovernanceLocation, StakingAdminBodyId>>,
+	EitherOf<
+		EnsureXcm<IsVoiceOfBody<RelayChainLocation, StakingAdminBodyId>>,
+		EnsureXcm<IsVoiceOfBody<AssetHubLocation, StakingAdminBodyId>>,
+	>,
 >;
 
 impl pallet_collator_selection::Config for Runtime {
@@ -656,12 +659,6 @@ impl pallet_utility::Config for Runtime {
 	type WeightInfo = weights::pallet_utility::WeightInfo<Runtime>;
 }
 
-impl pallet_sudo::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type RuntimeCall = RuntimeCall;
-	type WeightInfo = pallet_sudo::weights::SubstrateWeight<Runtime>;
-}
-
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime
@@ -696,9 +693,6 @@ construct_runtime!(
 
 		// The main stage.
 		Broker: pallet_broker = 50,
-
-		// Sudo.
-		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 255,
 	}
 );
 
@@ -706,8 +700,8 @@ construct_runtime!(
 mod benches {
 	use super::*;
 	use alloc::boxed::Box;
-	use paseo_runtime_constants::system_parachain::AssetHubParaId;
-	use system_parachains_constants::paseo::locations::AssetHubLocation;
+	use polkadot_runtime_constants::system_parachain::AssetHubParaId;
+	use system_parachains_constants::polkadot::locations::AssetHubLocation;
 
 	frame_benchmarking::define_benchmarks!(
 		[frame_system, SystemBench::<Runtime>]
@@ -828,7 +822,7 @@ mod benches {
 
 	impl pallet_xcm_benchmarks::Config for Runtime {
 		type XcmConfig = xcm_config::XcmConfig;
-		type DeliveryHelper = paseo_runtime_common::xcm_sender::ToParachainDeliveryHelper<
+		type DeliveryHelper = polkadot_runtime_common::xcm_sender::ToParachainDeliveryHelper<
 			xcm_config::XcmConfig,
 			ExistentialDepositAsset,
 			PriceForSiblingParachainDelivery,
