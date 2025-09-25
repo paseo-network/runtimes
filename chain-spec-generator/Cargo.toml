@@ -35,7 +35,7 @@ grandpa = { workspace = true }
 hex-literal = { workspace = true }
 sp-runtime = { workspace = true, default-features = true }
 beefy-primitives = { workspace = true, default-features = true }
-xcm = { package = "staging-xcm", version = "8.0.1" }
+xcm = { package = "staging-xcm", version = "18.0.0" }
 parachains-common = { workspace = true, default-features = true }
 cumulus-primitives-core = { workspace = true, default-features = true }
 
@@ -56,6 +56,7 @@ runtime-benchmarks = [
 	"runtime-parachains/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"system-parachains-constants/runtime-benchmarks",
+	"xcm/runtime-benchmarks",
 ]
 
 force-debug = [
