@@ -35,12 +35,9 @@ use parachains_common::{
 	},
 	TREASURY_PALLET_ID,
 };
-use paseo_runtime_constants::system_parachain;
 use polkadot_parachain_primitives::primitives::Sibling;
+use polkadot_runtime_constants::system_parachain;
 use sp_runtime::traits::AccountIdConversion;
-use system_parachains_constants::paseo::locations::{
-	AssetHubLocation, AssetHubPlurality, RelayChainLocation,
-};
 use xcm::latest::prelude::*;
 use xcm_builder::{
 	AccountId32Aliases, AliasChildLocation, AliasOriginRootUsingFilter,
@@ -56,7 +53,9 @@ use xcm_builder::{
 };
 use xcm_executor::{traits::ConvertLocation, XcmExecutor};
 
-pub use system_parachains_constants::paseo::locations::GovernanceLocation;
+pub use system_parachains_constants::polkadot::locations::{
+	AssetHubLocation, AssetHubPlurality, RelayChainLocation,
+};
 
 parameter_types! {
 	pub const RootLocation: Location = Location::here();
@@ -74,7 +73,7 @@ parameter_types! {
 	pub const BaseDeliveryFee: u128 = CENTS.saturating_mul(3);
 	pub TreasuryAccount: AccountId = TREASURY_PALLET_ID.into_account_truncating();
 	pub RelayTreasuryLocation: Location =
-		(Parent, PalletInstance(paseo_runtime_constants::TREASURY_PALLET_ID)).into();
+		(Parent, PalletInstance(polkadot_runtime_constants::TREASURY_PALLET_ID)).into();
 	pub RelayTreasuryPalletAccount: AccountId =
 		LocationToAccountId::convert_location(&RelayTreasuryLocation::get())
 			.unwrap_or(TreasuryAccount::get());
@@ -141,9 +140,9 @@ pub type XcmOriginToTransactDispatchOrigin = (
 	// Native converter for sibling Parachains; will convert to a `SiblingPara` origin when
 	// recognized.
 	SiblingParachainAsNative<cumulus_pallet_xcm::Origin, RuntimeOrigin>,
-	// Superuser converter for the AssetHub and Relaychain locations. This will allow it to issue a
-	// transaction from the Root origin.
-	LocationAsSuperuser<(Equals<AssetHubLocation>, Equals<RelayChainLocation>), RuntimeOrigin>,
+	// AssetHub or Relay can execute as root (based on: https://github.com/polkadot-fellows/runtimes/issues/651).
+	// This will allow them to issue a transaction from the Root origin.
+	LocationAsSuperuser<(Equals<RelayChainLocation>, Equals<AssetHubLocation>), RuntimeOrigin>,
 	// Native signed account converter; this just converts an `AccountId32` origin into a normal
 	// `RuntimeOrigin::Signed` origin of the same 32-byte value.
 	SignedAccountId32AsNative<RelayNetwork, RuntimeOrigin>,
@@ -197,11 +196,11 @@ pub type Barrier = TrailingSetTopicAsId<
 					AllowTopLevelPaidExecutionFrom<Everything>,
 					// Parent and its pluralities (i.e. governance bodies) get free execution.
 					AllowExplicitUnpaidExecutionFrom<(
-						AssetHubPlurality,
 						ParentOrParentsPlurality,
 						FellowsPlurality,
 						Equals<RelayTreasuryLocation>,
 						Equals<AssetHubLocation>,
+						AssetHubPlurality,
 					)>,
 					// Subscriptions for version tracking are OK.
 					AllowSubscriptionsFrom<ParentRelayOrSiblingParachains>,

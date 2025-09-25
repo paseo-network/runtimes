@@ -17,13 +17,12 @@
 //! Genesis configs presets for the PeoplePolkadot runtime
 
 use crate::*;
-use sp_core::sr25519;
 use sp_genesis_builder::PresetId;
 use system_parachains_constants::genesis_presets::*;
 
 const PEOPLE_POLKADOT_ED: Balance = ExistentialDeposit::get();
 
-fn people_paseo_genesis(
+fn people_polkadot_genesis(
 	invulnerables: Vec<(AccountId, parachains_common::AuraId)>,
 	endowed_accounts: Vec<AccountId>,
 	id: ParaId,
@@ -59,9 +58,6 @@ fn people_paseo_genesis(
 				.collect(),
 			..Default::default()
 		},
-		"sudo": {
-			"key": Some(get_account_id_from_seed::<sr25519::Public>("Alice"))
-		},
 		"polkadotXcm": {
 			"safeXcmVersion": Some(SAFE_XCM_VERSION),
 		},
@@ -70,12 +66,12 @@ fn people_paseo_genesis(
 	})
 }
 
-pub fn people_paseo_local_testnet_genesis(para_id: ParaId) -> serde_json::Value {
-	people_paseo_genesis(invulnerables(), testnet_accounts(), para_id)
+pub fn people_polkadot_local_testnet_genesis(para_id: ParaId) -> serde_json::Value {
+	people_polkadot_genesis(invulnerables(), testnet_accounts(), para_id)
 }
 
-fn people_paseo_development_genesis(para_id: ParaId) -> serde_json::Value {
-	people_paseo_genesis(
+fn people_polkadot_development_genesis(para_id: ParaId) -> serde_json::Value {
+	people_polkadot_genesis(
 		invulnerables(),
 		testnet_accounts_with([
 			// Make sure `StakingPot` is funded for benchmarking purposes.
@@ -96,9 +92,9 @@ pub fn preset_names() -> Vec<PresetId> {
 /// Provides the JSON representation of predefined genesis config for given `id`.
 pub fn get_preset(id: &PresetId) -> Option<Vec<u8>> {
 	let patch = match id.as_ref() {
-		sp_genesis_builder::DEV_RUNTIME_PRESET => people_paseo_development_genesis(1004.into()),
+		sp_genesis_builder::DEV_RUNTIME_PRESET => people_polkadot_development_genesis(1004.into()),
 		sp_genesis_builder::LOCAL_TESTNET_RUNTIME_PRESET =>
-			people_paseo_local_testnet_genesis(1004.into()),
+			people_polkadot_local_testnet_genesis(1004.into()),
 		_ => return None,
 	};
 	Some(
