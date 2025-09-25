@@ -1,20 +1,20 @@
 // Copyright (C) Parity Technologies (UK) Ltd.
-// This file is part of Polkadot.
+// This file is part of Paseo.
 
-// Polkadot is free software: you can redistribute it and/or modify
+// Paseo is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 
-// Polkadot is distributed in the hope that it will be useful,
+// Paseo is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
 // You should have received a copy of the GNU General Public License
-// along with Polkadot.  If not, see <http://www.gnu.org/licenses/>.
+// along with Paseo.  If not, see <http://www.gnu.org/licenses/>.
 
-//! The Polkadot runtime. This can be compiled with `#[no_std]`, ready for Wasm.
+//! The Paseo runtime. This can be compiled with `#[no_std]`, ready for Wasm.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
@@ -85,7 +85,7 @@ use polkadot_runtime_common::{
 		ContainsParts as ContainsLocationParts, DealWithFees, LocatableAssetConverter,
 		VersionedLocatableAsset, VersionedLocationConverter,
 	},
-	paras_registrar, prod_or_fast, slots,
+	paras_registrar, paras_sudo_wrapper, prod_or_fast, slots,
 	traits::OnSwap,
 	BlockHashCount, BlockLength, CurrencyToVote, SlowAdjustingFeeUpdate,
 };
@@ -136,7 +136,7 @@ use xcm_runtime_apis::{
 };
 
 /// Constant values used within the runtime.
-use polkadot_runtime_constants::{
+use paseo_runtime_constants::{
 	currency::*, fee::*, proxy::ProxyType, system_parachain, time::*, TREASURY_PALLET_ID,
 };
 
@@ -157,23 +157,23 @@ pub mod impls;
 pub mod xcm_config;
 
 /// Default logging target.
-pub const LOG_TARGET: &str = "runtime::polkadot";
+pub const LOG_TARGET: &str = "runtime::paseo";
 
-impl_runtime_weights!(polkadot_runtime_constants);
+impl_runtime_weights!(paseo_runtime_constants);
 
 // Make the WASM binary available.
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-#[cfg(all(not(feature = "polkadot-ahm"), feature = "on-chain-release-build"))]
-compile_error!("Asset Hub migration requires the `polkadot-ahm` feature");
+#[cfg(all(not(feature = "paseo-ahm"), feature = "on-chain-release-build"))]
+compile_error!("Asset Hub migration requires the `paseo-ahm` feature");
 
-// Polkadot version identifier;
-/// Runtime version (Polkadot).
+// Paseo version identifier;
+/// Runtime version (Paseo).
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: alloc::borrow::Cow::Borrowed("polkadot"),
-	impl_name: alloc::borrow::Cow::Borrowed("parity-polkadot"),
+	spec_name: alloc::borrow::Cow::Borrowed("paseo"),
+	impl_name: alloc::borrow::Cow::Borrowed("parity-paseo"),
 	authoring_version: 0,
 	spec_version: 1_007_001,
 	impl_version: 0,
@@ -298,11 +298,7 @@ impl pallet_preimage::Config for Runtime {
 }
 
 parameter_types! {
-	pub EpochDuration: u64 = prod_or_fast!(
-		EPOCH_DURATION_IN_SLOTS as u64,
-		2 * MINUTES as u64,
-		"DOT_EPOCH_DURATION"
-	);
+	pub EpochDuration: u64 = EPOCH_DURATION_IN_SLOTS as u64;
 	pub const ExpectedBlockTime: Moment = MILLISECS_PER_BLOCK;
 	pub ReportLongevity: u64 =
 		BondingDuration::get() as u64 * SessionsPerEra::get() as u64 * EpochDuration::get();
@@ -446,7 +442,7 @@ impl pallet_beefy_mmr::Config for Runtime {
 }
 
 parameter_types! {
-	pub const TransactionByteFee: Balance = polkadot_runtime_constants::fee::TRANSACTION_BYTE_FEE;
+	pub const TransactionByteFee: Balance = paseo_runtime_constants::fee::TRANSACTION_BYTE_FEE;
 	/// This value increases the priority of `Operational` transactions by adding
 	/// a "virtual tip" that's equal to the `OperationalFeeMultiplier * final_fee`.
 	pub const OperationalFeeMultiplier: u8 = 5;
@@ -534,9 +530,9 @@ parameter_types! {
 	pub const SignedMaxRefunds: u32 = 16 / 4;
 	pub const SignedFixedDeposit: Balance = deposit(2, 0);
 	pub const SignedDepositIncreaseFactor: Percent = Percent::from_percent(10);
-	// 0.01 DOT per KB of solution data.
+	// 0.01 PAS per KB of solution data.
 	pub const SignedDepositByte: Balance = deposit(0, 10) / 1024;
-	// Each good submission will get 1 DOT as reward
+	// Each good submission will get 1 PAS as reward
 	pub SignedRewardBase: Balance = UNITS;
 
 	// 4 hour session, 1 hour unsigned phase, 32 offchain executions.
@@ -684,7 +680,7 @@ impl pallet_staking::EraPayout<Balance> for EraPayout {
 			FixedU128::from_rational(era_duration_millis.into(), MILLISECONDS_PER_YEAR.into());
 
 		// TI at the time of execution of [Referendum 1139](https://polkadot.subsquare.io/referenda/1139), block hash: `0x39422610299a75ef69860417f4d0e1d94e77699f45005645ffc5e8e619950f9f`.
-		let fixed_total_issuance: i128 = 15_011_657_390_566_252_333;
+		let fixed_total_issuance: i128 = 1_487_502_468_008_283_162;
 		let fixed_inflation_rate = FixedU128::from_rational(8, 100);
 		let yearly_emission = fixed_inflation_rate.saturating_mul_int(fixed_total_issuance);
 
@@ -782,7 +778,7 @@ parameter_types! {
 	pub const DisableSpends: BlockNumber = BlockNumber::MAX;
 	pub const Burn: Permill = Permill::from_percent(1);
 	pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
-	pub const PayoutSpendPeriod: BlockNumber = 90 * DAYS;
+	pub const PayoutSpendPeriod: BlockNumber = 30 * DAYS;
 	// The asset's interior location for the paying account. This is the Treasury
 	// pallet instance (which sits at index 19).
 	pub TreasuryInteriorLocation: InteriorLocation = PalletInstance(TREASURY_PALLET_ID).into();
@@ -837,8 +833,7 @@ impl pallet_treasury::Config for Runtime {
 parameter_types! {
 	pub const BountyDepositBase: Balance = DOLLARS;
 	pub const BountyDepositPayoutDelay: BlockNumber = 0;
-	// Bounties expire after 10 years.
-	pub const BountyUpdatePeriod: BlockNumber = 10 * 12 * 30 * DAYS;
+	pub const BountyUpdatePeriod: BlockNumber = 90 * DAYS;
 	pub const MaximumReasonLength: u32 = 16384;
 	pub const CuratorDepositMultiplier: Permill = Permill::from_percent(50);
 	pub const CuratorDepositMin: Balance = 10 * DOLLARS;
@@ -991,7 +986,7 @@ parameter_types! {
 }
 
 parameter_types! {
-	pub Prefix: &'static [u8] = b"Pay DOTs to the Polkadot account:";
+	pub Prefix: &'static [u8] = b"Pay PASs to the Paseo account:";
 }
 
 impl claims::Config for Runtime {
@@ -1437,14 +1432,8 @@ impl paras_registrar::Config for Runtime {
 }
 
 parameter_types! {
-	// 12 weeks = 3 months per lease period -> 8 lease periods ~ 2 years
-	pub LeasePeriod: BlockNumber = prod_or_fast!(12 * WEEKS, 12 * WEEKS, "DOT_LEASE_PERIOD");
-	// Polkadot Genesis was on May 26, 2020.
-	// Target Parachain Onboarding Date: Dec 15, 2021.
-	// Difference is 568 days.
-	// We want a lease period to start on the target onboarding date.
-	// 568 % (12 * 7) = 64 day offset
-	pub LeaseOffset: BlockNumber = prod_or_fast!(64 * DAYS, 0, "DOT_LEASE_OFFSET");
+	// 1 weeks = per lease period -> 8 lease periods ~ 2 months
+	pub LeasePeriod: BlockNumber = prod_or_fast!(1 * WEEKS, 1 * DAYS, "PAS_LEASE_PERIOD");
 }
 
 impl slots::Config for Runtime {
@@ -1452,7 +1441,7 @@ impl slots::Config for Runtime {
 	type Currency = Balances;
 	type Registrar = Registrar;
 	type LeasePeriod = LeasePeriod;
-	type LeaseOffset = LeaseOffset;
+	type LeaseOffset = ();
 	type ForceOrigin = EitherOf<EnsureRoot<Self::AccountId>, LeaseAdmin>;
 	type WeightInfo = weights::polkadot_runtime_common_slots::WeightInfo<Runtime>;
 }
@@ -1550,8 +1539,8 @@ impl pallet_staking_async_ah_client::Config for Runtime {
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type SessionInterface = Self;
 	type SendToAssetHub = StakingXcmToAssetHub;
-	// Polkadot RC currently has 600 validators. 500 minimum for now.
-	type MinimumValidatorSetSize = ConstU32<500>;
+	// Paseo RC currently has 150 validators. 100 minimum for now.
+	type MinimumValidatorSetSize = ConstU32<100>;
 	type UnixTime = Timestamp;
 	type PointsPerBlock = ConstU32<20>;
 	type MaxOffenceBatchSize = ConstU32<32>;
@@ -1567,7 +1556,7 @@ impl frame_support::traits::EnsureOrigin<RuntimeOrigin> for EnsureAssetHub {
 			o.clone(),
 		) {
 			Ok(parachains_origin::Origin::Parachain(id))
-				if id == polkadot_runtime_constants::system_parachain::ASSET_HUB_ID.into() =>
+				if id == paseo_runtime_constants::system_parachain::ASSET_HUB_ID.into() =>
 				Ok(()),
 			_ => Err(o),
 		}
@@ -1714,14 +1703,22 @@ impl OnSwap for SwapLeases {
 	}
 }
 
-// Derived from `polkadot_asset_hub_runtime::RuntimeBlockWeights`.
+impl pallet_sudo::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type WeightInfo = weights::pallet_sudo::WeightInfo<Runtime>;
+}
+
+impl paras_sudo_wrapper::Config for Runtime {}
+
+// Derived from `paseo_asset_hub_runtime::RuntimeBlockWeights`.
 const AH_MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
 	frame_support::weights::constants::WEIGHT_REF_TIME_PER_SECOND.saturating_mul(2),
 	polkadot_primitives::MAX_POV_SIZE as u64,
 );
 
 parameter_types! {
-	// Exvivalent to `polkadot_asset_hub_runtime::MessageQueueServiceWeight`.
+	// Exvivalent to `paseo_asset_hub_runtime::MessageQueueServiceWeight`.
 	pub AhMqServiceWeight: Weight = Perbill::from_percent(50) * AH_MAXIMUM_BLOCK_WEIGHT;
 	// 80 percent of the `AhMqServiceWeight` to leave some space for XCM message base processing.
 	pub AhMigratorMaxWeight: Weight = Perbill::from_percent(80) * AhMqServiceWeight::get();
@@ -1879,11 +1876,15 @@ construct_runtime! {
 		Mmr: pallet_mmr = 201,
 		BeefyMmrLeaf: pallet_beefy_mmr = 202,
 
+		// Sudo.
+		ParaSudoWrapper: paras_sudo_wrapper = 249,
+		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 251,
+
 		// Relay Chain Migrator
 		// The pallet must be located below `MessageQueue` to get the XCM message acknowledgements
 		// from Asset Hub before we get the `RcMigrator` `on_initialize` executed.
-		RcMigrator: pallet_rc_migrator = 255,
-	}
+		RcMigrator: pallet_rc_migrator = 255
+  }
 }
 
 impl<LocalCall> frame_system::offchain::CreateBare<LocalCall> for Runtime
@@ -2010,6 +2011,8 @@ mod benches {
 		[pallet_xcm, PalletXcmExtrinsicsBenchmark::<Runtime>]
 		[pallet_xcm_benchmarks::fungible, pallet_xcm_benchmarks::fungible::Pallet::<Runtime>]
 		[pallet_xcm_benchmarks::generic, pallet_xcm_benchmarks::generic::Pallet::<Runtime>]
+	// Sudo
+	[pallet_sudo, Sudo]
 	);
 
 	pub use frame_benchmarking::{BenchmarkBatch, BenchmarkError, BenchmarkList};
@@ -2026,7 +2029,7 @@ mod benches {
 	pub use pallet_offences_benchmarking::Pallet as OffencesBench;
 	pub use pallet_session_benchmarking::Pallet as SessionBench;
 	pub use pallet_xcm::benchmarking::Pallet as PalletXcmExtrinsicsBenchmark;
-	use polkadot_runtime_constants::system_parachain::AssetHubParaId;
+	use paseo_runtime_constants::system_parachain::AssetHubParaId;
 	use xcm_builder::MintLocation;
 	use xcm_config::{
 		AssetHubLocation, SovereignAccountOf, TeleportTracking, TokenLocation, XcmConfig,
@@ -2115,7 +2118,7 @@ mod benches {
 			Ok(AssetHubLocation::get())
 		}
 		fn worst_case_holding(_depositable_count: u32) -> Assets {
-			// Polkadot only knows about DOT
+			// Paseo only knows about PAS
 			vec![Asset {
 				id: AssetId(TokenLocation::get()),
 				fun: Fungible(1_000_000_000_000 * UNITS),
@@ -2159,12 +2162,12 @@ mod benches {
 		}
 
 		fn worst_case_asset_exchange() -> Result<(Assets, Assets), BenchmarkError> {
-			// Polkadot doesn't support asset exchanges
+			// Paseo doesn't support asset exchanges
 			Err(BenchmarkError::Skip)
 		}
 
 		fn universal_alias() -> Result<(Location, Junction), BenchmarkError> {
-			// The XCM executor of Polkadot doesn't have a configured `UniversalAliases`
+			// The XCM executor of Paseo doesn't have a configured `UniversalAliases`
 			Err(BenchmarkError::Skip)
 		}
 
@@ -2194,13 +2197,13 @@ mod benches {
 		}
 
 		fn unlockable_asset() -> Result<(Location, Location, Asset), BenchmarkError> {
-			// Polkadot doesn't support asset locking
+			// Paseo doesn't support asset locking
 			Err(BenchmarkError::Skip)
 		}
 
 		fn export_message_origin_and_destination(
 		) -> Result<(Location, NetworkId, InteriorLocation), BenchmarkError> {
-			// Polkadot doesn't support exporting messages
+			// Paseo doesn't support exporting messages
 			Err(BenchmarkError::Skip)
 		}
 
@@ -3124,7 +3127,7 @@ mod test {
 	fn check_treasury_pallet_id() {
 		assert_eq!(
 			<Treasury as frame_support::traits::PalletInfoAccess>::index() as u8,
-			polkadot_runtime_constants::TREASURY_PALLET_ID
+			paseo_runtime_constants::TREASURY_PALLET_ID
 		);
 	}
 
@@ -3187,12 +3190,12 @@ mod multiplier_tests {
 		);
 
 		// Values are within 0.1%
-		assert_relative_eq!(to_stakers as f64, (279_477 * UNITS) as f64, max_relative = 0.001);
-		assert_relative_eq!(to_treasury as f64, (49_320 * UNITS) as f64, max_relative = 0.001);
-		// Total per day is ~328,797 DOT
+		assert_relative_eq!(to_stakers as f64, (27_693 * UNITS) as f64, max_relative = 0.001);
+		assert_relative_eq!(to_treasury as f64, (4_887 * UNITS) as f64, max_relative = 0.001);
+		// Total per day is ~32,580 PAS
 		assert_relative_eq!(
 			(to_stakers as f64 + to_treasury as f64),
-			(328_797 * UNITS) as f64,
+			(32_580 * UNITS) as f64,
 			max_relative = 0.001
 		);
 	}
@@ -3206,16 +3209,8 @@ mod multiplier_tests {
 			2 * MILLISECONDS_PER_DAY,
 		);
 
-		assert_relative_eq!(
-			to_stakers as f64,
-			(279_477 * UNITS) as f64 * 2.0,
-			max_relative = 0.001
-		);
-		assert_relative_eq!(
-			to_treasury as f64,
-			(49_320 * UNITS) as f64 * 2.0,
-			max_relative = 0.001
-		);
+		assert_relative_eq!(to_stakers as f64, (27_693 * UNITS) as f64 * 2.0, max_relative = 0.001);
+		assert_relative_eq!(to_treasury as f64, (4_887 * UNITS) as f64 * 2.0, max_relative = 0.001);
 	}
 
 	#[test]
@@ -3226,8 +3221,8 @@ mod multiplier_tests {
 			(36525 * MILLISECONDS_PER_DAY) / 100, // 1 year
 		);
 
-		// Our yearly emissions is about 120M DOT:
-		let yearly_emission = 120_093_259 * UNITS;
+		// Our yearly emissions is about 12M PAS:
+		let yearly_emission = 11_909_325 * UNITS;
 		assert_relative_eq!(
 			to_stakers as f64 + to_treasury as f64,
 			yearly_emission as f64,
@@ -3250,13 +3245,13 @@ mod multiplier_tests {
 			456,                                 // ignored
 			(36525 * MILLISECONDS_PER_DAY) / 10, // 10 years
 		);
-		let initial_ti: i128 = 15_011_657_390_566_252_333;
+		let initial_ti: i128 = 1_487_502_468_008_283_162;
 		let projected_total_issuance = (to_stakers as i128 + to_treasury as i128) + initial_ti;
 
-		// In 2034, there will be about 2.7 billion DOT in existence.
+		// In 2034, there will be about 267 million PAS in existence.
 		assert_relative_eq!(
 			projected_total_issuance as f64,
-			(2_700_000_000 * UNITS) as f64,
+			(267_750_000 * UNITS) as f64,
 			max_relative = 0.001
 		);
 	}
@@ -3270,7 +3265,7 @@ mod multiplier_tests {
 			(36525 * MILLISECONDS_PER_DAY) / 100, // 1 year
 		);
 		let yearly_emission = to_stakers + to_treasury;
-		let mut ti: i128 = 15_011_657_390_566_252_333;
+		let mut ti: i128 = 1_487_502_468_008_283_162;
 
 		for y in 0..10 {
 			let new_ti = ti + yearly_emission as i128;
@@ -3394,7 +3389,7 @@ mod remote_tests {
 
 	async fn remote_ext_test_setup() -> RemoteExternalities<Block> {
 		let transport: Transport =
-			var("WS").unwrap_or("wss://polkadot-rpc.dwellir.com".to_string()).into();
+			var("WS").unwrap_or("wss://paseo-rpc.dwellir.com".to_string()).into();
 		let maybe_state_snapshot: Option<SnapshotConfig> = var("SNAP").map(|s| s.into()).ok();
 		Builder::<Block>::default()
 			.mode(if let Some(state_snapshot) = maybe_state_snapshot {
@@ -3510,7 +3505,7 @@ mod remote_tests {
 		use hex_literal::hex;
 		sp_tracing::try_init_simple();
 		let transport: Transport =
-			var("WS").unwrap_or("wss://rpc.dotters.network/polkadot".to_string()).into();
+			var("WS").unwrap_or("wss://rpc.dotters.network/paseo".to_string()).into();
 		let mut ext = Builder::<Block>::default()
 			.mode(Mode::Online(OnlineConfig {
 				transport,
@@ -3528,6 +3523,9 @@ mod remote_tests {
 						.to_vec(),
 					// timestamp now
 					hex!("f0c365c3cf59d671eb72da0e7a4113c49f1f0515f462cdcf84e0f1d6045dfcbb")
+						.to_vec(),
+					// para-ids
+					hex!("cd710b30bd2eab0352ddcc26417aa1940b76934f4cc08dee01012d059e1b83ee")
 						.to_vec(),
 				],
 				..Default::default()

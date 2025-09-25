@@ -1,20 +1,20 @@
 // Copyright (C) Parity Technologies (UK) Ltd.
-// This file is part of Polkadot.
+// This file is part of Paseo.
 
-// Polkadot is free software: you can redistribute it and/or modify
+// Paseo is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 
-// Polkadot is distributed in the hope that it will be useful,
+// Paseo is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
 // You should have received a copy of the GNU General Public License
-// along with Polkadot. If not, see <http://www.gnu.org/licenses/>.
+// along with Paseo. If not, see <http://www.gnu.org/licenses/>.
 
-//! New governance configurations for the Polkadot runtime.
+//! New governance configurations for the Paseo runtime.
 
 use super::*;
 use crate::xcm_config::{CollectivesLocation, FellowsBodyId};
@@ -28,10 +28,6 @@ pub use origins::{
 };
 mod tracks;
 pub use tracks::TracksInfo;
-
-parameter_types! {
-	pub const VoteLockingPeriod: BlockNumber = prod_or_fast!(7 * DAYS, 1);
-}
 
 impl pallet_conviction_voting::Config for Runtime {
 	type WeightInfo = weights::pallet_conviction_voting::WeightInfo<Self>;
@@ -55,9 +51,16 @@ parameter_types! {
 parameter_types! {
 	pub const MaxBalance: Balance = Balance::MAX;
 }
-pub type TreasurySpender = EitherOf<EnsureRootWithSuccess<AccountId, MaxBalance>, Spender>;
+// We just allow `Root` to spend money from the treasury, this should prevent bad actors from
+// stealing "money".
+pub type TreasurySpender = EnsureRootWithSuccess<AccountId, MaxBalance>;
 
 impl origins::pallet_custom_origins::Config for Runtime {}
+
+parameter_types! {
+	// Fellows pluralistic body.
+	pub const FellowsBodyId: BodyId = BodyId::Technical;
+}
 
 impl pallet_whitelist::Config for Runtime {
 	type WeightInfo = weights::pallet_whitelist::WeightInfo<Self>;
