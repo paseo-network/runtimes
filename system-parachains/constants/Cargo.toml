@@ -11,10 +11,11 @@ license.workspace = true
 smallvec = { workspace = true }
 
 frame-support = { workspace = true }
+kusama-runtime-constants = { workspace = true }
 parachains-common = { workspace = true }
 polkadot-core-primitives = { workspace = true }
 polkadot-primitives = { workspace = true }
-paseo-runtime-constants = { path = "../../relay/paseo/constants", default-features = false }
+polkadot-runtime-constants = { workspace = true }
 sp-core = { workspace = true }
 sp-runtime = { workspace = true }
 xcm = { workspace = true }
@@ -23,19 +24,21 @@ xcm = { workspace = true }
 default = ["std"]
 std = [
 	"frame-support/std",
+	"kusama-runtime-constants/std",
 	"parachains-common/std",
-	"paseo-runtime-constants/std",
 	"polkadot-core-primitives/std",
 	"polkadot-primitives/std",
+	"polkadot-runtime-constants/std",
 	"sp-core/std",
 	"sp-runtime/std",
 	"xcm/std",
 ]
 runtime-benchmarks = [
 	"frame-support/runtime-benchmarks",
+	"kusama-runtime-constants/runtime-benchmarks",
 	"parachains-common/runtime-benchmarks",
-	"paseo-runtime-constants/runtime-benchmarks",
 	"polkadot-primitives/runtime-benchmarks",
+	"polkadot-runtime-constants/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"xcm/runtime-benchmarks",
 ]

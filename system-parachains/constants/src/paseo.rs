@@ -13,30 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/// Universally recognized accounts.
-pub mod account {
-	use frame_support::PalletId;
-
-	/// Polkadot treasury pallet id, used to convert into AccountId
-	pub const POLKADOT_TREASURY_PALLET_ID: PalletId = PalletId(*b"py/trsry");
-	/// Alliance pallet ID.
-	/// Used as a temporary place to deposit a slashed imbalance before teleporting to the Treasury.
-	pub const ALLIANCE_PALLET_ID: PalletId = PalletId(*b"py/allia");
-	/// Referenda pallet ID.
-	/// Used as a temporary place to deposit a slashed imbalance before teleporting to the Treasury.
-	pub const REFERENDA_PALLET_ID: PalletId = PalletId(*b"py/refer");
-	/// Ambassador Referenda pallet ID.
-	/// Used as a temporary place to deposit a slashed imbalance before teleporting to the Treasury.
-	pub const AMBASSADOR_REFERENDA_PALLET_ID: PalletId = PalletId(*b"py/amref");
-	/// Identity pallet ID.
-	/// Used as a temporary place to deposit a slashed imbalance before teleporting to the Treasury.
-	pub const IDENTITY_PALLET_ID: PalletId = PalletId(*b"py/ident");
-	/// Fellowship treasury pallet ID
-	pub const FELLOWSHIP_TREASURY_PALLET_ID: PalletId = PalletId(*b"py/feltr");
-	/// Ambassador treasury pallet ID
-	pub const AMBASSADOR_TREASURY_PALLET_ID: PalletId = PalletId(*b"py/ambtr");
-}
-
 /// Consensus-related.
 pub mod consensus {
 	/// Maximum number of blocks simultaneously accepted by the Runtime, not yet included
@@ -59,30 +35,30 @@ pub mod consensus {
 	}
 }
 
-/// Constants relating to DOT.
+/// Constants relating to KSM.
 pub mod currency {
 	use polkadot_core_primitives::Balance;
 
 	/// The default existential deposit for system chains. 1/10th of the Relay Chain's existential
 	/// deposit. Individual system parachains may modify this in special cases.
 	pub const SYSTEM_PARA_EXISTENTIAL_DEPOSIT: Balance =
-		paseo_runtime_constants::currency::EXISTENTIAL_DEPOSIT / 10;
+		kusama_runtime_constants::currency::EXISTENTIAL_DEPOSIT / 10;
 
-	/// One "DOT" that a UI would show a user.
-	pub const UNITS: Balance = 10_000_000_000;
-	pub const DOLLARS: Balance = UNITS; // 10_000_000_000
-	pub const GRAND: Balance = DOLLARS * 1_000; // 10_000_000_000_000
-	pub const CENTS: Balance = DOLLARS / 100; // 100_000_000
-	pub const MILLICENTS: Balance = CENTS / 1_000; // 100_000
+	/// One "KSM" that a UI would show a user.
+	pub const UNITS: Balance = 1_000_000_000_000;
+	pub const QUID: Balance = UNITS / 30;
+	pub const CENTS: Balance = QUID / 100;
+	pub const GRAND: Balance = QUID * 1_000;
+	pub const MILLICENTS: Balance = CENTS / 1_000;
 
 	/// Deposit rate for stored data. 1/100th of the Relay Chain's deposit rate. `items` is the
 	/// number of keys in storage and `bytes` is the size of the value.
 	pub const fn system_para_deposit(items: u32, bytes: u32) -> Balance {
-		paseo_runtime_constants::currency::deposit(items, bytes) / 100
+		kusama_runtime_constants::currency::deposit(items, bytes) / 100
 	}
 }
 
-/// Constants related to Polkadot fee payment.
+/// Constants related to Kusama fee payment.
 pub mod fee {
 	use frame_support::{
 		pallet_prelude::Weight,
@@ -98,10 +74,10 @@ pub mod fee {
 	/// The block saturation level. Fees will be updates based on this value.
 	pub const TARGET_BLOCK_FULLNESS: Perbill = Perbill::from_percent(25);
 
-	/// Cost of every transaction byte at Polkadot system parachains.
+	/// Cost of every transaction byte at Kusama system parachains.
 	///
-	/// It is the Relay Chain (Paseo) `TransactionByteFee` / 20.
-	pub const TRANSACTION_BYTE_FEE: Balance = super::currency::MILLICENTS / 2;
+	/// It is the Relay Chain (Kusama) `TransactionByteFee` / 10.
+	pub const TRANSACTION_BYTE_FEE: Balance = super::currency::MILLICENTS;
 
 	/// Handles converting a weight scalar to a fee value, based on the scale and granularity of the
 	/// node's balance type.
@@ -131,10 +107,10 @@ pub mod fee {
 	impl WeightToFeePolynomial for RefTimeToFee {
 		type Balance = Balance;
 		fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
-			// In Polkadot, extrinsic base weight (smallest non-zero weight) is mapped to 1/10 CENT:
-			// The standard system parachain configuration is 1/20 of that, as in 1/200 CENT.
+			// In Kusama, extrinsic base weight (smallest non-zero weight) is mapped to 1/10 CENT:
+			// The standard system parachain configuration is 1/10 of that, as in 1/100 CENT.
 			let p = super::currency::CENTS;
-			let q = 200 * Balance::from(ExtrinsicBaseWeight::get().ref_time());
+			let q = 100 * Balance::from(ExtrinsicBaseWeight::get().ref_time());
 
 			smallvec![WeightToFeeCoefficient {
 				degree: 1,
@@ -150,9 +126,9 @@ pub mod fee {
 	impl WeightToFeePolynomial for ProofSizeToFee {
 		type Balance = Balance;
 		fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
-			// Map 20kb proof to 1 CENT.
+			// Map 10kb proof to 1 CENT.
 			let p = super::currency::CENTS;
-			let q = 20_000;
+			let q = 10_000;
 
 			smallvec![WeightToFeeCoefficient {
 				degree: 1,
@@ -162,22 +138,23 @@ pub mod fee {
 			}]
 		}
 	}
+
+	pub fn calculate_weight_to_fee(weight: &Weight) -> Balance {
+		<WeightToFee as frame_support::weights::WeightToFee>::weight_to_fee(weight)
+	}
 }
 
 pub mod locations {
 	use frame_support::{parameter_types, traits::Contains};
-	use xcm::latest::prelude::{Junction::*, Location, NetworkId};
+	pub use kusama_runtime_constants::system_parachain::{AssetHubParaId, PeopleParaId};
+	use xcm::latest::prelude::{Junction::*, Location};
 
 	parameter_types! {
 		pub RelayChainLocation: Location = Location::parent();
 		pub AssetHubLocation: Location =
-			Location::new(1, Parachain(paseo_runtime_constants::system_parachain::ASSET_HUB_ID));
+			Location::new(1, Parachain(kusama_runtime_constants::system_parachain::ASSET_HUB_ID));
 		pub PeopleLocation: Location =
-			Location::new(1, Parachain(paseo_runtime_constants::system_parachain::PEOPLE_ID));
-
-		pub GovernanceLocation: Location = Location::new(1, Parachain(paseo_runtime_constants::system_parachain::ASSET_HUB_ID));
-
-		pub EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 11155111 };
+			Location::new(1, Parachain(kusama_runtime_constants::system_parachain::PEOPLE_ID));
 	}
 
 	/// `Contains` implementation for the asset hub location pluralities.
@@ -189,7 +166,7 @@ pub mod locations {
 				(
 					1,
 					[
-						Parachain(paseo_runtime_constants::system_parachain::ASSET_HUB_ID),
+						Parachain(kusama_runtime_constants::system_parachain::ASSET_HUB_ID),
 						Plurality { .. }
 					]
 				)
