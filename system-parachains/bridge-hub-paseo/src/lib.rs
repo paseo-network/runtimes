@@ -61,8 +61,8 @@ use frame_support::{
 	genesis_builder_helper::{build_state, get_preset},
 	parameter_types,
 	traits::{
-		tokens::imbalance::ResolveTo, ConstBool, ConstU32, ConstU64, ConstU8, EitherOfDiverse,
-		Everything, TransformOrigin,
+		tokens::imbalance::ResolveTo, ConstBool, ConstU32, ConstU64, ConstU8, EitherOf,
+		EitherOfDiverse, Everything, TransformOrigin,
 	},
 	weights::{ConstantMultiplier, Weight},
 	PalletId,
@@ -75,7 +75,8 @@ use pallet_xcm::{EnsureXcm, IsVoiceOfBody};
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
 use xcm_config::{
-	FellowshipLocation, GovernanceLocation, StakingPot, XcmOriginToTransactDispatchOrigin,
+	AssetHubLocation, FellowshipLocation, RelayChainLocation, StakingPot,
+	XcmOriginToTransactDispatchOrigin,
 };
 
 #[cfg(any(feature = "std", test))]
@@ -90,7 +91,7 @@ use parachains_common::{AccountId, Balance, BlockNumber, Hash, Header, Nonce, Si
 pub use system_parachains_constants::SLOT_DURATION;
 
 use system_parachains_constants::{
-	paseo::{consensus::*, currency::*, fee::WeightToFee},
+	polkadot::{consensus::*, currency::*, fee::WeightToFee},
 	AVERAGE_ON_INITIALIZE_RATIO, HOURS, MAXIMUM_BLOCK_WEIGHT, NORMAL_DISPATCH_RATIO,
 };
 
@@ -124,7 +125,7 @@ pub type TxExtension = (
 	frame_system::CheckWeight<Runtime>,
 	pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
 	BridgeRejectObsoleteHeadersAndMessages,
-	bridge_to_kusama_config::OnBridgeHubPaseoRefundBridgeHubKusamaMessages,
+	bridge_to_kusama_config::OnBridgeHubPolkadotRefundBridgeHubKusamaMessages,
 	frame_metadata_hash_extension::CheckMetadataHash<Runtime>,
 );
 
@@ -206,8 +207,8 @@ impl_opaque_keys! {
 
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: Cow::Borrowed("bridge-hub-paseo"),
-	impl_name: Cow::Borrowed("bridge-hub-paseo"),
+	spec_name: Cow::Borrowed("bridge-hub-polkadot"),
+	impl_name: Cow::Borrowed("bridge-hub-polkadot"),
 	authoring_version: 1,
 	spec_version: 1_007_001,
 	impl_version: 0,
@@ -342,7 +343,7 @@ impl pallet_balances::Config for Runtime {
 
 parameter_types! {
 	/// Relay Chain `TransactionByteFee` / 10
-	pub const TransactionByteFee: Balance = system_parachains_constants::paseo::fee::TRANSACTION_BYTE_FEE;
+	pub const TransactionByteFee: Balance = system_parachains_constants::polkadot::fee::TRANSACTION_BYTE_FEE;
 }
 
 impl pallet_transaction_payment::Config for Runtime {
@@ -520,7 +521,10 @@ parameter_types! {
 /// We allow root, the StakingAdmin to execute privileged collator selection operations.
 pub type CollatorSelectionUpdateOrigin = EitherOfDiverse<
 	EnsureRoot<AccountId>,
-	EnsureXcm<IsVoiceOfBody<GovernanceLocation, StakingAdminBodyId>>,
+	EitherOf<
+		EnsureXcm<IsVoiceOfBody<RelayChainLocation, StakingAdminBodyId>>,
+		EnsureXcm<IsVoiceOfBody<AssetHubLocation, StakingAdminBodyId>>,
+	>,
 >;
 
 impl pallet_collator_selection::Config for Runtime {
@@ -562,12 +566,6 @@ impl pallet_utility::Config for Runtime {
 	type RuntimeCall = RuntimeCall;
 	type PalletsOrigin = OriginCaller;
 	type WeightInfo = weights::pallet_utility::WeightInfo<Runtime>;
-}
-
-impl pallet_sudo::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type RuntimeCall = RuntimeCall;
-	type WeightInfo = pallet_sudo::weights::SubstrateWeight<Runtime>;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -624,9 +622,6 @@ construct_runtime!(
 		// Message Queue. Importantly, it is registered after Snowbridge pallets
 		// so that messages are processed after the `on_initialize` hooks of bridging pallets.
 		MessageQueue: pallet_message_queue = 175,
-
-		// Sudo.
-		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 255,
 	}
 );
 
@@ -637,8 +632,8 @@ use pallet_bridge_messages::LaneIdOf;
 mod benches {
 	use super::*;
 	use alloc::boxed::Box;
-	use paseo_runtime_constants::system_parachain::AssetHubParaId;
-	use system_parachains_constants::paseo::locations::AssetHubLocation;
+	use polkadot_runtime_constants::system_parachain::AssetHubParaId;
+	use system_parachains_constants::polkadot::locations::AssetHubLocation;
 
 	frame_benchmarking::define_benchmarks!(
 		[frame_system, SystemBench::<Runtime>]
@@ -660,7 +655,7 @@ mod benches {
 		[pallet_xcm_benchmarks::generic, XcmGeneric]
 		// Shared bridge pallets
 		[pallet_bridge_relayers, BridgeRelayersBench::<Runtime>]
-		// Paseo bridge pallets.
+		// Polkadot bridge pallets.
 		[pallet_bridge_grandpa, KusamaFinality]
 		[pallet_bridge_parachains, KusamaParachains]
 		[pallet_bridge_messages, KusamaMessages]
@@ -699,7 +694,7 @@ mod benches {
 	}
 
 	impl pallet_xcm::benchmarking::Config for Runtime {
-		type DeliveryHelper = paseo_runtime_common::xcm_sender::ToParachainDeliveryHelper<
+		type DeliveryHelper = polkadot_runtime_common::xcm_sender::ToParachainDeliveryHelper<
 			xcm_config::XcmConfig,
 			ExistentialDepositAsset,
 			PriceForSiblingParachainDelivery,
@@ -743,7 +738,7 @@ mod benches {
 	impl pallet_xcm_benchmarks::Config for Runtime {
 		type XcmConfig = xcm_config::XcmConfig;
 		type AccountIdConverter = xcm_config::LocationToAccountId;
-		type DeliveryHelper = paseo_runtime_common::xcm_sender::ToParachainDeliveryHelper<
+		type DeliveryHelper = polkadot_runtime_common::xcm_sender::ToParachainDeliveryHelper<
 			xcm_config::XcmConfig,
 			ExistentialDepositAsset,
 			PriceForSiblingParachainDelivery,
@@ -902,7 +897,7 @@ mod benches {
 				bridge_common_config::BridgeRelayersInstance,
 			>,
 		> {
-			let bridge_common_config::BridgeReward::PaseoKusamaBridge(reward_kind) = reward_kind
+			let bridge_common_config::BridgeReward::PolkadotKusamaBridge(reward_kind) = reward_kind
 			else {
 				panic!(
 					"Unexpected reward_kind: {reward_kind:?} - not compatible with `bench_reward`!"
@@ -930,22 +925,22 @@ mod benches {
 	use pallet_bridge_parachains::benchmarking::Config as BridgeParachainsConfig;
 
 	impl BridgeParachainsConfig<bridge_to_kusama_config::BridgeParachainKusamaInstance> for Runtime {
-		fn parachains() -> Vec<bp_paseo_core::parachains::ParaId> {
+		fn parachains() -> Vec<bp_polkadot_core::parachains::ParaId> {
 			use bp_runtime::Parachain;
-			vec![bp_paseo_core::parachains::ParaId(
+			vec![bp_polkadot_core::parachains::ParaId(
 				bp_bridge_hub_kusama::BridgeHubKusama::PARACHAIN_ID,
 			)]
 		}
 
 		fn prepare_parachain_heads_proof(
-			parachains: &[bp_paseo_core::parachains::ParaId],
+			parachains: &[bp_polkadot_core::parachains::ParaId],
 			parachain_head_size: u32,
 			proof_params: bp_runtime::UnverifiedStorageProofParams,
 		) -> (
 			bp_parachains::RelayBlockNumber,
 			bp_parachains::RelayBlockHash,
-			bp_paseo_core::parachains::ParaHeadsProof,
-			Vec<(bp_paseo_core::parachains::ParaId, bp_paseo_core::parachains::ParaHash)>,
+			bp_polkadot_core::parachains::ParaHeadsProof,
+			Vec<(bp_polkadot_core::parachains::ParaId, bp_polkadot_core::parachains::ParaHash)>,
 		) {
 			prepare_parachain_heads_proof::<
 				Runtime,
@@ -978,7 +973,7 @@ mod benches {
 				bridge_common_config::BridgeRelayersInstance,
 			>::relayer_reward(
 				relayer,
-				bridge_common_config::BridgeReward::PaseoKusamaBridge(
+				bridge_common_config::BridgeReward::PolkadotKusamaBridge(
 					bp_relayers::RewardsAccountParams::new(
 						bench_lane_id,
 						bridged_chain_id,
@@ -1454,7 +1449,7 @@ mod tests {
 
 	#[test]
 	fn test_transasction_byte_fee_is_one_twentieth_of_relay() {
-		let relay_tbf = paseo_runtime_constants::fee::TRANSACTION_BYTE_FEE;
+		let relay_tbf = polkadot_runtime_constants::fee::TRANSACTION_BYTE_FEE;
 		let parachain_tbf = TransactionByteFee::get();
 		assert_eq!(relay_tbf / 20, parachain_tbf);
 	}

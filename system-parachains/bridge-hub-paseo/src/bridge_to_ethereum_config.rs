@@ -21,17 +21,17 @@ use crate::{
 	EthereumOutboundQueue, EthereumOutboundQueueV2, EthereumSystem, EthereumSystemV2, MessageQueue,
 	Runtime, RuntimeEvent, TransactionByteFee,
 };
-use bp_asset_hub_paseo::SystemFrontendPalletInstance;
-use bp_bridge_hub_paseo::snowbridge::{
+use bp_asset_hub_polkadot::SystemFrontendPalletInstance;
+use bp_bridge_hub_polkadot::snowbridge::{
 	CreateAssetCall, InboundQueuePalletInstance, InboundQueueV2PalletInstance, Parameters,
 };
-pub use bp_bridge_hub_paseo::snowbridge::{EthereumLocation, EthereumNetwork};
+pub use bp_bridge_hub_polkadot::snowbridge::{EthereumLocation, EthereumNetwork};
 use frame_support::{parameter_types, traits::Contains, weights::ConstantMultiplier};
 use frame_system::EnsureRootWithSuccess;
 use hex_literal::hex;
 use pallet_xcm::EnsureXcm;
 use parachains_common::{AccountId, Balance};
-use paseo_runtime_constants::system_parachain::AssetHubParaId;
+use polkadot_runtime_constants::system_parachain::AssetHubParaId;
 use snowbridge_beacon_primitives::{Fork, ForkVersions};
 use snowbridge_core::AllowSiblingsOnly;
 use snowbridge_inbound_queue_primitives::v1::MessageToXcm;
@@ -41,7 +41,7 @@ use snowbridge_outbound_queue_primitives::{
 };
 use sp_core::H160;
 use sp_runtime::traits::{ConstU32, ConstU8, Keccak256};
-use system_parachains_constants::paseo::fee::WeightToFee;
+use system_parachains_constants::polkadot::fee::WeightToFee;
 use xcm::prelude::{GlobalConsensus, InteriorLocation, Location, PalletInstance, Parachain};
 use xcm_executor::XcmExecutor;
 
@@ -67,12 +67,12 @@ pub type SnowbridgeExporterV2 = EthereumBlobExporterV2<
 parameter_types! {
 	// The gateway address is set by governance.
 	pub storage EthereumGatewayAddress: H160 = H160::zero();
-	pub AssetHubFromEthereum: Location = Location::new(1, [GlobalConsensus(RelayNetwork::get()),Parachain(paseo_runtime_constants::system_parachain::ASSET_HUB_ID)]);
+	pub AssetHubFromEthereum: Location = Location::new(1, [GlobalConsensus(RelayNetwork::get()),Parachain(polkadot_runtime_constants::system_parachain::ASSET_HUB_ID)]);
 	pub EthereumUniversalLocation: InteriorLocation = [GlobalConsensus(EthereumNetwork::get())].into();
-	pub AssetHubUniversalLocation: InteriorLocation = [GlobalConsensus(RelayNetwork::get()), Parachain(paseo_runtime_constants::system_parachain::ASSET_HUB_ID)].into();
+	pub AssetHubUniversalLocation: InteriorLocation = [GlobalConsensus(RelayNetwork::get()), Parachain(polkadot_runtime_constants::system_parachain::ASSET_HUB_ID)].into();
 	pub InboundQueueV2Location: InteriorLocation = [PalletInstance(InboundQueueV2PalletInstance::get())].into();
 	pub const SnowbridgeReward: BridgeReward = BridgeReward::Snowbridge;
-	pub SnowbridgeFrontendLocation: Location = Location::new(1, [Parachain(paseo_runtime_constants::system_parachain::ASSET_HUB_ID), PalletInstance(SystemFrontendPalletInstance::get())]);
+	pub SnowbridgeFrontendLocation: Location = Location::new(1, [Parachain(polkadot_runtime_constants::system_parachain::ASSET_HUB_ID), PalletInstance(SystemFrontendPalletInstance::get())]);
 }
 
 impl snowbridge_pallet_inbound_queue::Config for Runtime {
@@ -89,7 +89,7 @@ impl snowbridge_pallet_inbound_queue::Config for Runtime {
 	type Helper = Runtime;
 	type MessageConverter = MessageToXcm<
 		CreateAssetCall,
-		bp_asset_hub_paseo::CreateForeignAssetDeposit,
+		bp_asset_hub_polkadot::CreateForeignAssetDeposit,
 		InboundQueuePalletInstance,
 		AccountId,
 		Balance,
@@ -120,7 +120,7 @@ impl snowbridge_pallet_inbound_queue_v2::Config for Runtime {
 	type XcmExecutor = XcmExecutor<xcm_config::XcmConfig>;
 	type MessageConverter = snowbridge_inbound_queue_primitives::v2::MessageToXcm<
 		CreateAssetCall,
-		bp_asset_hub_paseo::CreateForeignAssetDeposit,
+		bp_asset_hub_polkadot::CreateForeignAssetDeposit,
 		EthereumNetwork,
 		InboundQueueV2Location,
 		EthereumSystem,
@@ -184,28 +184,28 @@ impl snowbridge_pallet_outbound_queue_v2::Config for Runtime {
 parameter_types! {
 	pub const ChainForkVersions: ForkVersions = ForkVersions {
 		genesis: Fork {
-			version: hex!("90000069"),
+			version: hex!("00000000"),
 			epoch: 0,
 		},
 		altair: Fork {
-			version: hex!("90000070"),
-			epoch: 50,
+			version: hex!("01000000"),
+			epoch: 74240,
 		},
 		bellatrix: Fork {
-			version: hex!("90000071"),
-			epoch: 100,
+			version: hex!("02000000"),
+			epoch: 144896,
 		},
 		capella: Fork {
-			version: hex!("90000072"),
-			epoch: 56832,
+			version: hex!("03000000"),
+			epoch: 194048,
 		},
 		deneb: Fork {
-			version: hex!("90000073"),
-			epoch: 132608,
+			version: hex!("04000000"),
+			epoch: 269568,
 		},
 		electra: Fork {
-			version: hex!("90000074"),
-			epoch: 222464,
+			version: hex!("05000000"),
+			epoch: 364032,
 		},
 	};
 }
@@ -268,7 +268,7 @@ impl Contains<Location> for AllowFromEthereumFrontend {
 	fn contains(location: &Location) -> bool {
 		match location.unpack() {
 			(1, [Parachain(para_id), PalletInstance(index)]) =>
-				*para_id == paseo_runtime_constants::system_parachain::ASSET_HUB_ID &&
+				*para_id == polkadot_runtime_constants::system_parachain::ASSET_HUB_ID &&
 					*index == SystemFrontendPalletInstance::get(),
 			_ => false,
 		}
@@ -301,7 +301,7 @@ pub mod benchmark_helpers {
 	use xcm::latest::{Assets, Location, SendError, SendResult, SendXcm, Xcm, XcmHash};
 
 	parameter_types! {
-		// The fixture data for benchmark tests in the Paseo SDK relies on these gateway addresses,
+		// The fixture data for benchmark tests in the Polkadot SDK relies on these gateway addresses,
 		// which is validated in the pallets.
 		pub EthereumGatewayAddressV1: H160 = hex!["eda338e4dc46038493b885327842fd3e301cab39"].into();
 		pub EthereumGatewayAddressV2: H160 = hex!["b1185ede04202fe62d38f5db72f71e38ff3e8305"].into();

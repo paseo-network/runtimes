@@ -18,7 +18,7 @@ use bp_bridge_hub_kusama::Perbill;
 use bp_messages::LegacyLaneId;
 use bp_polkadot_core::Signature;
 use bp_relayers::{PayRewardFromAccount, RewardsAccountOwner, RewardsAccountParams};
-use bridge_hub_paseo_runtime::{
+use bridge_hub_polkadot_runtime::{
 	bridge_common_config::{
 		BridgeRelayersInstance, BridgeReward, BridgeRewardBeneficiaries,
 		RequiredStakeForStakeAndSlash,
@@ -26,11 +26,11 @@ use bridge_hub_paseo_runtime::{
 	bridge_to_kusama_config::{
 		BridgeGrandpaKusamaInstance, BridgeHubKusamaLocation, BridgeParachainKusamaInstance,
 		DeliveryRewardInBalance, KusamaGlobalConsensusNetwork,
-		OnBridgeHubPaseoRefundBridgeHubKusamaMessages, WithBridgeHubKusamaMessagesInstance,
+		OnBridgeHubPolkadotRefundBridgeHubKusamaMessages, WithBridgeHubKusamaMessagesInstance,
 		XcmOverBridgeHubKusamaInstance,
 	},
 	xcm_config::{
-		DotRelayLocation, GovernanceLocation, LocationToAccountId, RelayNetwork,
+		AssetHubLocation, DotRelayLocation, LocationToAccountId, RelayChainLocation, RelayNetwork,
 		RelayTreasuryLocation, RelayTreasuryPalletAccount, XcmConfig,
 	},
 	AllPalletsWithoutSystem, Balances, Block, BridgeRejectObsoleteHeadersAndMessages,
@@ -61,7 +61,7 @@ use sp_runtime::{
 	generic::{Era, SignedPayload},
 	AccountId32, Either,
 };
-use system_parachains_constants::paseo::{
+use system_parachains_constants::polkadot::{
 	consensus::RELAY_CHAIN_SLOT_DURATION_MILLIS, fee::WeightToFee,
 };
 use xcm::{latest::prelude::*, VersionedLocation};
@@ -93,6 +93,8 @@ type RuntimeTestsAdapter = from_parachain::WithRemoteParachainHelperAdapter<
 
 parameter_types! {
 	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
+	// Local OpenGov
+	pub Governance: GovernanceOrigin<RuntimeOrigin> = GovernanceOrigin::Origin(RuntimeOrigin::root());
 }
 
 fn construct_extrinsic(
@@ -112,7 +114,7 @@ fn construct_extrinsic(
 		frame_system::CheckWeight::<Runtime>::new(),
 		pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(0),
 		BridgeRejectObsoleteHeadersAndMessages,
-		(OnBridgeHubPaseoRefundBridgeHubKusamaMessages::default()),
+		(OnBridgeHubPolkadotRefundBridgeHubKusamaMessages::default()),
 		frame_metadata_hash_extension::CheckMetadataHash::<Runtime>::new(false),
 	);
 	let payload = SignedPayload::new(call.clone(), extra.clone()).unwrap();
@@ -171,7 +173,7 @@ bridge_hub_test_utils::test_cases::include_teleports_for_native_asset_works!(
 
 #[test]
 fn test_ed_is_one_tenth_of_relay() {
-	let relay_ed = paseo_runtime_constants::currency::EXISTENTIAL_DEPOSIT;
+	let relay_ed = polkadot_runtime_constants::currency::EXISTENTIAL_DEPOSIT;
 	let bridge_hub_ed = ExistentialDeposit::get();
 	assert_eq!(relay_ed / 10, bridge_hub_ed);
 }
@@ -184,7 +186,7 @@ fn initialize_bridge_by_governance_works() {
 	>(
 		collator_session_keys(),
 		bp_bridge_hub_polkadot::BRIDGE_HUB_POLKADOT_PARACHAIN_ID,
-		GovernanceOrigin::Location(GovernanceLocation::get()),
+		Governance::get(),
 	)
 }
 
@@ -197,7 +199,7 @@ fn change_bridge_grandpa_pallet_mode_by_governance_works() {
 	>(
 		collator_session_keys(),
 		bp_bridge_hub_polkadot::BRIDGE_HUB_POLKADOT_PARACHAIN_ID,
-		GovernanceOrigin::Location(GovernanceLocation::get()),
+		Governance::get(),
 	)
 }
 
@@ -210,7 +212,7 @@ fn change_bridge_parachains_pallet_mode_by_governance_works() {
 	>(
 		collator_session_keys(),
 		bp_bridge_hub_polkadot::BRIDGE_HUB_POLKADOT_PARACHAIN_ID,
-		GovernanceOrigin::Location(GovernanceLocation::get()),
+		Governance::get(),
 	)
 }
 
@@ -223,7 +225,7 @@ fn change_bridge_messages_pallet_mode_by_governance_works() {
 	>(
 		collator_session_keys(),
 		bp_bridge_hub_polkadot::BRIDGE_HUB_POLKADOT_PARACHAIN_ID,
-		GovernanceOrigin::Location(GovernanceLocation::get()),
+		Governance::get(),
 	)
 }
 
@@ -236,7 +238,7 @@ fn change_delivery_reward_by_governance_works() {
 	>(
 		collator_session_keys(),
 		bp_bridge_hub_polkadot::BRIDGE_HUB_POLKADOT_PARACHAIN_ID,
-		GovernanceOrigin::Location(GovernanceLocation::get()),
+		Governance::get(),
 		|| (DeliveryRewardInBalance::key().to_vec(), DeliveryRewardInBalance::get()),
 		|old_value| old_value.checked_mul(2).unwrap(),
 	)
@@ -251,7 +253,7 @@ fn change_required_stake_by_governance_works() {
 	>(
 		collator_session_keys(),
 		bp_bridge_hub_polkadot::BRIDGE_HUB_POLKADOT_PARACHAIN_ID,
-		GovernanceOrigin::Location(GovernanceLocation::get()),
+		Governance::get(),
 		|| (RequiredStakeForStakeAndSlash::key().to_vec(), RequiredStakeForStakeAndSlash::get()),
 		|old_value| old_value.checked_mul(2).unwrap(),
 	)
@@ -369,7 +371,7 @@ fn relayed_incoming_message_works() {
 
 #[test]
 fn free_relay_extrinsic_works() {
-	// from Paseo
+	// from Polkadot
 	from_parachain::free_relay_extrinsic_works::<RuntimeTestsAdapter>(
 		collator_session_keys(),
 		slot_durations(),
@@ -587,10 +589,10 @@ fn xcm_payment_api_works() {
 pub fn bridge_rewards_works() {
 	run_test::<Runtime, _>(
 		collator_session_keys(),
-		bp_bridge_hub_paseo::BRIDGE_HUB_POLKADOT_PARACHAIN_ID,
+		bp_bridge_hub_polkadot::BRIDGE_HUB_POLKADOT_PARACHAIN_ID,
 		vec![],
 		|| {
-			// reward in PAS
+			// reward in DOT
 			let reward1: u128 = 2_000_000_000;
 			// reward in ETH
 			let reward2: u128 = 3_000_000_000;
@@ -663,7 +665,7 @@ pub fn bridge_rewards_works() {
 			let claim_location = VersionedLocation::V5(Location::new(
 				1,
 				[
-					Parachain(bp_asset_hub_paseo::ASSET_HUB_PASEO_PARACHAIN_ID),
+					Parachain(bp_asset_hub_polkadot::ASSET_HUB_POLKADOT_PARACHAIN_ID),
 					Junction::AccountId32 { id: account2.clone().into(), network: None },
 				],
 			));
@@ -682,9 +684,9 @@ pub fn bridge_rewards_works() {
 
 #[test]
 fn governance_authorize_upgrade_works() {
-	use paseo_runtime_constants::system_parachain::{ASSET_HUB_ID, COLLECTIVES_ID};
+	use polkadot_runtime_constants::system_parachain::COLLECTIVES_ID;
 
-	// no - random para
+	// no - random non-system para
 	assert_err!(
 		parachains_runtimes_test_utils::test_cases::can_governance_authorize_upgrade::<
 			Runtime,
@@ -692,6 +694,15 @@ fn governance_authorize_upgrade_works() {
 		>(GovernanceOrigin::Location(Location::new(1, Parachain(12334)))),
 		Either::Right(InstructionError { index: 0, error: XcmError::Barrier })
 	);
+	// no - random system para
+	assert_err!(
+		parachains_runtimes_test_utils::test_cases::can_governance_authorize_upgrade::<
+			Runtime,
+			RuntimeOrigin,
+		>(GovernanceOrigin::Location(Location::new(1, Parachain(1765)))),
+		Either::Right(InstructionError { index: 0, error: XcmError::Barrier })
+	);
+
 	// no - Collectives
 	assert_err!(
 		parachains_runtimes_test_utils::test_cases::can_governance_authorize_upgrade::<
@@ -712,18 +723,15 @@ fn governance_authorize_upgrade_works() {
 		Either::Right(InstructionError { index: 2, error: XcmError::BadOrigin })
 	);
 
+	// ok - relaychain
+	assert_ok!(parachains_runtimes_test_utils::test_cases::can_governance_authorize_upgrade::<
+		Runtime,
+		RuntimeOrigin,
+	>(GovernanceOrigin::Location(RelayChainLocation::get())));
+
 	// ok - AssetHub
 	assert_ok!(parachains_runtimes_test_utils::test_cases::can_governance_authorize_upgrade::<
 		Runtime,
 		RuntimeOrigin,
-	>(GovernanceOrigin::Location(Location::new(1, Parachain(ASSET_HUB_ID)))));
-	assert_ok!(parachains_runtimes_test_utils::test_cases::can_governance_authorize_upgrade::<
-		Runtime,
-		RuntimeOrigin,
-	>(GovernanceOrigin::Location(GovernanceLocation::get())));
-	// ok - relay
-	assert_ok!(parachains_runtimes_test_utils::test_cases::can_governance_authorize_upgrade::<
-		Runtime,
-		RuntimeOrigin,
-	>(GovernanceOrigin::Location(Location::parent())));
+	>(GovernanceOrigin::Location(AssetHubLocation::get())));
 }

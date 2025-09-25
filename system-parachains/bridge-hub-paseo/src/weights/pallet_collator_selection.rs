@@ -28,10 +28,10 @@
 // benchmark
 // pallet
 // --extrinsic=*
-// --runtime=target/production/wbuild/bridge-hub-paseo-runtime/bridge_hub_paseo_runtime.wasm
+// --runtime=target/production/wbuild/bridge-hub-polkadot-runtime/bridge_hub_polkadot_runtime.wasm
 // --pallet=pallet_collator_selection
 // --header=/_work/fellowship-001/runtimes/runtimes/.github/scripts/cmd/file_header.txt
-// --output=./system-parachains/bridge-hubs/bridge-hub-paseo/src/weights
+// --output=./system-parachains/bridge-hubs/bridge-hub-polkadot/src/weights
 // --wasm-execution=compiled
 // --steps=50
 // --repeat=20

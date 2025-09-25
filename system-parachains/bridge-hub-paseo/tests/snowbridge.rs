@@ -16,12 +16,12 @@
 
 #![cfg(test)]
 
-use bp_bridge_hub_paseo::{snowbridge::EthereumLocation, BRIDGE_HUB_POLKADOT_PARACHAIN_ID};
+use bp_bridge_hub_polkadot::{snowbridge::EthereumLocation, BRIDGE_HUB_POLKADOT_PARACHAIN_ID};
 use bp_polkadot_core::Signature;
-use bridge_hub_paseo_runtime::{
+use bridge_hub_polkadot_runtime::{
 	bridge_to_ethereum_config::{EthereumGatewayAddress, EthereumNetwork},
-	bridge_to_kusama_config::OnBridgeHubPaseoRefundBridgeHubKusamaMessages,
-	xcm_config::{GovernanceLocation, UniversalLocation, XcmConfig},
+	bridge_to_kusama_config::OnBridgeHubPolkadotRefundBridgeHubKusamaMessages,
+	xcm_config::{UniversalLocation, XcmConfig},
 	AllPalletsWithoutSystem, BridgeRejectObsoleteHeadersAndMessages, EthereumBeaconClient,
 	Executive, MessageQueueServiceWeight, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin,
 	SessionKeys, TxExtension, UncheckedExtrinsic,
@@ -54,6 +54,8 @@ use xcm_executor::traits::{ConvertLocation, FeeManager, FeeReason};
 
 parameter_types! {
 	pub const DefaultBridgeHubEthereumBaseFee: Balance = 3_833_568_200_000;
+	// Local OpenGov
+	pub Governance: GovernanceOrigin<RuntimeOrigin> = GovernanceOrigin::Origin(RuntimeOrigin::root());
 }
 type RuntimeHelper<Runtime, AllPalletsWithoutSystem = ()> =
 	parachains_runtimes_test_utils::RuntimeHelper<Runtime, AllPalletsWithoutSystem>;
@@ -66,12 +68,10 @@ fn collator_session_keys() -> CollatorSessionKeys<Runtime> {
 	)
 }
 
-const CHAIN_ID: u64 = 11155111;
-
 #[test]
 pub fn transfer_token_to_ethereum_works() {
 	snowbridge_runtime_test_common::send_transfer_token_message_success::<Runtime, XcmConfig>(
-		CHAIN_ID,
+		1,
 		collator_session_keys(),
 		1013,
 		1000,
@@ -90,7 +90,7 @@ pub fn transfer_token_to_ethereum_works() {
 #[test]
 pub fn unpaid_transfer_token_to_ethereum_should_work() {
 	snowbridge_runtime_test_common::send_unpaid_transfer_token_message::<Runtime, XcmConfig>(
-		CHAIN_ID,
+		1,
 		collator_session_keys(),
 		1013,
 		1000,
@@ -102,7 +102,7 @@ pub fn unpaid_transfer_token_to_ethereum_should_work() {
 #[test]
 pub fn transfer_token_to_ethereum_insufficient_fund() {
 	snowbridge_runtime_test_common::send_transfer_token_message_failure::<Runtime, XcmConfig>(
-		CHAIN_ID,
+		1,
 		collator_session_keys(),
 		1013,
 		1000,
@@ -118,8 +118,8 @@ pub fn transfer_token_to_ethereum_insufficient_fund() {
 fn change_ethereum_gateway_by_governance_works() {
 	change_storage_constant_by_governance_works::<Runtime, EthereumGatewayAddress, H160>(
 		collator_session_keys(),
-		bp_bridge_hub_paseo::BRIDGE_HUB_POLKADOT_PARACHAIN_ID,
-		GovernanceOrigin::Location(GovernanceLocation::get()),
+		bp_bridge_hub_polkadot::BRIDGE_HUB_POLKADOT_PARACHAIN_ID,
+		Governance::get(),
 		|| (EthereumGatewayAddress::key().to_vec(), EthereumGatewayAddress::get()),
 		|_| [1; 20].into(),
 	)
@@ -151,8 +151,8 @@ fn test_xcm_fee_manager_from_components_bh_origin_in_waived_locations() {
 
 /// Fee is waived when origin is in waived location with Export message, but not to Ethereum.
 #[test]
-fn test_xcm_fee_manager_from_components_bh_origin_in_waived_locations_with_export_to_paseo_reason()
-{
+fn test_xcm_fee_manager_from_components_bh_origin_in_waived_locations_with_export_to_polkadot_reason(
+) {
 	assert!(TestXcmFeeManager::is_waived(
 		Some(&Location::new(1, [Parachain(2)])),
 		FeeReason::Export { network: Polkadot, destination: Here }
@@ -201,7 +201,7 @@ fn ethereum_client_consensus_extrinsics_work() {
 }
 
 #[test]
-fn ethereum_to_paseo_message_extrinsics_work() {
+fn ethereum_to_polkadot_message_extrinsics_work() {
 	snowbridge_runtime_test_common::ethereum_to_polkadot_message_extrinsics_work(
 		collator_session_keys(),
 		1013,
@@ -216,7 +216,7 @@ fn ethereum_outbound_queue_processes_messages_before_message_queue_works() {
 		XcmConfig,
 		AllPalletsWithoutSystem,
 	>(
-		CHAIN_ID,
+		1,
 		collator_session_keys(),
 		1013,
 		1000,
@@ -391,7 +391,7 @@ fn construct_extrinsic(
 		frame_system::CheckWeight::<Runtime>::new(),
 		pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(0),
 		BridgeRejectObsoleteHeadersAndMessages,
-		(OnBridgeHubPaseoRefundBridgeHubKusamaMessages::default()),
+		(OnBridgeHubPolkadotRefundBridgeHubKusamaMessages::default()),
 		frame_metadata_hash_extension::CheckMetadataHash::<Runtime>::new(false),
 	);
 	let payload = SignedPayload::new(call.clone(), extra.clone()).unwrap();
@@ -408,12 +408,12 @@ fn construct_and_apply_extrinsic(
 	r.unwrap()
 }
 
-// Check compatibility for `token_id` stored on ethereum. If this test starts to fail, the [TokenIdOf](https://github.com/paritytech/paseo-sdk/blob/20510c488198e8ee72b241fd2d0f6d1784982734/bridges/snowbridge/primitives/core/src/location.rs#L38-L43)
+// Check compatibility for `token_id` stored on ethereum. If this test starts to fail, the [TokenIdOf](https://github.com/paritytech/polkadot-sdk/blob/20510c488198e8ee72b241fd2d0f6d1784982734/bridges/snowbridge/primitives/core/src/location.rs#L38-L43)
 // converter should be updated to ensure the generated token ID remains consistent and unchanged.
 #[test]
 fn check_compatibility_for_token_id_stored_on_ethereum() {
 	pub struct RegisterTokenTestCase {
-		/// Input: Location of Paseo-native token relative to BH
+		/// Input: Location of Polkadot-native token relative to BH
 		pub native: Location,
 		/// Output: Reanchored, canonicalized location
 		pub reanchored: Location,
@@ -421,7 +421,7 @@ fn check_compatibility_for_token_id_stored_on_ethereum() {
 		pub foreign: TokenId,
 	}
 	let test_cases = vec![
-		// PAS
+		// DOT
 		RegisterTokenTestCase {
 			native: Location::parent(),
 			reanchored: Location::new(1, GlobalConsensus(Polkadot)),
@@ -462,7 +462,7 @@ fn check_compatibility_for_token_id_stored_on_ethereum() {
 			foreign: hex!("d5678e3bb6486c4fef73dc109cf23d5648654edd4b41fb32e1ce9f9a984a3d59")
 				.into(),
 		},
-		// Voucher PAS
+		// Voucher DOT
 		RegisterTokenTestCase {
 			native: Location::new(
 				1,

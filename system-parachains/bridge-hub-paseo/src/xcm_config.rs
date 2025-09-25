@@ -36,14 +36,10 @@ use parachains_common::xcm_config::{
 	AllSiblingSystemParachains, ConcreteAssetFromSystem, ParentRelayOrSiblingParachains,
 	RelayOrOtherSystemParachains,
 };
-use paseo_runtime_constants::system_parachain;
 use polkadot_parachain_primitives::primitives::Sibling;
+use polkadot_runtime_constants::system_parachain;
 use sp_runtime::traits::AccountIdConversion;
-pub use system_parachains_constants::paseo::locations::GovernanceLocation;
-use system_parachains_constants::{
-	paseo::locations::{AssetHubLocation, AssetHubPlurality, EthereumNetwork, RelayChainLocation},
-	TREASURY_PALLET_ID,
-};
+use system_parachains_constants::{polkadot::locations::EthereumNetwork, TREASURY_PALLET_ID};
 use xcm::latest::prelude::*;
 use xcm_builder::{
 	AccountId32Aliases, AliasChildLocation, AllowExplicitUnpaidExecutionFrom,
@@ -59,6 +55,10 @@ use xcm_builder::{
 };
 use xcm_executor::{traits::ConvertLocation, XcmExecutor};
 
+pub use system_parachains_constants::polkadot::locations::{
+	AssetHubLocation, AssetHubPlurality, RelayChainLocation,
+};
+
 parameter_types! {
 	pub const RootLocation: Location = Location::here();
 	pub const DotRelayLocation: Location = Location::parent();
@@ -69,7 +69,7 @@ parameter_types! {
 	pub const MaxInstructions: u32 = 100;
 	pub const MaxAssetsIntoHolding: u32 = 64;
 	pub FellowshipLocation: Location = Location::new(1, Parachain(system_parachain::COLLECTIVES_ID));
-	pub RelayTreasuryLocation: Location = (Parent, PalletInstance(paseo_runtime_constants::TREASURY_PALLET_ID)).into();
+	pub RelayTreasuryLocation: Location = (Parent, PalletInstance(polkadot_runtime_constants::TREASURY_PALLET_ID)).into();
 	pub TreasuryAccount: AccountId = TREASURY_PALLET_ID.into_account_truncating();
 	// Test [`crate::tests::treasury_pallet_account_not_none`] ensures that the result of location
 	// conversion is not `None`.
@@ -125,9 +125,9 @@ pub type XcmOriginToTransactDispatchOrigin = (
 	// Native converter for sibling Parachains; will convert to a `SiblingPara` origin when
 	// recognized.
 	SiblingParachainAsNative<cumulus_pallet_xcm::Origin, RuntimeOrigin>,
-	// Superuser converter for the AssetHub and Relaychain locations. This will allow it to issue a
-	// transaction from the Root origin.
-	LocationAsSuperuser<(Equals<AssetHubLocation>, Equals<RelayChainLocation>), RuntimeOrigin>,
+	// AssetHub or Relay can execute as root (based on: https://github.com/polkadot-fellows/runtimes/issues/651).
+	// This will allow them to issue a transaction from the Root origin.
+	LocationAsSuperuser<(Equals<RelayChainLocation>, Equals<AssetHubLocation>), RuntimeOrigin>,
 	// Native signed account converter; this just converts an `AccountId32` origin into a normal
 	// `RuntimeOrigin::Signed` origin of the same 32-byte value.
 	SignedAccountId32AsNative<RelayNetwork, RuntimeOrigin>,
@@ -184,9 +184,9 @@ pub type Barrier = TrailingSetTopicAsId<
 					AllowExplicitUnpaidExecutionFrom<(
 						ParentOrParentsPlurality,
 						FellowsPlurality,
-						AssetHubPlurality,
 						Equals<RelayTreasuryLocation>,
 						Equals<AssetHubLocation>,
+						AssetHubPlurality,
 						Equals<SnowbridgeFrontendLocation>,
 					)>,
 					// Subscriptions for version tracking are OK.
@@ -227,7 +227,7 @@ impl xcm_executor::Config for XcmConfig {
 	type XcmSender = XcmRouter;
 	type AssetTransactor = FungibleTransactor;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
-	// BridgeHub does not recognize a reserve location for any asset. Users must teleport PAS
+	// BridgeHub does not recognize a reserve location for any asset. Users must teleport DOT
 	// where allowed (e.g. with the Relay Chain).
 	type IsReserve = ();
 	type IsTeleporter = TrustedTeleporters;

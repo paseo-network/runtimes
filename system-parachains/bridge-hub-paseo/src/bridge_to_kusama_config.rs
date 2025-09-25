@@ -43,8 +43,8 @@ use pallet_bridge_relayers::extension::{
 };
 use pallet_xcm_bridge_hub::{BridgeId, XcmAsPlainPayload};
 use parachains_common::xcm_config::{AllSiblingSystemParachains, RelayOrOtherSystemParachains};
-use paseo_runtime_constants as constants;
 use polkadot_parachain_primitives::primitives::Sibling;
+use polkadot_runtime_constants as constants;
 use sp_runtime::traits::ConstU32;
 use xcm::latest::prelude::*;
 use xcm_builder::{BridgeBlobDispatcher, ParentIsPreset, SiblingParachainConvertsVia};
@@ -108,7 +108,7 @@ parameter_types! {
 /// Proof of messages, coming from Kusama.
 pub type FromKusamaBridgeHubMessagesProof<MI> =
 	FromBridgedChainMessagesProof<bp_bridge_hub_kusama::Hash, LaneIdOf<Runtime, MI>>;
-/// Messages delivery proof for Kusama Bridge Hub -> Paseo Bridge Hub messages.
+/// Messages delivery proof for Kusama Bridge Hub -> Polkadot Bridge Hub messages.
 pub type ToKusamaBridgeHubMessagesDeliveryProof<MI> =
 	FromBridgedChainMessagesDeliveryProof<bp_bridge_hub_kusama::Hash, LaneIdOf<Runtime, MI>>;
 
@@ -120,17 +120,17 @@ pub type FromKusamaMessageBlobDispatcher = BridgeBlobDispatcher<
 >;
 
 /// Signed extension that refunds relayers that are delivering messages from the Kusama parachain.
-pub type OnBridgeHubPaseoRefundBridgeHubKusamaMessages = BridgeRelayersTransactionExtension<
+pub type OnBridgeHubPolkadotRefundBridgeHubKusamaMessages = BridgeRelayersTransactionExtension<
 	Runtime,
 	WithMessagesExtensionConfig<
-		StrOnBridgeHubPaseoRefundBridgeHubKusamaMessages,
+		StrOnBridgeHubPolkadotRefundBridgeHubKusamaMessages,
 		Runtime,
 		WithBridgeHubKusamaMessagesInstance,
 		BridgeRelayersInstance,
 		PriorityBoostPerMessage,
 	>,
 >;
-bp_runtime::generate_static_str_provider!(OnBridgeHubPaseoRefundBridgeHubKusamaMessages);
+bp_runtime::generate_static_str_provider!(OnBridgeHubPolkadotRefundBridgeHubKusamaMessages);
 
 /// Add GRANDPA bridge pallet to track Kusama relay chain.
 pub type BridgeGrandpaKusamaInstance = pallet_bridge_grandpa::Instance1;
@@ -163,7 +163,7 @@ impl pallet_bridge_messages::Config<WithBridgeHubKusamaMessagesInstance> for Run
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = weights::pallet_bridge_messages::WeightInfo<Runtime>;
 
-	type ThisChain = bp_bridge_hub_paseo::BridgeHubPaseo;
+	type ThisChain = bp_bridge_hub_polkadot::BridgeHubPolkadot;
 	type BridgedChain = bp_bridge_hub_kusama::BridgeHubKusama;
 	type BridgedHeaderChain = pallet_bridge_parachains::ParachainHeaders<
 		Runtime,
@@ -276,7 +276,7 @@ where
 	// insert bridge metadata
 	let lane_id = with;
 	let sibling_parachain = Location::new(1, [Parachain(sibling_para_id)]);
-	let universal_source = [GlobalConsensus(Paseo), Parachain(sibling_para_id)].into();
+	let universal_source = [GlobalConsensus(Polkadot), Parachain(sibling_para_id)].into();
 	let universal_destination = [GlobalConsensus(Kusama), Parachain(2075)].into();
 	let bridge_id = BridgeId::new(&universal_source, &universal_destination);
 
@@ -325,7 +325,6 @@ mod tests {
 	const FEE_BOOST_PER_MESSAGE: Balance = 2 * constants::currency::UNITS;
 
 	#[test]
-	#[ignore]
 	fn ensure_bridge_hub_polkadot_message_lane_weights_are_correct() {
 		use bp_messages::ChainWithMessages;
 		check_message_lane_weights::<
@@ -334,8 +333,8 @@ mod tests {
 			WithBridgeHubKusamaMessagesInstance,
 		>(
 			bp_bridge_hub_kusama::EXTRA_STORAGE_PROOF_SIZE,
-			bp_bridge_hub_polkadot::MAX_UNREWARDED_RELAYERS_IN_CONFIRMATION_TX,
-			bp_bridge_hub_polkadot::MAX_UNCONFIRMED_MESSAGES_IN_CONFIRMATION_TX,
+			bp_bridge_hub_polkadot::BridgeHubPolkadot::MAX_UNREWARDED_RELAYERS_IN_CONFIRMATION_TX,
+			bp_bridge_hub_polkadot::BridgeHubPolkadot::MAX_UNCONFIRMED_MESSAGES_IN_CONFIRMATION_TX,
 			true,
 		);
 	}
@@ -345,7 +344,7 @@ mod tests {
 		assert_complete_bridge_types!(
 			runtime: Runtime,
 			with_bridged_chain_messages_instance: WithBridgeHubKusamaMessagesInstance,
-			this_chain: bp_bridge_hub_paseo::BridgeHubPaseo,
+			this_chain: bp_bridge_hub_polkadot::BridgeHubPolkadot,
 			bridged_chain: bp_bridge_hub_kusama::BridgeHubKusama,
 			expected_payload_type: XcmAsPlainPayload,
 		);
