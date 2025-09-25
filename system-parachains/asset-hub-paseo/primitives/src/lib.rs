@@ -27,16 +27,16 @@ use scale_info::TypeInfo;
 pub use bp_xcm_bridge_hub_router::XcmBridgeHubRouterCall;
 use xcm::latest::prelude::*;
 
-use system_parachains_constants::paseo::currency::*;
+use system_parachains_constants::polkadot::currency::*;
 
-/// `AssetHubPaseo` Runtime `Call` enum.
+/// `AssetHubPolkadot` Runtime `Call` enum.
 ///
-/// The enum represents a subset of possible `Call`s we can send to `AssetHubPaseo` chain.
+/// The enum represents a subset of possible `Call`s we can send to `AssetHubPolkadot` chain.
 /// Ideally this code would be auto-generated from metadata, because we want to
 /// avoid depending directly on the ENTIRE runtime just to get the encoding of `Dispatchable`s.
 ///
 /// All entries here (like pretty much in the entire file) must be kept in sync with
-/// `AssetHubPaseo` `construct_runtime`, so that we maintain SCALE-compatibility.
+/// `AssetHubPolkadot` `construct_runtime`, so that we maintain SCALE-compatibility.
 #[allow(clippy::large_enum_variant)]
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, TypeInfo)]
 pub enum Call {
@@ -78,4 +78,4 @@ pub fn build_congestion_message<RuntimeCall>(
 }
 
 /// Identifier of AssetHubPolkadot in the Polkadot relay chain.
-pub const ASSET_HUB_PASEO_PARACHAIN_ID: u32 = 1000;
+pub const ASSET_HUB_POLKADOT_PARACHAIN_ID: u32 = 1000;

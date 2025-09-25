@@ -22,7 +22,7 @@ use crate::{
 	AccountId, AssetConversion, Assets, ForeignAssets, Runtime, RuntimeEvent,
 };
 use assets_common::{matching::FromSiblingParachain, AssetIdForTrustBackedAssetsConvert};
-use bp_asset_hub_paseo::SystemFrontendPalletInstance;
+use bp_asset_hub_polkadot::SystemFrontendPalletInstance;
 use bp_bridge_hub_polkadot::snowbridge::EthereumNetwork;
 use frame_support::{parameter_types, traits::EitherOf};
 use frame_system::EnsureRootWithSuccess;

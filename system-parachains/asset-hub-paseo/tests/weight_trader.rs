@@ -15,7 +15,7 @@
 
 //! Tests for `WeighTrader` type of XCM Executor.
 
-use asset_hub_paseo_runtime::{
+use asset_hub_polkadot_runtime::{
 	xcm_config::{DotLocation, StakingPot, TrustBackedAssetsPalletLocation, XcmConfig},
 	AllPalletsWithoutSystem, AssetConversion, Assets, Balances, ForeignAssets, Runtime,
 	SessionKeys,
@@ -30,9 +30,9 @@ use frame_support::{
 	},
 	weights::WeightToFee as WeightToFeeT,
 };
-use parachains_common::{AccountId, AuraId};
+use parachains_common::{AccountId, AssetHubPolkadotAuraId as AuraId};
 use sp_runtime::traits::MaybeEquivalence;
-use system_parachains_constants::paseo::{currency::*, fee::WeightToFee};
+use system_parachains_constants::polkadot::{currency::*, fee::WeightToFee};
 use xcm::latest::prelude::*;
 use xcm_executor::traits::WeightTrader;
 
@@ -48,7 +48,7 @@ fn test_buy_and_refund_weight_with_native() {
 		.with_session_keys(vec![(
 			AccountId::from(ALICE),
 			AccountId::from(ALICE),
-			SessionKeys { aura: AuraId::from(sp_core::sr25519::Public::from_raw(ALICE)) },
+			SessionKeys { aura: AuraId::from(sp_core::ed25519::Public::from_raw(ALICE)) },
 		)])
 		.build()
 		.execute_with(|| {
@@ -106,7 +106,7 @@ fn test_buy_and_refund_weight_with_swap_local_asset_xcm_trader() {
 		.with_session_keys(vec![(
 			AccountId::from(ALICE),
 			AccountId::from(ALICE),
-			SessionKeys { aura: AuraId::from(sp_core::sr25519::Public::from_raw(ALICE)) },
+			SessionKeys { aura: AuraId::from(sp_core::ed25519::Public::from_raw(ALICE)) },
 		)])
 		.build()
 		.execute_with(|| {
@@ -208,7 +208,7 @@ fn test_buy_and_refund_weight_with_swap_foreign_asset_xcm_trader() {
 		.with_session_keys(vec![(
 			AccountId::from(ALICE),
 			AccountId::from(ALICE),
-			SessionKeys { aura: AuraId::from(sp_core::sr25519::Public::from_raw(ALICE)) },
+			SessionKeys { aura: AuraId::from(sp_core::ed25519::Public::from_raw(ALICE)) },
 		)])
 		.build()
 		.execute_with(|| {

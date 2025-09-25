@@ -1,6 +1,6 @@
 [package]
-name = "bp-asset-hub-paseo"
-description = "Primitives of AssetHubPaseo parachain runtime."
+name = "bp-asset-hub-polkadot"
+description = "Primitives of AssetHubPolkadot parachain runtime."
 repository.workspace = true
 version.workspace = true
 authors.workspace = true

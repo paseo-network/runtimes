@@ -14,30 +14,36 @@
 // You should have received a copy of the GNU General Public License
 // along with Polkadot.  If not, see <http://www.gnu.org/licenses/>.
 
-//! Genesis configs presets for the AssetHubPaseo runtime
+//! Genesis configs presets for the AssetHubPolkadot runtime
 
 use crate::{xcm_config::UniversalLocation, *};
 use alloc::vec::Vec;
+use parachains_common::AssetHubPolkadotAuraId;
 use sp_core::sr25519;
 use sp_genesis_builder::PresetId;
 use system_parachains_constants::genesis_presets::*;
 use xcm::latest::prelude::*;
 use xcm_builder::GlobalConsensusConvertsFor;
 use xcm_executor::traits::ConvertLocation;
-use AuraId;
 
 const ASSET_HUB_POLKADOT_ED: Balance = ExistentialDeposit::get();
 
-/// Invulnerable Collators for the particular case of AssetHubPaseo
-pub fn invulnerables_asset_hub_paseo() -> Vec<(AccountId, AuraId)> {
+/// Invulnerable Collators for the particular case of AssetHubPolkadot
+pub fn invulnerables_asset_hub_polkadot() -> Vec<(AccountId, AssetHubPolkadotAuraId)> {
 	vec![
-		(get_account_id_from_seed::<sr25519::Public>("Alice"), get_from_seed::<AuraId>("Alice")),
-		(get_account_id_from_seed::<sr25519::Public>("Bob"), get_from_seed::<AuraId>("Bob")),
+		(
+			get_account_id_from_seed::<sr25519::Public>("Alice"),
+			get_from_seed::<AssetHubPolkadotAuraId>("Alice"),
+		),
+		(
+			get_account_id_from_seed::<sr25519::Public>("Bob"),
+			get_from_seed::<AssetHubPolkadotAuraId>("Bob"),
+		),
 	]
 }
 
-fn asset_hub_paseo_genesis(
-	invulnerables: Vec<(AccountId, AuraId)>,
+fn asset_hub_polkadot_genesis(
+	invulnerables: Vec<(AccountId, AssetHubPolkadotAuraId)>,
 	endowed_accounts: Vec<AccountId>,
 	id: ParaId,
 	foreign_assets: Vec<(Location, AccountId, Balance)>,
@@ -74,11 +80,12 @@ fn asset_hub_paseo_genesis(
 				.collect(),
 			..Default::default()
 		},
-		"sudo": {
-			"key": Some(get_account_id_from_seed::<sr25519::Public>("Alice"))
-		},
 		"polkadotXcm": {
 			"safeXcmVersion": Some(SAFE_XCM_VERSION),
+		},
+		"staking": {
+			"validatorCount": 1000,
+			"devStakers": Some((2_000, 25_000)),
 		},
 		"foreignAssets": ForeignAssetsConfig {
 			assets: foreign_assets
@@ -96,9 +103,9 @@ fn asset_hub_paseo_genesis(
 	})
 }
 
-pub fn asset_hub_paseo_local_testnet_genesis(para_id: ParaId) -> serde_json::Value {
-	asset_hub_paseo_genesis(
-		invulnerables_asset_hub_paseo(),
+pub fn asset_hub_polkadot_local_testnet_genesis(para_id: ParaId) -> serde_json::Value {
+	asset_hub_polkadot_genesis(
+		invulnerables_asset_hub_polkadot(),
 		testnet_accounts(),
 		para_id,
 		vec![
@@ -123,9 +130,9 @@ pub fn asset_hub_paseo_local_testnet_genesis(para_id: ParaId) -> serde_json::Val
 	)
 }
 
-fn asset_hub_paseo_development_genesis(para_id: ParaId) -> serde_json::Value {
-	asset_hub_paseo_genesis(
-		invulnerables_asset_hub_paseo(),
+fn asset_hub_polkadot_development_genesis(para_id: ParaId) -> serde_json::Value {
+	asset_hub_polkadot_genesis(
+		invulnerables_asset_hub_polkadot(),
 		testnet_accounts_with([
 			// Make sure `StakingPot` is funded for benchmarking purposes.
 			StakingPot::get(),
@@ -147,9 +154,10 @@ pub fn preset_names() -> Vec<PresetId> {
 /// Provides the JSON representation of predefined genesis config for given `id`.
 pub fn get_preset(id: &PresetId) -> Option<Vec<u8>> {
 	let patch = match id.as_ref() {
-		sp_genesis_builder::DEV_RUNTIME_PRESET => asset_hub_paseo_development_genesis(1000.into()),
+		sp_genesis_builder::DEV_RUNTIME_PRESET =>
+			asset_hub_polkadot_development_genesis(1000.into()),
 		sp_genesis_builder::LOCAL_TESTNET_RUNTIME_PRESET =>
-			asset_hub_paseo_local_testnet_genesis(1000.into()),
+			asset_hub_polkadot_local_testnet_genesis(1000.into()),
 		_ => return None,
 	};
 	Some(
