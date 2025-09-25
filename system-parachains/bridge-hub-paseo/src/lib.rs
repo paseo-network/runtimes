@@ -356,6 +356,7 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type ConsensusHook = ConsensusHook;
 	type WeightInfo = weights::cumulus_pallet_parachain_system::WeightInfo<Runtime>;
 	type SelectCore = cumulus_pallet_parachain_system::DefaultCoreSelector<Runtime>;
+  type RelayParentOffset = ConstU32<0>;
 }
 
 type ConsensusHook = cumulus_pallet_aura_ext::FixedVelocityConsensusHook<
@@ -477,6 +478,8 @@ impl pallet_session::Config for Runtime {
 	type Keys = SessionKeys;
 	type WeightInfo = weights::pallet_session::WeightInfo<Runtime>;
 	type DisablingStrategy = ();
+    type Currency = Balances;
+    type KeyDeposit = ();
 }
 
 impl pallet_aura::Config for Runtime {

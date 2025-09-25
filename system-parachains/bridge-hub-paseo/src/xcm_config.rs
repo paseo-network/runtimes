@@ -17,7 +17,7 @@
 use crate::XcmOverBridgeHubKusama;
 
 use super::{
-	bridge_to_ethereum_config::EthereumNetwork, AccountId, AllPalletsWithSystem, Balance, Balances,
+	bridge_to_ethereum_config::EthereumNetwork, AccountId, AllPalletsWithSystem, Balances,
 	CollatorSelection, ParachainInfo, ParachainSystem, PolkadotXcm, PriceForParentDelivery,
 	Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, WeightToFee, XcmpQueue,
 };
@@ -36,7 +36,6 @@ use parachains_common::xcm_config::{
 };
 use paseo_runtime_constants::system_parachain;
 use polkadot_parachain_primitives::primitives::Sibling;
-use snowbridge_runtime_common::XcmExportFeeToSibling;
 use sp_runtime::traits::AccountIdConversion;
 use system_parachains_constants::TREASURY_PALLET_ID;
 use xcm::latest::prelude::*;
@@ -48,7 +47,7 @@ use xcm_builder::{
 	IsConcrete, ParentAsSuperuser, ParentIsPreset, RelayChainAsNative, SendXcmFeeToAccount,
 	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
 	SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit, TrailingSetTopicAsId,
-	UsingComponents, WeightInfoBounds, WithComputedOrigin, WithUniqueTopic,
+	UsingComponents, WeightInfoBounds, WithComputedOrigin, WithUniqueTopic, XcmFeeManagerFromComponents
 };
 use xcm_executor::{
 	traits::{ConvertLocation, FeeManager, FeeReason, FeeReason::Export},
@@ -231,21 +230,11 @@ impl xcm_executor::Config for XcmConfig {
 	type SubscriptionService = PolkadotXcm;
 	type PalletInstancesInfo = AllPalletsWithSystem;
 	type MaxAssetsIntoHolding = MaxAssetsIntoHolding;
-	type FeeManager = XcmFeeManagerFromComponentsBridgeHub<
+		type FeeManager = XcmFeeManagerFromComponents<
 		WaivedLocations,
-		(
-			XcmExportFeeToSibling<
-				Balance,
-				AccountId,
-				DotRelayLocation,
-				EthereumNetwork,
-				Self::AssetTransactor,
-				crate::EthereumOutboundQueue,
-			>,
-			SendXcmFeeToAccount<Self::AssetTransactor, RelayTreasuryPalletAccount>,
-		),
+		SendXcmFeeToAccount<Self::AssetTransactor, RelayTreasuryPalletAccount>,
 	>;
-	type MessageExporter =
+    type MessageExporter =
 		(XcmOverBridgeHubKusama, crate::bridge_to_ethereum_config::SnowbridgeExporter);
 	type UniversalAliases = Nothing;
 	type CallDispatcher = RuntimeCall;
