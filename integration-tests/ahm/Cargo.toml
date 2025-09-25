@@ -66,7 +66,7 @@ default = ["std"]
 paseo-ahm = [
 	"asset-hub-paseo-runtime",
 	"asset-hub-paseo-runtime?/paseo-ahm",
-  "pallet-ah-migrator/polkadot-ahm",
+	"pallet-ah-migrator/polkadot-ahm",
 	"pallet-rc-migrator/polkadot-ahm",
 	"paseo-runtime",
 	"paseo-runtime-constants",
@@ -76,8 +76,8 @@ std = [
 	"cumulus-pallet-parachain-system/std",
 	"frame-benchmarking/std",
 	"hex/std",
-	"paseo-runtime?/std",
 	"log/std",
+	"paseo-runtime?/std",
 	"rand/std",
 ]
 try-runtime = [
@@ -102,8 +102,8 @@ try-runtime = [
 	"pallet-whitelist/try-runtime",
 	"pallet-xcm/try-runtime",
 	"parachains-common/try-runtime",
-	"polkadot-runtime-common/try-runtime",
 	"paseo-runtime?/try-runtime",
+	"polkadot-runtime-common/try-runtime",
 	"runtime-parachains/try-runtime",
 	"sp-runtime/try-runtime",
 ]
@@ -131,11 +131,11 @@ runtime-benchmarks = [
 	"pallet-whitelist/runtime-benchmarks",
 	"pallet-xcm/runtime-benchmarks",
 	"parachains-common/runtime-benchmarks",
+	"paseo-runtime-constants?/runtime-benchmarks",
+	"paseo-runtime?/runtime-benchmarks",
 	"polkadot-parachain-primitives/runtime-benchmarks",
 	"polkadot-primitives/runtime-benchmarks",
 	"polkadot-runtime-common/runtime-benchmarks",
-	"paseo-runtime-constants?/runtime-benchmarks",
-	"paseo-runtime?/runtime-benchmarks",
 	"runtime-parachains/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",

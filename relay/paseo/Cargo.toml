@@ -176,7 +176,7 @@ std = [
 	"pallet-offences/std",
 	"pallet-preimage/std",
 	"pallet-proxy/std",
-  "pallet-rc-migrator/std",
+	"pallet-rc-migrator/std",
 	"pallet-referenda/std",
 	"pallet-scheduler/std",
 	"pallet-session-benchmarking?/std",
@@ -260,11 +260,11 @@ runtime-benchmarks = [
 	"pallet-offences/runtime-benchmarks",
 	"pallet-preimage/runtime-benchmarks",
 	"pallet-proxy/runtime-benchmarks",
-  "pallet-rc-migrator/runtime-benchmarks",
+	"pallet-rc-migrator/runtime-benchmarks",
 	"pallet-referenda/runtime-benchmarks",
 	"pallet-scheduler/runtime-benchmarks",
 	"pallet-session-benchmarking/runtime-benchmarks",
-  "pallet-staking-async-ah-client/runtime-benchmarks",
+	"pallet-staking-async-ah-client/runtime-benchmarks",
 	"pallet-staking-async-rc-client/runtime-benchmarks",
 	"pallet-staking/runtime-benchmarks",
 	"pallet-state-trie-migration/runtime-benchmarks",
@@ -321,11 +321,11 @@ try-runtime = [
 	"pallet-offences/try-runtime",
 	"pallet-preimage/try-runtime",
 	"pallet-proxy/try-runtime",
-  "pallet-rc-migrator/try-runtime",
+	"pallet-rc-migrator/try-runtime",
 	"pallet-referenda/try-runtime",
 	"pallet-scheduler/try-runtime",
 	"pallet-session/try-runtime",
-"pallet-staking-async-ah-client/try-runtime",
+	"pallet-staking-async-ah-client/try-runtime",
 	"pallet-staking-async-rc-client/try-runtime",
 	"pallet-staking/try-runtime",
 	"pallet-state-trie-migration/try-runtime",
@@ -348,7 +348,7 @@ metadata-hash = ["substrate-wasm-builder?/metadata-hash"]
 # A feature that should be enabled when the runtime should be built for on-chain
 # deployment. This will disable stuff that shouldn't be part of the on-chain wasm
 # to make it smaller, like logging for example.
-on-chain-release-build = ["metadata-hash", "paseo-ahm","sp-api/disable-logging"]
+on-chain-release-build = ["metadata-hash", "paseo-ahm", "sp-api/disable-logging"]
 
 # Set timing constants (e.g. session period) to faster versions to speed up testing.
 fast-runtime = ["paseo-runtime-constants/fast-runtime"]
