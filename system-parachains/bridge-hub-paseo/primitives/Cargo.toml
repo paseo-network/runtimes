@@ -1,6 +1,6 @@
 [package]
-name = "bp-bridge-hub-polkadot"
-description = "Primitives of BridgeHubPolkadot parachain runtime."
+name = "bp-bridge-hub-paseo"
+description = "Primitives of BridgeHubPaseo parachain runtime."
 repository.workspace = true
 version.workspace = true
 authors.workspace = true
@@ -11,7 +11,7 @@ license.workspace = true
 
 # Local
 kusama-runtime-constants = { workspace = true }
-polkadot-runtime-constants = { workspace = true }
+paseo-runtime-constants = { workspace = true }
 system-parachains-constants = { workspace = true }
 
 # Bridge Dependencies
@@ -41,7 +41,7 @@ std = [
 	"bp-runtime/std",
 	"frame-support/std",
 	"kusama-runtime-constants/std",
-	"polkadot-runtime-constants/std",
+	"paseo-runtime-constants/std",
 	"snowbridge-core/std",
 	"sp-api/std",
 	"sp-runtime/std",
@@ -52,7 +52,7 @@ std = [
 runtime-benchmarks = [
 	"frame-support/runtime-benchmarks",
 	"kusama-runtime-constants/runtime-benchmarks",
-	"polkadot-runtime-constants/runtime-benchmarks",
+	"paseo-runtime-constants/runtime-benchmarks",
 	"snowbridge-core/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"system-parachains-constants/runtime-benchmarks",

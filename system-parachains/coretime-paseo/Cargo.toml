@@ -1,6 +1,6 @@
 [package]
-name = "coretime-polkadot-runtime"
-description = "Polkadot's Coretime parachain runtime"
+name = "coretime-paseo-runtime"
+description = "Paseo's Coretime parachain runtime"
 repository.workspace = true
 version.workspace = true
 authors.workspace = true
@@ -17,7 +17,7 @@ serde = { optional = true, features = ["derive"], workspace = true }
 serde_json = { features = ["alloc"], workspace = true }
 
 # Local
-polkadot-runtime-constants = { workspace = true }
+paseo-runtime-constants = { workspace = true }
 system-parachains-constants = { workspace = true }
 
 # Substrate
@@ -37,6 +37,7 @@ pallet-broker = { workspace = true }
 pallet-multisig = { workspace = true }
 pallet-proxy = { workspace = true }
 pallet-session = { workspace = true }
+pallet-sudo = { workspace = true }
 pallet-timestamp = { workspace = true }
 pallet-transaction-payment = { workspace = true }
 pallet-transaction-payment-rpc-runtime-api = { workspace = true }
@@ -115,6 +116,7 @@ std = [
 	"pallet-multisig/std",
 	"pallet-proxy/std",
 	"pallet-session/std",
+	"pallet-sudo/std",
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
@@ -123,10 +125,10 @@ std = [
 	"pallet-xcm/std",
 	"parachain-info/std",
 	"parachains-common/std",
+	"paseo-runtime-constants/std",
 	"polkadot-core-primitives/std",
 	"polkadot-parachain-primitives/std",
 	"polkadot-runtime-common/std",
-	"polkadot-runtime-constants/std",
 	"scale-info/std",
 	"serde",
 	"serde_json/std",
@@ -167,15 +169,16 @@ runtime-benchmarks = [
 	"pallet-message-queue/runtime-benchmarks",
 	"pallet-multisig/runtime-benchmarks",
 	"pallet-proxy/runtime-benchmarks",
+	"pallet-sudo/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"pallet-transaction-payment/runtime-benchmarks",
 	"pallet-utility/runtime-benchmarks",
 	"pallet-xcm-benchmarks/runtime-benchmarks",
 	"pallet-xcm/runtime-benchmarks",
 	"parachains-common/runtime-benchmarks",
+	"paseo-runtime-constants/runtime-benchmarks",
 	"polkadot-parachain-primitives/runtime-benchmarks",
 	"polkadot-runtime-common/runtime-benchmarks",
-	"polkadot-runtime-constants/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"system-parachains-constants/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
@@ -202,6 +205,7 @@ try-runtime = [
 	"pallet-multisig/try-runtime",
 	"pallet-proxy/try-runtime",
 	"pallet-session/try-runtime",
+	"pallet-sudo/try-runtime",
 	"pallet-timestamp/try-runtime",
 	"pallet-transaction-payment/try-runtime",
 	"pallet-utility/try-runtime",
@@ -212,7 +216,7 @@ try-runtime = [
 	"sp-runtime/try-runtime",
 ]
 
-fast-runtime = ["polkadot-runtime-constants/fast-runtime"]
+fast-runtime = ["paseo-runtime-constants/fast-runtime"]
 
 # Enable metadata hash generation at compile time for the `CheckMetadataHash` extension.
 metadata-hash = ["substrate-wasm-builder?/metadata-hash"]

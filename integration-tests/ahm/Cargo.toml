@@ -1,6 +1,6 @@
 [package]
-name = "polkadot-integration-tests-ahm"
-version = "0.1.0"
+name = "paseo-integration-tests-ahm"
+version.workspace = true
 authors.workspace = true
 edition.workspace = true
 license = "Apache-2.0"
@@ -57,48 +57,34 @@ pallet-preimage = { workspace = true, default-features = true }
 pallet-staking-async = { workspace = true, default-features = true }
 pallet-referenda = { workspace = true, default-features = true }
 
-polkadot-runtime = { workspace = true, optional = true }
-polkadot-runtime-constants = { workspace = true, default-features = true, optional = true }
-asset-hub-polkadot-runtime = { workspace = true, optional = true }
-
-kusama-runtime = { workspace = true, optional = true }
-kusama-runtime-constants = { workspace = true, default-features = true, optional = true }
-asset-hub-kusama-runtime = { workspace = true, optional = true }
+paseo-runtime = { workspace = true, optional = true }
+paseo-runtime-constants = { workspace = true, default-features = true, optional = true }
+asset-hub-paseo-runtime = { workspace = true, optional = true }
 
 [features]
 default = ["std"]
-polkadot-ahm = [
-	"asset-hub-polkadot-runtime",
-	"asset-hub-polkadot-runtime?/polkadot-ahm",
-	"pallet-ah-migrator/polkadot-ahm",
+paseo-ahm = [
+	"asset-hub-paseo-runtime",
+	"asset-hub-paseo-runtime?/paseo-ahm",
+  "pallet-ah-migrator/polkadot-ahm",
 	"pallet-rc-migrator/polkadot-ahm",
-	"polkadot-runtime",
-	"polkadot-runtime-constants",
-	"polkadot-runtime?/polkadot-ahm",
-]
-kusama-ahm = [
-	"asset-hub-kusama-runtime/kusama-ahm",
-	"kusama-runtime-constants",
-	"kusama-runtime/kusama-ahm",
-	"pallet-ah-migrator/kusama-ahm",
-	"pallet-rc-migrator/kusama-ahm",
+	"paseo-runtime",
+	"paseo-runtime-constants",
+	"paseo-runtime?/polkadot-ahm",
 ]
 std = [
 	"cumulus-pallet-parachain-system/std",
 	"frame-benchmarking/std",
 	"hex/std",
-	"kusama-runtime?/std",
+	"paseo-runtime?/std",
 	"log/std",
-	"polkadot-runtime?/std",
 	"rand/std",
 ]
 try-runtime = [
-	"asset-hub-kusama-runtime?/try-runtime",
-	"asset-hub-polkadot-runtime?/try-runtime",
+	"asset-hub-paseo-runtime?/try-runtime",
 	"cumulus-pallet-parachain-system/try-runtime",
 	"frame-support/try-runtime",
 	"frame-system/try-runtime",
-	"kusama-runtime?/try-runtime",
 	"pallet-ah-migrator/try-runtime",
 	"pallet-ah-ops/try-runtime",
 	"pallet-balances/try-runtime",
@@ -117,20 +103,17 @@ try-runtime = [
 	"pallet-xcm/try-runtime",
 	"parachains-common/try-runtime",
 	"polkadot-runtime-common/try-runtime",
-	"polkadot-runtime?/try-runtime",
+	"paseo-runtime?/try-runtime",
 	"runtime-parachains/try-runtime",
 	"sp-runtime/try-runtime",
 ]
 runtime-benchmarks = [
-	"asset-hub-kusama-runtime?/runtime-benchmarks",
-	"asset-hub-polkadot-runtime?/runtime-benchmarks",
+	"asset-hub-paseo-runtime?/runtime-benchmarks",
 	"cumulus-pallet-parachain-system/runtime-benchmarks",
 	"cumulus-primitives-core/runtime-benchmarks",
 	"frame-benchmarking/runtime-benchmarks",
 	"frame-support/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
-	"kusama-runtime-constants?/runtime-benchmarks",
-	"kusama-runtime?/runtime-benchmarks",
 	"pallet-ah-migrator/runtime-benchmarks",
 	"pallet-ah-ops/runtime-benchmarks",
 	"pallet-balances/runtime-benchmarks",
@@ -151,8 +134,8 @@ runtime-benchmarks = [
 	"polkadot-parachain-primitives/runtime-benchmarks",
 	"polkadot-primitives/runtime-benchmarks",
 	"polkadot-runtime-common/runtime-benchmarks",
-	"polkadot-runtime-constants?/runtime-benchmarks",
-	"polkadot-runtime?/runtime-benchmarks",
+	"paseo-runtime-constants?/runtime-benchmarks",
+	"paseo-runtime?/runtime-benchmarks",
 	"runtime-parachains/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",

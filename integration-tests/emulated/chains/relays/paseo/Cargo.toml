@@ -1,10 +1,10 @@
 [package]
-name = "polkadot-emulated-chain"
+name = "paseo-emulated-chain"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
 license = "Apache-2.0"
-description = "Polkadot emulated chain used for integration tests"
+description = "Paseo emulated chain used for integration tests"
 publish = false
 
 [dependencies]
@@ -27,14 +27,14 @@ emulated-integration-tests-common = { workspace = true }
 
 # Runtimes
 paseo-runtime-constants = { workspace = true, default-features = true }
-paseo-runtime = { workspace = true }
+paseo-runtime = { workspace = true, default-features = true }
 
 [features]
 runtime-benchmarks = [
 	"pallet-staking/runtime-benchmarks",
 	"parachains-common/runtime-benchmarks",
+	"paseo-runtime-constants/runtime-benchmarks",
+	"paseo-runtime/runtime-benchmarks",
 	"polkadot-primitives/runtime-benchmarks",
-	"polkadot-runtime-constants/runtime-benchmarks",
-	"polkadot-runtime/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 ]

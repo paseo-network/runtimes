@@ -6,9 +6,11 @@ repository = "https://github.com/paseo-network/runtimes.git"
 license = "GPL-3.0-only"                                     # TODO <https://github.com/paseo-fellows/runtimes/issues/29>
 
 [workspace.dependencies]
-pallet-ah-migrator = { path = "pallets/ah-migrator", default-features = false }
-pallet-rc-migrator = { path = "pallets/rc-migrator", default-features = false }
-pallet-ah-ops = { path = "pallets/ah-ops", default-features = false }
+pallet-ah-migrator = { git = "https://github.com/polkadot-fellows/runtimes", rev = "39ba53b", default-features = false }
+pallet-ah-ops = { git = "https://github.com/polkadot-fellows/runtimes", rev = "39ba53b", default-features = false }
+pallet-rc-migrator = { git = "https://github.com/polkadot-fellows/runtimes", rev = "39ba53b", default-features = false }
+system-parachains-common = { git = "https://github.com/polkadot-fellows/runtimes", rev = "39ba53b", default-features = false }
+
 pallet-election-provider-multi-block = { version = "0.3.2", default-features = false }
 pallet-staking-async = { version = "0.4.2", default-features = false }
 hex = { version = "0.4.3", default-features = false }
@@ -236,7 +238,6 @@ sp-trie = { version = "41.0.0", default-features = false }
 sp-version = { version = "41.0.0", default-features = false }
 sp-weights = { version = "33.0.0", default-features = false }
 substrate-wasm-builder = { version = "28.0.0" }
-system-parachains-common = { path = "system-parachains/common", default-features = false }
 system-parachains-constants = { path = "system-parachains/constants", default-features = false }
 tokio = { version = "1.45.0" }
 xcm = { version = "18.0.0", default-features = false, package = "staging-xcm" }
@@ -257,9 +258,6 @@ resolver = "2"
 
 members = [
   "integration-tests/ahm",
-  "pallets/ah-migrator",
-  "pallets/ah-ops",
-  "pallets/rc-migrator",
 	"chain-spec-generator",
 	"integration-tests/emulated/chains/parachains/assets/asset-hub-paseo",
 	"integration-tests/emulated/chains/parachains/bridges/bridge-hub-paseo",

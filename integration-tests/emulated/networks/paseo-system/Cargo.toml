@@ -1,5 +1,5 @@
 [package]
-name = "polkadot-system-emulated-network"
+name = "paseo-system-emulated-network"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
@@ -13,21 +13,21 @@ publish = false
 emulated-integration-tests-common = { workspace = true }
 
 # Runtimes
-asset-hub-polkadot-emulated-chain = { workspace = true }
-bridge-hub-polkadot-emulated-chain = { workspace = true }
-collectives-polkadot-emulated-chain = { workspace = true }
-coretime-polkadot-emulated-chain = { workspace = true }
+asset-hub-paseo-emulated-chain = { workspace = true }
+bridge-hub-paseo-emulated-chain = { workspace = true }
+collectives-paseo-emulated-chain = { workspace = true }
+coretime-paseo-emulated-chain = { workspace = true }
 penpal-emulated-chain = { workspace = true }
-polkadot-emulated-chain = { workspace = true }
-people-polkadot-emulated-chain = { workspace = true }
+paseo-emulated-chain = { workspace = true }
+people-paseo-emulated-chain = { workspace = true }
 
 [features]
 runtime-benchmarks = [
-	"asset-hub-polkadot-emulated-chain/runtime-benchmarks",
-	"bridge-hub-polkadot-emulated-chain/runtime-benchmarks",
-	"collectives-polkadot-emulated-chain/runtime-benchmarks",
-	"coretime-polkadot-emulated-chain/runtime-benchmarks",
+	"asset-hub-paseo-emulated-chain/runtime-benchmarks",
+	"bridge-hub-paseo-emulated-chain/runtime-benchmarks",
+	"collectives-paseo-emulated-chain/runtime-benchmarks",
+	"coretime-paseo-emulated-chain/runtime-benchmarks",
+	"paseo-emulated-chain/runtime-benchmarks",
 	"penpal-emulated-chain/runtime-benchmarks",
-	"people-polkadot-emulated-chain/runtime-benchmarks",
-	"polkadot-emulated-chain/runtime-benchmarks",
+	"people-paseo-emulated-chain/runtime-benchmarks",
 ]

@@ -1,10 +1,10 @@
 [package]
-name = "asset-hub-polkadot-emulated-chain"
+name = "asset-hub-paseo-emulated-chain"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
 license = "Apache-2.0"
-description = "Asset Hub Polkadot emulated chain used for integration tests"
+description = "Asset Hub Paseo emulated chain used for integration tests"
 publish = false
 
 [dependencies]
@@ -22,7 +22,7 @@ xcm = { workspace = true, default-features = true }
 polkadot-parachain-primitives = { workspace = true }
 
 # Runtimes
-asset-hub-paseo-runtime = { workspace = true }
+asset-hub-paseo-runtime = { workspace = true, default-features = true }
 paseo-emulated-chain = { workspace = true }
 penpal-emulated-chain = { workspace = true }
 
@@ -34,13 +34,13 @@ integration-tests-helpers = { workspace = true }
 
 [features]
 runtime-benchmarks = [
-	"asset-hub-polkadot-runtime/runtime-benchmarks",
+	"asset-hub-paseo-runtime/runtime-benchmarks",
 	"cumulus-primitives-core/runtime-benchmarks",
 	"frame-support/runtime-benchmarks",
 	"integration-tests-helpers/runtime-benchmarks",
 	"parachains-common/runtime-benchmarks",
+	"paseo-emulated-chain/runtime-benchmarks",
 	"penpal-emulated-chain/runtime-benchmarks",
-	"polkadot-emulated-chain/runtime-benchmarks",
 	"polkadot-parachain-primitives/runtime-benchmarks",
 	"snowbridge-inbound-queue-primitives/runtime-benchmarks",
 	"xcm/runtime-benchmarks",

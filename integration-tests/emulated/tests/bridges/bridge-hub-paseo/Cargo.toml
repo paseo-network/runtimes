@@ -1,10 +1,10 @@
 [package]
-name = "bridge-hub-polkadot-integration-tests"
+name = "bridge-hub-paseo-integration-tests"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
 license = "Apache-2.0"
-description = "Bridge Hub Polkadot runtime integration tests with xcm-emulator"
+description = "Bridge Hub Paseo runtime integration tests with xcm-emulator"
 publish = false
 
 [dependencies]
@@ -41,14 +41,13 @@ pallet-bridge-messages = { workspace = true, default-features = true }
 pallet-bridge-relayers = { workspace = true, default-features = true }
 
 # Local
-bp-bridge-hub-polkadot = { workspace = true, default-features = true }
+bp-bridge-hub-paseo = { workspace = true, default-features = true }
 bridge-hub-common = { workspace = true, default-features = true }
-bp-asset-hub-polkadot = { workspace = true, default-features = true }
-bridge-hub-polkadot-runtime = { workspace = true }
-asset-hub-polkadot-runtime = { workspace = true }
+bp-asset-hub-paseo = { workspace = true, default-features = true }
+bridge-hub-paseo-runtime = { workspace = true }
+asset-hub-paseo-runtime = { workspace = true }
 integration-tests-helpers = { workspace = true }
-kusama-polkadot-system-emulated-network = { workspace = true }
-polkadot-system-emulated-network = { workspace = true }
+paseo-system-emulated-network = { workspace = true }
 system-parachains-constants = { workspace = true, default-features = true }
 
 # Snowbridge
@@ -67,16 +66,15 @@ snowbridge-pallet-system-v2 = { workspace = true }
 
 [features]
 runtime-benchmarks = [
-	"asset-hub-polkadot-runtime/runtime-benchmarks",
-	"bp-asset-hub-polkadot/runtime-benchmarks",
-	"bp-bridge-hub-polkadot/runtime-benchmarks",
+	"asset-hub-paseo-runtime/runtime-benchmarks",
+	"bp-asset-hub-paseo/runtime-benchmarks",
+	"bp-bridge-hub-paseo/runtime-benchmarks",
 	"bridge-hub-common/runtime-benchmarks",
-	"bridge-hub-polkadot-runtime/runtime-benchmarks",
+	"bridge-hub-paseo-runtime/runtime-benchmarks",
 	"cumulus-pallet-parachain-system/runtime-benchmarks",
 	"cumulus-pallet-xcmp-queue/runtime-benchmarks",
 	"frame-support/runtime-benchmarks",
 	"integration-tests-helpers/runtime-benchmarks",
-	"kusama-polkadot-system-emulated-network/runtime-benchmarks",
 	"pallet-asset-conversion/runtime-benchmarks",
 	"pallet-assets/runtime-benchmarks",
 	"pallet-balances/runtime-benchmarks",
@@ -85,7 +83,7 @@ runtime-benchmarks = [
 	"pallet-message-queue/runtime-benchmarks",
 	"pallet-xcm/runtime-benchmarks",
 	"parachains-common/runtime-benchmarks",
-	"polkadot-system-emulated-network/runtime-benchmarks",
+	"paseo-system-emulated-network/runtime-benchmarks",
 	"snowbridge-core/runtime-benchmarks",
 	"snowbridge-inbound-queue-primitives/runtime-benchmarks",
 	"snowbridge-pallet-inbound-queue-fixtures/runtime-benchmarks",

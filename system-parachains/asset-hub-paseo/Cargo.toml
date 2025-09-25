@@ -4,7 +4,7 @@ build = "build.rs"
 description = "Asset Hub Polkadot parachain runtime"
 edition.workspace = true
 license.workspace = true
-name = "asset-hub-polkadot-runtime"
+name = "asset-hub-paseo-runtime"
 repository.workspace = true
 version.workspace = true
 
@@ -19,8 +19,8 @@ scale-info = { features = ["derive"], workspace = true }
 serde_json = { features = ["alloc"], workspace = true }
 
 # Local
-bp-asset-hub-kusama = { workspace = true }
-bp-asset-hub-polkadot = { workspace = true }
+bp-asset-hub-paseo = { workspace = true }
+bp-bridge-hub-paseo = { workspace = true }
 bp-bridge-hub-kusama = { workspace = true }
 bp-bridge-hub-polkadot = { workspace = true }
 collectives-polkadot-runtime-constants = { workspace = true }
@@ -143,7 +143,7 @@ substrate-wasm-builder = { optional = true, workspace = true }
 [features]
 default = ["std"]
 
-polkadot-ahm = [
+paseo-ahm = [
 	"pallet-ah-migrator/polkadot-ahm",
 	"pallet-rc-migrator/polkadot-ahm",
 ]
@@ -163,7 +163,6 @@ runtime-benchmarks = [
 	"frame-support/runtime-benchmarks",
 	"frame-system-benchmarking/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
-	"kusama-runtime-constants/runtime-benchmarks",
 	"pallet-ah-migrator/runtime-benchmarks",
 	"pallet-ah-ops/runtime-benchmarks",
 	"pallet-asset-conversion-tx-payment/runtime-benchmarks",
@@ -207,7 +206,7 @@ runtime-benchmarks = [
 	"parachains-common/runtime-benchmarks",
 	"polkadot-parachain-primitives/runtime-benchmarks",
 	"polkadot-runtime-common/runtime-benchmarks",
-	"polkadot-runtime-constants/runtime-benchmarks",
+	"paseo-runtime-constants/runtime-benchmarks",
 	"snowbridge-inbound-queue-primitives/runtime-benchmarks",
 	"snowbridge-pallet-system-frontend/runtime-benchmarks",
 	"snowbridge-runtime-common/runtime-benchmarks",
@@ -280,10 +279,8 @@ try-runtime = [
 ]
 std = [
 	"pallet-ah-migrator/std",
-
 	"assets-common/std",
-	"bp-asset-hub-kusama/std",
-	"bp-asset-hub-polkadot/std",
+	"bp-asset-hub-paseo/std",
 	"bp-bridge-hub-kusama/std",
 	"bp-bridge-hub-polkadot/std",
 	"codec/std",
@@ -304,7 +301,6 @@ std = [
 	"frame-system-rpc-runtime-api/std",
 	"frame-system/std",
 	"frame-try-runtime?/std",
-	"kusama-runtime-constants/std",
 	"log/std",
 	"pallet-ah-ops/std",
 	"pallet-asset-conversion-tx-payment/std",
@@ -355,7 +351,7 @@ std = [
 	"polkadot-core-primitives/std",
 	"polkadot-parachain-primitives/std",
 	"polkadot-runtime-common/std",
-	"polkadot-runtime-constants/std",
+	"paseo-runtime-constants/std",
 	"primitive-types/std",
 	"scale-info/std",
 	"serde_json/std",
@@ -397,4 +393,4 @@ metadata-hash = ["substrate-wasm-builder?/metadata-hash"]
 # A feature that should be enabled when the runtime should be built for on-chain
 # deployment. This will disable stuff that shouldn't be part of the on-chain wasm
 # to make it smaller, like logging for example.
-on-chain-release-build = ["metadata-hash", "polkadot-ahm", "sp-api/disable-logging"]
+on-chain-release-build = ["metadata-hash", "paseo-ahm", "sp-api/disable-logging"]
