@@ -14,16 +14,16 @@
 // limitations under the License.
 
 use crate::{tests::snowbridge::CHAIN_ID, *};
-use asset_hub_polkadot_runtime::xcm_config::{
+use asset_hub_paseo_runtime::xcm_config::{
 	bridging::to_ethereum::BridgeHubEthereumBaseFeeV2, LocationToAccountId,
 };
-use bp_bridge_hub_polkadot::snowbridge::EthereumNetwork;
+use bp_bridge_hub_paseo::snowbridge::EthereumNetwork;
 use emulated_integration_tests_common::{
 	create_pool_with_native_on, PenpalBTeleportableAssetLocation,
 };
 use frame_support::traits::fungibles::Mutate;
 use hex_literal::hex;
-use polkadot_system_emulated_network::penpal_emulated_chain::{
+use paseo_system_emulated_network::penpal_emulated_chain::{
 	penpal_runtime::xcm_config::{CheckingAccount, TELEPORTABLE_ASSET_ID},
 	PenpalAssetOwner,
 };
@@ -32,7 +32,7 @@ use sp_core::H160;
 use xcm_builder::ExternalConsensusLocationsConverterFor;
 use xcm_executor::traits::ConvertLocation;
 
-/// Initial fund in DOT to be used to prefund test and sovereign accounts.
+/// Initial fund in PAS to be used to prefund test and sovereign accounts.
 pub const INITIAL_FUND: u128 = 50_000_000_000_000_000;
 /// A beneficiary address on Ethereum.
 pub const ETHEREUM_DESTINATION_ADDRESS: [u8; 20] = hex!("44a57ee2f2FCcb85FDa2B0B18EBD0D8D2333700e");
@@ -44,8 +44,8 @@ pub const TOKEN_ID: [u8; 20] = hex!("8daebade922df735c38c80c7ebd708af50815faa");
 pub const TOKEN_AMOUNT: u128 = 10_000_000_000_000_000;
 /// The fee in ether to be sent
 pub const REMOTE_FEE_AMOUNT_IN_ETHER: u128 = 6_000_000_000_000_000;
-/// Local execution fee in DOT.
-pub const LOCAL_FEE_AMOUNT_IN_DOT: u128 = 80_000_000_000_000;
+/// Local execution fee in PAS.
+pub const LOCAL_FEE_AMOUNT_IN_PAS: u128 = 80_000_000_000_000;
 /// Execution weight provided as limited for XCM execute.
 pub const EXECUTION_WEIGHT: u64 = 800_000_000_000;
 /// The execution fee (in Ether) for execution on AssetHub.
@@ -55,7 +55,7 @@ pub const RELAYER_REWARD_IN_ETHER: u128 = 1_500_000_000_000;
 /// The base cost for transfers to Ethereum, for Snowbridge V2.
 const AH_BASE_FEE_V2: u128 = 100_000_000_000;
 /// Amount of native to be provided for pool creation.
-const DOT_POOL_AMOUNT: u128 = 900_000_000_000;
+const PAS_POOL_AMOUNT: u128 = 900_000_000_000;
 /// Amount of ether to be provided for pool creation.
 const ETH_POOL_AMOUNT: u128 = 100_000_000_000_000;
 
@@ -64,29 +64,29 @@ pub fn beneficiary() -> Location {
 }
 
 pub fn asset_hub() -> Location {
-	Location::new(1, Parachain(AssetHubPolkadot::para_id().into()))
+	Location::new(1, Parachain(AssetHubPaseo::para_id().into()))
 }
 
 pub fn bridge_hub() -> Location {
-	Location::new(1, Parachain(BridgeHubPolkadot::para_id().into()))
+	Location::new(1, Parachain(BridgeHubPaseo::para_id().into()))
 }
 
-pub(crate) fn asset_hub_polkadot_location() -> Location {
+pub(crate) fn asset_hub_paseo_location() -> Location {
 	Location::new(
 		2,
-		[GlobalConsensus(NetworkId::Polkadot), Parachain(AssetHubPolkadot::para_id().into())],
+		[GlobalConsensus(NetworkId::Polkadot), Parachain(AssetHubPaseo::para_id().into())],
 	)
 }
-pub(crate) fn bridge_hub_polkadot_location() -> Location {
+pub(crate) fn bridge_hub_paseo_location() -> Location {
 	Location::new(
 		2,
-		[GlobalConsensus(NetworkId::Polkadot), Parachain(BridgeHubPolkadot::para_id().into())],
+		[GlobalConsensus(NetworkId::Polkadot), Parachain(BridgeHubPaseo::para_id().into())],
 	)
 }
 
 pub fn fund_on_bh() {
-	let assethub_sovereign = BridgeHubPolkadot::sovereign_account_id_of(asset_hub());
-	BridgeHubPolkadot::fund_accounts(vec![(assethub_sovereign.clone(), INITIAL_FUND)]);
+	let assethub_sovereign = BridgeHubPaseo::sovereign_account_id_of(asset_hub());
+	BridgeHubPaseo::fund_accounts(vec![(assethub_sovereign.clone(), INITIAL_FUND)]);
 }
 
 pub fn weth_location() -> Location {
@@ -107,23 +107,19 @@ pub fn erc20_token_location(token_id: H160) -> Location {
 	)
 }
 
-pub(crate) fn bridged_ksm_at_ah_polkadot() -> Location {
-	Location::new(2, [GlobalConsensus(Kusama)])
-}
-
 pub fn penpal_root_sovereign() -> sp_runtime::AccountId32 {
 	let penpal_root_sovereign: AccountId = PenpalB::execute_with(|| {
-		use polkadot_system_emulated_network::penpal_emulated_chain::penpal_runtime::xcm_config;
+		use paseo_system_emulated_network::penpal_emulated_chain::penpal_runtime::xcm_config;
 		xcm_config::LocationToAccountId::convert_location(&xcm_config::RootLocation::get()).unwrap()
 	});
 	penpal_root_sovereign
 }
 
 pub fn ethereum_sovereign() -> sp_runtime::AccountId32 {
-	use asset_hub_polkadot_runtime::xcm_config::UniversalLocation as AssetHubPolkadotUniversalLocation;
-	AssetHubPolkadot::execute_with(|| {
+	use asset_hub_paseo_runtime::xcm_config::UniversalLocation as AssetHubPaseoUniversalLocation;
+	AssetHubPaseo::execute_with(|| {
 		ExternalConsensusLocationsConverterFor::<
-			AssetHubPolkadotUniversalLocation,
+			AssetHubPaseoUniversalLocation,
 			[u8; 32],
 		>::convert_location(&Location::new(
 			2,
@@ -134,38 +130,28 @@ pub fn ethereum_sovereign() -> sp_runtime::AccountId32 {
 	})
 }
 
-/// Registers KSM as a native Polkadot asset on Snowbridge.
-pub fn register_ksm_as_native_polkadot_asset_on_snowbridge() {
-	register_asset_native_polkadot_asset_on_snowbridge(
-		bridged_ksm_at_ah_polkadot(),
-		String::from("ksm"),
-		String::from("KSM"),
-		12,
-	);
-}
-
-/// Registers DOT as a native Polkadot asset on Snowbridge.
-pub fn register_relay_token_on_polkadot_bh() {
-	register_asset_native_polkadot_asset_on_snowbridge(
+/// Registers PAS as a native Paseo asset on Snowbridge.
+pub fn register_relay_token_on_paseo_bh() {
+	register_asset_native_paseo_asset_on_snowbridge(
 		Location::parent(),
 		String::from("dot"),
-		String::from("DOT"),
+		String::from("PAS"),
 		10,
 	);
 }
 
 /// Method to register a native asset on Snowbridge.
-pub fn register_asset_native_polkadot_asset_on_snowbridge(
+pub fn register_asset_native_paseo_asset_on_snowbridge(
 	asset_location: Location,
 	name: String,
 	symbol: String,
 	decimals: u8,
 ) {
-	BridgeHubPolkadot::execute_with(|| {
-		type RuntimeEvent = <BridgeHubPolkadot as Chain>::RuntimeEvent;
-		type RuntimeOrigin = <BridgeHubPolkadot as Chain>::RuntimeOrigin;
+	BridgeHubPaseo::execute_with(|| {
+		type RuntimeEvent = <BridgeHubPaseo as Chain>::RuntimeEvent;
+		type RuntimeOrigin = <BridgeHubPaseo as Chain>::RuntimeOrigin;
 
-		assert_ok!(<BridgeHubPolkadot as BridgeHubPolkadotPallet>::EthereumSystem::register_token(
+		assert_ok!(<BridgeHubPaseo as BridgeHubPaseoPallet>::EthereumSystem::register_token(
 			RuntimeOrigin::root(),
 			Box::new(VersionedLocation::from(asset_location)),
 			AssetMetadata {
@@ -175,7 +161,7 @@ pub fn register_asset_native_polkadot_asset_on_snowbridge(
 			},
 		));
 		assert_expected_events!(
-			BridgeHubPolkadot,
+			BridgeHubPaseo,
 			vec![RuntimeEvent::EthereumSystem(snowbridge_pallet_system::Event::RegisterToken { .. }) => {},]
 		);
 	});
@@ -193,18 +179,18 @@ pub fn register_foreign_asset_on_penpal(id: Location, owner: AccountId, sufficie
 	PenpalB::force_create_foreign_asset(id, owner, sufficient, ASSET_MIN_BALANCE, vec![]);
 }
 
-/// Registers a foreign asset on Polkadot AssetHub.
+/// Registers a foreign asset on Paseo AssetHub.
 pub fn register_foreign_asset(id: Location, owner: AccountId, sufficient: bool) {
-	AssetHubPolkadot::force_create_foreign_asset(id, owner, sufficient, ASSET_MIN_BALANCE, vec![]);
+	AssetHubPaseo::force_create_foreign_asset(id, owner, sufficient, ASSET_MIN_BALANCE, vec![]);
 }
 
 /// Create PAL (native asset for penpal) on AH.
-pub fn register_pal_on_polkadot_asset_hub() {
-	AssetHubPolkadot::execute_with(|| {
-		type RuntimeOrigin = <AssetHubPolkadot as Chain>::RuntimeOrigin;
+pub fn register_pal_on_paseo_asset_hub() {
+	AssetHubPaseo::execute_with(|| {
+		type RuntimeOrigin = <AssetHubPaseo as Chain>::RuntimeOrigin;
 		let penpal_asset_id = Location::new(1, Parachain(PenpalB::para_id().into()));
 
-		assert_ok!(<AssetHubPolkadot as AssetHubPolkadotPallet>::ForeignAssets::force_create(
+		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::ForeignAssets::force_create(
 			RuntimeOrigin::root(),
 			penpal_asset_id.clone(),
 			PenpalAssetOwner::get().into(),
@@ -212,30 +198,30 @@ pub fn register_pal_on_polkadot_asset_hub() {
 			1_000_000,
 		));
 
-		assert!(<AssetHubPolkadot as AssetHubPolkadotPallet>::ForeignAssets::asset_exists(
+		assert!(<AssetHubPaseo as AssetHubPaseoPallet>::ForeignAssets::asset_exists(
 			penpal_asset_id.clone(),
 		));
 
-		assert_ok!(<AssetHubPolkadot as AssetHubPolkadotPallet>::ForeignAssets::mint_into(
+		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::ForeignAssets::mint_into(
 			penpal_asset_id.clone(),
-			&AssetHubPolkadotReceiver::get(),
+			&AssetHubPaseoReceiver::get(),
 			TOKEN_AMOUNT,
 		));
 
-		assert_ok!(<AssetHubPolkadot as AssetHubPolkadotPallet>::ForeignAssets::mint_into(
+		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::ForeignAssets::mint_into(
 			penpal_asset_id.clone(),
-			&AssetHubPolkadotSender::get(),
+			&AssetHubPaseoSender::get(),
 			TOKEN_AMOUNT,
 		));
 	});
 }
 
-pub fn register_pal_on_polkadot_bh() {
-	BridgeHubPolkadot::execute_with(|| {
-		type RuntimeEvent = <BridgeHubPolkadot as Chain>::RuntimeEvent;
-		type RuntimeOrigin = <BridgeHubPolkadot as Chain>::RuntimeOrigin;
+pub fn register_pal_on_paseo_bh() {
+	BridgeHubPaseo::execute_with(|| {
+		type RuntimeEvent = <BridgeHubPaseo as Chain>::RuntimeEvent;
+		type RuntimeOrigin = <BridgeHubPaseo as Chain>::RuntimeOrigin;
 
-		assert_ok!(<BridgeHubPolkadot as BridgeHubPolkadotPallet>::EthereumSystem::register_token(
+		assert_ok!(<BridgeHubPaseo as BridgeHubPaseoPallet>::EthereumSystem::register_token(
 			RuntimeOrigin::root(),
 			Box::new(VersionedLocation::from(PenpalBTeleportableAssetLocation::get())),
 			AssetMetadata {
@@ -245,7 +231,7 @@ pub fn register_pal_on_polkadot_bh() {
 			},
 		));
 		assert_expected_events!(
-			BridgeHubPolkadot,
+			BridgeHubPaseo,
 			vec![RuntimeEvent::EthereumSystem(snowbridge_pallet_system::Event::RegisterToken { .. }) => {},]
 		);
 	});
@@ -324,13 +310,13 @@ pub fn prefund_accounts_on_penpal_b() {
 	});
 }
 
-/// Fund all the accounts that need to funded for tests, on Polkadot AssetHub.
-pub fn prefund_accounts_on_polkadot_asset_hub() {
-	AssetHubPolkadot::fund_accounts(vec![(AssetHubPolkadotSender::get(), INITIAL_FUND)]);
-	AssetHubPolkadot::fund_accounts(vec![(AssetHubPolkadotReceiver::get(), INITIAL_FUND)]);
+/// Fund all the accounts that need to funded for tests, on Paseo AssetHub.
+pub fn prefund_accounts_on_paseo_asset_hub() {
+	AssetHubPaseo::fund_accounts(vec![(AssetHubPaseoSender::get(), INITIAL_FUND)]);
+	AssetHubPaseo::fund_accounts(vec![(AssetHubPaseoReceiver::get(), INITIAL_FUND)]);
 
-	let penpal_sovereign_on_pah = AssetHubPolkadot::sovereign_account_id_of(
-		AssetHubPolkadot::sibling_location_of(PenpalB::para_id()),
+	let penpal_sovereign_on_pah = AssetHubPaseo::sovereign_account_id_of(
+		AssetHubPaseo::sibling_location_of(PenpalB::para_id()),
 	);
 	let penpal_user_sovereign_on_pah = LocationToAccountId::convert_location(&Location::new(
 		1,
@@ -341,81 +327,81 @@ pub fn prefund_accounts_on_polkadot_asset_hub() {
 	))
 	.unwrap();
 
-	AssetHubPolkadot::execute_with(|| {
-		assert_ok!(<AssetHubPolkadot as AssetHubPolkadotPallet>::ForeignAssets::mint_into(
+	AssetHubPaseo::execute_with(|| {
+		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::ForeignAssets::mint_into(
 			weth_location(),
 			&penpal_sovereign_on_pah,
 			INITIAL_FUND,
 		));
-		assert_ok!(<AssetHubPolkadot as AssetHubPolkadotPallet>::ForeignAssets::mint_into(
+		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::ForeignAssets::mint_into(
 			weth_location(),
 			&penpal_user_sovereign_on_pah,
 			INITIAL_FUND,
 		));
-		assert_ok!(<AssetHubPolkadot as AssetHubPolkadotPallet>::ForeignAssets::mint_into(
+		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::ForeignAssets::mint_into(
 			weth_location(),
-			&AssetHubPolkadotReceiver::get(),
+			&AssetHubPaseoReceiver::get(),
 			INITIAL_FUND,
 		));
-		assert_ok!(<AssetHubPolkadot as AssetHubPolkadotPallet>::ForeignAssets::mint_into(
+		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::ForeignAssets::mint_into(
 			weth_location(),
-			&AssetHubPolkadotSender::get(),
+			&AssetHubPaseoSender::get(),
 			INITIAL_FUND,
 		));
-		assert_ok!(<AssetHubPolkadot as AssetHubPolkadotPallet>::ForeignAssets::mint_into(
+		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::ForeignAssets::mint_into(
 			eth_location(),
 			&penpal_sovereign_on_pah,
 			INITIAL_FUND,
 		));
-		assert_ok!(<AssetHubPolkadot as AssetHubPolkadotPallet>::ForeignAssets::mint_into(
+		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::ForeignAssets::mint_into(
 			eth_location(),
 			&penpal_user_sovereign_on_pah,
 			INITIAL_FUND,
 		));
-		assert_ok!(<AssetHubPolkadot as AssetHubPolkadotPallet>::ForeignAssets::mint_into(
+		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::ForeignAssets::mint_into(
 			eth_location(),
-			&AssetHubPolkadotReceiver::get(),
+			&AssetHubPaseoReceiver::get(),
 			INITIAL_FUND,
 		));
-		assert_ok!(<AssetHubPolkadot as AssetHubPolkadotPallet>::ForeignAssets::mint_into(
+		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::ForeignAssets::mint_into(
 			eth_location(),
-			&AssetHubPolkadotSender::get(),
+			&AssetHubPaseoSender::get(),
 			INITIAL_FUND,
 		));
 	});
 
-	AssetHubPolkadot::fund_accounts(vec![(ethereum_sovereign(), INITIAL_FUND)]);
-	AssetHubPolkadot::fund_accounts(vec![(penpal_sovereign_on_pah.clone(), INITIAL_FUND)]);
-	AssetHubPolkadot::fund_accounts(vec![(penpal_user_sovereign_on_pah.clone(), INITIAL_FUND)]);
+	AssetHubPaseo::fund_accounts(vec![(ethereum_sovereign(), INITIAL_FUND)]);
+	AssetHubPaseo::fund_accounts(vec![(penpal_sovereign_on_pah.clone(), INITIAL_FUND)]);
+	AssetHubPaseo::fund_accounts(vec![(penpal_user_sovereign_on_pah.clone(), INITIAL_FUND)]);
 }
 
-/// Create a pool between DOT and ETH on Polkadot AssetHub to support paying for fees with ETH.
-pub(crate) fn set_up_eth_and_dot_pool_on_polkadot_asset_hub() {
-	set_up_foreign_asset_and_dot_pool_on_polkadot_asset_hub(eth_location());
+/// Create a pool between PAS and ETH on Paseo AssetHub to support paying for fees with ETH.
+pub(crate) fn set_up_eth_and_pas_pool_on_paseo_asset_hub() {
+	set_up_foreign_asset_and_pas_pool_on_paseo_asset_hub(eth_location());
 }
 
-/// Create a pool between DOT and a foreign asset on Polkadot AssetHub.
-pub(crate) fn set_up_foreign_asset_and_dot_pool_on_polkadot_asset_hub(asset: Location) {
+/// Create a pool between PAS and a foreign asset on Paseo AssetHub.
+pub(crate) fn set_up_foreign_asset_and_pas_pool_on_paseo_asset_hub(asset: Location) {
 	let ethereum_sovereign = ethereum_sovereign();
-	AssetHubPolkadot::fund_accounts(vec![(ethereum_sovereign.clone(), INITIAL_FUND)]);
-	AssetHubPolkadot::execute_with(|| {
-		assert_ok!(<AssetHubPolkadot as AssetHubPolkadotPallet>::ForeignAssets::mint_into(
+	AssetHubPaseo::fund_accounts(vec![(ethereum_sovereign.clone(), INITIAL_FUND)]);
+	AssetHubPaseo::execute_with(|| {
+		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::ForeignAssets::mint_into(
 			asset.clone(),
 			&ethereum_sovereign.clone(),
 			INITIAL_FUND,
 		));
 	});
 	create_pool_with_native_on!(
-		AssetHubPolkadot,
+		AssetHubPaseo,
 		asset,
 		true,
 		ethereum_sovereign.clone(),
-		DOT_POOL_AMOUNT,
+		PAS_POOL_AMOUNT,
 		ETH_POOL_AMOUNT
 	);
 }
 
-/// Create a pool between DOT and ETH on Penpal to support paying for fees with ETH.
+/// Create a pool between PAS and ETH on Penpal to support paying for fees with ETH.
 pub(crate) fn set_up_eth_and_dot_pool_on_penpal() {
 	let ethereum_sovereign = ethereum_sovereign();
 	PenpalB::fund_accounts(vec![(ethereum_sovereign.clone(), INITIAL_FUND)]);
@@ -431,42 +417,18 @@ pub(crate) fn set_up_eth_and_dot_pool_on_penpal() {
 		eth_location(),
 		true,
 		ethereum_sovereign.clone(),
-		DOT_POOL_AMOUNT,
+		PAS_POOL_AMOUNT,
 		ETH_POOL_AMOUNT
 	);
 }
 
-/// Setup KSM and Ether pool on Kusama to pay for fees.
-pub(crate) fn set_up_eth_and_ksm_pool_on_kusama_asset_hub() {
-	let sa_of_pah_on_kah = AssetHubKusama::sovereign_account_of_parachain_on_other_global_consensus(
-		NetworkId::Polkadot,
-		AssetHubPolkadot::para_id(),
-	);
-	AssetHubKusama::execute_with(|| {
-		assert_ok!(<AssetHubPolkadot as AssetHubPolkadotPallet>::ForeignAssets::mint_into(
-			eth_location(),
-			&sa_of_pah_on_kah.clone(),
-			INITIAL_FUND,
-		));
-	});
-	AssetHubKusama::fund_accounts(vec![(sa_of_pah_on_kah.clone(), INITIAL_FUND)]);
-	create_pool_with_native_on!(
-		AssetHubKusama,
-		eth_location(),
-		true,
-		sa_of_pah_on_kah.clone(),
-		DOT_POOL_AMOUNT,
-		ETH_POOL_AMOUNT
-	);
-}
-
-/// Set the BridgeHubEthereumBaseFeeV2 storage item in the Polkadot AssetHub xcm config.
-/// This is the minimum fee to send transactions from Polkadot AH to Ethereum.
+/// Set the BridgeHubEthereumBaseFeeV2 storage item in the Paseo AssetHub xcm config.
+/// This is the minimum fee to send transactions from Paseo AH to Ethereum.
 pub fn set_bridge_hub_ethereum_base_fee() {
-	AssetHubPolkadot::execute_with(|| {
-		type RuntimeOrigin = <AssetHubPolkadot as Chain>::RuntimeOrigin;
+	AssetHubPaseo::execute_with(|| {
+		type RuntimeOrigin = <AssetHubPaseo as Chain>::RuntimeOrigin;
 
-		assert_ok!(<AssetHubPolkadot as Chain>::System::set_storage(
+		assert_ok!(<AssetHubPaseo as Chain>::System::set_storage(
 			RuntimeOrigin::root(),
 			vec![(BridgeHubEthereumBaseFeeV2::key().to_vec(), AH_BASE_FEE_V2.encode())],
 		));
@@ -487,34 +449,18 @@ pub fn set_trust_reserve_on_penpal() {
 	});
 }
 
-/// Check that no assets were trapped on Polkadot AssetHub.
+/// Check that no assets were trapped on Paseo AssetHub.
 pub fn ensure_no_assets_trapped_on_pah() {
-	AssetHubPolkadot::execute_with(|| {
-		type RuntimeEvent = <AssetHubPolkadot as Chain>::RuntimeEvent;
+	AssetHubPaseo::execute_with(|| {
+		type RuntimeEvent = <AssetHubPaseo as Chain>::RuntimeEvent;
 
-		let events = AssetHubPolkadot::events();
+		let events = AssetHubPaseo::events();
 		assert!(
 			!events.iter().any(|event| matches!(
 				event,
 				RuntimeEvent::PolkadotXcm(pallet_xcm::Event::AssetsTrapped { .. })
 			)),
-			"Assets were trapped on Polkadot AssetHub, should not happen."
-		);
-	});
-}
-
-/// Check that no assets were trapped on Kusama AssetHub.
-pub fn ensure_no_assets_trapped_on_kah() {
-	AssetHubKusama::execute_with(|| {
-		type RuntimeEvent = <AssetHubKusama as Chain>::RuntimeEvent;
-
-		let events = AssetHubKusama::events();
-		assert!(
-			!events.iter().any(|event| matches!(
-				event,
-				RuntimeEvent::PolkadotXcm(pallet_xcm::Event::AssetsTrapped { .. })
-			)),
-			"Assets were trapped on Kusama AssetHub, should not happen."
+			"Assets were trapped on Paseo AssetHub, should not happen."
 		);
 	});
 }

@@ -18,13 +18,13 @@ pub use codec::Encode;
 pub use frame_support::{assert_err, assert_ok, pallet_prelude::DispatchResult};
 pub use sp_runtime::DispatchError;
 
-// Polkadot
+// Paseo
 pub use xcm::{
 	latest::ParentThen,
 	prelude::{AccountId32 as AccountId32Junction, *},
 	v5::{
 		self, Error,
-		NetworkId::{Kusama as KusamaId, Polkadot as PolkadotId},
+		NetworkId::{Kusama as KusamaId, Polkadot as PaseoId},
 	},
 };
 pub use xcm_executor::traits::TransferType;
@@ -47,19 +47,22 @@ pub use emulated_integration_tests_common::{
 	ASSETS_PALLET_ID, PROOF_SIZE_THRESHOLD, REF_TIME_THRESHOLD, XCM_V4,
 };
 pub use integration_tests_helpers::common::snowbridge::{MIN_ETHER_BALANCE, WETH};
-pub use kusama_polkadot_system_emulated_network::{
-	asset_hub_kusama_emulated_chain::{
-		genesis::ED as ASSET_HUB_KUSAMA_ED, AssetHubKusamaParaPallet as AssetHubKusamaPallet,
+pub use parachains_common::{AccountId, Balance};
+pub use paseo_system_emulated_network::{
+	asset_hub_paseo_emulated_chain::{
+		genesis::{
+			AssetHubPaseoAssetOwner, PenpalATeleportableAssetLocation, ED as ASSET_HUB_POLKADOT_ED,
+		},
+		AssetHubPaseoParaPallet as AssetHubPaseoPallet,
 	},
-	asset_hub_polkadot_emulated_chain::{
-		genesis::{AssetHubPolkadotAssetOwner, ED as ASSET_HUB_POLKADOT_ED},
-		AssetHubPolkadotParaPallet as AssetHubPolkadotPallet,
+	bridge_hub_paseo_emulated_chain::{
+		genesis::ED as BRIDGE_HUB_POLKADOT_ED, BridgeHubPaseoParaPallet as BridgeHubPaseoPallet,
 	},
-	bridge_hub_polkadot_emulated_chain::{
-		genesis::ED as BRIDGE_HUB_POLKADOT_ED,
-		BridgeHubPolkadotParaPallet as BridgeHubPolkadotPallet,
+	paseo_emulated_chain::{
+		genesis::ED as POLKADOT_ED,
+		paseo_runtime::{xcm_config::UniversalLocation as PaseoRelayUniversalLocation, Dmp},
+		PaseoRelayPallet as PaseoPallet,
 	},
-	kusama_emulated_chain::KusamaRelayPallet as KusamaPallet,
 	penpal_emulated_chain::{
 		penpal_runtime::xcm_config::{
 			CustomizableAssetFromSystemAssetHub as PenpalCustomizableAssetFromSystemAssetHub,
@@ -67,25 +70,14 @@ pub use kusama_polkadot_system_emulated_network::{
 		},
 		PenpalAParaPallet as PenpalAPallet, PenpalAssetOwner, PenpalBParaPallet as PenpalBPallet,
 	},
-	polkadot_emulated_chain::{
-		genesis::ED as POLKADOT_ED,
-		polkadot_runtime::{xcm_config::UniversalLocation as PolkadotRelayUniversalLocation, Dmp},
-		PolkadotRelayPallet as PolkadotPallet,
-	},
-	AssetHubKusamaPara as AssetHubKusama, AssetHubKusamaParaReceiver as AssetHubKusamaReceiver,
-	AssetHubKusamaParaSender as AssetHubKusamaSender, AssetHubPolkadotPara as AssetHubPolkadot,
-	AssetHubPolkadotParaReceiver as AssetHubPolkadotReceiver,
-	AssetHubPolkadotParaSender as AssetHubPolkadotSender, BridgeHubKusamaPara as BridgeHubKusama,
-	BridgeHubPolkadotPara as BridgeHubPolkadot,
-	BridgeHubPolkadotParaReceiver as BridgeHubPolkadotReceiver,
-	BridgeHubPolkadotParaSender as BridgeHubPolkadotSender, KusamaRelay as Kusama,
-	KusamaRelayReceiver as KusamaReceiver, PenpalAPara as PenpalA,
+	AssetHubPaseoPara as AssetHubPaseo, AssetHubPaseoParaReceiver as AssetHubPaseoReceiver,
+	AssetHubPaseoParaSender as AssetHubPaseoSender, BridgeHubPaseoPara as BridgeHubPaseo,
+	BridgeHubPaseoParaReceiver as BridgeHubPaseoReceiver,
+	BridgeHubPaseoParaSender as BridgeHubPaseoSender, PaseoRelay as Paseo,
+	PaseoRelayReceiver as PaseoReceiver, PaseoRelaySender as PaseoSender, PenpalAPara as PenpalA,
 	PenpalAParaReceiver as PenpalAReceiver, PenpalBPara as PenpalB,
 	PenpalBParaReceiver as PenpalBReceiver, PenpalBParaSender as PenpalBSender,
-	PolkadotRelay as Polkadot, PolkadotRelayReceiver as PolkadotReceiver,
-	PolkadotRelaySender as PolkadotSender,
 };
-pub use parachains_common::{AccountId, Balance};
 
 pub const ASSET_ID: u32 = 1;
 pub const ASSET_MIN_BALANCE: u128 = 1000;

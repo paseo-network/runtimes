@@ -25,7 +25,7 @@ pub mod snowbridge {
 	pub const MIN_ETHER_BALANCE: u128 = 15_000_000_000_000;
 
 	parameter_types! {
-		pub EthereumNetwork: NetworkId = Ethereum { chain_id: 1 };
+		pub EthereumNetwork: NetworkId = Ethereum { chain_id: 11155111 };
 		pub WethLocation: Location =  Location::new(2, [GlobalConsensus(EthereumNetwork::get()), AccountKey20 { network: None, key: WETH }]);
 		pub EthLocation: Location =  Location::new(2, [GlobalConsensus(EthereumNetwork::get())]);
 	}

@@ -85,8 +85,7 @@ fn send_xcm_through_opened_lane_with_different_xcm_version_on_hops_works() {
 		send_assets_from_asset_hub_polkadot(
 			destination.clone(),
 			(native_token.clone(), amount).into(),
-			0,
-			TransferType::LocalReserve
+			0
 		),
 		DispatchError::Module(sp_runtime::ModuleError {
 			index: 31,
@@ -107,8 +106,7 @@ fn send_xcm_through_opened_lane_with_different_xcm_version_on_hops_works() {
 	assert_ok!(send_assets_from_asset_hub_polkadot(
 		destination.clone(),
 		(native_token.clone(), amount).into(),
-		0,
-		TransferType::LocalReserve
+		0
 	));
 
 	// `ExportMessage` on local BridgeHub - fails - remote BridgeHub version not known
@@ -126,8 +124,7 @@ fn send_xcm_through_opened_lane_with_different_xcm_version_on_hops_works() {
 	assert_ok!(send_assets_from_asset_hub_polkadot(
 		destination.clone(),
 		(native_token.clone(), amount).into(),
-		0,
-		TransferType::LocalReserve
+		0
 	));
 	assert_bridge_hub_polkadot_message_accepted(true);
 	assert_bridge_hub_kusama_message_received();

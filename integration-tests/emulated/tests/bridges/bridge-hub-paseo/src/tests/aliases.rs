@@ -16,7 +16,7 @@
 //! Tests related to XCM aliasing.
 
 use crate::*;
-use bridge_hub_polkadot_runtime::xcm_config::XcmConfig;
+use bridge_hub_paseo_runtime::xcm_config::XcmConfig;
 use emulated_integration_tests_common::{macros::AccountId, test_cross_chain_alias};
 use frame_support::traits::ContainsPair;
 use xcm::latest::Junctions::*;
@@ -48,9 +48,9 @@ fn account_on_sibling_chain_cannot_alias_into_same_local_account() {
 	test_cross_chain_alias!(
 		vec![
 			// between AH and BH: denied
-			(AssetHubPolkadot, BridgeHubPolkadot, TELEPORT_FEES, DENIED),
+			(AssetHubPaseo, BridgeHubPaseo, TELEPORT_FEES, DENIED),
 			// between Penpal and BH: denied
-			(PenpalB, BridgeHubPolkadot, RESERVE_TRANSFER_FEES, DENIED)
+			(PenpalB, BridgeHubPaseo, RESERVE_TRANSFER_FEES, DENIED)
 		],
 		origin,
 		target,
@@ -76,9 +76,9 @@ fn account_on_sibling_chain_cannot_alias_into_different_local_account() {
 	test_cross_chain_alias!(
 		vec![
 			// between AH and BH: denied
-			(AssetHubPolkadot, BridgeHubPolkadot, TELEPORT_FEES, DENIED),
+			(AssetHubPaseo, BridgeHubPaseo, TELEPORT_FEES, DENIED),
 			// between Penpal and BH: denied
-			(PenpalB, BridgeHubPolkadot, RESERVE_TRANSFER_FEES, DENIED)
+			(PenpalB, BridgeHubPaseo, RESERVE_TRANSFER_FEES, DENIED)
 		],
 		origin,
 		target,
@@ -97,10 +97,10 @@ fn authorized_cross_chain_aliases() {
 	let pal_admin = <PenpalB as Chain>::RuntimeOrigin::signed(PenpalAssetOwner::get());
 	PenpalB::mint_foreign_asset(pal_admin.clone(), Location::parent(), origin.clone(), fees * 10);
 	PenpalB::mint_foreign_asset(pal_admin, Location::parent(), bad_origin.clone(), fees * 10);
-	BridgeHubPolkadot::fund_accounts(vec![(target.clone(), fees * 10)]);
+	BridgeHubPaseo::fund_accounts(vec![(target.clone(), fees * 10)]);
 
 	// let's authorize `origin` on Penpal to alias `target` on BridgeHub
-	BridgeHubPolkadot::execute_with(|| {
+	BridgeHubPaseo::execute_with(|| {
 		let penpal_origin = Location::new(
 			1,
 			X2([
@@ -110,21 +110,19 @@ fn authorized_cross_chain_aliases() {
 			.into()),
 		);
 		// `target` adds `penpal_origin` as authorized alias
-		assert_ok!(
-			<BridgeHubPolkadot as BridgeHubPolkadotPallet>::PolkadotXcm::add_authorized_alias(
-				<BridgeHubPolkadot as Chain>::RuntimeOrigin::signed(target.clone()),
-				Box::new(penpal_origin.into()),
-				None
-			)
-		);
+		assert_ok!(<BridgeHubPaseo as BridgeHubPaseoPallet>::PolkadotXcm::add_authorized_alias(
+			<BridgeHubPaseo as Chain>::RuntimeOrigin::signed(target.clone()),
+			Box::new(penpal_origin.into()),
+			None
+		));
 	});
 	// Verify that unauthorized `bad_origin` cannot alias into `target`, from any chain.
 	test_cross_chain_alias!(
 		vec![
 			// between AH and BridgeHub: denied
-			(AssetHubPolkadot, BridgeHubPolkadot, TELEPORT_FEES, DENIED),
+			(AssetHubPaseo, BridgeHubPaseo, TELEPORT_FEES, DENIED),
 			// between Penpal and BridgeHub: denied
-			(PenpalB, BridgeHubPolkadot, RESERVE_TRANSFER_FEES, DENIED)
+			(PenpalB, BridgeHubPaseo, RESERVE_TRANSFER_FEES, DENIED)
 		],
 		bad_origin,
 		target,
@@ -135,26 +133,26 @@ fn authorized_cross_chain_aliases() {
 	test_cross_chain_alias!(
 		vec![
 			// between AH and BridgeHub: denied
-			(AssetHubPolkadot, BridgeHubPolkadot, TELEPORT_FEES, DENIED),
+			(AssetHubPaseo, BridgeHubPaseo, TELEPORT_FEES, DENIED),
 			// between Penpal and BridgeHub: allowed
-			(PenpalB, BridgeHubPolkadot, RESERVE_TRANSFER_FEES, ALLOWED)
+			(PenpalB, BridgeHubPaseo, RESERVE_TRANSFER_FEES, ALLOWED)
 		],
 		origin,
 		target,
 		fees
 	);
 	// remove authorization for `origin` on Penpal to alias `target` on BridgeHub
-	BridgeHubPolkadot::execute_with(|| {
+	BridgeHubPaseo::execute_with(|| {
 		// `target` removes all authorized aliases
 		assert_ok!(
-			<BridgeHubPolkadot as BridgeHubPolkadotPallet>::PolkadotXcm::remove_all_authorized_aliases(
-				<BridgeHubPolkadot as Chain>::RuntimeOrigin::signed(target.clone())
+			<BridgeHubPaseo as BridgeHubPaseoPallet>::PolkadotXcm::remove_all_authorized_aliases(
+				<BridgeHubPaseo as Chain>::RuntimeOrigin::signed(target.clone())
 			)
 		);
 	});
 	// Verify `penpal::origin` can no longer alias into `target` on BridgeHub.
 	test_cross_chain_alias!(
-		vec![(PenpalB, BridgeHubPolkadot, RESERVE_TRANSFER_FEES, DENIED)],
+		vec![(PenpalB, BridgeHubPaseo, RESERVE_TRANSFER_FEES, DENIED)],
 		origin,
 		target,
 		fees
@@ -163,7 +161,7 @@ fn authorized_cross_chain_aliases() {
 
 #[test]
 fn aliasing_child_locations() {
-	BridgeHubPolkadot::execute_with(|| {
+	BridgeHubPaseo::execute_with(|| {
 		// Bridge Hub allows aliasing descendant of origin.
 		let origin = Location::new(1, X1([PalletInstance(8)].into()));
 		let target = Location::new(1, X2([PalletInstance(8), GeneralIndex(9)].into()));
@@ -200,7 +198,7 @@ fn aliasing_child_locations() {
 
 #[test]
 fn asset_hub_root_aliases_anything() {
-	BridgeHubPolkadot::execute_with(|| {
+	BridgeHubPaseo::execute_with(|| {
 		// Does not allow AH root to alias other locations.
 		let origin = Location::new(1, X1([Parachain(1000)].into()));
 
@@ -216,7 +214,8 @@ fn asset_hub_root_aliases_anything() {
 		let target =
 			Location::new(1, X3([Parachain(42), PalletInstance(8), GeneralIndex(9)].into()));
 		assert!(!<XcmConfig as xcm_executor::Config>::Aliasers::contains(&origin, &target));
-		let target = Location::new(2, X1([GlobalConsensus(Ethereum { chain_id: 1 })].into()));
+		let target =
+			Location::new(2, X1([GlobalConsensus(Ethereum { chain_id: 11155111 })].into()));
 		assert!(!<XcmConfig as xcm_executor::Config>::Aliasers::contains(&origin, &target));
 		let target = Location::new(2, X2([GlobalConsensus(Kusama), Parachain(1000)].into()));
 		assert!(!<XcmConfig as xcm_executor::Config>::Aliasers::contains(&origin, &target));
@@ -236,7 +235,8 @@ fn asset_hub_root_aliases_anything() {
 
 		// Other root locations cannot alias anything.
 		let origin = Location::new(1, Here);
-		let target = Location::new(2, X1([GlobalConsensus(Ethereum { chain_id: 1 })].into()));
+		let target =
+			Location::new(2, X1([GlobalConsensus(Ethereum { chain_id: 11155111 })].into()));
 		assert!(!<XcmConfig as xcm_executor::Config>::Aliasers::contains(&origin, &target));
 		let target = Location::new(2, X2([GlobalConsensus(Kusama), Parachain(1000)].into()));
 		assert!(!<XcmConfig as xcm_executor::Config>::Aliasers::contains(&origin, &target));

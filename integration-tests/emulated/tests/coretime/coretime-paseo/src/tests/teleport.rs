@@ -35,7 +35,7 @@ fn teleport_via_transfer_assets_from_and_to_relay() {
 	let native_asset: Assets = (Here, amount).into();
 
 	test_relay_is_trusted_teleporter!(
-		Polkadot,
+		Paseo,
 		vec![CoretimePolkadot],
 		(native_asset, amount),
 		transfer_assets
@@ -45,7 +45,7 @@ fn teleport_via_transfer_assets_from_and_to_relay() {
 
 	test_parachain_is_trusted_teleporter_for_relay!(
 		CoretimePolkadot,
-		Polkadot,
+		Paseo,
 		amount,
 		transfer_assets
 	);
@@ -57,7 +57,7 @@ fn teleport_via_limited_teleport_assets_from_and_to_relay() {
 	let native_asset: Assets = (Here, amount).into();
 
 	test_relay_is_trusted_teleporter!(
-		Polkadot,
+		Paseo,
 		vec![CoretimePolkadot],
 		(native_asset, amount),
 		limited_teleport_assets
@@ -67,7 +67,7 @@ fn teleport_via_limited_teleport_assets_from_and_to_relay() {
 
 	test_parachain_is_trusted_teleporter_for_relay!(
 		CoretimePolkadot,
-		Polkadot,
+		Paseo,
 		amount,
 		limited_teleport_assets
 	);

@@ -13,16 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use asset_hub_polkadot_runtime::Runtime as AhRuntime;
-use bridge_hub_polkadot_runtime::Runtime as BhRuntime;
+use asset_hub_paseo_runtime::Runtime as AhRuntime;
+use bridge_hub_paseo_runtime::Runtime as BhRuntime;
 use snowbridge_pallet_outbound_queue_v2::WeightInfo as OutboundQueueWeightInfo;
 use snowbridge_pallet_system_frontend::BackendWeightInfo;
 use snowbridge_pallet_system_v2::WeightInfo as SystemWeightInfo;
 
 /// Verifies that the AssetHub backend weights are equal to or larger than the corresponding
 /// BridgeHub extrinsic weight. If this test fails, please update
-/// system-parachains/asset-hubs/asset-hub-polkadot/src/weights/snowbridge_pallet_system_backend.rs
-/// with the corresponding weight value in the Polkadot Bridge Hub runtime.
+/// system-parachains/asset-hubs/asset-hub-paseo/src/weights/snowbridge_pallet_system_backend.rs
+/// with the corresponding weight value in the Paseo Bridge Hub runtime.
 #[test]
 fn asset_hub_weights_should_be_equal_or_gte_bridge_hub_weights() {
 	let bh_register_token =

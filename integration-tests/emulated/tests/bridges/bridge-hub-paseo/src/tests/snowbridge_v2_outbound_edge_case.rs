@@ -18,13 +18,12 @@ use crate::{
 		snowbridge::CHAIN_ID,
 		snowbridge_common::*,
 		snowbridge_v2_outbound::{EthereumSystemFrontend, EthereumSystemFrontendCall},
-		usdt_at_ah_polkadot,
+		usdt_at_ah_paseo,
 	},
 	*,
 };
-use asset_hub_polkadot_runtime::xcm_config::bridging::to_ethereum::BridgeHubEthereumBaseFee;
+use asset_hub_paseo_runtime::xcm_config::bridging::to_ethereum::BridgeHubEthereumBaseFee;
 use frame_support::{assert_noop, BoundedVec};
-use kusama_polkadot_system_emulated_network::asset_hub_kusama_emulated_chain::genesis::PenpalATeleportableAssetLocation;
 use snowbridge_core::AssetMetadata;
 use sp_runtime::DispatchError::BadOrigin;
 use xcm::v5::AssetTransferFilter;
@@ -32,8 +31,8 @@ use xcm::v5::AssetTransferFilter;
 #[test]
 fn register_penpal_a_asset_from_penpal_b_will_fail() {
 	fund_on_bh();
-	prefund_accounts_on_polkadot_asset_hub();
-	set_up_eth_and_dot_pool_on_polkadot_asset_hub();
+	prefund_accounts_on_paseo_asset_hub();
+	set_up_eth_and_pas_pool_on_paseo_asset_hub();
 	set_trust_reserve_on_penpal();
 	register_ethereum_assets_on_penpal();
 	prefund_accounts_on_penpal_b();
@@ -52,7 +51,7 @@ fn register_penpal_a_asset_from_penpal_b_will_fail() {
 		type RuntimeOrigin = <PenpalB as Chain>::RuntimeOrigin;
 
 		let local_fee_asset_on_penpal =
-			Asset { id: AssetId(Location::parent()), fun: Fungible(LOCAL_FEE_AMOUNT_IN_DOT) };
+			Asset { id: AssetId(Location::parent()), fun: Fungible(LOCAL_FEE_AMOUNT_IN_PAS) };
 
 		let remote_fee_asset_on_ah =
 			Asset { id: AssetId(eth_location()), fun: Fungible(REMOTE_FEE_AMOUNT_IN_ETHER) };
@@ -104,25 +103,25 @@ fn register_penpal_a_asset_from_penpal_b_will_fail() {
 		));
 	});
 
-	AssetHubPolkadot::execute_with(|| {
-		type RuntimeEvent = <AssetHubPolkadot as Chain>::RuntimeEvent;
+	AssetHubPaseo::execute_with(|| {
+		type RuntimeEvent = <AssetHubPaseo as Chain>::RuntimeEvent;
 		assert_expected_events!(
-			AssetHubPolkadot,
+			AssetHubPaseo,
 			vec![RuntimeEvent::ForeignAssets(pallet_assets::Event::Burned { .. }) => {},]
 		);
 	});
 
 	// No events should be emitted on the bridge hub
-	BridgeHubPolkadot::execute_with(|| {
-		assert_expected_events!(BridgeHubPolkadot, vec![]);
+	BridgeHubPaseo::execute_with(|| {
+		assert_expected_events!(BridgeHubPaseo, vec![]);
 	});
 }
 
 #[test]
 fn export_from_non_system_parachain_will_fail() {
 	let penpal_location = Location::new(1, [Parachain(PenpalB::para_id().into())]);
-	let penpal_sovereign = BridgeHubPolkadot::sovereign_account_id_of(penpal_location.clone());
-	BridgeHubPolkadot::fund_accounts(vec![(penpal_sovereign.clone(), INITIAL_FUND)]);
+	let penpal_sovereign = BridgeHubPaseo::sovereign_account_id_of(penpal_location.clone());
+	BridgeHubPaseo::fund_accounts(vec![(penpal_sovereign.clone(), INITIAL_FUND)]);
 
 	PenpalB::execute_with(|| {
 		type RuntimeEvent = <PenpalB as Chain>::RuntimeEvent;
@@ -162,10 +161,10 @@ fn export_from_non_system_parachain_will_fail() {
 		);
 	});
 
-	BridgeHubPolkadot::execute_with(|| {
-		type RuntimeEvent = <BridgeHubPolkadot as Chain>::RuntimeEvent;
+	BridgeHubPaseo::execute_with(|| {
+		type RuntimeEvent = <BridgeHubPaseo as Chain>::RuntimeEvent;
 		assert_expected_events!(
-			BridgeHubPolkadot,
+			BridgeHubPaseo,
 			vec![RuntimeEvent::MessageQueue(pallet_message_queue::Event::Processed{ success: false, .. }) => {},]
 		);
 	});
@@ -174,18 +173,18 @@ fn export_from_non_system_parachain_will_fail() {
 #[test]
 pub fn register_usdt_not_from_owner_on_asset_hub_will_fail() {
 	fund_on_bh();
-	prefund_accounts_on_polkadot_asset_hub();
-	AssetHubPolkadot::execute_with(|| {
-		type RuntimeOrigin = <AssetHubPolkadot as Chain>::RuntimeOrigin;
+	prefund_accounts_on_paseo_asset_hub();
+	AssetHubPaseo::execute_with(|| {
+		type RuntimeOrigin = <AssetHubPaseo as Chain>::RuntimeOrigin;
 
 		let fees_asset =
 			Asset { id: AssetId(eth_location()), fun: Fungible(REMOTE_FEE_AMOUNT_IN_ETHER) };
 
 		assert_noop!(
-			<AssetHubPolkadot as AssetHubPolkadotPallet>::SnowbridgeSystemFrontend::register_token(
-				// The owner is Alice, while AssetHubPolkadotReceiver is Bob, so it should fail
-				RuntimeOrigin::signed(AssetHubPolkadotReceiver::get()),
-				bx!(VersionedLocation::from(usdt_at_ah_polkadot())),
+			<AssetHubPaseo as AssetHubPaseoPallet>::SnowbridgeSystemFrontend::register_token(
+				// The owner is Alice, while AssetHubPaseoReceiver is Bob, so it should fail
+				RuntimeOrigin::signed(AssetHubPaseoReceiver::get()),
+				bx!(VersionedLocation::from(usdt_at_ah_paseo())),
 				AssetMetadata {
 					name: "usdt".as_bytes().to_vec().try_into().unwrap(),
 					symbol: "usdt".as_bytes().to_vec().try_into().unwrap(),
@@ -201,20 +200,20 @@ pub fn register_usdt_not_from_owner_on_asset_hub_will_fail() {
 #[test]
 pub fn register_relay_token_from_asset_hub_user_origin_will_fail() {
 	fund_on_bh();
-	prefund_accounts_on_polkadot_asset_hub();
-	AssetHubPolkadot::execute_with(|| {
-		type RuntimeOrigin = <AssetHubPolkadot as Chain>::RuntimeOrigin;
+	prefund_accounts_on_paseo_asset_hub();
+	AssetHubPaseo::execute_with(|| {
+		type RuntimeOrigin = <AssetHubPaseo as Chain>::RuntimeOrigin;
 
 		let fees_asset =
 			Asset { id: AssetId(eth_location()), fun: Fungible(REMOTE_FEE_AMOUNT_IN_ETHER) };
 
 		assert_noop!(
-			<AssetHubPolkadot as AssetHubPolkadotPallet>::SnowbridgeSystemFrontend::register_token(
-				RuntimeOrigin::signed(AssetHubPolkadotSender::get()),
+			<AssetHubPaseo as AssetHubPaseoPallet>::SnowbridgeSystemFrontend::register_token(
+				RuntimeOrigin::signed(AssetHubPaseoSender::get()),
 				bx!(VersionedLocation::from(Location { parents: 1, interior: [].into() })),
 				AssetMetadata {
 					name: "dot".as_bytes().to_vec().try_into().unwrap(),
-					symbol: "DOT".as_bytes().to_vec().try_into().unwrap(),
+					symbol: "PAS".as_bytes().to_vec().try_into().unwrap(),
 					decimals: 10,
 				},
 				fees_asset,
@@ -228,14 +227,14 @@ pub fn register_relay_token_from_asset_hub_user_origin_will_fail() {
 // remoteXcm, successfully routing to the V2 path, but ultimately failing at the BH Exporter.
 #[test]
 pub fn exploit_v2_route_with_legacy_v1_transfer_will_fail() {
-	prefund_accounts_on_polkadot_asset_hub();
+	prefund_accounts_on_paseo_asset_hub();
 	set_bridge_hub_ethereum_base_fee();
 
 	// Set base transfer fee to Ethereum on AH.
-	AssetHubPolkadot::execute_with(|| {
-		type RuntimeOrigin = <AssetHubPolkadot as Chain>::RuntimeOrigin;
+	AssetHubPaseo::execute_with(|| {
+		type RuntimeOrigin = <AssetHubPaseo as Chain>::RuntimeOrigin;
 
-		assert_ok!(<AssetHubPolkadot as Chain>::System::set_storage(
+		assert_ok!(<AssetHubPaseo as Chain>::System::set_storage(
 			RuntimeOrigin::root(),
 			vec![(BridgeHubEthereumBaseFee::key().to_vec(), 1_000_000_000_u128.encode())],
 		));
@@ -253,24 +252,24 @@ pub fn exploit_v2_route_with_legacy_v1_transfer_will_fail() {
 		DepositAsset { assets: Wild(AllCounted(2)), beneficiary: beneficiary() },
 	]);
 
-	assert_ok!(AssetHubPolkadot::execute_with(|| {
-		<AssetHubPolkadot as AssetHubPolkadotPallet>::PolkadotXcm::transfer_assets_using_type_and_then(
- 			<AssetHubPolkadot as Chain>::RuntimeOrigin::signed(AssetHubPolkadotSender::get()),
- 			bx!(eth_location().into()),
- 			bx!(assets.into()),
- 			bx!(TransferType::DestinationReserve),
- 			bx!(AssetId(eth_location()).into()),
- 			bx!(TransferType::DestinationReserve),
- 			bx!(VersionedXcm::from(custom_xcm_on_dest)),
- 			Unlimited,
- 		)
+	assert_ok!(AssetHubPaseo::execute_with(|| {
+		<AssetHubPaseo as AssetHubPaseoPallet>::PolkadotXcm::transfer_assets_using_type_and_then(
+			<AssetHubPaseo as Chain>::RuntimeOrigin::signed(AssetHubPaseoSender::get()),
+			bx!(eth_location().into()),
+			bx!(assets.into()),
+			bx!(TransferType::DestinationReserve),
+			bx!(AssetId(eth_location()).into()),
+			bx!(TransferType::DestinationReserve),
+			bx!(VersionedXcm::from(custom_xcm_on_dest)),
+			Unlimited,
+		)
 	}));
 
-	BridgeHubPolkadot::execute_with(|| {
-		type RuntimeEvent = <BridgeHubPolkadot as Chain>::RuntimeEvent;
+	BridgeHubPaseo::execute_with(|| {
+		type RuntimeEvent = <BridgeHubPaseo as Chain>::RuntimeEvent;
 		// Check that the Ethereum message was queue in the Outbound Queue
 		assert_expected_events!(
-			BridgeHubPolkadot,
+			BridgeHubPaseo,
 			vec![
 				RuntimeEvent::MessageQueue(pallet_message_queue::Event::Processed{ success: false, .. }) => {},
 			]

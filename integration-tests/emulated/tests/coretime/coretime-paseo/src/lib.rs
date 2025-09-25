@@ -32,7 +32,7 @@ pub use xcm::{
 
 // Cumulus
 pub use asset_test_utils::xcm_helpers;
-pub use coretime_polkadot_runtime::ExistentialDeposit as CoretimeExistentialDeposit;
+pub use coretime_paseo_runtime::ExistentialDeposit as CoretimeExistentialDeposit;
 pub use emulated_integration_tests_common::{
 	xcm_emulator::{
 		assert_expected_events, bx, helpers::weight_within_threshold, Chain, Parachain as Para,
@@ -42,28 +42,26 @@ pub use emulated_integration_tests_common::{
 	PROOF_SIZE_THRESHOLD, REF_TIME_THRESHOLD, XCM_V3,
 };
 pub use parachains_common::{AccountId, Balance};
-pub use polkadot_system_emulated_network::{
-	asset_hub_polkadot_emulated_chain::{
-		genesis::ED as ASSET_HUB_POLKADOT_ED, AssetHubPolkadotParaPallet as AssetHubPolkadotPallet,
+pub use paseo_system_emulated_network::{
+	asset_hub_paseo_emulated_chain::{
+		genesis::ED as ASSET_HUB_POLKADOT_ED, AssetHubPaseoParaPallet as AssetHubPolkadotPallet,
 	},
-	bridge_hub_polkadot_emulated_chain::BridgeHubPolkadotParaPallet as BridgeHubPolkadotPallet,
-	collectives_polkadot_emulated_chain::CollectivesPolkadotParaPallet as CollectivesPolkadotPallet,
-	coretime_polkadot_emulated_chain::{
-		self, coretime_polkadot_runtime, genesis::ED as CORETIME_POLKADOT_ED,
-		CoretimePolkadotParaPallet as CoretimePolkadotPallet,
+	bridge_hub_paseo_emulated_chain::BridgeHubPaseoParaPallet as BridgeHubPolkadotPallet,
+	collectives_paseo_emulated_chain::CollectivesPaseoParaPallet as CollectivesPolkadotPallet,
+	coretime_paseo_emulated_chain::{
+		self, coretime_paseo_runtime, genesis::ED as CORETIME_POLKADOT_ED,
+		CoretimePaseoParaPallet as CoretimePolkadotPallet,
 	},
+	paseo_emulated_chain::{genesis::ED as POLKADOT_ED, PaseoRelayPallet as PaseoPallet},
 	penpal_emulated_chain::{PenpalAParaPallet as PenpalAPallet, PenpalAssetOwner},
-	people_polkadot_emulated_chain::PeoplePolkadotParaPallet as PeoplePolkadotPallet,
-	polkadot_emulated_chain::{genesis::ED as POLKADOT_ED, PolkadotRelayPallet as PolkadotPallet},
-	AssetHubPolkadotPara as AssetHubPolkadot,
-	AssetHubPolkadotParaReceiver as AssetHubPolkadotReceiver,
-	AssetHubPolkadotParaSender as AssetHubPolkadotSender,
-	BridgeHubPolkadotPara as BridgeHubPolkadot, CollectivesPolkadotPara as CollectivesPolkadot,
-	CoretimePolkadotPara as CoretimePolkadot,
-	CoretimePolkadotParaReceiver as CoretimePolkadotReceiver,
-	CoretimePolkadotParaSender as CoretimePolkadotSender, PenpalAPara as PenpalA,
-	PeoplePolkadotPara as PeoplePolkadot, PolkadotRelay as Polkadot,
-	PolkadotRelayReceiver as PolkadotReceiver, PolkadotRelaySender as PolkadotSender,
+	people_paseo_emulated_chain::PeoplePaseoParaPallet as PeoplePolkadotPallet,
+	AssetHubPaseoPara as AssetHubPolkadot, AssetHubPaseoParaReceiver as AssetHubPolkadotReceiver,
+	AssetHubPaseoParaSender as AssetHubPolkadotSender, BridgeHubPaseoPara as BridgeHubPolkadot,
+	CollectivesPaseoPara as CollectivesPolkadot, CoretimePaseoPara as CoretimePolkadot,
+	CoretimePaseoParaReceiver as CoretimePolkadotReceiver,
+	CoretimePaseoParaSender as CoretimePolkadotSender, PaseoRelay as Paseo,
+	PaseoRelayReceiver as PaseoReceiver, PaseoRelaySender as PaseoSender, PenpalAPara as PenpalA,
+	PeoplePaseoPara as PeoplePolkadot,
 };
 
 #[cfg(test)]
