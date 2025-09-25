@@ -22,7 +22,7 @@ xcm = { workspace = true, default-features = true }
 polkadot-parachain-primitives = { workspace = true }
 
 # Runtimes
-asset-hub-paseo-runtime = { workspace = true }
+asset-hub-paseo-runtime = { workspace = true, default-features = true }
 paseo-emulated-chain = { workspace = true }
 penpal-emulated-chain = { workspace = true }
 
