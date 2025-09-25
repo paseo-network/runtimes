@@ -38,40 +38,84 @@ fn main() -> Result<(), String> {
 
 	let supported_chains =
 		HashMap::<&str, Box<dyn Fn() -> Result<Box<dyn ChainSpec>, String>>>::from([
-			("paseo-dev", Box::new(|| relay_chain_specs::paseo_development_config()) as Box<_>),
-			("paseo-local", Box::new(|| relay_chain_specs::paseo_local_testnet_config()) as Box<_>),
+			#[cfg(feature = "polkadot")]
+			("polkadot-dev", Box::new(relay_chain_specs::polkadot_development_config) as Box<_>),
+			#[cfg(feature = "polkadot")]
 			(
-				"asset-hub-paseo-local",
-				Box::new(|| system_parachains_specs::asset_hub_paseo_local_testnet_config())
+				"polkadot-local",
+				Box::new(relay_chain_specs::polkadot_local_testnet_config) as Box<_>,
+			),
+			#[cfg(feature = "kusama")]
+			("kusama-dev", Box::new(relay_chain_specs::kusama_development_config) as Box<_>),
+			#[cfg(feature = "kusama")]
+			("kusama-local", Box::new(relay_chain_specs::kusama_local_testnet_config) as Box<_>),
+			#[cfg(feature = "asset-hub-kusama")]
+			(
+				"asset-hub-kusama-local",
+				Box::new(system_parachains_specs::asset_hub_kusama_local_testnet_config) as Box<_>,
+			),
+			#[cfg(feature = "asset-hub-polkadot")]
+			(
+				"asset-hub-polkadot-local",
+				Box::new(system_parachains_specs::asset_hub_polkadot_local_testnet_config)
 					as Box<_>,
 			),
+			#[cfg(feature = "collectives-polkadot")]
 			(
-				"bridge-hub-paseo-local",
-				Box::new(system_parachains_specs::bridge_hub_paseo_local_testnet_config) as Box<_>,
+				"collectives-polkadot-local",
+				Box::new(system_parachains_specs::collectives_polkadot_local_testnet_config)
+					as Box<_>,
 			),
+			#[cfg(feature = "bridge-hub-polkadot")]
 			(
-				"collectives-paseo-local",
-				Box::new(|| system_parachains_specs::collectives_paseo_local_config()) as Box<_>,
+				"bridge-hub-polkadot-local",
+				Box::new(system_parachains_specs::bridge_hub_polkadot_local_testnet_config)
+					as Box<_>,
 			),
+			#[cfg(feature = "bridge-hub-kusama")]
 			(
-				"collectives-paseo-live",
-				Box::new(|| system_parachains_specs::collectives_paseo_live_config()) as Box<_>,
+				"bridge-hub-kusama-local",
+				Box::new(system_parachains_specs::bridge_hub_kusama_local_testnet_config) as Box<_>,
 			),
+			#[cfg(feature = "glutton-kusama")]
 			(
-				"coretime-paseo-local",
-				Box::new(system_parachains_specs::coretime_paseo_local_testnet_config) as Box<_>,
+				"glutton-kusama-local",
+				Box::new(system_parachains_specs::glutton_kusama_local_testnet_config) as Box<_>,
 			),
+			#[cfg(feature = "encointer-kusama")]
 			(
-				"coretime-paseo-tot",
-				Box::new(|| system_parachains_specs::coretime_paseo_tot_config()) as Box<_>,
+				"encointer-kusama-local",
+				Box::new(system_parachains_specs::encointer_kusama_local_testnet_config) as Box<_>,
 			),
+			#[cfg(feature = "coretime-kusama")]
 			(
-				"coretime-paseo",
-				Box::new(|| system_parachains_specs::coretime_paseo_config()) as Box<_>,
+				"coretime-kusama",
+				Box::new(system_parachains_specs::coretime_kusama_config) as Box<_>,
 			),
+			#[cfg(feature = "coretime-kusama")]
 			(
-				"people-paseo-local",
-				Box::new(|| system_parachains_specs::people_paseo_local_testnet_config()) as Box<_>,
+				"coretime-kusama-local",
+				Box::new(system_parachains_specs::coretime_kusama_local_testnet_config) as Box<_>,
+			),
+			#[cfg(feature = "coretime-polkadot")]
+			(
+				"coretime-polkadot",
+				Box::new(system_parachains_specs::coretime_polkadot_config) as Box<_>,
+			),
+			#[cfg(feature = "coretime-polkadot")]
+			(
+				"coretime-polkadot-local",
+				Box::new(system_parachains_specs::coretime_polkadot_local_testnet_config) as Box<_>,
+			),
+			#[cfg(feature = "people-kusama")]
+			(
+				"people-kusama-local",
+				Box::new(system_parachains_specs::people_kusama_local_testnet_config) as Box<_>,
+			),
+			#[cfg(feature = "people-polkadot")]
+			(
+				"people-polkadot-local",
+				Box::new(system_parachains_specs::people_polkadot_local_testnet_config) as Box<_>,
 			),
 		]);
 
@@ -91,7 +135,7 @@ fn main() -> Result<(), String> {
 		} else {
 			Err(format!(
 				"Unknown chain: '{}', only supported: '{supported}' or a json file",
-				cli.chain
+				cli.chain,
 			))
 		}
 	}

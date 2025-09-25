@@ -1,18 +1,18 @@
 // Copyright (C) Parity Technologies (UK) Ltd.
-// This file is part of Paseo.
+// This file is part of Polkadot.
 
-// Paseo is free software: you can redistribute it and/or modify
+// Polkadot is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 
-// Paseo is distributed in the hope that it will be useful,
+// Polkadot is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
 // You should have received a copy of the GNU General Public License
-// along with Paseo.  If not, see <http://www.gnu.org/licenses/>.
+// along with Polkadot.  If not, see <http://www.gnu.org/licenses/>.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -46,7 +46,7 @@ pub mod time {
 	use polkadot_runtime_common::prod_or_fast;
 	pub const MILLISECS_PER_BLOCK: Moment = 6000;
 	pub const SLOT_DURATION: Moment = MILLISECS_PER_BLOCK;
-	pub const EPOCH_DURATION_IN_SLOTS: BlockNumber = prod_or_fast!(1 * HOURS, 1 * MINUTES);
+	pub const EPOCH_DURATION_IN_SLOTS: BlockNumber = prod_or_fast!(4 * HOURS, MINUTES);
 
 	// These time units are defined in number of blocks.
 	pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
@@ -74,7 +74,7 @@ pub mod fee {
 	/// The block saturation level. Fees will be updates based on this value.
 	pub const TARGET_BLOCK_FULLNESS: Perbill = Perbill::from_percent(25);
 
-	/// Cost of every transaction byte at Paseo relay chain.
+	/// Cost of every transaction byte at Polkadot relay chain.
 	pub const TRANSACTION_BYTE_FEE: Balance = 10 * super::currency::MILLICENTS;
 
 	/// Handles converting a weight scalar to a fee value, based on the scale and granularity of the
@@ -141,8 +141,6 @@ pub mod system_parachain {
 	pub const PEOPLE_ID: u32 = 1004;
 	/// Coretime Chain ID.
 	pub const BROKER_ID: u32 = 1005;
-	/// PAssetHub (Interim AH + contracts) Chain ID.
-	pub const PASSET_HUB_ID: u32 = 1111;
 
 	// System parachains from Polkadot point of view.
 	pub type SystemParachains = IsChildSystemParachain<ParaId>;
@@ -159,7 +157,7 @@ pub mod system_parachain {
 	}
 }
 
-/// Paseo Treasury pallet instance.
+/// Polkadot Treasury pallet instance.
 pub const TREASURY_PALLET_ID: u8 = 19;
 
 pub mod proxy {

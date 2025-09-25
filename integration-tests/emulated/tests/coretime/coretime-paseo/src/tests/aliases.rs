@@ -16,7 +16,7 @@
 //! Tests related to XCM aliasing.
 
 use crate::*;
-use coretime_paseo_runtime::xcm_config::XcmConfig;
+use coretime_polkadot_runtime::xcm_config::XcmConfig;
 use emulated_integration_tests_common::{macros::AccountId, test_cross_chain_alias};
 use frame_support::traits::ContainsPair;
 use xcm::latest::Junctions::*;
@@ -237,8 +237,7 @@ fn asset_hub_root_aliases_anything() {
 		let target =
 			Location::new(1, X3([Parachain(42), PalletInstance(8), GeneralIndex(9)].into()));
 		assert!(<XcmConfig as xcm_executor::Config>::Aliasers::contains(&origin, &target));
-		let target =
-			Location::new(2, X1([GlobalConsensus(Ethereum { chain_id: 11155111 })].into()));
+		let target = Location::new(2, X1([GlobalConsensus(Ethereum { chain_id: 1 })].into()));
 		assert!(<XcmConfig as xcm_executor::Config>::Aliasers::contains(&origin, &target));
 		let target = Location::new(2, X2([GlobalConsensus(Kusama), Parachain(1000)].into()));
 		assert!(<XcmConfig as xcm_executor::Config>::Aliasers::contains(&origin, &target));
@@ -258,8 +257,7 @@ fn asset_hub_root_aliases_anything() {
 
 		// Other root locations cannot alias anything.
 		let origin = Location::new(1, Here);
-		let target =
-			Location::new(2, X1([GlobalConsensus(Ethereum { chain_id: 11155111 })].into()));
+		let target = Location::new(2, X1([GlobalConsensus(Ethereum { chain_id: 1 })].into()));
 		assert!(!<XcmConfig as xcm_executor::Config>::Aliasers::contains(&origin, &target));
 		let target = Location::new(2, X2([GlobalConsensus(Kusama), Parachain(1000)].into()));
 		assert!(!<XcmConfig as xcm_executor::Config>::Aliasers::contains(&origin, &target));

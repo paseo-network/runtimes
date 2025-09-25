@@ -13,21 +13,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use asset_hub_paseo_emulated_chain;
-pub use bridge_hub_paseo_emulated_chain;
-pub use collectives_paseo_emulated_chain;
-pub use coretime_paseo_emulated_chain;
-pub use paseo_emulated_chain;
+pub use asset_hub_polkadot_emulated_chain;
+pub use bridge_hub_polkadot_emulated_chain;
+pub use collectives_polkadot_emulated_chain;
+pub use coretime_polkadot_emulated_chain;
 pub use penpal_emulated_chain;
-pub use people_paseo_emulated_chain;
+pub use people_polkadot_emulated_chain;
+pub use polkadot_emulated_chain;
 
-use asset_hub_paseo_emulated_chain::AssetHubPaseo;
-use bridge_hub_paseo_emulated_chain::BridgeHubPaseo;
-use collectives_paseo_emulated_chain::CollectivesPaseo;
-use coretime_paseo_emulated_chain::CoretimePaseo;
-use paseo_emulated_chain::Paseo;
+use asset_hub_polkadot_emulated_chain::AssetHubPolkadot;
+use bridge_hub_polkadot_emulated_chain::BridgeHubPolkadot;
+use collectives_polkadot_emulated_chain::CollectivesPolkadot;
+use coretime_polkadot_emulated_chain::CoretimePolkadot;
 use penpal_emulated_chain::{PenpalA, PenpalB};
-use people_paseo_emulated_chain::PeoplePaseo;
+use people_polkadot_emulated_chain::PeoplePolkadot;
+use polkadot_emulated_chain::Polkadot;
 
 // Cumulus
 use emulated_integration_tests_common::{
@@ -36,28 +36,28 @@ use emulated_integration_tests_common::{
 };
 
 decl_test_networks! {
-	pub struct PaseoMockNet {
-		relay_chain = Paseo,
+	pub struct PolkadotMockNet {
+		relay_chain = Polkadot,
 		parachains = vec![
-			AssetHubPaseo,
-			BridgeHubPaseo,
-			CollectivesPaseo,
-			CoretimePaseo,
+			AssetHubPolkadot,
+			BridgeHubPolkadot,
+			CollectivesPolkadot,
+			CoretimePolkadot,
 			PenpalA,
 			PenpalB,
-			PeoplePaseo,
+			PeoplePolkadot,
 		],
 		bridge = ()
 	},
 }
 
 decl_test_sender_receiver_accounts_parameter_types! {
-	PaseoRelay { sender: ALICE, receiver: BOB },
-	AssetHubPaseoPara { sender: ALICE, receiver: BOB },
-	BridgeHubPaseoPara { sender: ALICE, receiver: BOB },
-	CollectivesPaseoPara { sender: ALICE, receiver: BOB },
-	CoretimePaseoPara { sender: ALICE, receiver: BOB },
+	PolkadotRelay { sender: ALICE, receiver: BOB },
+	AssetHubPolkadotPara { sender: ALICE, receiver: BOB },
+	BridgeHubPolkadotPara { sender: ALICE, receiver: BOB },
+	CollectivesPolkadotPara { sender: ALICE, receiver: BOB },
+	CoretimePolkadotPara { sender: ALICE, receiver: BOB },
 	PenpalAPara { sender: ALICE, receiver: BOB },
 	PenpalBPara { sender: ALICE, receiver: BOB },
-	PeoplePaseoPara { sender: ALICE, receiver: BOB }
+	PeoplePolkadotPara { sender: ALICE, receiver: BOB }
 }

@@ -15,33 +15,33 @@
 
 use crate::{
 	tests::snowbridge_common::{
-		eth_location, set_up_eth_and_pas_pool_on_paseo_asset_hub, INITIAL_FUND,
+		eth_location, set_up_eth_and_dot_pool_on_polkadot_asset_hub, INITIAL_FUND,
 	},
 	*,
 };
-use bridge_hub_paseo_runtime::bridge_common_config::{BridgeReward, BridgeRewardBeneficiaries};
+use bridge_hub_polkadot_runtime::bridge_common_config::{BridgeReward, BridgeRewardBeneficiaries};
 use pallet_bridge_relayers::{Error::FailedToPayReward, RewardLedger};
 
 #[test]
 fn claim_rewards_works() {
-	let assethub_location = BridgeHubPaseo::sibling_location_of(AssetHubPaseo::para_id());
-	let assethub_sovereign = BridgeHubPaseo::sovereign_account_id_of(assethub_location);
+	let assethub_location = BridgeHubPolkadot::sibling_location_of(AssetHubPolkadot::para_id());
+	let assethub_sovereign = BridgeHubPolkadot::sovereign_account_id_of(assethub_location);
 
-	let relayer_account = BridgeHubPaseoSender::get();
-	let reward_address = AssetHubPaseoReceiver::get();
+	let relayer_account = BridgeHubPolkadotSender::get();
+	let reward_address = AssetHubPolkadotReceiver::get();
 
-	BridgeHubPaseo::fund_accounts(vec![
+	BridgeHubPolkadot::fund_accounts(vec![
 		(assethub_sovereign.clone(), INITIAL_FUND),
 		(relayer_account.clone(), INITIAL_FUND),
 	]);
-	set_up_eth_and_pas_pool_on_paseo_asset_hub();
+	set_up_eth_and_dot_pool_on_polkadot_asset_hub();
 
-	BridgeHubPaseo::execute_with(|| {
-		type RuntimeEvent = <BridgeHubPaseo as Chain>::RuntimeEvent;
-		type RuntimeOrigin = <BridgeHubPaseo as Chain>::RuntimeOrigin;
+	BridgeHubPolkadot::execute_with(|| {
+		type RuntimeEvent = <BridgeHubPolkadot as Chain>::RuntimeEvent;
+		type RuntimeOrigin = <BridgeHubPolkadot as Chain>::RuntimeOrigin;
 		let reward_amount = MIN_ETHER_BALANCE * 2; // Reward should be more than Ether min balance
 
-		type BridgeRelayers = <BridgeHubPaseo as BridgeHubPaseoPallet>::BridgeRelayers;
+		type BridgeRelayers = <BridgeHubPolkadot as BridgeHubPolkadotPallet>::BridgeRelayers;
 		BridgeRelayers::register_reward(
 			&relayer_account.clone(),
 			BridgeReward::Snowbridge,
@@ -50,7 +50,7 @@ fn claim_rewards_works() {
 
 		// Check that the reward was registered.
 		assert_expected_events!(
-			BridgeHubPaseo,
+			BridgeHubPolkadot,
 			vec![
 				RuntimeEvent::BridgeRelayers(pallet_bridge_relayers::Event::RewardRegistered { relayer, reward_kind, reward_balance }) => {
 					relayer: *relayer == relayer_account,
@@ -75,7 +75,7 @@ fn claim_rewards_works() {
 		assert_ok!(result);
 
 		assert_expected_events!(
-			BridgeHubPaseo,
+			BridgeHubPolkadot,
 			vec![
 				// Check that the pay reward event was emitted on BH
 				RuntimeEvent::BridgeRelayers(pallet_bridge_relayers::Event::RewardPaid { relayer, reward_kind, reward_balance, beneficiary }) => {
@@ -88,10 +88,10 @@ fn claim_rewards_works() {
 		);
 	});
 
-	AssetHubPaseo::execute_with(|| {
-		type RuntimeEvent = <AssetHubPaseo as Chain>::RuntimeEvent;
+	AssetHubPolkadot::execute_with(|| {
+		type RuntimeEvent = <AssetHubPolkadot as Chain>::RuntimeEvent;
 		assert_expected_events!(
-			AssetHubPaseo,
+			AssetHubPolkadot,
 			vec![
 				// Check that the reward was paid on AH
 				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { asset_id, owner, .. }) => {
@@ -105,25 +105,25 @@ fn claim_rewards_works() {
 
 #[test]
 fn claim_snowbridge_rewards_to_local_account_fails() {
-	let assethub_location = BridgeHubPaseo::sibling_location_of(AssetHubPaseo::para_id());
-	let assethub_sovereign = BridgeHubPaseo::sovereign_account_id_of(assethub_location);
+	let assethub_location = BridgeHubPolkadot::sibling_location_of(AssetHubPolkadot::para_id());
+	let assethub_sovereign = BridgeHubPolkadot::sovereign_account_id_of(assethub_location);
 
-	let relayer_account = BridgeHubPaseoSender::get();
-	let reward_address = AssetHubPaseoReceiver::get();
+	let relayer_account = BridgeHubPolkadotSender::get();
+	let reward_address = AssetHubPolkadotReceiver::get();
 
-	BridgeHubPaseo::fund_accounts(vec![
+	BridgeHubPolkadot::fund_accounts(vec![
 		(assethub_sovereign.clone(), INITIAL_FUND),
 		(relayer_account.clone(), INITIAL_FUND),
 	]);
-	set_up_eth_and_pas_pool_on_paseo_asset_hub();
+	set_up_eth_and_dot_pool_on_polkadot_asset_hub();
 
-	BridgeHubPaseo::execute_with(|| {
-		type Runtime = <BridgeHubPaseo as Chain>::Runtime;
-		type RuntimeEvent = <BridgeHubPaseo as Chain>::RuntimeEvent;
-		type RuntimeOrigin = <BridgeHubPaseo as Chain>::RuntimeOrigin;
+	BridgeHubPolkadot::execute_with(|| {
+		type Runtime = <BridgeHubPolkadot as Chain>::Runtime;
+		type RuntimeEvent = <BridgeHubPolkadot as Chain>::RuntimeEvent;
+		type RuntimeOrigin = <BridgeHubPolkadot as Chain>::RuntimeOrigin;
 		let reward_amount = MIN_ETHER_BALANCE * 2; // Reward should be more than Ether min balance
 
-		type BridgeRelayers = <BridgeHubPaseo as BridgeHubPaseoPallet>::BridgeRelayers;
+		type BridgeRelayers = <BridgeHubPolkadot as BridgeHubPolkadotPallet>::BridgeRelayers;
 		BridgeRelayers::register_reward(
 			&relayer_account.clone(),
 			BridgeReward::Snowbridge,
@@ -132,7 +132,7 @@ fn claim_snowbridge_rewards_to_local_account_fails() {
 
 		// Check that the reward was registered.
 		assert_expected_events!(
-			BridgeHubPaseo,
+			BridgeHubPolkadot,
 			vec![
 				RuntimeEvent::BridgeRelayers(pallet_bridge_relayers::Event::RewardRegistered { relayer, reward_kind, reward_balance }) => {
 					relayer: *relayer == relayer_account,

@@ -21,17 +21,17 @@ use emulated_integration_tests_common::validators;
 use grandpa::AuthorityId as GrandpaId;
 use sp_runtime::Perbill;
 
-// Paseo
+// Polkadot
 use polkadot_primitives::{AssignmentId, ValidatorId};
 
 // Cumulus
 use emulated_integration_tests_common::{accounts, build_genesis_storage, get_host_config};
 use parachains_common::Balance;
-use paseo_runtime_constants::currency::UNITS as PAS;
+use polkadot_runtime_constants::currency::UNITS as DOT;
 
-pub const ED: Balance = paseo_runtime::ExistentialDeposit::get();
-const ENDOWMENT: u128 = 1_000_000 * PAS;
-const STASH: u128 = 100 * PAS;
+pub const ED: Balance = polkadot_runtime::ExistentialDeposit::get();
+const ENDOWMENT: u128 = 1_000_000 * DOT;
+const STASH: u128 = 100 * DOT;
 
 fn session_keys(
 	babe: BabeId,
@@ -40,8 +40,8 @@ fn session_keys(
 	para_assignment: AssignmentId,
 	authority_discovery: AuthorityDiscoveryId,
 	beefy: BeefyId,
-) -> paseo_runtime::SessionKeys {
-	paseo_runtime::SessionKeys {
+) -> polkadot_runtime::SessionKeys {
+	polkadot_runtime::SessionKeys {
 		babe,
 		grandpa,
 		para_validator,
@@ -52,13 +52,13 @@ fn session_keys(
 }
 
 pub fn genesis() -> sp_core::storage::Storage {
-	let genesis_config = paseo_runtime::RuntimeGenesisConfig {
-		system: paseo_runtime::SystemConfig::default(),
-		balances: paseo_runtime::BalancesConfig {
+	let genesis_config = polkadot_runtime::RuntimeGenesisConfig {
+		system: polkadot_runtime::SystemConfig::default(),
+		balances: polkadot_runtime::BalancesConfig {
 			balances: accounts::init_balances().iter().cloned().map(|k| (k, ENDOWMENT)).collect(),
 			dev_accounts: None,
 		},
-		session: paseo_runtime::SessionConfig {
+		session: polkadot_runtime::SessionConfig {
 			keys: validators::initial_authorities()
 				.iter()
 				.map(|x| {
@@ -78,7 +78,7 @@ pub fn genesis() -> sp_core::storage::Storage {
 				.collect::<Vec<_>>(),
 			..Default::default()
 		},
-		staking: paseo_runtime::StakingConfig {
+		staking: polkadot_runtime::StakingConfig {
 			validator_count: validators::initial_authorities().len() as u32,
 			minimum_validator_count: 1,
 			stakers: validators::initial_authorities()
@@ -90,14 +90,14 @@ pub fn genesis() -> sp_core::storage::Storage {
 			slash_reward_fraction: Perbill::from_percent(10),
 			..Default::default()
 		},
-		babe: paseo_runtime::BabeConfig {
+		babe: polkadot_runtime::BabeConfig {
 			authorities: Default::default(),
-			epoch_config: paseo_runtime::BABE_GENESIS_EPOCH_CONFIG,
+			epoch_config: polkadot_runtime::BABE_GENESIS_EPOCH_CONFIG,
 			..Default::default()
 		},
-		configuration: paseo_runtime::ConfigurationConfig { config: get_host_config() },
+		configuration: polkadot_runtime::ConfigurationConfig { config: get_host_config() },
 		..Default::default()
 	};
 
-	build_genesis_storage(&genesis_config, paseo_runtime::WASM_BINARY.unwrap())
+	build_genesis_storage(&genesis_config, polkadot_runtime::WASM_BINARY.unwrap())
 }

@@ -28,180 +28,340 @@ pub struct Extensions {
 	pub para_id: u32,
 }
 
-pub type AssetHubPaseoChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
+pub type AssetHubPolkadotChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
 
-pub type CollectivesPaseoChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
+pub type AssetHubKusamaChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
 
-pub type BridgeHubPaseoChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
+pub type CollectivesPolkadotChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
 
-pub type CoretimePaseoChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
+pub type BridgeHubPolkadotChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
 
-pub type PeoplePaseoChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
+pub type BridgeHubKusamaChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
 
-pub fn asset_hub_paseo_local_testnet_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String> {
-	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("ss58Format".into(), 0.into());
-	properties.insert("tokenSymbol".into(), "PAS".into());
-	properties.insert("tokenDecimals".into(), 10.into());
+pub type GluttonKusamaChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
 
-	Ok(Box::new(
-		AssetHubPaseoChainSpec::builder(
-			asset_hub_paseo_runtime::WASM_BINARY.expect("AssetHubPaseo wasm not available!"),
-			Extensions { relay_chain: "paseo-local".into(), para_id: 1000 },
-		)
-		.with_name("Asset Hub Paseo Local")
-		.with_id("asset-hub-paseo-local")
-		.with_chain_type(sc_chain_spec::ChainType::Local)
-		.with_genesis_config_preset_name("local_testnet")
-		.with_protocol_id("ah-pas")
-		.with_properties(properties)
-		.build(),
-	))
-}
+pub type EncointerKusamaChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
 
-pub fn bridge_hub_paseo_local_testnet_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String>
+pub type CoretimeKusamaChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
+
+pub type CoretimePolkadotChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
+
+pub type PeopleKusamaChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
+
+pub type PeoplePolkadotChainSpec = sc_chain_spec::GenericChainSpec<Extensions>;
+
+#[cfg(feature = "asset-hub-polkadot")]
+pub fn asset_hub_polkadot_local_testnet_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String>
 {
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("ss58Format".into(), 0.into());
-	properties.insert("tokenSymbol".into(), "PAS".into());
+	properties.insert("tokenSymbol".into(), "DOT".into());
 	properties.insert("tokenDecimals".into(), 10.into());
 
 	Ok(Box::new(
-		BridgeHubPaseoChainSpec::builder(
-			bridge_hub_paseo_runtime::WASM_BINARY.expect("BridgeHubPaseo wasm not available!"),
-			Extensions { relay_chain: "paseo-local".into(), para_id: 1002 },
+		AssetHubPolkadotChainSpec::builder(
+			asset_hub_polkadot_runtime::WASM_BINARY.expect("AssetHubPolkadot wasm not available!"),
+			Extensions { relay_chain: "polkadot-local".into(), para_id: 1000 },
 		)
-		.with_name("Paseo Bridge Hub Local")
-		.with_id("paseo-bridge-hub-local")
+		.with_name("Polkadot Asset Hub Local")
+		.with_id("asset-hub-polkadot-local")
 		.with_chain_type(sc_chain_spec::ChainType::Local)
 		.with_genesis_config_preset_name("local_testnet")
-		.with_protocol_id("bh-pas")
 		.with_properties(properties)
 		.build(),
 	))
 }
 
-pub fn people_paseo_local_testnet_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String> {
+#[cfg(feature = "asset-hub-kusama")]
+pub fn asset_hub_kusama_local_testnet_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String>
+{
+	let mut properties = sc_chain_spec::Properties::new();
+	properties.insert("ss58Format".into(), 2.into());
+	properties.insert("tokenSymbol".into(), "KSM".into());
+	properties.insert("tokenDecimals".into(), 12.into());
+
+	Ok(Box::new(
+		AssetHubKusamaChainSpec::builder(
+			asset_hub_kusama_runtime::WASM_BINARY.expect("AssetHubKusama wasm not available!"),
+			Extensions { relay_chain: "kusama-local".into(), para_id: 1000 },
+		)
+		.with_name("Kusama Asset Hub Local")
+		.with_id("asset-hub-kusama-local")
+		.with_chain_type(sc_chain_spec::ChainType::Local)
+		.with_genesis_config_preset_name("local_testnet")
+		.with_properties(properties)
+		.build(),
+	))
+}
+
+#[cfg(feature = "collectives-polkadot")]
+pub fn collectives_polkadot_local_testnet_config(
+) -> Result<Box<dyn sc_chain_spec::ChainSpec>, String> {
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("ss58Format".into(), 0.into());
-	properties.insert("tokenSymbol".into(), "PAS".into());
+	properties.insert("tokenSymbol".into(), "DOT".into());
 	properties.insert("tokenDecimals".into(), 10.into());
 
 	Ok(Box::new(
-		PeoplePaseoChainSpec::builder(
-			people_paseo_runtime::WASM_BINARY.expect("PeoplePaseo wasm not available!"),
-			Extensions { relay_chain: "paseo-local".into(), para_id: 1004 },
+		CollectivesPolkadotChainSpec::builder(
+			collectives_polkadot_runtime::WASM_BINARY
+				.expect("CollectivesPolkadot wasm not available!"),
+			Extensions { relay_chain: "polkadot-local".into(), para_id: 1001 },
 		)
-		.with_name("Paseo People Local")
-		.with_id("paseo-people-local")
+		.with_name("Polkadot Collectives Local")
+		.with_id("collectives-polkadot-local")
 		.with_chain_type(sc_chain_spec::ChainType::Local)
-		.with_protocol_id("pc-pas")
 		.with_genesis_config_preset_name("local_testnet")
 		.with_properties(properties)
 		.build(),
 	))
 }
 
-pub fn coretime_paseo_local_testnet_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String> {
+#[cfg(feature = "bridge-hub-polkadot")]
+pub fn bridge_hub_polkadot_local_testnet_config(
+) -> Result<Box<dyn sc_chain_spec::ChainSpec>, String> {
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("ss58Format".into(), 0.into());
-	properties.insert("tokenSymbol".into(), "PAS".into());
+	properties.insert("tokenSymbol".into(), "DOT".into());
 	properties.insert("tokenDecimals".into(), 10.into());
 
 	Ok(Box::new(
-		CoretimePaseoChainSpec::builder(
-			coretime_paseo_runtime::WASM_BINARY.expect("CoretimePaseo wasm not available!"),
-			Extensions { relay_chain: "paseo-local".into(), para_id: 1005 },
+		BridgeHubPolkadotChainSpec::builder(
+			bridge_hub_polkadot_runtime::WASM_BINARY
+				.expect("BridgeHubPolkadot wasm not available!"),
+			Extensions { relay_chain: "polkadot-local".into(), para_id: 1002 },
 		)
-		.with_name("Paseo Coretime Local")
-		.with_id("paseo-coretime-local")
+		.with_name("Polkadot Bridge Hub Local")
+		.with_id("bridge-hub-polkadot-local")
 		.with_chain_type(sc_chain_spec::ChainType::Local)
 		.with_genesis_config_preset_name("local_testnet")
-		.with_protocol_id("ct-pas")
 		.with_properties(properties)
 		.build(),
 	))
 }
 
-pub fn coretime_paseo_tot_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String> {
+#[cfg(feature = "bridge-hub-kusama")]
+pub fn bridge_hub_kusama_local_testnet_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String>
+{
 	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("ss58Format".into(), 0.into());
-	properties.insert("tokenSymbol".into(), "PAS".into());
-	properties.insert("tokenDecimals".into(), 10.into());
+	properties.insert("ss58Format".into(), 2.into());
+	properties.insert("tokenSymbol".into(), "KSM".into());
+	properties.insert("tokenDecimals".into(), 12.into());
 
 	Ok(Box::new(
-		CoretimePaseoChainSpec::builder(
-			coretime_paseo_runtime::WASM_BINARY.expect("CoretimePaseo wasm not available!"),
-			Extensions { relay_chain: "paseo".into(), para_id: 1005 },
+		BridgeHubKusamaChainSpec::builder(
+			bridge_hub_kusama_runtime::WASM_BINARY.expect("BridgeHubKusama wasm not available!"),
+			Extensions { relay_chain: "kusama-local".into(), para_id: 1002 },
 		)
-		.with_name("Paseo Coretime Local")
-		.with_id("paseo-coretime-tot")
+		.with_name("Kusama Bridge Hub Local")
+		.with_id("bridge-hub-kusama-local")
 		.with_chain_type(sc_chain_spec::ChainType::Local)
-		.with_protocol_id("ct-pas")
-		.with_genesis_config_preset_name("tot")
+		.with_genesis_config_preset_name("local_testnet")
 		.with_properties(properties)
 		.build(),
 	))
 }
 
-pub fn coretime_paseo_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String> {
+#[cfg(feature = "glutton-kusama")]
+pub fn glutton_kusama_local_testnet_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String> {
 	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("ss58Format".into(), 0.into());
-	properties.insert("tokenSymbol".into(), "PAS".into());
-	properties.insert("tokenDecimals".into(), 10.into());
+	properties.insert("ss58Format".into(), 2.into());
 
 	Ok(Box::new(
-		CoretimePaseoChainSpec::builder(
-			coretime_paseo_runtime::WASM_BINARY.expect("Paseo Coretime wasm not available!"),
-			Extensions { relay_chain: "paseo".into(), para_id: 1005 },
+		GluttonKusamaChainSpec::builder(
+			glutton_kusama_runtime::WASM_BINARY.expect("GluttonKusama wasm not available!"),
+			Extensions { relay_chain: "kusama-local".into(), para_id: 1300 },
 		)
-		.with_name("Paseo Coretime")
-		.with_id("paseo-coretime")
+		.with_name("Kusama Glutton Local")
+		.with_id("glutton-kusama-local")
+		.with_chain_type(sc_chain_spec::ChainType::Local)
+		.with_genesis_config_preset_name("local_testnet")
+		.with_properties(properties)
+		.build(),
+	))
+}
+
+#[cfg(feature = "encointer-kusama")]
+pub fn encointer_kusama_local_testnet_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String>
+{
+	let mut properties = sc_chain_spec::Properties::new();
+	properties.insert("ss58Format".into(), 2.into());
+	properties.insert("tokenSymbol".into(), "KSM".into());
+	properties.insert("tokenDecimals".into(), 12.into());
+
+	Ok(Box::new(
+		EncointerKusamaChainSpec::builder(
+			encointer_kusama_runtime::WASM_BINARY.expect("EncointerKusama wasm not available!"),
+			Extensions { relay_chain: "kusama-local".into(), para_id: 1001 },
+		)
+		.with_name("Kusama Encointer Local")
+		.with_id("encointer-kusama-local")
+		.with_chain_type(sc_chain_spec::ChainType::Local)
+		.with_genesis_config_preset_name("local_testnet")
+		.with_properties(properties)
+		.build(),
+	))
+}
+
+#[cfg(feature = "coretime-kusama")]
+pub fn coretime_kusama_local_testnet_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String> {
+	let mut properties = sc_chain_spec::Properties::new();
+	properties.insert("ss58Format".into(), 2.into());
+	properties.insert("tokenSymbol".into(), "KSM".into());
+	properties.insert("tokenDecimals".into(), 12.into());
+
+	Ok(Box::new(
+		CoretimeKusamaChainSpec::builder(
+			coretime_kusama_runtime::WASM_BINARY.expect("CoretimeKusama wasm not available!"),
+			Extensions { relay_chain: "kusama-local".into(), para_id: 1005 },
+		)
+		.with_name("Kusama Coretime Local")
+		.with_id("coretime-kusama-local")
+		.with_chain_type(sc_chain_spec::ChainType::Local)
+		.with_genesis_config_preset_name("local_testnet")
+		.with_properties(properties)
+		.build(),
+	))
+}
+
+#[cfg(feature = "coretime-kusama")]
+pub fn coretime_kusama_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String> {
+	let mut properties = sc_chain_spec::Properties::new();
+	properties.insert("ss58Format".into(), 2.into());
+	properties.insert("tokenSymbol".into(), "KSM".into());
+	properties.insert("tokenDecimals".into(), 12.into());
+
+	let boot_nodes = [
+		"/dns/kusama-coretime-connect-a-0.polkadot.io/tcp/30334/p2p/12D3KooWR7Biy6nPgQFhk2eYP62pAkcFA6he9RUFURTDh7ewTjpo",
+		"/dns/kusama-coretime-connect-a-1.polkadot.io/tcp/30334/p2p/12D3KooWAGFiMZDF9RxdacrkenzGdo8nhfSe9EXofHc5mHeJ9vGX",
+		"/dns/kusama-coretime-connect-a-0.polkadot.io/tcp/443/wss/p2p/12D3KooWR7Biy6nPgQFhk2eYP62pAkcFA6he9RUFURTDh7ewTjpo",
+		"/dns/kusama-coretime-connect-a-1.polkadot.io/tcp/443/wss/p2p/12D3KooWAGFiMZDF9RxdacrkenzGdo8nhfSe9EXofHc5mHeJ9vGX",
+	];
+
+	Ok(Box::new(
+		CoretimeKusamaChainSpec::builder(
+			coretime_kusama_runtime::WASM_BINARY.expect("Kusama Coretime wasm not available!"),
+			Extensions { relay_chain: "kusama".into(), para_id: 1005 },
+		)
+		.with_name("Kusama Coretime")
+		.with_id("coretime-kusama")
 		.with_chain_type(sc_chain_spec::ChainType::Live)
-		.with_protocol_id("ct-pas")
 		.with_genesis_config_preset_name("live")
 		.with_properties(properties)
+		.with_boot_nodes(
+			boot_nodes
+				.iter()
+				.map(|addr| {
+					use std::str::FromStr;
+					sc_network::config::MultiaddrWithPeerId::from_str(addr)
+						.expect("Boot node address is incorrect.")
+				})
+				.collect(),
+		)
 		.build(),
 	))
 }
 
-pub fn collectives_paseo_local_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String> {
+#[cfg(feature = "coretime-polkadot")]
+pub fn coretime_polkadot_local_testnet_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String>
+{
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("ss58Format".into(), 0.into());
-	properties.insert("tokenSymbol".into(), "PAS".into());
+	properties.insert("tokenSymbol".into(), "DOT".into());
 	properties.insert("tokenDecimals".into(), 10.into());
 
 	Ok(Box::new(
-		CollectivesPaseoChainSpec::builder(
-			collectives_paseo_runtime::WASM_BINARY.expect("Collectives wasm not available!"),
-			Extensions { relay_chain: "collectives-local".into(), para_id: 1001 },
+		CoretimePolkadotChainSpec::builder(
+			coretime_polkadot_runtime::WASM_BINARY.expect("CoretimePolkadot wasm not available!"),
+			Extensions { relay_chain: "polkadot-local".into(), para_id: 1005 },
 		)
-		.with_name("Paseo Collectives Local")
-		.with_id("paseo-collectives-local")
+		.with_name("Polkadot Coretime Local")
+		.with_id("coretime-polkadot-local")
 		.with_chain_type(sc_chain_spec::ChainType::Local)
 		.with_genesis_config_preset_name("local_testnet")
-		.with_protocol_id("col-pas")
 		.with_properties(properties)
 		.build(),
 	))
 }
 
-pub fn collectives_paseo_live_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String> {
+#[cfg(feature = "coretime-polkadot")]
+pub fn coretime_polkadot_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String> {
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("ss58Format".into(), 0.into());
-	properties.insert("tokenSymbol".into(), "PAS".into());
+	properties.insert("tokenSymbol".into(), "DOT".into());
+	properties.insert("tokenDecimals".into(), 10.into());
+
+	let boot_nodes = [
+		"/dns/polkadot-coretime-connect-a-0.polkadot.io/tcp/30334/p2p/12D3KooWKjnixAHbKMsPTJwGx8SrBeGEJLHA8KmKcEDYMp3YmWgR",
+		"/dns/polkadot-coretime-connect-a-1.polkadot.io/tcp/30334/p2p/12D3KooWQ7B7p4DFv1jWqaKfhrZBcMmi5g8bWFnmskguLaGEmT6n",
+		"/dns/polkadot-coretime-connect-a-0.polkadot.io/tcp/443/wss/p2p/12D3KooWKjnixAHbKMsPTJwGx8SrBeGEJLHA8KmKcEDYMp3YmWgR",
+		"/dns/polkadot-coretime-connect-a-1.polkadot.io/tcp/443/wss/p2p/12D3KooWQ7B7p4DFv1jWqaKfhrZBcMmi5g8bWFnmskguLaGEmT6n",
+		"/dns4/coretime-polkadot.boot.stake.plus/tcp/30332/wss/p2p/12D3KooWFJ2yBTKFKYwgKUjfY3F7XfaxHV8hY6fbJu5oMkpP7wZ9",
+		"/dns4/coretime-polkadot.boot.stake.plus/tcp/31332/wss/p2p/12D3KooWCy5pToLafcQzPHn5kadxAftmF6Eh8ZJGPXhSeXSUDfjv",
+
+	];
+
+	Ok(Box::new(
+		CoretimePolkadotChainSpec::builder(
+			coretime_polkadot_runtime::WASM_BINARY.expect("Polkadot Coretime wasm not available!"),
+			Extensions { relay_chain: "polkadot".into(), para_id: 1005 },
+		)
+		.with_name("Polkadot Coretime")
+		.with_id("coretime-polkadot")
+		.with_chain_type(sc_chain_spec::ChainType::Live)
+		.with_genesis_config_preset_name("live")
+		.with_properties(properties)
+		.with_boot_nodes(
+			boot_nodes
+				.iter()
+				.map(|addr| {
+					use std::str::FromStr;
+					sc_network::config::MultiaddrWithPeerId::from_str(addr)
+						.expect("Boot node address is incorrect.")
+				})
+				.collect(),
+		)
+		.build(),
+	))
+}
+
+#[cfg(feature = "people-kusama")]
+pub fn people_kusama_local_testnet_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String> {
+	let mut properties = sc_chain_spec::Properties::new();
+	properties.insert("ss58Format".into(), 2.into());
+	properties.insert("tokenSymbol".into(), "KSM".into());
+	properties.insert("tokenDecimals".into(), 12.into());
+
+	Ok(Box::new(
+		PeopleKusamaChainSpec::builder(
+			people_kusama_runtime::WASM_BINARY.expect("PeopleKusama wasm not available!"),
+			Extensions { relay_chain: "kusama-local".into(), para_id: 1004 },
+		)
+		.with_name("Kusama People Local")
+		.with_id("people-kusama-local")
+		.with_chain_type(sc_chain_spec::ChainType::Local)
+		.with_genesis_config_preset_name("local_testnet")
+		.with_properties(properties)
+		.build(),
+	))
+}
+
+#[cfg(feature = "people-polkadot")]
+pub fn people_polkadot_local_testnet_config() -> Result<Box<dyn sc_chain_spec::ChainSpec>, String> {
+	let mut properties = sc_chain_spec::Properties::new();
+	properties.insert("ss58Format".into(), 0.into());
+	properties.insert("tokenSymbol".into(), "DOT".into());
 	properties.insert("tokenDecimals".into(), 10.into());
 
 	Ok(Box::new(
-		CollectivesPaseoChainSpec::builder(
-			collectives_paseo_runtime::WASM_BINARY.expect("Collectives wasm not available!"),
-			Extensions { relay_chain: "collectives-local".into(), para_id: 1001 },
+		PeoplePolkadotChainSpec::builder(
+			people_polkadot_runtime::WASM_BINARY.expect("PeoplePolkadot wasm not available!"),
+			Extensions { relay_chain: "polkadot-local".into(), para_id: 1004 },
 		)
-		.with_name("Paseo Collectives")
-		.with_id("paseo-collectives")
-		.with_chain_type(sc_chain_spec::ChainType::Live)
-		.with_genesis_config_preset_name("live")
-		.with_protocol_id("col-pas")
+		.with_name("Polkadot People Local")
+		.with_id("people-polkadot-local")
+		.with_chain_type(sc_chain_spec::ChainType::Local)
+		.with_genesis_config_preset_name("local_testnet")
 		.with_properties(properties)
 		.build(),
 	))

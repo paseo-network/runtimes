@@ -14,15 +14,15 @@
 // limitations under the License.
 
 use crate::{
-	tests::{snowbridge_common::*, usdt_at_ah_paseo},
+	tests::{snowbridge_common::*, usdt_at_ah_polkadot},
 	*,
 };
-use bridge_hub_paseo_runtime::{
+use bridge_hub_polkadot_runtime::{
 	bridge_to_ethereum_config::EthereumGatewayAddress, EthereumOutboundQueueV2,
 };
 use emulated_integration_tests_common::{impls::Decode, PenpalBTeleportableAssetLocation};
 use frame_support::{assert_err_ignore_postinfo, pallet_prelude::TypeInfo, BoundedVec};
-use paseo_system_emulated_network::penpal_emulated_chain::penpal_runtime::xcm_config::LocalTeleportableToAssetHub;
+use polkadot_system_emulated_network::penpal_emulated_chain::penpal_runtime::xcm_config::LocalTeleportableToAssetHub;
 use snowbridge_core::{reward::MessageId, AssetMetadata, BasicOperatingMode};
 use snowbridge_outbound_queue_primitives::v2::{ContractCall, DeliveryReceipt};
 use snowbridge_pallet_outbound_queue_v2::Error;
@@ -46,14 +46,14 @@ pub enum EthereumSystemFrontend {
 #[test]
 fn send_weth_from_asset_hub_to_ethereum() {
 	fund_on_bh();
-	prefund_accounts_on_paseo_asset_hub();
+	prefund_accounts_on_polkadot_asset_hub();
 	set_bridge_hub_ethereum_base_fee();
 
-	AssetHubPaseo::execute_with(|| {
-		type RuntimeOrigin = <AssetHubPaseo as Chain>::RuntimeOrigin;
+	AssetHubPolkadot::execute_with(|| {
+		type RuntimeOrigin = <AssetHubPolkadot as Chain>::RuntimeOrigin;
 
 		let local_fee_asset =
-			Asset { id: AssetId(Location::parent()), fun: Fungible(LOCAL_FEE_AMOUNT_IN_PAS) };
+			Asset { id: AssetId(Location::parent()), fun: Fungible(LOCAL_FEE_AMOUNT_IN_DOT) };
 
 		let remote_fee_asset =
 			Asset { id: AssetId(eth_location()), fun: Fungible(REMOTE_FEE_AMOUNT_IN_ETHER) };
@@ -82,26 +82,26 @@ fn send_weth_from_asset_hub_to_ethereum() {
 		]));
 
 		// Send the Weth back to Ethereum
-		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::PolkadotXcm::execute(
-			RuntimeOrigin::signed(AssetHubPaseoReceiver::get()),
+		assert_ok!(<AssetHubPolkadot as AssetHubPolkadotPallet>::PolkadotXcm::execute(
+			RuntimeOrigin::signed(AssetHubPolkadotReceiver::get()),
 			bx!(xcm),
 			Weight::from(EXECUTION_WEIGHT),
 		));
 	});
 
-	BridgeHubPaseo::execute_with(|| {
-		type RuntimeEvent = <BridgeHubPaseo as Chain>::RuntimeEvent;
+	BridgeHubPolkadot::execute_with(|| {
+		type RuntimeEvent = <BridgeHubPolkadot as Chain>::RuntimeEvent;
 		// Check that the Ethereum message was queue in the Outbound Queue
 		assert_expected_events!(
-			BridgeHubPaseo,
+			BridgeHubPolkadot,
 			vec![
 				RuntimeEvent::EthereumOutboundQueueV2(snowbridge_pallet_outbound_queue_v2::Event::MessageQueued{ .. }) => {},
 				RuntimeEvent::EthereumOutboundQueueV2(snowbridge_pallet_outbound_queue_v2::Event::MessageAccepted{ .. }) => {},
 			]
 		);
 
-		let relayer = BridgeHubPaseoSender::get();
-		let reward_account = AssetHubPaseoReceiver::get();
+		let relayer = BridgeHubPolkadotSender::get();
+		let reward_account = AssetHubPolkadotReceiver::get();
 		let receipt = DeliveryReceipt {
 			gateway: EthereumGatewayAddress::get(),
 			nonce: 1,
@@ -114,7 +114,7 @@ fn send_weth_from_asset_hub_to_ethereum() {
 		assert_ok!(EthereumOutboundQueueV2::process_delivery_receipt(relayer, receipt));
 
 		assert_expected_events!(
-			BridgeHubPaseo,
+			BridgeHubPolkadot,
 			vec![
 				RuntimeEvent::BridgeRelayers(pallet_bridge_relayers::Event::RewardRegistered { .. }) => {},
 			]
@@ -125,28 +125,16 @@ fn send_weth_from_asset_hub_to_ethereum() {
 #[test]
 pub fn register_relay_token_from_asset_hub_with_sudo() {
 	fund_on_bh();
-	prefund_accounts_on_paseo_asset_hub();
+	prefund_accounts_on_polkadot_asset_hub();
 	set_bridge_hub_ethereum_base_fee();
 
-	// Ensure FeeAsset storage is properly set to match test's eth_location
-	AssetHubPaseo::execute_with(|| {
-		use crate::tests::snowbridge_common::eth_location;
-		assert_ok!(<AssetHubPaseo as Chain>::System::set_storage(
-			<AssetHubPaseo as Chain>::RuntimeOrigin::root(),
-			vec![(
-				asset_hub_paseo_runtime::bridge_to_ethereum_config::FeeAsset::key().to_vec(),
-				eth_location().encode(),
-			)],
-		));
-	});
-
-	AssetHubPaseo::execute_with(|| {
-		type RuntimeOrigin = <AssetHubPaseo as Chain>::RuntimeOrigin;
+	AssetHubPolkadot::execute_with(|| {
+		type RuntimeOrigin = <AssetHubPolkadot as Chain>::RuntimeOrigin;
 
 		let fees_asset = Asset { id: AssetId(eth_location()), fun: Fungible(1) };
 
 		assert_ok!(
-			<AssetHubPaseo as AssetHubPaseoPallet>::SnowbridgeSystemFrontend::register_token(
+			<AssetHubPolkadot as AssetHubPolkadotPallet>::SnowbridgeSystemFrontend::register_token(
 				RuntimeOrigin::root(),
 				bx!(VersionedLocation::from(Location { parents: 1, interior: [].into() })),
 				AssetMetadata {
@@ -159,10 +147,10 @@ pub fn register_relay_token_from_asset_hub_with_sudo() {
 		);
 	});
 
-	BridgeHubPaseo::execute_with(|| {
-		type RuntimeEvent = <BridgeHubPaseo as Chain>::RuntimeEvent;
+	BridgeHubPolkadot::execute_with(|| {
+		type RuntimeEvent = <BridgeHubPolkadot as Chain>::RuntimeEvent;
 		assert_expected_events!(
-			BridgeHubPaseo,
+			BridgeHubPolkadot,
 			vec![RuntimeEvent::EthereumOutboundQueueV2(snowbridge_pallet_outbound_queue_v2::Event::MessageQueued{ .. }) => {},]
 		);
 	});
@@ -171,31 +159,19 @@ pub fn register_relay_token_from_asset_hub_with_sudo() {
 #[test]
 pub fn register_usdt_from_owner_on_asset_hub() {
 	fund_on_bh();
-	prefund_accounts_on_paseo_asset_hub();
+	prefund_accounts_on_polkadot_asset_hub();
 	set_bridge_hub_ethereum_base_fee();
-	set_up_eth_and_pas_pool_on_paseo_asset_hub();
+	set_up_eth_and_dot_pool_on_polkadot_asset_hub();
 
-	// Ensure FeeAsset storage is properly set to match test's eth_location
-	AssetHubPaseo::execute_with(|| {
-		use crate::tests::snowbridge_common::eth_location;
-		assert_ok!(<AssetHubPaseo as Chain>::System::set_storage(
-			<AssetHubPaseo as Chain>::RuntimeOrigin::root(),
-			vec![(
-				asset_hub_paseo_runtime::bridge_to_ethereum_config::FeeAsset::key().to_vec(),
-				eth_location().encode(),
-			)],
-		));
-	});
-
-	AssetHubPaseo::execute_with(|| {
-		type RuntimeOrigin = <AssetHubPaseo as Chain>::RuntimeOrigin;
+	AssetHubPolkadot::execute_with(|| {
+		type RuntimeOrigin = <AssetHubPolkadot as Chain>::RuntimeOrigin;
 
 		let fees_asset = Asset { id: AssetId(eth_location()), fun: Fungible(1) };
 
 		assert_ok!(
-			<AssetHubPaseo as AssetHubPaseoPallet>::SnowbridgeSystemFrontend::register_token(
-				RuntimeOrigin::signed(AssetHubPaseoAssetOwner::get()),
-				bx!(VersionedLocation::from(usdt_at_ah_paseo())),
+			<AssetHubPolkadot as AssetHubPolkadotPallet>::SnowbridgeSystemFrontend::register_token(
+				RuntimeOrigin::signed(AssetHubPolkadotAssetOwner::get()),
+				bx!(VersionedLocation::from(usdt_at_ah_polkadot())),
 				AssetMetadata {
 					name: "usdt".as_bytes().to_vec().try_into().unwrap(),
 					symbol: "usdt".as_bytes().to_vec().try_into().unwrap(),
@@ -206,10 +182,10 @@ pub fn register_usdt_from_owner_on_asset_hub() {
 		);
 	});
 
-	BridgeHubPaseo::execute_with(|| {
-		type RuntimeEvent = <BridgeHubPaseo as Chain>::RuntimeEvent;
+	BridgeHubPolkadot::execute_with(|| {
+		type RuntimeEvent = <BridgeHubPolkadot as Chain>::RuntimeEvent;
 		assert_expected_events!(
-			BridgeHubPaseo,
+			BridgeHubPolkadot,
 			vec![RuntimeEvent::EthereumOutboundQueueV2(snowbridge_pallet_outbound_queue_v2::Event::MessageQueued{ .. }) => {},]
 		);
 	});
@@ -218,20 +194,20 @@ pub fn register_usdt_from_owner_on_asset_hub() {
 #[test]
 pub fn add_tip_from_asset_hub_user_origin() {
 	fund_on_bh();
-	prefund_accounts_on_paseo_asset_hub();
-	set_up_eth_and_pas_pool_on_paseo_asset_hub();
+	prefund_accounts_on_polkadot_asset_hub();
+	set_up_eth_and_dot_pool_on_polkadot_asset_hub();
 	set_bridge_hub_ethereum_base_fee();
-	let relayer = AssetHubPaseoSender::get();
+	let relayer = AssetHubPolkadotSender::get();
 
 	// Fund the relayer account to pay xcm delivery fees from AH -> BH.
-	AssetHubPaseo::fund_accounts(vec![(relayer.clone(), INITIAL_FUND)]);
+	AssetHubPolkadot::fund_accounts(vec![(relayer.clone(), INITIAL_FUND)]);
 
 	// Send a message from AH to Ethereum to increase the nonce
-	AssetHubPaseo::execute_with(|| {
-		type RuntimeOrigin = <AssetHubPaseo as Chain>::RuntimeOrigin;
+	AssetHubPolkadot::execute_with(|| {
+		type RuntimeOrigin = <AssetHubPolkadot as Chain>::RuntimeOrigin;
 
 		let local_fee_asset =
-			Asset { id: AssetId(Location::parent()), fun: Fungible(LOCAL_FEE_AMOUNT_IN_PAS) };
+			Asset { id: AssetId(Location::parent()), fun: Fungible(LOCAL_FEE_AMOUNT_IN_DOT) };
 		let remote_fee_asset =
 			Asset { id: AssetId(eth_location()), fun: Fungible(REMOTE_FEE_AMOUNT_IN_ETHER) };
 		let reserve_asset = Asset { id: AssetId(weth_location()), fun: Fungible(TOKEN_AMOUNT) };
@@ -257,8 +233,8 @@ pub fn add_tip_from_asset_hub_user_origin() {
 		]));
 
 		// Send the Weth back to Ethereum
-		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::PolkadotXcm::execute(
-			RuntimeOrigin::signed(AssetHubPaseoReceiver::get()),
+		assert_ok!(<AssetHubPolkadot as AssetHubPolkadotPallet>::PolkadotXcm::execute(
+			RuntimeOrigin::signed(AssetHubPolkadotReceiver::get()),
 			bx!(xcm),
 			Weight::from(EXECUTION_WEIGHT),
 		));
@@ -267,34 +243,23 @@ pub fn add_tip_from_asset_hub_user_origin() {
 	// Add the tip.
 	let tip_message_id = MessageId::Outbound(1);
 
-	let pas = Location::parent();
+	let dot = Location::new(1, Here);
+	AssetHubPolkadot::execute_with(|| {
+		type RuntimeOrigin = <AssetHubPolkadot as Chain>::RuntimeOrigin;
 
-	// Ensure FeeAsset storage is properly set to match test's eth_location
-	AssetHubPaseo::execute_with(|| {
-		use crate::tests::snowbridge_common::eth_location;
-		assert_ok!(<AssetHubPaseo as Chain>::System::set_storage(
-			<AssetHubPaseo as Chain>::RuntimeOrigin::root(),
-			vec![(
-				asset_hub_paseo_runtime::bridge_to_ethereum_config::FeeAsset::key().to_vec(),
-				eth_location().encode(),
-			)],
-		));
+		assert_ok!(
+			<AssetHubPolkadot as AssetHubPolkadotPallet>::SnowbridgeSystemFrontend::add_tip(
+				RuntimeOrigin::signed(relayer.clone()),
+				tip_message_id.clone(),
+				xcm::prelude::Asset::from((dot, 1_000_000_000u128)),
+			)
+		);
 	});
 
-	AssetHubPaseo::execute_with(|| {
-		type RuntimeOrigin = <AssetHubPaseo as Chain>::RuntimeOrigin;
+	BridgeHubPolkadot::execute_with(|| {
+		type RuntimeEvent = <BridgeHubPolkadot as Chain>::RuntimeEvent;
 
-		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::SnowbridgeSystemFrontend::add_tip(
-			RuntimeOrigin::signed(relayer.clone()),
-			tip_message_id.clone(),
-			xcm::prelude::Asset::from((pas, 1_000_000_000u128)),
-		));
-	});
-
-	BridgeHubPaseo::execute_with(|| {
-		type RuntimeEvent = <BridgeHubPaseo as Chain>::RuntimeEvent;
-
-		let events = BridgeHubPaseo::events();
+		let events = BridgeHubPolkadot::events();
 		assert!(
 			events.iter().any(|event| matches!(
 				event,
@@ -309,44 +274,33 @@ pub fn add_tip_from_asset_hub_user_origin() {
 #[test]
 pub fn tip_to_invalid_nonce_is_added_to_lost_tips() {
 	fund_on_bh();
-	prefund_accounts_on_paseo_asset_hub();
-	set_up_eth_and_pas_pool_on_paseo_asset_hub();
+	prefund_accounts_on_polkadot_asset_hub();
+	set_up_eth_and_dot_pool_on_polkadot_asset_hub();
 	set_bridge_hub_ethereum_base_fee();
-	let relayer = AssetHubPaseoSender::get();
+	let relayer = AssetHubPolkadotSender::get();
 
-	AssetHubPaseo::fund_accounts(vec![(relayer.clone(), INITIAL_FUND)]);
+	AssetHubPolkadot::fund_accounts(vec![(relayer.clone(), INITIAL_FUND)]);
 
 	// A nonce that does not exist.
 	let tip_message_id = MessageId::Outbound(22);
 
-	let pas = Location::parent();
+	let dot = Location::new(1, Here);
+	AssetHubPolkadot::execute_with(|| {
+		type RuntimeOrigin = <AssetHubPolkadot as Chain>::RuntimeOrigin;
 
-	// Ensure FeeAsset storage is properly set to match test's eth_location
-	AssetHubPaseo::execute_with(|| {
-		use crate::tests::snowbridge_common::eth_location;
-		assert_ok!(<AssetHubPaseo as Chain>::System::set_storage(
-			<AssetHubPaseo as Chain>::RuntimeOrigin::root(),
-			vec![(
-				asset_hub_paseo_runtime::bridge_to_ethereum_config::FeeAsset::key().to_vec(),
-				eth_location().encode(),
-			)],
-		));
+		assert_ok!(
+			<AssetHubPolkadot as AssetHubPolkadotPallet>::SnowbridgeSystemFrontend::add_tip(
+				RuntimeOrigin::signed(relayer.clone()),
+				tip_message_id.clone(),
+				xcm::prelude::Asset::from((dot, 1_000_000_000u128)),
+			)
+		);
 	});
 
-	AssetHubPaseo::execute_with(|| {
-		type RuntimeOrigin = <AssetHubPaseo as Chain>::RuntimeOrigin;
+	BridgeHubPolkadot::execute_with(|| {
+		type RuntimeEvent = <BridgeHubPolkadot as Chain>::RuntimeEvent;
 
-		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::SnowbridgeSystemFrontend::add_tip(
-			RuntimeOrigin::signed(relayer.clone()),
-			tip_message_id.clone(),
-			xcm::prelude::Asset::from((pas, 1_000_000_000u128)),
-		));
-	});
-
-	BridgeHubPaseo::execute_with(|| {
-		type RuntimeEvent = <BridgeHubPaseo as Chain>::RuntimeEvent;
-
-		let events = BridgeHubPaseo::events();
+		let events = BridgeHubPolkadot::events();
 		assert!(
 			events.iter().any(|event| matches!(
 				event,
@@ -356,8 +310,9 @@ pub fn tip_to_invalid_nonce_is_added_to_lost_tips() {
 			"tip added event found"
 		);
 
-		let relayer_lost_tip =
-			LostTips::<bridge_hub_paseo_runtime::Runtime>::get::<sp_runtime::AccountId32>(relayer);
+		let relayer_lost_tip = LostTips::<bridge_hub_polkadot_runtime::Runtime>::get::<
+			sp_runtime::AccountId32,
+		>(relayer);
 		// Assert a tip was added to storage.
 		assert!(relayer_lost_tip > 0);
 	});
@@ -371,24 +326,24 @@ fn transfer_relay_token_from_ah() {
 	// a. register_relay_token_on_bh();
 	// b. register_relay_token_from_asset_hub_with_sudo();
 	// c. register_relay_token_from_asset_hub_user_origin();
-	register_relay_token_on_paseo_bh();
-	prefund_accounts_on_paseo_asset_hub();
+	register_relay_token_on_polkadot_bh();
+	prefund_accounts_on_polkadot_asset_hub();
 	set_bridge_hub_ethereum_base_fee();
 
 	// Send token to Ethereum
-	AssetHubPaseo::execute_with(|| {
-		type RuntimeOrigin = <AssetHubPaseo as Chain>::RuntimeOrigin;
-		type RuntimeEvent = <AssetHubPaseo as Chain>::RuntimeEvent;
+	AssetHubPolkadot::execute_with(|| {
+		type RuntimeOrigin = <AssetHubPolkadot as Chain>::RuntimeOrigin;
+		type RuntimeEvent = <AssetHubPolkadot as Chain>::RuntimeEvent;
 
 		let local_fee_asset =
-			Asset { id: AssetId(Location::parent()), fun: Fungible(LOCAL_FEE_AMOUNT_IN_PAS) };
+			Asset { id: AssetId(Location::parent()), fun: Fungible(LOCAL_FEE_AMOUNT_IN_DOT) };
 		let remote_fee_asset =
 			Asset { id: AssetId(eth_location()), fun: Fungible(REMOTE_FEE_AMOUNT_IN_ETHER) };
 
 		let assets = vec![
 			Asset {
 				id: AssetId(Location::parent()),
-				fun: Fungible(TOKEN_AMOUNT + LOCAL_FEE_AMOUNT_IN_PAS),
+				fun: Fungible(TOKEN_AMOUNT + LOCAL_FEE_AMOUNT_IN_DOT),
 			},
 			remote_fee_asset.clone(),
 		];
@@ -415,15 +370,15 @@ fn transfer_relay_token_from_ah() {
 			},
 		]));
 
-		// Send PAS to Ethereum
-		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::PolkadotXcm::execute(
-			RuntimeOrigin::signed(AssetHubPaseoSender::get()),
+		// Send DOT to Ethereum
+		assert_ok!(<AssetHubPolkadot as AssetHubPolkadotPallet>::PolkadotXcm::execute(
+			RuntimeOrigin::signed(AssetHubPolkadotSender::get()),
 			bx!(xcm),
 			Weight::from(EXECUTION_WEIGHT),
 		));
 
 		// Check that the native asset transferred to some reserved account(sovereign of Ethereum)
-		let events = AssetHubPaseo::events();
+		let events = AssetHubPolkadot::events();
 		assert!(
 			events.iter().any(|event| matches!(
 				event,
@@ -434,17 +389,17 @@ fn transfer_relay_token_from_ah() {
 		);
 	});
 
-	BridgeHubPaseo::execute_with(|| {
-		type RuntimeEvent = <BridgeHubPaseo as Chain>::RuntimeEvent;
+	BridgeHubPolkadot::execute_with(|| {
+		type RuntimeEvent = <BridgeHubPolkadot as Chain>::RuntimeEvent;
 
 		// Check that the Ethereum message was queue in the Outbound Queue
 		assert_expected_events!(
-			BridgeHubPaseo,
+			BridgeHubPolkadot,
 			vec![RuntimeEvent::EthereumOutboundQueueV2(snowbridge_pallet_outbound_queue_v2::Event::MessageQueued{ .. }) => {},]
 		);
 
-		let relayer = BridgeHubPaseoSender::get();
-		let reward_account = AssetHubPaseoReceiver::get();
+		let relayer = BridgeHubPolkadotSender::get();
+		let reward_account = AssetHubPolkadotReceiver::get();
 		let receipt = DeliveryReceipt {
 			gateway: EthereumGatewayAddress::get(),
 			nonce: 1,
@@ -457,7 +412,7 @@ fn transfer_relay_token_from_ah() {
 		assert_ok!(EthereumOutboundQueueV2::process_delivery_receipt(relayer, receipt));
 
 		assert_expected_events!(
-			BridgeHubPaseo,
+			BridgeHubPolkadot,
 			vec![
 				RuntimeEvent::BridgeRelayers(pallet_bridge_relayers::Event::RewardRegistered { .. }) => {},
 			]
@@ -468,15 +423,15 @@ fn transfer_relay_token_from_ah() {
 #[test]
 fn send_weth_and_dot_from_asset_hub_to_ethereum() {
 	fund_on_bh();
-	register_relay_token_on_paseo_bh();
-	prefund_accounts_on_paseo_asset_hub();
+	register_relay_token_on_polkadot_bh();
+	prefund_accounts_on_polkadot_asset_hub();
 	set_bridge_hub_ethereum_base_fee();
 
-	AssetHubPaseo::execute_with(|| {
-		type RuntimeOrigin = <AssetHubPaseo as Chain>::RuntimeOrigin;
+	AssetHubPolkadot::execute_with(|| {
+		type RuntimeOrigin = <AssetHubPolkadot as Chain>::RuntimeOrigin;
 
 		let local_fee_asset =
-			Asset { id: AssetId(Location::parent()), fun: Fungible(LOCAL_FEE_AMOUNT_IN_PAS) };
+			Asset { id: AssetId(Location::parent()), fun: Fungible(LOCAL_FEE_AMOUNT_IN_DOT) };
 		let remote_fee_asset =
 			Asset { id: AssetId(eth_location()), fun: Fungible(REMOTE_FEE_AMOUNT_IN_ETHER) };
 
@@ -511,23 +466,23 @@ fn send_weth_and_dot_from_asset_hub_to_ethereum() {
 			},
 		]));
 
-		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::PolkadotXcm::execute(
-			RuntimeOrigin::signed(AssetHubPaseoReceiver::get()),
+		assert_ok!(<AssetHubPolkadot as AssetHubPolkadotPallet>::PolkadotXcm::execute(
+			RuntimeOrigin::signed(AssetHubPolkadotReceiver::get()),
 			bx!(xcms),
 			Weight::from(EXECUTION_WEIGHT),
 		));
 	});
 
-	BridgeHubPaseo::execute_with(|| {
-		type RuntimeEvent = <BridgeHubPaseo as Chain>::RuntimeEvent;
+	BridgeHubPolkadot::execute_with(|| {
+		type RuntimeEvent = <BridgeHubPolkadot as Chain>::RuntimeEvent;
 		// Check that Ethereum message was queue in the Outbound Queue
 		assert_expected_events!(
-			BridgeHubPaseo,
+			BridgeHubPolkadot,
 			vec![RuntimeEvent::EthereumOutboundQueueV2(snowbridge_pallet_outbound_queue_v2::Event::MessageQueued{ .. }) => {},]
 		);
 
-		let relayer = BridgeHubPaseoSender::get();
-		let reward_account = AssetHubPaseoReceiver::get();
+		let relayer = BridgeHubPolkadotSender::get();
+		let reward_account = AssetHubPolkadotReceiver::get();
 		let receipt = DeliveryReceipt {
 			gateway: EthereumGatewayAddress::get(),
 			nonce: 1,
@@ -540,7 +495,7 @@ fn send_weth_and_dot_from_asset_hub_to_ethereum() {
 		assert_ok!(EthereumOutboundQueueV2::process_delivery_receipt(relayer, receipt));
 
 		assert_expected_events!(
-			BridgeHubPaseo,
+			BridgeHubPolkadot,
 			vec![
 				RuntimeEvent::BridgeRelayers(pallet_bridge_relayers::Event::RewardRegistered { .. }) => {},
 			]
@@ -552,14 +507,14 @@ fn send_weth_and_dot_from_asset_hub_to_ethereum() {
 fn transact_with_agent_from_asset_hub() {
 	let weth_asset_location: Location = weth_location();
 	fund_on_bh();
-	prefund_accounts_on_paseo_asset_hub();
+	prefund_accounts_on_polkadot_asset_hub();
 	set_bridge_hub_ethereum_base_fee();
 
-	AssetHubPaseo::execute_with(|| {
-		type RuntimeOrigin = <AssetHubPaseo as Chain>::RuntimeOrigin;
+	AssetHubPolkadot::execute_with(|| {
+		type RuntimeOrigin = <AssetHubPolkadot as Chain>::RuntimeOrigin;
 
 		let local_fee_asset =
-			Asset { id: AssetId(Location::parent()), fun: Fungible(LOCAL_FEE_AMOUNT_IN_PAS) };
+			Asset { id: AssetId(Location::parent()), fun: Fungible(LOCAL_FEE_AMOUNT_IN_DOT) };
 
 		let remote_fee_asset =
 			Asset { id: AssetId(eth_location()), fun: Fungible(REMOTE_FEE_AMOUNT_IN_ETHER) };
@@ -602,23 +557,23 @@ fn transact_with_agent_from_asset_hub() {
 			},
 		]));
 
-		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::PolkadotXcm::execute(
-			RuntimeOrigin::signed(AssetHubPaseoSender::get()),
+		assert_ok!(<AssetHubPolkadot as AssetHubPolkadotPallet>::PolkadotXcm::execute(
+			RuntimeOrigin::signed(AssetHubPolkadotSender::get()),
 			bx!(xcms),
 			Weight::from(EXECUTION_WEIGHT),
 		));
 	});
 
-	BridgeHubPaseo::execute_with(|| {
-		type RuntimeEvent = <BridgeHubPaseo as Chain>::RuntimeEvent;
+	BridgeHubPolkadot::execute_with(|| {
+		type RuntimeEvent = <BridgeHubPolkadot as Chain>::RuntimeEvent;
 		// Check that Ethereum message was queue in the Outbound Queue
 		assert_expected_events!(
-			BridgeHubPaseo,
+			BridgeHubPolkadot,
 			vec![RuntimeEvent::EthereumOutboundQueueV2(snowbridge_pallet_outbound_queue_v2::Event::MessageQueued{ .. }) => {},]
 		);
 
-		let relayer = BridgeHubPaseoSender::get();
-		let reward_account = AssetHubPaseoReceiver::get();
+		let relayer = BridgeHubPolkadotSender::get();
+		let reward_account = AssetHubPolkadotReceiver::get();
 		let receipt = DeliveryReceipt {
 			gateway: EthereumGatewayAddress::get(),
 			nonce: 1,
@@ -631,7 +586,7 @@ fn transact_with_agent_from_asset_hub() {
 		assert_ok!(EthereumOutboundQueueV2::process_delivery_receipt(relayer, receipt));
 
 		assert_expected_events!(
-			BridgeHubPaseo,
+			BridgeHubPolkadot,
 			vec![
 				RuntimeEvent::BridgeRelayers(pallet_bridge_relayers::Event::RewardRegistered { .. }) => {},
 			]
@@ -642,14 +597,14 @@ fn transact_with_agent_from_asset_hub() {
 #[test]
 fn transact_with_agent_from_asset_hub_without_any_asset_transfer() {
 	fund_on_bh();
-	prefund_accounts_on_paseo_asset_hub();
+	prefund_accounts_on_polkadot_asset_hub();
 	set_bridge_hub_ethereum_base_fee();
 
-	AssetHubPaseo::execute_with(|| {
-		type RuntimeOrigin = <AssetHubPaseo as Chain>::RuntimeOrigin;
+	AssetHubPolkadot::execute_with(|| {
+		type RuntimeOrigin = <AssetHubPolkadot as Chain>::RuntimeOrigin;
 
 		let local_fee_asset =
-			Asset { id: AssetId(Location::parent()), fun: Fungible(LOCAL_FEE_AMOUNT_IN_PAS) };
+			Asset { id: AssetId(Location::parent()), fun: Fungible(LOCAL_FEE_AMOUNT_IN_DOT) };
 
 		let remote_fee_asset =
 			Asset { id: AssetId(eth_location()), fun: Fungible(REMOTE_FEE_AMOUNT_IN_ETHER) };
@@ -682,23 +637,23 @@ fn transact_with_agent_from_asset_hub_without_any_asset_transfer() {
 			},
 		]));
 
-		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::PolkadotXcm::execute(
-			RuntimeOrigin::signed(AssetHubPaseoSender::get()),
+		assert_ok!(<AssetHubPolkadot as AssetHubPolkadotPallet>::PolkadotXcm::execute(
+			RuntimeOrigin::signed(AssetHubPolkadotSender::get()),
 			bx!(xcms),
 			Weight::from(EXECUTION_WEIGHT),
 		));
 	});
 
-	BridgeHubPaseo::execute_with(|| {
-		type RuntimeEvent = <BridgeHubPaseo as Chain>::RuntimeEvent;
+	BridgeHubPolkadot::execute_with(|| {
+		type RuntimeEvent = <BridgeHubPolkadot as Chain>::RuntimeEvent;
 		// Check that Ethereum message was queue in the Outbound Queue
 		assert_expected_events!(
-			BridgeHubPaseo,
+			BridgeHubPolkadot,
 			vec![RuntimeEvent::EthereumOutboundQueueV2(snowbridge_pallet_outbound_queue_v2::Event::MessageQueued{ .. }) => {},]
 		);
 
-		let relayer = BridgeHubPaseoSender::get();
-		let reward_account = AssetHubPaseoReceiver::get();
+		let relayer = BridgeHubPolkadotSender::get();
+		let reward_account = AssetHubPolkadotReceiver::get();
 		let receipt = DeliveryReceipt {
 			gateway: EthereumGatewayAddress::get(),
 			nonce: 1,
@@ -711,7 +666,7 @@ fn transact_with_agent_from_asset_hub_without_any_asset_transfer() {
 		assert_ok!(EthereumOutboundQueueV2::process_delivery_receipt(relayer, receipt));
 
 		assert_expected_events!(
-			BridgeHubPaseo,
+			BridgeHubPolkadot,
 			vec![
 				RuntimeEvent::BridgeRelayers(pallet_bridge_relayers::Event::RewardRegistered { .. }) => {},
 			]
@@ -722,26 +677,14 @@ fn transact_with_agent_from_asset_hub_without_any_asset_transfer() {
 #[test]
 fn register_token_from_penpal() {
 	fund_on_bh();
-	prefund_accounts_on_paseo_asset_hub();
-	set_up_eth_and_pas_pool_on_paseo_asset_hub();
+	prefund_accounts_on_polkadot_asset_hub();
+	set_up_eth_and_dot_pool_on_polkadot_asset_hub();
 	set_bridge_hub_ethereum_base_fee();
 
 	set_trust_reserve_on_penpal();
 	register_ethereum_assets_on_penpal();
 	prefund_accounts_on_penpal_b();
 	set_up_eth_and_dot_pool_on_penpal();
-
-	// Ensure FeeAsset storage is properly set to match test's eth_location
-	AssetHubPaseo::execute_with(|| {
-		use crate::tests::snowbridge_common::eth_location;
-		assert_ok!(<AssetHubPaseo as Chain>::System::set_storage(
-			<AssetHubPaseo as Chain>::RuntimeOrigin::root(),
-			vec![(
-				asset_hub_paseo_runtime::bridge_to_ethereum_config::FeeAsset::key().to_vec(),
-				eth_location().encode(),
-			)],
-		));
-	});
 
 	let penpal_user_location = Location::new(
 		1,
@@ -759,7 +702,7 @@ fn register_token_from_penpal() {
 		type RuntimeOrigin = <PenpalB as Chain>::RuntimeOrigin;
 
 		let local_fee_asset_on_penpal =
-			Asset { id: AssetId(Location::parent()), fun: Fungible(LOCAL_FEE_AMOUNT_IN_PAS) };
+			Asset { id: AssetId(Location::parent()), fun: Fungible(LOCAL_FEE_AMOUNT_IN_DOT) };
 
 		let remote_fee_asset_on_ah =
 			Asset { id: AssetId(eth_location()), fun: Fungible(REMOTE_FEE_AMOUNT_IN_ETHER) };
@@ -812,23 +755,23 @@ fn register_token_from_penpal() {
 		));
 	});
 
-	AssetHubPaseo::execute_with(|| {
-		type RuntimeEvent = <AssetHubPaseo as Chain>::RuntimeEvent;
+	AssetHubPolkadot::execute_with(|| {
+		type RuntimeEvent = <AssetHubPolkadot as Chain>::RuntimeEvent;
 		assert_expected_events!(
-			AssetHubPaseo,
+			AssetHubPolkadot,
 			vec![RuntimeEvent::ForeignAssets(pallet_assets::Event::Burned { .. }) => {},]
 		);
 	});
 
-	BridgeHubPaseo::execute_with(|| {
-		type RuntimeEvent = <BridgeHubPaseo as Chain>::RuntimeEvent;
+	BridgeHubPolkadot::execute_with(|| {
+		type RuntimeEvent = <BridgeHubPolkadot as Chain>::RuntimeEvent;
 		assert_expected_events!(
-			BridgeHubPaseo,
+			BridgeHubPolkadot,
 			vec![RuntimeEvent::EthereumOutboundQueueV2(snowbridge_pallet_outbound_queue_v2::Event::MessageQueued{ .. }) => {},]
 		);
 
-		let relayer = BridgeHubPaseoSender::get();
-		let reward_account = AssetHubPaseoReceiver::get();
+		let relayer = BridgeHubPolkadotSender::get();
+		let reward_account = AssetHubPolkadotReceiver::get();
 		let receipt = DeliveryReceipt {
 			gateway: EthereumGatewayAddress::get(),
 			nonce: 1,
@@ -841,7 +784,7 @@ fn register_token_from_penpal() {
 		assert_ok!(EthereumOutboundQueueV2::process_delivery_receipt(relayer, receipt));
 
 		assert_expected_events!(
-			BridgeHubPaseo,
+			BridgeHubPolkadot,
 			vec![
 				RuntimeEvent::EthereumOutboundQueueV2(snowbridge_pallet_outbound_queue_v2::Event::MessageDelivered { .. }) => {},
 			]
@@ -853,10 +796,10 @@ fn send_message_from_penpal_to_ethereum(sudo: bool) {
 	// bh
 	fund_on_bh();
 	// ah
-	set_up_eth_and_pas_pool_on_paseo_asset_hub();
-	register_pal_on_paseo_asset_hub();
-	register_pal_on_paseo_bh();
-	prefund_accounts_on_paseo_asset_hub();
+	set_up_eth_and_dot_pool_on_polkadot_asset_hub();
+	register_pal_on_polkadot_asset_hub();
+	register_pal_on_polkadot_bh();
+	prefund_accounts_on_polkadot_asset_hub();
 	set_bridge_hub_ethereum_base_fee();
 	// penpal
 	set_trust_reserve_on_penpal();
@@ -867,7 +810,7 @@ fn send_message_from_penpal_to_ethereum(sudo: bool) {
 		type RuntimeOrigin = <PenpalB as Chain>::RuntimeOrigin;
 
 		let local_fee_asset_on_penpal =
-			Asset { id: AssetId(Location::parent()), fun: Fungible(LOCAL_FEE_AMOUNT_IN_PAS) };
+			Asset { id: AssetId(Location::parent()), fun: Fungible(LOCAL_FEE_AMOUNT_IN_DOT) };
 
 		let remote_fee_asset_on_ah =
 			Asset { id: AssetId(eth_location()), fun: Fungible(REMOTE_FEE_AMOUNT_IN_ETHER) };
@@ -956,22 +899,22 @@ fn send_message_from_penpal_to_ethereum(sudo: bool) {
 		}
 	});
 
-	AssetHubPaseo::execute_with(|| {
-		type RuntimeEvent = <AssetHubPaseo as Chain>::RuntimeEvent;
+	AssetHubPolkadot::execute_with(|| {
+		type RuntimeEvent = <AssetHubPolkadot as Chain>::RuntimeEvent;
 		assert_expected_events!(
-			AssetHubPaseo,
+			AssetHubPolkadot,
 			vec![RuntimeEvent::AssetConversion(pallet_asset_conversion::Event::SwapCreditExecuted { .. }) => {},]
 		);
 		assert_expected_events!(
-			AssetHubPaseo,
+			AssetHubPolkadot,
 			vec![RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { .. }) => {},]
 		);
 	});
 
-	BridgeHubPaseo::execute_with(|| {
-		type RuntimeEvent = <BridgeHubPaseo as Chain>::RuntimeEvent;
+	BridgeHubPolkadot::execute_with(|| {
+		type RuntimeEvent = <BridgeHubPolkadot as Chain>::RuntimeEvent;
 		assert_expected_events!(
-			BridgeHubPaseo,
+			BridgeHubPolkadot,
 			vec![RuntimeEvent::EthereumOutboundQueueV2(snowbridge_pallet_outbound_queue_v2::Event::MessageQueued{ .. }) => {},]
 		);
 	});
@@ -989,11 +932,11 @@ fn send_message_from_penpal_to_ethereum_with_user_origin() {
 
 #[test]
 fn invalid_nonce_for_delivery_receipt_fails() {
-	BridgeHubPaseo::execute_with(|| {
-		type Runtime = <BridgeHubPaseo as Chain>::Runtime;
+	BridgeHubPolkadot::execute_with(|| {
+		type Runtime = <BridgeHubPolkadot as Chain>::Runtime;
 
-		let relayer = BridgeHubPaseoSender::get();
-		let reward_account = AssetHubPaseoReceiver::get();
+		let relayer = BridgeHubPolkadotSender::get();
+		let reward_account = AssetHubPolkadotReceiver::get();
 		let receipt = DeliveryReceipt {
 			gateway: EthereumGatewayAddress::get(),
 			nonce: 0,
@@ -1012,26 +955,24 @@ fn invalid_nonce_for_delivery_receipt_fails() {
 #[test]
 fn export_message_from_asset_hub_to_ethereum_is_banned_when_set_operating_mode_is_halted() {
 	fund_on_bh();
-	prefund_accounts_on_paseo_asset_hub();
+	prefund_accounts_on_polkadot_asset_hub();
 	set_bridge_hub_ethereum_base_fee();
 
-	AssetHubPaseo::execute_with(|| {
-		type RuntimeOrigin = <AssetHubPaseo as Chain>::RuntimeOrigin;
+	AssetHubPolkadot::execute_with(|| {
+		type RuntimeOrigin = <AssetHubPolkadot as Chain>::RuntimeOrigin;
 		assert_ok!(
-			<AssetHubPaseo as AssetHubPaseoPallet>::SnowbridgeSystemFrontend::set_operating_mode(
+			<AssetHubPolkadot as AssetHubPolkadotPallet>::SnowbridgeSystemFrontend::set_operating_mode(
 				RuntimeOrigin::root(),
-				BasicOperatingMode::Halted
-			)
-		);
+				BasicOperatingMode::Halted));
 	});
 
-	AssetHubPaseo::execute_with(|| {
-		type RuntimeOrigin = <AssetHubPaseo as Chain>::RuntimeOrigin;
+	AssetHubPolkadot::execute_with(|| {
+		type RuntimeOrigin = <AssetHubPolkadot as Chain>::RuntimeOrigin;
 
-		type Runtime = <AssetHubPaseo as Chain>::Runtime;
+		type Runtime = <AssetHubPolkadot as Chain>::Runtime;
 
 		let local_fee_asset =
-			Asset { id: AssetId(Location::parent()), fun: Fungible(LOCAL_FEE_AMOUNT_IN_PAS) };
+			Asset { id: AssetId(Location::parent()), fun: Fungible(LOCAL_FEE_AMOUNT_IN_DOT) };
 
 		let remote_fee_asset =
 			Asset { id: AssetId(eth_location()), fun: Fungible(REMOTE_FEE_AMOUNT_IN_ETHER) };
@@ -1061,8 +1002,8 @@ fn export_message_from_asset_hub_to_ethereum_is_banned_when_set_operating_mode_i
 
 		// Send the Weth back to Ethereum
 		assert_err_ignore_postinfo!(
-			<AssetHubPaseo as AssetHubPaseoPallet>::PolkadotXcm::execute(
-				RuntimeOrigin::signed(AssetHubPaseoReceiver::get()),
+			<AssetHubPolkadot as AssetHubPolkadotPallet>::PolkadotXcm::execute(
+				RuntimeOrigin::signed(AssetHubPolkadotReceiver::get()),
 				bx!(xcm),
 				Weight::from(EXECUTION_WEIGHT),
 			),

@@ -18,7 +18,7 @@
 //! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 4.0.0-dev
 //! DATE: 2022-03-29 (Y/M/D)
 //!
-//! DATABASE: `RocksDb`, RUNTIME: `Paseo`
+//! DATABASE: `RocksDb`, RUNTIME: `Polkadot`
 //! BLOCK-NUM: `BlockId::Number(9643856)`
 //! SKIP-WRITE: `false`, SKIP-READ: `false`, WARMUPS: `1`
 //! STATE-VERSION: `V0`, STATE-CACHE-SIZE: `0`
@@ -32,7 +32,7 @@
 //   --mul=1.1
 //   --weight-path=runtime/polkadot/constants/src/weights/
 
-/// Storage DB weights for the `Paseo` runtime and `RocksDb`.
+/// Storage DB weights for the `Polkadot` runtime and `RocksDb`.
 pub mod constants {
 	use frame_support::{
 		parameter_types,

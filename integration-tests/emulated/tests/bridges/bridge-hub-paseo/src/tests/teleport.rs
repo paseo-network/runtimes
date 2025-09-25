@@ -34,15 +34,20 @@ fn teleport_via_transfer_assets_from_and_to_relay() {
 	let native_asset: Assets = (Here, amount).into();
 
 	test_relay_is_trusted_teleporter!(
-		Paseo,
-		vec![BridgeHubPaseo],
+		Polkadot,
+		vec![BridgeHubPolkadot],
 		(native_asset, amount),
 		transfer_assets
 	);
 
 	let amount = POLKADOT_ED * 1000;
 
-	test_parachain_is_trusted_teleporter_for_relay!(BridgeHubPaseo, Paseo, amount, transfer_assets);
+	test_parachain_is_trusted_teleporter_for_relay!(
+		BridgeHubPolkadot,
+		Polkadot,
+		amount,
+		transfer_assets
+	);
 }
 
 #[test]
@@ -51,8 +56,8 @@ fn teleport_via_limited_teleport_assets_from_and_to_relay() {
 	let native_asset: Assets = (Here, amount).into();
 
 	test_relay_is_trusted_teleporter!(
-		Paseo,
-		vec![BridgeHubPaseo],
+		Polkadot,
+		vec![BridgeHubPolkadot],
 		(native_asset, amount),
 		limited_teleport_assets
 	);
@@ -60,8 +65,8 @@ fn teleport_via_limited_teleport_assets_from_and_to_relay() {
 	let amount = POLKADOT_ED * 1000;
 
 	test_parachain_is_trusted_teleporter_for_relay!(
-		BridgeHubPaseo,
-		Paseo,
+		BridgeHubPolkadot,
+		Polkadot,
 		amount,
 		limited_teleport_assets
 	);
@@ -73,8 +78,8 @@ fn teleport_via_limited_teleport_assets_from_and_to_other_system_parachains_work
 	let native_asset: Assets = (Parent, amount).into();
 
 	test_parachain_is_trusted_teleporter!(
-		BridgeHubPaseo,
-		vec![AssetHubPaseo],
+		BridgeHubPolkadot,
+		vec![AssetHubPolkadot],
 		(native_asset, amount),
 		limited_teleport_assets
 	);
@@ -83,8 +88,8 @@ fn teleport_via_limited_teleport_assets_from_and_to_other_system_parachains_work
 	let native_asset: Assets = (Parent, amount).into();
 
 	test_parachain_is_trusted_teleporter!(
-		AssetHubPaseo,
-		vec![BridgeHubPaseo],
+		AssetHubPolkadot,
+		vec![BridgeHubPolkadot],
 		(native_asset, amount),
 		limited_teleport_assets
 	);
@@ -96,8 +101,8 @@ fn teleport_via_transfer_assets_from_and_to_other_system_parachains_works() {
 	let native_asset: Assets = (Parent, amount).into();
 
 	test_parachain_is_trusted_teleporter!(
-		BridgeHubPaseo,
-		vec![AssetHubPaseo],
+		BridgeHubPolkadot,
+		vec![AssetHubPolkadot],
 		(native_asset, amount),
 		transfer_assets
 	);
@@ -106,8 +111,8 @@ fn teleport_via_transfer_assets_from_and_to_other_system_parachains_works() {
 	let native_asset: Assets = (Parent, amount).into();
 
 	test_parachain_is_trusted_teleporter!(
-		AssetHubPaseo,
-		vec![BridgeHubPaseo],
+		AssetHubPolkadot,
+		vec![BridgeHubPolkadot],
 		(native_asset, amount),
 		transfer_assets
 	);

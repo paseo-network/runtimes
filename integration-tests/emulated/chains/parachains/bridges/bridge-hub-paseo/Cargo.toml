@@ -1,10 +1,10 @@
 [package]
-name = "bridge-hub-paseo-emulated-chain"
+name = "bridge-hub-polkadot-emulated-chain"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
 license = "Apache-2.0"
-description = "Bridge Hub Paseo emulated chain used for integration tests"
+description = "Bridge Hub Polkadot emulated chain used for integration tests"
 publish = false
 
 [dependencies]
@@ -29,7 +29,7 @@ bridge-hub-paseo-runtime = { workspace = true }
 [features]
 runtime-benchmarks = [
 	"bridge-hub-common/runtime-benchmarks",
-	"bridge-hub-paseo-runtime/runtime-benchmarks",
+	"bridge-hub-polkadot-runtime/runtime-benchmarks",
 	"frame-support/runtime-benchmarks",
 	"parachains-common/runtime-benchmarks",
 	"xcm/runtime-benchmarks",

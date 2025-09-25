@@ -14,7 +14,7 @@
 // limitations under the License.
 
 pub mod genesis;
-pub use paseo_runtime;
+pub use polkadot_runtime;
 
 // Cumulus
 use emulated_integration_tests_common::{
@@ -23,28 +23,29 @@ use emulated_integration_tests_common::{
 	xcm_emulator::decl_test_relay_chains,
 };
 
-// Paseo declaration
+// Polkadot declaration
 decl_test_relay_chains! {
 	#[api_version(13)]
-	pub struct Paseo {
+	pub struct Polkadot {
 		genesis = genesis::genesis(),
 		on_init = (),
-		runtime = paseo_runtime,
+		runtime = polkadot_runtime,
 		core = {
-			SovereignAccountOf: paseo_runtime::xcm_config::SovereignAccountOf,
+			SovereignAccountOf: polkadot_runtime::xcm_config::SovereignAccountOf,
 		},
 		pallets = {
-			XcmPallet: paseo_runtime::XcmPallet,
-			Balances: paseo_runtime::Balances,
-			Treasury: paseo_runtime::Treasury,
-			AssetRate: paseo_runtime::AssetRate,
-			Hrmp: paseo_runtime::Hrmp,
+			XcmPallet: polkadot_runtime::XcmPallet,
+			Balances: polkadot_runtime::Balances,
+			Treasury: polkadot_runtime::Treasury,
+			AssetRate: polkadot_runtime::AssetRate,
+			Preimage: polkadot_runtime::Preimage,
+			Hrmp: polkadot_runtime::Hrmp,
 		}
 	},
 }
 
-// Paseo implementation
-impl_accounts_helpers_for_relay_chain!(Paseo);
-impl_assert_events_helpers_for_relay_chain!(Paseo);
-impl_hrmp_channels_helpers_for_relay_chain!(Paseo);
-impl_send_transact_helpers_for_relay_chain!(Paseo);
+// Polkadot implementation
+impl_accounts_helpers_for_relay_chain!(Polkadot);
+impl_assert_events_helpers_for_relay_chain!(Polkadot);
+impl_hrmp_channels_helpers_for_relay_chain!(Polkadot);
+impl_send_transact_helpers_for_relay_chain!(Polkadot);

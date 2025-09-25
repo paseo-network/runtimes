@@ -25,55 +25,55 @@ use xcm::latest::prelude::*;
 
 pub const ASSET_HUB_PARA_ID: u32 = 1000;
 pub const PARA_ID: u32 = 1002;
-pub const ED: Balance = bridge_hub_paseo_runtime::ExistentialDeposit::get();
+pub const ED: Balance = bridge_hub_polkadot_runtime::ExistentialDeposit::get();
 
 pub fn genesis() -> sp_core::storage::Storage {
-	let genesis_config = bridge_hub_paseo_runtime::RuntimeGenesisConfig {
-		system: bridge_hub_paseo_runtime::SystemConfig::default(),
-		balances: bridge_hub_paseo_runtime::BalancesConfig {
+	let genesis_config = bridge_hub_polkadot_runtime::RuntimeGenesisConfig {
+		system: bridge_hub_polkadot_runtime::SystemConfig::default(),
+		balances: bridge_hub_polkadot_runtime::BalancesConfig {
 			balances: accounts::init_balances().iter().cloned().map(|k| (k, ED * 4096)).collect(),
 			dev_accounts: None,
 		},
-		parachain_info: bridge_hub_paseo_runtime::ParachainInfoConfig {
+		parachain_info: bridge_hub_polkadot_runtime::ParachainInfoConfig {
 			parachain_id: PARA_ID.into(),
 			..Default::default()
 		},
-		collator_selection: bridge_hub_paseo_runtime::CollatorSelectionConfig {
+		collator_selection: bridge_hub_polkadot_runtime::CollatorSelectionConfig {
 			invulnerables: collators::invulnerables().iter().cloned().map(|(acc, _)| acc).collect(),
 			candidacy_bond: ED * 16,
 			..Default::default()
 		},
-		session: bridge_hub_paseo_runtime::SessionConfig {
+		session: bridge_hub_polkadot_runtime::SessionConfig {
 			keys: collators::invulnerables()
 				.into_iter()
 				.map(|(acc, aura)| {
 					(
-						acc.clone(),                                    // account id
-						acc,                                            // validator id
-						bridge_hub_paseo_runtime::SessionKeys { aura }, // session keys
+						acc.clone(),                                       // account id
+						acc,                                               // validator id
+						bridge_hub_polkadot_runtime::SessionKeys { aura }, // session keys
 					)
 				})
 				.collect(),
 			..Default::default()
 		},
-		polkadot_xcm: bridge_hub_paseo_runtime::PolkadotXcmConfig {
+		polkadot_xcm: bridge_hub_polkadot_runtime::PolkadotXcmConfig {
 			safe_xcm_version: Some(SAFE_XCM_VERSION),
 			..Default::default()
 		},
-		bridge_kusama_grandpa: bridge_hub_paseo_runtime::BridgeKusamaGrandpaConfig {
+		bridge_kusama_grandpa: bridge_hub_polkadot_runtime::BridgeKusamaGrandpaConfig {
 			owner: Some(Keyring::Bob.to_account_id()),
 			..Default::default()
 		},
-		bridge_kusama_messages: bridge_hub_paseo_runtime::BridgeKusamaMessagesConfig {
+		bridge_kusama_messages: bridge_hub_polkadot_runtime::BridgeKusamaMessagesConfig {
 			owner: Some(Keyring::Bob.to_account_id()),
 			..Default::default()
 		},
-		ethereum_system: bridge_hub_paseo_runtime::EthereumSystemConfig {
+		ethereum_system: bridge_hub_polkadot_runtime::EthereumSystemConfig {
 			para_id: PARA_ID.into(),
 			asset_hub_para_id: ASSET_HUB_PARA_ID.into(),
 			..Default::default()
 		},
-		xcm_over_bridge_hub_kusama: bridge_hub_paseo_runtime::XcmOverBridgeHubKusamaConfig {
+		xcm_over_bridge_hub_kusama: bridge_hub_polkadot_runtime::XcmOverBridgeHubKusamaConfig {
 			opened_bridges: vec![
 				// open PAH -> KAH bridge
 				(
@@ -89,6 +89,7 @@ pub fn genesis() -> sp_core::storage::Storage {
 
 	build_genesis_storage(
 		&genesis_config,
-		bridge_hub_paseo_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
+		bridge_hub_polkadot_runtime::WASM_BINARY
+			.expect("WASM binary was not built, please build it!"),
 	)
 }

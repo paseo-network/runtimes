@@ -1,27 +1,25 @@
 // Copyright (C) Parity Technologies (UK) Ltd.
-// This file is part of Paseo.
+// This file is part of Polkadot.
 
-// Paseo is free software: you can redistribute it and/or modify
+// Polkadot is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 
-// Paseo is distributed in the hope that it will be useful,
+// Polkadot is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
 // You should have received a copy of the GNU General Public License
-// along with Paseo. If not, see <http://www.gnu.org/licenses/>.
+// along with Polkadot. If not, see <http://www.gnu.org/licenses/>.
 
-//! New governance configurations for the Paseo runtime.
+//! New governance configurations for the Polkadot runtime.
 
 use super::*;
-use crate::xcm_config::CollectivesLocation;
+use crate::xcm_config::{CollectivesLocation, FellowsBodyId};
 use frame_support::parameter_types;
 use frame_system::EnsureRootWithSuccess;
-use pallet_xcm::{EnsureXcm, IsVoiceOfBody};
-use xcm::latest::BodyId;
 
 mod origins;
 pub use origins::{
@@ -57,16 +55,9 @@ parameter_types! {
 parameter_types! {
 	pub const MaxBalance: Balance = Balance::MAX;
 }
-// We just allow `Root` to spend money from the treasury, this should prevent bad actors from
-// stealing "money".
-pub type TreasurySpender = EnsureRootWithSuccess<AccountId, MaxBalance>;
+pub type TreasurySpender = EitherOf<EnsureRootWithSuccess<AccountId, MaxBalance>, Spender>;
 
 impl origins::pallet_custom_origins::Config for Runtime {}
-
-parameter_types! {
-	// Fellows pluralistic body.
-	pub const FellowsBodyId: BodyId = BodyId::Technical;
-}
 
 impl pallet_whitelist::Config for Runtime {
 	type WeightInfo = weights::pallet_whitelist::WeightInfo<Self>;

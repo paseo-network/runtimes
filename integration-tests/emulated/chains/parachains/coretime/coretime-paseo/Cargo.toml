@@ -1,10 +1,10 @@
 [package]
-name = "coretime-paseo-emulated-chain"
+name = "coretime-polkadot-emulated-chain"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
 license = "Apache-2.0"
-description = "Coretime Paseo emulated chain used for integration tests"
+description = "Coretime Polkadot emulated chain used for integration tests"
 publish = false
 
 [dependencies]
@@ -23,7 +23,7 @@ coretime-paseo-runtime = { workspace = true }
 
 [features]
 runtime-benchmarks = [
-	"coretime-paseo-runtime/runtime-benchmarks",
+	"coretime-polkadot-runtime/runtime-benchmarks",
 	"cumulus-primitives-core/runtime-benchmarks",
 	"frame-support/runtime-benchmarks",
 	"parachains-common/runtime-benchmarks",

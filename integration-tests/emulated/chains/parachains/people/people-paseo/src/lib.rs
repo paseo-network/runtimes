@@ -23,30 +23,30 @@ use emulated_integration_tests_common::{
 	impl_accounts_helpers_for_parachain, impl_assert_events_helpers_for_parachain,
 	impls::Parachain, xcm_emulator::decl_test_parachains,
 };
-pub use people_paseo_runtime;
+pub use people_polkadot_runtime;
 
 // PeoplePolkadot Parachain declaration
 decl_test_parachains! {
-	pub struct PeoplePaseo {
+	pub struct PeoplePolkadot {
 		genesis = genesis::genesis(),
 		on_init = {
-			people_paseo_runtime::AuraExt::on_initialize(1);
+			people_polkadot_runtime::AuraExt::on_initialize(1);
 		},
-		runtime = people_paseo_runtime,
+		runtime = people_polkadot_runtime,
 		core = {
-			XcmpMessageHandler: people_paseo_runtime::XcmpQueue,
-			LocationToAccountId: people_paseo_runtime::xcm_config::LocationToAccountId,
-			ParachainInfo: people_paseo_runtime::ParachainInfo,
+			XcmpMessageHandler: people_polkadot_runtime::XcmpQueue,
+			LocationToAccountId: people_polkadot_runtime::xcm_config::LocationToAccountId,
+			ParachainInfo: people_polkadot_runtime::ParachainInfo,
 			MessageOrigin: cumulus_primitives_core::AggregateMessageOrigin,
 		},
 		pallets = {
-			PolkadotXcm: people_paseo_runtime::PolkadotXcm,
-			Balances: people_paseo_runtime::Balances,
-			Identity: people_paseo_runtime::Identity,
+			PolkadotXcm: people_polkadot_runtime::PolkadotXcm,
+			Balances: people_polkadot_runtime::Balances,
+			Identity: people_polkadot_runtime::Identity,
 		}
 	},
 }
 
 // PeoplePolkadot implementation
-impl_accounts_helpers_for_parachain!(PeoplePaseo);
-impl_assert_events_helpers_for_parachain!(PeoplePaseo);
+impl_accounts_helpers_for_parachain!(PeoplePolkadot);
+impl_assert_events_helpers_for_parachain!(PeoplePolkadot);
