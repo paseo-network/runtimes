@@ -24,33 +24,33 @@ use emulated_integration_tests_common::{
 	impl_xcm_helpers_for_parachain, impls::Parachain, xcm_emulator::decl_test_parachains,
 };
 
-// BridgeHubPolkadot Parachain declaration
+// BridgeHubPaseo Parachain declaration
 decl_test_parachains! {
-	pub struct BridgeHubPolkadot {
+	pub struct BridgeHubPaseo {
 		genesis = genesis::genesis(),
 		on_init = {
-			bridge_hub_polkadot_runtime::AuraExt::on_initialize(1);
+			bridge_hub_paseo_runtime::AuraExt::on_initialize(1);
 		},
-		runtime = bridge_hub_polkadot_runtime,
+		runtime = bridge_hub_paseo_runtime,
 		core = {
-			XcmpMessageHandler: bridge_hub_polkadot_runtime::XcmpQueue,
-			LocationToAccountId: bridge_hub_polkadot_runtime::xcm_config::LocationToAccountId,
-			ParachainInfo: bridge_hub_polkadot_runtime::ParachainInfo,
+			XcmpMessageHandler: bridge_hub_paseo_runtime::XcmpQueue,
+			LocationToAccountId: bridge_hub_paseo_runtime::xcm_config::LocationToAccountId,
+			ParachainInfo: bridge_hub_paseo_runtime::ParachainInfo,
 			MessageOrigin: bridge_hub_common::AggregateMessageOrigin,
 		},
 		pallets = {
-			PolkadotXcm: bridge_hub_polkadot_runtime::PolkadotXcm,
-			Balances: bridge_hub_polkadot_runtime::Balances,
-			EthereumSystem: bridge_hub_polkadot_runtime::EthereumSystem,
-			EthereumInboundQueue: bridge_hub_polkadot_runtime::EthereumInboundQueue,
-			EthereumOutboundQueue: bridge_hub_polkadot_runtime::EthereumOutboundQueue,
-			EthereumSystemV2: bridge_hub_polkadot_runtime::EthereumSystemV2,
-			BridgeRelayers: bridge_hub_polkadot_runtime::BridgeRelayers,
+			PolkadotXcm: bridge_hub_paseo_runtime::PolkadotXcm,
+			Balances: bridge_hub_paseo_runtime::Balances,
+			EthereumSystem: bridge_hub_paseo_runtime::EthereumSystem,
+			EthereumInboundQueue: bridge_hub_paseo_runtime::EthereumInboundQueue,
+			EthereumOutboundQueue: bridge_hub_paseo_runtime::EthereumOutboundQueue,
+			EthereumSystemV2: bridge_hub_paseo_runtime::EthereumSystemV2,
+			BridgeRelayers: bridge_hub_paseo_runtime::BridgeRelayers,
 		}
 	},
 }
 
-// BridgeHubPolkadot implementation
-impl_accounts_helpers_for_parachain!(BridgeHubPolkadot);
-impl_assert_events_helpers_for_parachain!(BridgeHubPolkadot);
-impl_xcm_helpers_for_parachain!(BridgeHubPolkadot);
+// BridgeHubPaseo implementation
+impl_accounts_helpers_for_parachain!(BridgeHubPaseo);
+impl_assert_events_helpers_for_parachain!(BridgeHubPaseo);
+impl_xcm_helpers_for_parachain!(BridgeHubPaseo);

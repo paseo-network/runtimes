@@ -20,34 +20,34 @@ pub mod genesis;
 use frame_support::traits::OnInitialize;
 
 // Cumulus
-pub use coretime_polkadot_runtime;
+pub use coretime_paseo_runtime;
 use emulated_integration_tests_common::{
 	impl_accounts_helpers_for_parachain, impl_assert_events_helpers_for_parachain,
 	impls::Parachain, xcm_emulator::decl_test_parachains,
 };
 
-// CollectivesPolkadot Parachain declaration
+// CollectivesPaseo Parachain declaration
 decl_test_parachains! {
-	pub struct CoretimePolkadot {
+	pub struct CoretimePaseo {
 		genesis = genesis::genesis(),
 		on_init = {
-			coretime_polkadot_runtime::AuraExt::on_initialize(1);
+			coretime_paseo_runtime::AuraExt::on_initialize(1);
 		},
-		runtime = coretime_polkadot_runtime,
+		runtime = coretime_paseo_runtime,
 		core = {
-			XcmpMessageHandler: coretime_polkadot_runtime::XcmpQueue,
-			LocationToAccountId: coretime_polkadot_runtime::xcm_config::LocationToAccountId,
-			ParachainInfo: coretime_polkadot_runtime::ParachainInfo,
+			XcmpMessageHandler: coretime_paseo_runtime::XcmpQueue,
+			LocationToAccountId: coretime_paseo_runtime::xcm_config::LocationToAccountId,
+			ParachainInfo: coretime_paseo_runtime::ParachainInfo,
 			MessageOrigin: cumulus_primitives_core::AggregateMessageOrigin,
 		},
 		pallets = {
-			PolkadotXcm: coretime_polkadot_runtime::PolkadotXcm,
-			Balances: coretime_polkadot_runtime::Balances,
-			Broker: coretime_polkadot_runtime::Broker,
+			PolkadotXcm: coretime_paseo_runtime::PolkadotXcm,
+			Balances: coretime_paseo_runtime::Balances,
+			Broker: coretime_paseo_runtime::Broker,
 		}
 	},
 }
 
-// CoretimePolkadot implementation
-impl_accounts_helpers_for_parachain!(CoretimePolkadot);
-impl_assert_events_helpers_for_parachain!(CoretimePolkadot);
+// CoretimePaseo implementation
+impl_accounts_helpers_for_parachain!(CoretimePaseo);
+impl_assert_events_helpers_for_parachain!(CoretimePaseo);

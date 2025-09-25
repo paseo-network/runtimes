@@ -25,39 +25,39 @@ use emulated_integration_tests_common::{
 	impl_foreign_assets_helpers_for_parachain, impl_xcm_helpers_for_parachain, impls::Parachain,
 	xcm_emulator::decl_test_parachains,
 };
-use polkadot_emulated_chain::Polkadot;
+use paseo_emulated_chain::Paseo;
 
-// AssetHubPolkadot Parachain declaration
+// AssetHubPaseo Parachain declaration
 decl_test_parachains! {
-	pub struct AssetHubPolkadot {
+	pub struct AssetHubPaseo {
 		genesis = genesis::genesis(),
 		on_init = {
-			asset_hub_polkadot_runtime::AuraExt::on_initialize(1);
+			asset_hub_paseo_runtime::AuraExt::on_initialize(1);
 		},
-		runtime = asset_hub_polkadot_runtime,
+		runtime = asset_hub_paseo_runtime,
 		core = {
-			XcmpMessageHandler: asset_hub_polkadot_runtime::XcmpQueue,
-			LocationToAccountId: asset_hub_polkadot_runtime::xcm_config::LocationToAccountId,
-			ParachainInfo: asset_hub_polkadot_runtime::ParachainInfo,
+			XcmpMessageHandler: asset_hub_paseo_runtime::XcmpQueue,
+			LocationToAccountId: asset_hub_paseo_runtime::xcm_config::LocationToAccountId,
+			ParachainInfo: asset_hub_paseo_runtime::ParachainInfo,
 			MessageOrigin: cumulus_primitives_core::AggregateMessageOrigin,
 		},
 		pallets = {
-			PolkadotXcm: asset_hub_polkadot_runtime::PolkadotXcm,
-			Balances: asset_hub_polkadot_runtime::Balances,
-			Assets: asset_hub_polkadot_runtime::Assets,
-			ForeignAssets: asset_hub_polkadot_runtime::ForeignAssets,
-			PoolAssets: asset_hub_polkadot_runtime::PoolAssets,
-			AssetConversion: asset_hub_polkadot_runtime::AssetConversion,
-			SnowbridgeSystemFrontend: asset_hub_polkadot_runtime::SnowbridgeSystemFrontend,
-			Preimage: asset_hub_polkadot_runtime::Preimage,
+			PolkadotXcm: asset_hub_paseo_runtime::PolkadotXcm,
+			Balances: asset_hub_paseo_runtime::Balances,
+			Assets: asset_hub_paseo_runtime::Assets,
+			ForeignAssets: asset_hub_paseo_runtime::ForeignAssets,
+			PoolAssets: asset_hub_paseo_runtime::PoolAssets,
+			AssetConversion: asset_hub_paseo_runtime::AssetConversion,
+			SnowbridgeSystemFrontend: asset_hub_paseo_runtime::SnowbridgeSystemFrontend,
+	  Preimage: asset_hub_paseo_runtime::Preimage
 		}
 	},
 }
 
-// AssetHubPolkadot implementation
-impl_accounts_helpers_for_parachain!(AssetHubPolkadot);
-impl_assert_events_helpers_for_parachain!(AssetHubPolkadot);
-impl_assets_helpers_for_system_parachain!(AssetHubPolkadot, Polkadot);
-impl_assets_helpers_for_parachain!(AssetHubPolkadot);
-impl_foreign_assets_helpers_for_parachain!(AssetHubPolkadot, xcm::latest::Location);
-impl_xcm_helpers_for_parachain!(AssetHubPolkadot);
+// AssetHubPaseo implementation
+impl_accounts_helpers_for_parachain!(AssetHubPaseo);
+impl_assert_events_helpers_for_parachain!(AssetHubPaseo);
+impl_assets_helpers_for_system_parachain!(AssetHubPaseo, Paseo);
+impl_assets_helpers_for_parachain!(AssetHubPaseo);
+impl_foreign_assets_helpers_for_parachain!(AssetHubPaseo, xcm::latest::Location);
+impl_xcm_helpers_for_parachain!(AssetHubPaseo);

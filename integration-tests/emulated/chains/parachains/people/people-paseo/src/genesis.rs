@@ -22,42 +22,42 @@ use emulated_integration_tests_common::{
 	accounts, build_genesis_storage, collators, SAFE_XCM_VERSION,
 };
 use parachains_common::Balance;
-use polkadot_runtime_constants::currency::UNITS as DOT;
+use paseo_runtime_constants::currency::UNITS as PAS;
 
-const ENDOWMENT: u128 = 1_000 * DOT;
+const ENDOWMENT: u128 = 1_000 * PAS;
 pub const PARA_ID: u32 = 1004;
-pub const ED: Balance = people_polkadot_runtime::ExistentialDeposit::get();
+pub const ED: Balance = people_paseo_runtime::ExistentialDeposit::get();
 
 pub fn genesis() -> Storage {
-	let genesis_config = people_polkadot_runtime::RuntimeGenesisConfig {
-		balances: people_polkadot_runtime::BalancesConfig {
+	let genesis_config = people_paseo_runtime::RuntimeGenesisConfig {
+		balances: people_paseo_runtime::BalancesConfig {
 			balances: accounts::init_balances().iter().cloned().map(|k| (k, ENDOWMENT)).collect(),
 			dev_accounts: None,
 		},
-		system: people_polkadot_runtime::SystemConfig::default(),
-		parachain_info: people_polkadot_runtime::ParachainInfoConfig {
+		system: people_paseo_runtime::SystemConfig::default(),
+		parachain_info: people_paseo_runtime::ParachainInfoConfig {
 			parachain_id: ParaId::from(PARA_ID),
 			..Default::default()
 		},
-		collator_selection: people_polkadot_runtime::CollatorSelectionConfig {
+		collator_selection: people_paseo_runtime::CollatorSelectionConfig {
 			invulnerables: collators::invulnerables().iter().cloned().map(|(acc, _)| acc).collect(),
 			candidacy_bond: ED * 16,
 			..Default::default()
 		},
-		session: people_polkadot_runtime::SessionConfig {
+		session: people_paseo_runtime::SessionConfig {
 			keys: collators::invulnerables()
 				.into_iter()
 				.map(|(acc, aura)| {
 					(
-						acc.clone(),                                   // account id
-						acc,                                           // validator id
-						people_polkadot_runtime::SessionKeys { aura }, // session keys
+						acc.clone(),                                // account id
+						acc,                                        // validator id
+						people_paseo_runtime::SessionKeys { aura }, // session keys
 					)
 				})
 				.collect(),
 			..Default::default()
 		},
-		polkadot_xcm: people_polkadot_runtime::PolkadotXcmConfig {
+		polkadot_xcm: people_paseo_runtime::PolkadotXcmConfig {
 			safe_xcm_version: Some(SAFE_XCM_VERSION),
 			..Default::default()
 		},
@@ -66,6 +66,6 @@ pub fn genesis() -> Storage {
 
 	build_genesis_storage(
 		&genesis_config,
-		people_polkadot_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
+		people_paseo_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
 	)
 }
