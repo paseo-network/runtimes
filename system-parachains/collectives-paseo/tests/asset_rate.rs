@@ -16,7 +16,7 @@
 
 //! AssetRate pallet instance tests.
 
-use collectives_paseo_runtime::AssetRateWithNative;
+use collectives_polkadot_runtime::AssetRateWithNative;
 use frame_support::traits::tokens::ConversionFromAssetBalance;
 use polkadot_runtime_common::impls::VersionedLocatableAsset;
 use xcm::prelude::*;

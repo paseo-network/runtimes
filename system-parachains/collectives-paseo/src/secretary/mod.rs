@@ -26,7 +26,7 @@ use frame_support::{
 use frame_system::{pallet_prelude::BlockNumberFor, EnsureRootWithSuccess};
 use pallet_ranked_collective::{MemberIndex, TallyOf, Votes};
 use pallet_xcm::{EnsureXcm, IsVoiceOfBody};
-use paseo_runtime_constants::time::HOURS;
+use polkadot_runtime_constants::time::HOURS;
 use sp_core::{ConstU128, ConstU32};
 use sp_runtime::{
 	traits::{ConstU16, ConvertToValue, Identity, Replace},
@@ -54,9 +54,15 @@ pub mod ranks {
 type ApproveOrigin = EitherOf<
 	EnsureRootWithSuccess<AccountId, ConstU16<65535>>,
 	EitherOf<
-		MapSuccess<
-			EnsureXcm<IsVoiceOfBody<GovernanceLocation, FellowshipAdminBodyId>>,
-			Replace<ConstU16<65535>>,
+		EitherOf<
+			MapSuccess<
+				EnsureXcm<IsVoiceOfBody<RelayChainLocation, FellowshipAdminBodyId>>,
+				Replace<ConstU16<65535>>,
+			>,
+			MapSuccess<
+				EnsureXcm<IsVoiceOfBody<AssetHubLocation, FellowshipAdminBodyId>>,
+				Replace<ConstU16<65535>>,
+			>,
 		>,
 		MapSuccess<Fellows, Replace<ConstU16<65535>>>,
 	>,

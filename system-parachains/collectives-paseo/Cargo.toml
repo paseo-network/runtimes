@@ -1,10 +1,10 @@
 [package]
 authors.workspace = true
 build = "build.rs"
-description = "Paseo Collectives Parachain Runtime"
+description = "Polkadot Collectives Parachain Runtime"
 edition.workspace = true
 license.workspace = true
-name = "collectives-paseo-runtime"
+name = "collectives-polkadot-runtime"
 repository.workspace = true
 version.workspace = true
 
@@ -14,10 +14,6 @@ hex-literal = { workspace = true }
 log = { workspace = true }
 scale-info = { features = ["derive"], workspace = true }
 serde_json = { features = ["alloc"], workspace = true }
-
-# Local
-paseo-runtime-constants = { workspace = true }
-collectives-paseo-runtime-constants = { workspace = true }
 
 # Substrate
 frame-benchmarking = { optional = true, workspace = true }
@@ -31,7 +27,6 @@ frame-try-runtime = { optional = true, workspace = true }
 pallet-asset-rate = { workspace = true }
 pallet-alliance = { workspace = true }
 pallet-aura = { workspace = true }
-pallet-sudo = { workspace = true }
 pallet-authorship = { workspace = true }
 pallet-balances = { workspace = true }
 pallet-collective = { workspace = true }
@@ -70,6 +65,7 @@ pallet-xcm-benchmarks = { optional = true, workspace = true }
 polkadot-core-primitives = { workspace = true }
 polkadot-parachain-primitives = { workspace = true }
 polkadot-runtime-common = { workspace = true }
+polkadot-runtime-constants = { workspace = true }
 xcm = { workspace = true }
 xcm-builder = { workspace = true }
 xcm-executor = { workspace = true }
@@ -123,7 +119,6 @@ runtime-benchmarks = [
 	"pallet-referenda/runtime-benchmarks",
 	"pallet-salary/runtime-benchmarks",
 	"pallet-scheduler/runtime-benchmarks",
-	"pallet-sudo/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"pallet-transaction-payment/runtime-benchmarks",
 	"pallet-treasury/runtime-benchmarks",
@@ -131,9 +126,9 @@ runtime-benchmarks = [
 	"pallet-xcm-benchmarks/runtime-benchmarks",
 	"pallet-xcm/runtime-benchmarks",
 	"parachains-common/runtime-benchmarks",
-	"paseo-runtime-constants/runtime-benchmarks",
 	"polkadot-parachain-primitives/runtime-benchmarks",
 	"polkadot-runtime-common/runtime-benchmarks",
+	"polkadot-runtime-constants/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"system-parachains-constants/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
@@ -167,7 +162,6 @@ try-runtime = [
 	"pallet-salary/try-runtime",
 	"pallet-scheduler/try-runtime",
 	"pallet-session/try-runtime",
-	"pallet-sudo/try-runtime",
 	"pallet-timestamp/try-runtime",
 	"pallet-transaction-payment/try-runtime",
 	"pallet-treasury/try-runtime",
@@ -214,7 +208,6 @@ std = [
 	"pallet-salary/std",
 	"pallet-scheduler/std",
 	"pallet-session/std",
-	"pallet-sudo/std",
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
@@ -224,10 +217,10 @@ std = [
 	"pallet-xcm/std",
 	"parachain-info/std",
 	"parachains-common/std",
-	"paseo-runtime-constants/std",
 	"polkadot-core-primitives/std",
 	"polkadot-parachain-primitives/std",
 	"polkadot-runtime-common/std",
+	"polkadot-runtime-constants/std",
 	"scale-info/std",
 	"serde_json/std",
 	"sp-api/std",

@@ -81,7 +81,7 @@ use frame_support::{
 	traits::{
 		fungible::HoldConsideration,
 		tokens::{imbalance::ResolveTo, UnityOrOuterConversion},
-		ConstBool, ConstU16, ConstU32, ConstU64, ConstU8, EitherOfDiverse, FromContains,
+		ConstBool, ConstU16, ConstU32, ConstU64, ConstU8, EitherOf, EitherOfDiverse, FromContains,
 		InstanceFilter, LinearStoragePrice, TransformOrigin,
 	},
 	weights::{ConstantMultiplier, Weight},
@@ -96,13 +96,13 @@ use parachains_common::{
 };
 use sp_runtime::RuntimeDebug;
 use system_parachains_constants::{
-	paseo::{account::*, consensus::*, currency::*, fee::WeightToFee},
+	polkadot::{account::*, consensus::*, currency::*, fee::WeightToFee},
 	AVERAGE_ON_INITIALIZE_RATIO, DAYS, HOURS, MAXIMUM_BLOCK_WEIGHT, MINUTES, NORMAL_DISPATCH_RATIO,
 	SLOT_DURATION,
 };
 use xcm_config::{
-	GovernanceLocation, LocationToAccountId, SelfParaId, StakingPot, TreasurerBodyId,
-	XcmOriginToTransactDispatchOrigin,
+	AssetHubLocation, LocationToAccountId, RelayChainLocation, SelfParaId, StakingPot,
+	TreasurerBodyId, XcmOriginToTransactDispatchOrigin,
 };
 
 #[cfg(any(feature = "std", test))]
@@ -245,7 +245,7 @@ impl pallet_balances::Config for Runtime {
 
 parameter_types! {
 	/// Relay Chain `TransactionByteFee` / 10
-	pub const TransactionByteFee: Balance = system_parachains_constants::paseo::fee::TRANSACTION_BYTE_FEE;
+	pub const TransactionByteFee: Balance = system_parachains_constants::polkadot::fee::TRANSACTION_BYTE_FEE;
 }
 
 impl pallet_transaction_payment::Config for Runtime {
@@ -576,7 +576,10 @@ parameter_types! {
 /// We allow root and the `StakingAdmin` to execute privileged collator selection operations.
 pub type CollatorSelectionUpdateOrigin = EitherOfDiverse<
 	EnsureRoot<AccountId>,
-	EnsureXcm<IsVoiceOfBody<GovernanceLocation, StakingAdminBodyId>>,
+	EitherOf<
+		EnsureXcm<IsVoiceOfBody<RelayChainLocation, StakingAdminBodyId>>,
+		EnsureXcm<IsVoiceOfBody<AssetHubLocation, StakingAdminBodyId>>,
+	>,
 >;
 
 impl pallet_collator_selection::Config for Runtime {
@@ -724,7 +727,13 @@ impl pallet_asset_rate::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type CreateOrigin = EitherOfDiverse<
 		EnsureRoot<AccountId>,
-		EitherOfDiverse<EnsureXcm<IsVoiceOfBody<GovernanceLocation, TreasurerBodyId>>, Fellows>,
+		EitherOfDiverse<
+			EitherOf<
+				EnsureXcm<IsVoiceOfBody<RelayChainLocation, TreasurerBodyId>>,
+				EnsureXcm<IsVoiceOfBody<AssetHubLocation, TreasurerBodyId>>,
+			>,
+			Fellows,
+		>,
 	>;
 	type RemoveOrigin = Self::CreateOrigin;
 	type UpdateOrigin = Self::CreateOrigin;
@@ -732,12 +741,6 @@ impl pallet_asset_rate::Config for Runtime {
 	type AssetKind = VersionedLocatableAsset;
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = polkadot_runtime_common::impls::benchmarks::AssetRateArguments;
-}
-
-impl pallet_sudo::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type RuntimeCall = RuntimeCall;
-	type WeightInfo = pallet_sudo::weights::SubstrateWeight<Runtime>;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -808,9 +811,6 @@ construct_runtime!(
 		SecretaryCollective: pallet_ranked_collective::<Instance3> = 80,
 		// pub type SecretarySalaryInstance = pallet_salary::Instance3;
 		SecretarySalary: pallet_salary::<Instance3> = 81,
-
-		// Sudo.
-		Sudo: pallet_sudo = 255,
 	}
 );
 
@@ -879,8 +879,8 @@ pub type Executive = frame_executive::Executive<
 #[cfg(feature = "runtime-benchmarks")]
 mod benches {
 	use super::*;
-	use paseo_runtime_constants::system_parachain::AssetHubParaId;
-	use system_parachains_constants::paseo::locations::AssetHubLocation;
+	use polkadot_runtime_constants::system_parachain::AssetHubParaId;
+	use system_parachains_constants::polkadot::locations::AssetHubLocation;
 
 	frame_benchmarking::define_benchmarks!(
 		[frame_system, SystemBench::<Runtime>]
@@ -1424,14 +1424,14 @@ fn fellowship_treasury_pallet_index() {
 
 #[test]
 fn test_ed_is_one_tenth_of_relay() {
-	let relay_ed = paseo_runtime_constants::currency::EXISTENTIAL_DEPOSIT;
+	let relay_ed = polkadot_runtime_constants::currency::EXISTENTIAL_DEPOSIT;
 	let collectives_ed = ExistentialDeposit::get();
 	assert_eq!(relay_ed / 10, collectives_ed);
 }
 
 #[test]
 fn test_transasction_byte_fee_is_one_twentieth_of_relay() {
-	let relay_tbf = paseo_runtime_constants::fee::TRANSACTION_BYTE_FEE;
+	let relay_tbf = polkadot_runtime_constants::fee::TRANSACTION_BYTE_FEE;
 	let parachain_tbf = TransactionByteFee::get();
 	assert_eq!(relay_tbf / 20, parachain_tbf);
 }
