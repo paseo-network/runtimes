@@ -70,7 +70,7 @@ paseo-ahm = [
 	"pallet-rc-migrator/polkadot-ahm",
 	"paseo-runtime",
 	"paseo-runtime-constants",
-	"paseo-runtime?/polkadot-ahm",
+	"paseo-runtime?/paseo-ahm",
 ]
 std = [
 	"cumulus-pallet-parachain-system/std",

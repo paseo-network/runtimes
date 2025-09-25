@@ -80,6 +80,7 @@ sp-arithmetic = { workspace = true }
 sp-block-builder = { workspace = true }
 sp-consensus-aura = { workspace = true }
 sp-core = { workspace = true }
+sp-debug-derive = { workspace = true }
 sp-genesis-builder = { workspace = true }
 sp-io = { workspace = true }
 sp-inherents = { workspace = true }
@@ -384,9 +385,6 @@ std = [
 	"xcm/std",
 ]
 
-# Set timing constants (e.g. session period) to faster versions to speed up testing.
-fast-runtime = []
-
 # Enable metadata hash generation at compile time for the `CheckMetadataHash` extension.
 metadata-hash = ["substrate-wasm-builder?/metadata-hash"]
 
@@ -394,3 +392,6 @@ metadata-hash = ["substrate-wasm-builder?/metadata-hash"]
 # deployment. This will disable stuff that shouldn't be part of the on-chain wasm
 # to make it smaller, like logging for example.
 on-chain-release-build = ["metadata-hash", "paseo-ahm", "sp-api/disable-logging"]
+
+fast-runtime = ["paseo-runtime-constants/fast-runtime"]
+force-debug = ["sp-debug-derive/force-debug"]
