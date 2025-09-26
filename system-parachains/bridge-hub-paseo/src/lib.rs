@@ -61,8 +61,8 @@ use frame_support::{
 	genesis_builder_helper::{build_state, get_preset},
 	parameter_types,
 	traits::{
-		tokens::imbalance::ResolveTo, ConstBool, ConstU32, ConstU64, ConstU8, EitherOfDiverse,
-		Everything, TransformOrigin,
+		tokens::imbalance::ResolveTo, ConstBool, ConstU32, ConstU64, ConstU8, EitherOf,
+		EitherOfDiverse, Everything, TransformOrigin,
 	},
 	weights::{ConstantMultiplier, Weight},
 	PalletId,
@@ -75,7 +75,8 @@ use pallet_xcm::{EnsureXcm, IsVoiceOfBody};
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
 use xcm_config::{
-	FellowshipLocation, GovernanceLocation, StakingPot, XcmOriginToTransactDispatchOrigin,
+	AssetHubLocation, FellowshipLocation, RelayChainLocation, StakingPot,
+	XcmOriginToTransactDispatchOrigin,
 };
 
 #[cfg(any(feature = "std", test))]
@@ -520,7 +521,10 @@ parameter_types! {
 /// We allow root, the StakingAdmin to execute privileged collator selection operations.
 pub type CollatorSelectionUpdateOrigin = EitherOfDiverse<
 	EnsureRoot<AccountId>,
-	EnsureXcm<IsVoiceOfBody<GovernanceLocation, StakingAdminBodyId>>,
+	EitherOf<
+		EnsureXcm<IsVoiceOfBody<RelayChainLocation, StakingAdminBodyId>>,
+		EnsureXcm<IsVoiceOfBody<AssetHubLocation, StakingAdminBodyId>>,
+	>,
 >;
 
 impl pallet_collator_selection::Config for Runtime {
@@ -625,8 +629,8 @@ construct_runtime!(
 		// so that messages are processed after the `on_initialize` hooks of bridging pallets.
 		MessageQueue: pallet_message_queue = 175,
 
-		// Sudo.
-		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 255,
+	// Sudo
+	Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 255
 	}
 );
 
@@ -699,7 +703,7 @@ mod benches {
 	}
 
 	impl pallet_xcm::benchmarking::Config for Runtime {
-		type DeliveryHelper = paseo_runtime_common::xcm_sender::ToParachainDeliveryHelper<
+		type DeliveryHelper = polkadot_runtime_common::xcm_sender::ToParachainDeliveryHelper<
 			xcm_config::XcmConfig,
 			ExistentialDepositAsset,
 			PriceForSiblingParachainDelivery,
@@ -743,7 +747,7 @@ mod benches {
 	impl pallet_xcm_benchmarks::Config for Runtime {
 		type XcmConfig = xcm_config::XcmConfig;
 		type AccountIdConverter = xcm_config::LocationToAccountId;
-		type DeliveryHelper = paseo_runtime_common::xcm_sender::ToParachainDeliveryHelper<
+		type DeliveryHelper = polkadot_runtime_common::xcm_sender::ToParachainDeliveryHelper<
 			xcm_config::XcmConfig,
 			ExistentialDepositAsset,
 			PriceForSiblingParachainDelivery,

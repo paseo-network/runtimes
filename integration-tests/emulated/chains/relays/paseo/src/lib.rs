@@ -38,6 +38,7 @@ decl_test_relay_chains! {
 			Balances: paseo_runtime::Balances,
 			Treasury: paseo_runtime::Treasury,
 			AssetRate: paseo_runtime::AssetRate,
+			Preimage: paseo_runtime::Preimage,
 			Hrmp: paseo_runtime::Hrmp,
 		}
 	},

@@ -29,7 +29,7 @@
 // pallet
 // --extrinsic=*
 // --runtime=target/production/wbuild/paseo-runtime/paseo_runtime.wasm
-// --pallet=paseo_runtime_common::auctions
+// --pallet=polkadot_runtime_common::auctions
 // --header=/_work/fellowship-001/runtimes/runtimes/.github/scripts/cmd/file_header.txt
 // --output=./relay/paseo/src/weights
 // --wasm-execution=compiled
@@ -45,7 +45,7 @@
 use frame_support::{traits::Get, weights::Weight};
 use core::marker::PhantomData;
 
-/// Weight functions for `paseo_runtime_common::auctions`.
+/// Weight functions for `polkadot_runtime_common::auctions`.
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> polkadot_runtime_common::auctions::WeightInfo for WeightInfo<T> {
 	/// Storage: `Auctions::AuctionInfo` (r:1 w:1)

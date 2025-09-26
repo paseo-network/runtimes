@@ -49,6 +49,7 @@ decl_test_parachains! {
 			PoolAssets: asset_hub_paseo_runtime::PoolAssets,
 			AssetConversion: asset_hub_paseo_runtime::AssetConversion,
 			SnowbridgeSystemFrontend: asset_hub_paseo_runtime::SnowbridgeSystemFrontend,
+			Preimage: asset_hub_paseo_runtime::Preimage,
 		}
 	},
 }

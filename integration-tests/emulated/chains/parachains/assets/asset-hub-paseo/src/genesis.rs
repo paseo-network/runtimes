@@ -24,7 +24,7 @@ use emulated_integration_tests_common::{
 };
 use frame_support::sp_runtime::traits::AccountIdConversion;
 use integration_tests_helpers::common::snowbridge::{EthLocation, WethLocation, MIN_ETHER_BALANCE};
-use parachains_common::{AccountId, AuraId, Balance};
+use parachains_common::{AccountId, Balance};
 use polkadot_parachain_primitives::primitives::Sibling;
 use snowbridge_inbound_queue_primitives::EthereumLocationsConverterFor;
 use xcm::prelude::*;
