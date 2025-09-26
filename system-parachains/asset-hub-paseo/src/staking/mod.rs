@@ -195,7 +195,7 @@ impl multi_block::verifier::Config for Runtime {
 /// ```
 /// use asset_hub_polkadot_runtime::staking::GeometricDeposit;
 /// use pallet_election_provider_multi_block::signed::CalculateBaseDeposit;
-/// use polkadot_runtime_constants::currency::UNITS;
+/// use paseo_runtime_constants::currency::UNITS;
 ///
 /// // Base deposit
 /// assert_eq!(GeometricDeposit::calculate_base_deposit(0), 4 * UNITS);

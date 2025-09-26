@@ -105,12 +105,12 @@ impl Get<(AccountId, Vec<cumulus_primitives_core::Location>)> for TreasuryAccoun
 	}
 }
 
-pub type RcProxyType = polkadot_runtime_constants::proxy::ProxyType;
+pub type RcProxyType = paseo_runtime_constants::proxy::ProxyType;
 
 pub struct RcToProxyType;
 impl TryConvert<RcProxyType, ProxyType> for RcToProxyType {
 	fn try_convert(p: RcProxyType) -> Result<ProxyType, RcProxyType> {
-		use polkadot_runtime_constants::proxy::ProxyType::*;
+		use paseo_runtime_constants::proxy::ProxyType::*;
 
 		match p {
 			Any => Ok(ProxyType::Any),

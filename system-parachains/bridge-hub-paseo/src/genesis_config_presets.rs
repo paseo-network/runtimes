@@ -18,12 +18,13 @@
 
 use crate::*;
 use alloc::vec::Vec;
+use sp_core::sr25519;
 use sp_genesis_builder::PresetId;
 use system_parachains_constants::genesis_presets::*;
 
 const BRIDGE_HUB_POLKADOT_ED: Balance = ExistentialDeposit::get();
 
-fn bridge_hub_polkadot_genesis(
+fn bridge_hub_paseo_genesis(
 	invulnerables: Vec<(AccountId, AuraId)>,
 	endowed_accounts: Vec<AccountId>,
 	id: ParaId,
@@ -60,18 +61,29 @@ fn bridge_hub_polkadot_genesis(
 				.collect(),
 			..Default::default()
 		},
+		"sudo": {
+			"key": Some(get_account_id_from_seed::<sr25519::Public>("Alice"))
+		},
 		"polkadotXcm": {
 			"safeXcmVersion": Some(SAFE_XCM_VERSION),
 		},
 		"xcmOverBridgeHubKusama": XcmOverBridgeHubKusamaConfig { opened_bridges, ..Default::default() },
 		"ethereumSystem": EthereumSystemConfig {
 			para_id: id,
-			asset_hub_para_id: polkadot_runtime_constants::system_parachain::AssetHubParaId::get(),
+			asset_hub_para_id: paseo_runtime_constants::system_parachain::AssetHubParaId::get(),
 			..Default::default()
 		},
 		// no need to pass anything to aura, in fact it will panic if we do. Session will take care
 		// of this. `aura: Default::default()`
 	})
+}
+
+pub fn bridge_hub_paseo_local_testnet_genesis(para_id: ParaId) -> serde_json::Value {
+	bridge_hub_paseo_genesis(invulnerables(), testnet_accounts(), para_id, vec![])
+}
+
+fn bridge_hub_paseo_development_genesis(para_id: ParaId) -> serde_json::Value {
+	bridge_hub_paseo_local_testnet_genesis(para_id)
 }
 
 /// Provides the names of the predefined genesis configs for this runtime.
@@ -85,7 +97,7 @@ pub fn preset_names() -> Vec<PresetId> {
 /// Provides the JSON representation of predefined genesis config for given `id`.
 pub fn get_preset(id: &PresetId) -> Option<Vec<u8>> {
 	let patch = match id.as_ref() {
-		sp_genesis_builder::DEV_RUNTIME_PRESET => bridge_hub_polkadot_genesis(
+		sp_genesis_builder::DEV_RUNTIME_PRESET => bridge_hub_paseo_genesis(
 			invulnerables(),
 			testnet_accounts_with([
 				// Make sure `StakingPot` is funded for benchmarking purposes.
@@ -94,7 +106,7 @@ pub fn get_preset(id: &PresetId) -> Option<Vec<u8>> {
 			1002.into(),
 			vec![],
 		),
-		sp_genesis_builder::LOCAL_TESTNET_RUNTIME_PRESET => bridge_hub_polkadot_genesis(
+		sp_genesis_builder::LOCAL_TESTNET_RUNTIME_PRESET => bridge_hub_paseo_genesis(
 			invulnerables(),
 			testnet_accounts(),
 			1002.into(),

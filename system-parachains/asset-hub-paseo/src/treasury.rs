@@ -16,7 +16,7 @@
 use crate::*;
 use frame_support::traits::{tokens::UnityOrOuterConversion, FromContains};
 use parachains_common::pay::VersionedLocatableAccount;
-use paseo_runtime_common::impls::{ContainsParts, VersionedLocatableAsset};
+use polkadot_runtime_common::impls::{ContainsParts, VersionedLocatableAsset};
 
 parameter_types! {
 	pub const SpendPeriod: BlockNumber = 24 * RC_DAYS;
@@ -130,5 +130,5 @@ impl pallet_asset_rate::Config for Runtime {
 	type Currency = Balances;
 	type AssetKind = <Runtime as pallet_treasury::Config>::AssetKind;
 	#[cfg(feature = "runtime-benchmarks")]
-	type BenchmarkHelper = paseo_runtime_common::impls::benchmarks::AssetRateArguments;
+	type BenchmarkHelper = polkadot_runtime_common::impls::benchmarks::AssetRateArguments;
 }

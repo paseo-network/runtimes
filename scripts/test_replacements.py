@@ -22,7 +22,7 @@ def test_replacements(config_file):
          "Check out https://github.com/paseo-network/runtimes.git for more info."
         ),
         (
-         "We use polkadot_runtime_constants in our code.",
+         "We use paseo_runtime_constants in our code.",
          "We use paseo_runtime_constants in our code."
         ),
         (

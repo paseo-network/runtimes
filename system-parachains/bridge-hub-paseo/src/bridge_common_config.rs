@@ -23,14 +23,14 @@ use crate::{
 	AccountId, Balance, Balances, BlockNumber, Runtime, RuntimeCall, RuntimeEvent,
 };
 use alloc::boxed::Box;
-use bp_bridge_hub_polkadot::snowbridge::EthereumNetwork;
+use bp_bridge_hub_paseo::snowbridge::EthereumNetwork;
 use bp_messages::LegacyLaneId;
 use bp_relayers::RewardsAccountParams;
 use codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
 use frame_support::parameter_types;
-use polkadot_runtime_constants as constants;
+use paseo_runtime_constants as constants;
 use scale_info::TypeInfo;
-use system_parachains_constants::polkadot::locations::AssetHubLocation;
+use system_parachains_constants::paseo::locations::AssetHubLocation;
 use xcm::{opaque::latest::Location, VersionedLocation};
 use xcm_executor::XcmExecutor;
 

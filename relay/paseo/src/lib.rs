@@ -1731,7 +1731,7 @@ parameter_types! {
 pub struct ProxyTypeAny;
 impl frame_support::traits::Contains<TransparentProxyType<ProxyType>> for ProxyTypeAny {
 	fn contains(proxy_type: &TransparentProxyType<ProxyType>) -> bool {
-		proxy_type.0 == polkadot_runtime_constants::proxy::ProxyType::Any
+		proxy_type.0 == paseo_runtime_constants::proxy::ProxyType::Any
 	}
 }
 

@@ -16,7 +16,7 @@
 
 //! Helper imports to make it easy to run the AHM integration tests for different runtimes.
 
-#![cfg(all(test, any(feature = "polkadot-ahm", feature = "kusama-ahm")))]
+#![cfg(all(test, feature = "paseo-ahm"))]
 
 pub mod account_whale_watching;
 pub mod accounts_translation_works;
@@ -32,55 +32,30 @@ pub mod multisig_still_work;
 pub mod multisig_test;
 pub mod proxy;
 pub mod queues_priority;
-#[cfg(feature = "kusama-ahm")]
-pub mod recovery_test;
 pub mod tests;
 pub mod xcm_route;
 
 /// Imports for the AHM tests that can be reused for other chains.
 pub mod porting_prelude {
-	#[cfg(feature = "polkadot-ahm")]
+	#[cfg(feature = "paseo-ahm")]
 	pub mod import_alias {
-		pub use polkadot_runtime_constants::DOLLARS as RC_DOLLARS;
+		pub use paseo_runtime_constants::DOLLARS as RC_DOLLARS;
 	}
-	#[cfg(feature = "kusama-ahm")]
-	pub mod import_alias {
-		pub use asset_hub_kusama_runtime as asset_hub_polkadot_runtime;
-		pub use kusama_runtime as polkadot_runtime;
-		pub use kusama_runtime_constants as polkadot_runtime_constants;
-
-		pub use kusama_runtime_constants::currency::UNITS as RC_DOLLARS;
-	}
-	#[cfg(any(feature = "polkadot-ahm", feature = "kusama-ahm"))]
+	#[cfg(feature = "paseo-ahm")]
 	pub use import_alias::*;
 
 	// Convenience aliases:
-	#[cfg(feature = "polkadot-ahm")]
-	pub use asset_hub_polkadot_runtime::{
+	#[cfg(feature = "paseo-ahm")]
+	pub use asset_hub_paseo_runtime::{
 		Runtime as AhRuntime, RuntimeCall as AhRuntimeCall, RuntimeEvent as AhRuntimeEvent,
 		RuntimeOrigin as AhRuntimeOrigin,
 	};
-	#[cfg(feature = "polkadot-ahm")]
-	pub use polkadot_runtime::{
+	#[cfg(feature = "paseo-ahm")]
+	pub use paseo_runtime::{
 		Runtime as RcRuntime, RuntimeCall as RcRuntimeCall, RuntimeEvent as RcRuntimeEvent,
 		RuntimeOrigin as RcRuntimeOrigin,
 	};
 
-	#[cfg(feature = "polkadot-ahm")]
-	pub use polkadot_runtime_constants::proxy as rc_proxy_definition;
-
-	// Convenience aliases:
-	#[cfg(feature = "kusama-ahm")]
-	pub use asset_hub_kusama_runtime::{
-		Runtime as AhRuntime, RuntimeCall as AhRuntimeCall, RuntimeEvent as AhRuntimeEvent,
-		RuntimeOrigin as AhRuntimeOrigin,
-	};
-	#[cfg(feature = "kusama-ahm")]
-	pub use kusama_runtime::{
-		Runtime as RcRuntime, RuntimeCall as RcRuntimeCall, RuntimeEvent as RcRuntimeEvent,
-		RuntimeOrigin as RcRuntimeOrigin,
-	};
-
-	#[cfg(feature = "kusama-ahm")]
-	pub use kusama_runtime_constants::proxy as rc_proxy_definition;
+	#[cfg(feature = "paseo-ahm")]
+	pub use paseo_runtime_constants::proxy as rc_proxy_definition;
 }
