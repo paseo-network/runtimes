@@ -18,7 +18,7 @@ use bp_bridge_hub_kusama::Perbill;
 use bp_messages::LegacyLaneId;
 use bp_polkadot_core::Signature;
 use bp_relayers::{PayRewardFromAccount, RewardsAccountOwner, RewardsAccountParams};
-use bridge_hub_polkadot_runtime::{
+use bridge_hub_paseo_runtime::{
 	bridge_common_config::{
 		BridgeRelayersInstance, BridgeReward, BridgeRewardBeneficiaries,
 		RequiredStakeForStakeAndSlash,
@@ -26,7 +26,7 @@ use bridge_hub_polkadot_runtime::{
 	bridge_to_kusama_config::{
 		BridgeGrandpaKusamaInstance, BridgeHubKusamaLocation, BridgeParachainKusamaInstance,
 		DeliveryRewardInBalance, KusamaGlobalConsensusNetwork,
-		OnBridgeHubPolkadotRefundBridgeHubKusamaMessages, WithBridgeHubKusamaMessagesInstance,
+		OnBridgeHubPaseoRefundBridgeHubKusamaMessages, WithBridgeHubKusamaMessagesInstance,
 		XcmOverBridgeHubKusamaInstance,
 	},
 	xcm_config::{
@@ -61,7 +61,7 @@ use sp_runtime::{
 	generic::{Era, SignedPayload},
 	AccountId32, Either,
 };
-use system_parachains_constants::polkadot::{
+use system_parachains_constants::paseo::{
 	consensus::RELAY_CHAIN_SLOT_DURATION_MILLIS, fee::WeightToFee,
 };
 use xcm::{latest::prelude::*, VersionedLocation};
@@ -114,7 +114,7 @@ fn construct_extrinsic(
 		frame_system::CheckWeight::<Runtime>::new(),
 		pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(0),
 		BridgeRejectObsoleteHeadersAndMessages,
-		(OnBridgeHubPolkadotRefundBridgeHubKusamaMessages::default()),
+		(OnBridgeHubPaseoRefundBridgeHubKusamaMessages::default()),
 		frame_metadata_hash_extension::CheckMetadataHash::<Runtime>::new(false),
 	);
 	let payload = SignedPayload::new(call.clone(), extra.clone()).unwrap();
@@ -173,7 +173,7 @@ bridge_hub_test_utils::test_cases::include_teleports_for_native_asset_works!(
 
 #[test]
 fn test_ed_is_one_tenth_of_relay() {
-	let relay_ed = polkadot_runtime_constants::currency::EXISTENTIAL_DEPOSIT;
+	let relay_ed = paseo_runtime_constants::currency::EXISTENTIAL_DEPOSIT;
 	let bridge_hub_ed = ExistentialDeposit::get();
 	assert_eq!(relay_ed / 10, bridge_hub_ed);
 }
@@ -371,7 +371,7 @@ fn relayed_incoming_message_works() {
 
 #[test]
 fn free_relay_extrinsic_works() {
-	// from Polkadot
+	// from Paseo
 	from_parachain::free_relay_extrinsic_works::<RuntimeTestsAdapter>(
 		collator_session_keys(),
 		slot_durations(),
@@ -589,10 +589,10 @@ fn xcm_payment_api_works() {
 pub fn bridge_rewards_works() {
 	run_test::<Runtime, _>(
 		collator_session_keys(),
-		bp_bridge_hub_polkadot::BRIDGE_HUB_POLKADOT_PARACHAIN_ID,
+		bp_bridge_hub_paseo::BRIDGE_HUB_POLKADOT_PARACHAIN_ID,
 		vec![],
 		|| {
-			// reward in DOT
+			// reward in PAS
 			let reward1: u128 = 2_000_000_000;
 			// reward in ETH
 			let reward2: u128 = 3_000_000_000;
@@ -665,7 +665,7 @@ pub fn bridge_rewards_works() {
 			let claim_location = VersionedLocation::V5(Location::new(
 				1,
 				[
-					Parachain(bp_asset_hub_polkadot::ASSET_HUB_POLKADOT_PARACHAIN_ID),
+					Parachain(bp_asset_hub_paseo::ASSET_HUB_PASEO_PARACHAIN_ID),
 					Junction::AccountId32 { id: account2.clone().into(), network: None },
 				],
 			));
@@ -684,7 +684,7 @@ pub fn bridge_rewards_works() {
 
 #[test]
 fn governance_authorize_upgrade_works() {
-	use polkadot_runtime_constants::system_parachain::COLLECTIVES_ID;
+	use paseo_runtime_constants::system_parachain::COLLECTIVES_ID;
 
 	// no - random non-system para
 	assert_err!(

@@ -37,9 +37,9 @@ use parachains_common::xcm_config::{
 	RelayOrOtherSystemParachains,
 };
 use polkadot_parachain_primitives::primitives::Sibling;
-use polkadot_runtime_constants::system_parachain;
+use paseo_runtime_constants::system_parachain;
 use sp_runtime::traits::AccountIdConversion;
-use system_parachains_constants::{polkadot::locations::EthereumNetwork, TREASURY_PALLET_ID};
+use system_parachains_constants::{paseo::locations::EthereumNetwork, TREASURY_PALLET_ID};
 use xcm::latest::prelude::*;
 use xcm_builder::{
 	AccountId32Aliases, AliasChildLocation, AllowExplicitUnpaidExecutionFrom,
@@ -55,7 +55,7 @@ use xcm_builder::{
 };
 use xcm_executor::{traits::ConvertLocation, XcmExecutor};
 
-pub use system_parachains_constants::polkadot::locations::{
+pub use system_parachains_constants::paseo::locations::{
 	AssetHubLocation, AssetHubPlurality, RelayChainLocation,
 };
 
@@ -69,7 +69,7 @@ parameter_types! {
 	pub const MaxInstructions: u32 = 100;
 	pub const MaxAssetsIntoHolding: u32 = 64;
 	pub FellowshipLocation: Location = Location::new(1, Parachain(system_parachain::COLLECTIVES_ID));
-	pub RelayTreasuryLocation: Location = (Parent, PalletInstance(polkadot_runtime_constants::TREASURY_PALLET_ID)).into();
+	pub RelayTreasuryLocation: Location = (Parent, PalletInstance(paseo_runtime_constants::TREASURY_PALLET_ID)).into();
 	pub TreasuryAccount: AccountId = TREASURY_PALLET_ID.into_account_truncating();
 	// Test [`crate::tests::treasury_pallet_account_not_none`] ensures that the result of location
 	// conversion is not `None`.
@@ -227,7 +227,7 @@ impl xcm_executor::Config for XcmConfig {
 	type XcmSender = XcmRouter;
 	type AssetTransactor = FungibleTransactor;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
-	// BridgeHub does not recognize a reserve location for any asset. Users must teleport DOT
+	// BridgeHub does not recognize a reserve location for any asset. Users must teleport PAS 
 	// where allowed (e.g. with the Relay Chain).
 	type IsReserve = ();
 	type IsTeleporter = TrustedTeleporters;
