@@ -28,10 +28,10 @@
 // benchmark
 // pallet
 // --extrinsic=*
-// --runtime=target/production/wbuild/polkadot-runtime/polkadot_runtime.wasm
+// --runtime=target/production/wbuild/paseo-runtime/paseo_runtime.wasm
 // --pallet=pallet_session
 // --header=/_work/fellowship-001/runtimes/runtimes/.github/scripts/cmd/file_header.txt
-// --output=./relay/polkadot/src/weights
+// --output=./relay/paseo/src/weights
 // --wasm-execution=compiled
 // --steps=50
 // --repeat=20
