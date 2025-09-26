@@ -29,6 +29,10 @@ pub use origins::{
 mod tracks;
 pub use tracks::TracksInfo;
 
+parameter_types! {
+	pub const VoteLockingPeriod: BlockNumber = prod_or_fast!(7 * DAYS, 1);
+}
+
 impl pallet_conviction_voting::Config for Runtime {
 	type WeightInfo = weights::pallet_conviction_voting::WeightInfo<Self>;
 	type RuntimeEvent = RuntimeEvent;
@@ -56,11 +60,6 @@ parameter_types! {
 pub type TreasurySpender = EnsureRootWithSuccess<AccountId, MaxBalance>;
 
 impl origins::pallet_custom_origins::Config for Runtime {}
-
-parameter_types! {
-	// Fellows pluralistic body.
-	pub const FellowsBodyId: BodyId = BodyId::Technical;
-}
 
 impl pallet_whitelist::Config for Runtime {
 	type WeightInfo = weights::pallet_whitelist::WeightInfo<Self>;

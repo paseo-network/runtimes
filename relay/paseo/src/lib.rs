@@ -173,7 +173,7 @@ compile_error!("Asset Hub migration requires the `paseo-ahm` feature");
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: alloc::borrow::Cow::Borrowed("paseo"),
-	impl_name: alloc::borrow::Cow::Borrowed("parity-paseo"),
+	impl_name: alloc::borrow::Cow::Borrowed("paseo-testnet"),
 	authoring_version: 0,
 	spec_version: 1_007_001,
 	impl_version: 0,
