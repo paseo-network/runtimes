@@ -15,9 +15,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Tests for the Polkadot Asset Hub (previously known as Statemint) chain.
+//! Tests for the Paseo Asset Hub (previously known as Statemint) chain.
 
-use asset_hub_polkadot_runtime::{
+use asset_hub_paseo_runtime::{
 	xcm_config::{
 		bridging, CheckingAccount, DotLocation, LocationToAccountId, RelayChainLocation,
 		StakingPot, TrustBackedAssetsPalletLocation, XcmConfig,
@@ -41,12 +41,12 @@ use frame_support::{
 	traits::{fungibles::InspectEnumerable, ContainsPair},
 };
 use parachains_common::{
-	AccountId, AssetHubPolkadotAuraId as AuraId, AssetIdForTrustBackedAssets, Balance,
+	AccountId, AuraId, AssetIdForTrustBackedAssets, Balance,
 };
 use sp_consensus_aura::SlotDuration;
 use sp_core::crypto::Ss58Codec;
 use sp_runtime::{traits::MaybeEquivalence, Either, TryRuntimeError};
-use system_parachains_constants::polkadot::{
+use system_parachains_constants::paseo::{
 	consensus::RELAY_CHAIN_SLOT_DURATION_MILLIS, currency::UNITS, fee::WeightToFee,
 };
 use xcm::latest::{
@@ -74,7 +74,7 @@ fn collator_session_key(account: [u8; 32]) -> CollatorSessionKey<Runtime> {
 	CollatorSessionKey::new(
 		AccountId::from(account),
 		AccountId::from(account),
-		SessionKeys { aura: AuraId::from(sp_core::ed25519::Public::from_raw(account)) },
+		SessionKeys { aura: AuraId::from(sp_core::sr25519::Public::from_raw(account)) },
 	)
 }
 
@@ -97,11 +97,11 @@ fn test_ed_is_one_hundredth_of_relay() {
 		.with_session_keys(vec![(
 			AccountId::from(ALICE),
 			AccountId::from(ALICE),
-			SessionKeys { aura: AuraId::from(sp_core::ed25519::Public::from_raw(ALICE)) },
+			SessionKeys { aura: AuraId::from(sp_core::sr25519::Public::from_raw(ALICE)) },
 		)])
 		.build()
 		.execute_with(|| {
-			let relay_ed = polkadot_runtime_constants::currency::EXISTENTIAL_DEPOSIT;
+			let relay_ed = paseo_runtime_constants::currency::EXISTENTIAL_DEPOSIT;
 			let asset_hub_ed = ExistentialDeposit::get();
 			assert_eq!(relay_ed / 100, asset_hub_ed);
 		});
@@ -117,7 +117,7 @@ fn test_assets_balances_api_works() {
 		.with_session_keys(vec![(
 			AccountId::from(ALICE),
 			AccountId::from(ALICE),
-			SessionKeys { aura: AuraId::from(sp_core::ed25519::Public::from_raw(ALICE)) },
+			SessionKeys { aura: AuraId::from(sp_core::sr25519::Public::from_raw(ALICE)) },
 		)])
 		.build()
 		.execute_with(|| {
@@ -442,7 +442,7 @@ fn receive_reserve_asset_deposited_ksm_from_asset_hub_kusama_fees_paid_by_pool_s
 		},
 		(
 			[PalletInstance(
-				bp_bridge_hub_polkadot::WITH_BRIDGE_POLKADOT_TO_KUSAMA_MESSAGES_PALLET_INDEX,
+				bp_bridge_hub_paseo::WITH_BRIDGE_POLKADOT_TO_KUSAMA_MESSAGES_PALLET_INDEX,
 			)]
 			.into(),
 			GlobalConsensus(Kusama),
@@ -510,8 +510,8 @@ fn report_bridge_status_from_xcm_bridge_router_for_kusama_works() {
 	>(
 		collator_session_keys(),
 		bridging_to_asset_hub_kusama,
-		|| bp_asset_hub_polkadot::build_congestion_message(Default::default(), true).into(),
-		|| bp_asset_hub_polkadot::build_congestion_message(Default::default(), false).into(),
+		|| bp_asset_hub_paseo::build_congestion_message(Default::default(), true).into(),
+		|| bp_asset_hub_paseo::build_congestion_message(Default::default(), false).into(),
 	)
 }
 
@@ -524,8 +524,8 @@ fn test_report_bridge_status_call_compatibility() {
 			is_congested: true,
 		})
 		.encode(),
-		bp_asset_hub_polkadot::Call::ToKusamaXcmRouter(
-			bp_asset_hub_polkadot::XcmBridgeHubRouterCall::report_bridge_status {
+		bp_asset_hub_paseo::Call::ToKusamaXcmRouter(
+			bp_asset_hub_paseo::XcmBridgeHubRouterCall::report_bridge_status {
 				bridge_id: Default::default(),
 				is_congested: true,
 			}
@@ -540,7 +540,7 @@ fn check_sane_weight_report_bridge_status() {
 	let actual = <Runtime as pallet_xcm_bridge_hub_router::Config<
 		ToKusamaXcmRouterInstance,
 	>>::WeightInfo::report_bridge_status();
-	let max_weight = bp_asset_hub_polkadot::XcmBridgeHubRouterTransactCallMaxWeight::get();
+	let max_weight = bp_asset_hub_paseo::XcmBridgeHubRouterTransactCallMaxWeight::get();
 	assert!(
 		actual.all_lte(max_weight),
 		"max_weight: {max_weight:?} should be adjusted to actual {actual:?}"
@@ -821,7 +821,7 @@ fn authorized_aliases_work() {
 		.with_session_keys(vec![(
 			AccountId::from(ALICE),
 			AccountId::from(ALICE),
-			SessionKeys { aura: AuraId::from(sp_core::ed25519::Public::from_raw(ALICE)) },
+			SessionKeys { aura: AuraId::from(sp_core::sr25519::Public::from_raw(ALICE)) },
 		)])
 		.build()
 		.execute_with(|| {

@@ -1,7 +1,7 @@
 [package]
 authors.workspace = true
 build = "build.rs"
-description = "Asset Hub Polkadot parachain runtime"
+description = "Asset Hub Paseo parachain runtime"
 edition.workspace = true
 license.workspace = true
 name = "asset-hub-paseo-runtime"
@@ -67,6 +67,7 @@ pallet-election-provider-multi-block = { workspace = true }
 pallet-session = { workspace = true }
 pallet-staking = { workspace = true }
 pallet-state-trie-migration = { workspace = true }
+pallet-sudo = { workspace = true }
 pallet-timestamp = { workspace = true }
 pallet-transaction-payment = { workspace = true }
 pallet-transaction-payment-rpc-runtime-api = { workspace = true }
@@ -194,6 +195,7 @@ runtime-benchmarks = [
 	"pallet-staking-async/runtime-benchmarks",
 	"pallet-staking/runtime-benchmarks",
 	"pallet-state-trie-migration/runtime-benchmarks",
+  "pallet-sudo/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"pallet-transaction-payment/runtime-benchmarks",
 	"pallet-treasury/runtime-benchmarks",
@@ -262,6 +264,7 @@ try-runtime = [
 	"pallet-staking-async/try-runtime",
 	"pallet-staking/try-runtime",
 	"pallet-state-trie-migration/try-runtime",
+  "pallet-sudo/try-runtime",
 	"pallet-timestamp/try-runtime",
 	"pallet-transaction-payment/try-runtime",
 	"pallet-treasury/try-runtime",
@@ -282,6 +285,7 @@ std = [
 	"assets-common/std",
 	"bp-asset-hub-paseo/std",
 	"bp-bridge-hub-kusama/std",
+  "bp-asset-hub-paseo/std",
 	"bp-bridge-hub-polkadot/std",
 	"codec/std",
 	"cumulus-pallet-aura-ext/std",
@@ -336,6 +340,7 @@ std = [
 	"pallet-staking-async/std",
 	"pallet-staking/std",
 	"pallet-state-trie-migration/std",
+  "pallet-sudo/std",
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
@@ -365,6 +370,7 @@ std = [
 	"sp-block-builder/std",
 	"sp-consensus-aura/std",
 	"sp-core/std",
+  "sp-debug-derive/std",
 	"sp-genesis-builder/std",
 	"sp-inherents/std",
 	"sp-io/std",

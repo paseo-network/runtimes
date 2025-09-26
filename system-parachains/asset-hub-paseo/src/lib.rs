@@ -13,9 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! # Asset Hub Polkadot Runtime
+//! # Asset Hub Paseo Runtime
 //!
-//! Asset Hub Polkadot is a parachain that provides an interface to create, manage, and use assets.
+//! Asset Hub Paseo is a parachain that provides an interface to create, manage, and use assets.
 //! Assets may be fungible or non-fungible.
 //!
 //! ## Renaming
@@ -33,12 +33,7 @@
 //!
 //! ### Native Balances
 //!
-//! Asset Hub Polkadot uses its parent DOT token as its native asset.
-//!
-//! ### Governance
-//!
-//! As a system parachain, Asset Hub defers its governance (namely, its `Root` origin), to its
-//! Relay Chain parent, Polkadot.
+//! Asset Hub Paseo uses its parent PAS token as its native asset.
 //!
 //! ### Collator Selection
 //!
@@ -59,8 +54,8 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-#[cfg(all(not(feature = "polkadot-ahm"), feature = "on-chain-release-build"))]
-compile_error!("Asset Hub migration requires the `polkadot-ahm` feature");
+#[cfg(all(not(feature = "paseo-ahm"), feature = "on-chain-release-build"))]
+compile_error!("Asset Hub migration requires the `paseo-ahm` feature");
 
 extern crate alloc;
 
@@ -91,7 +86,7 @@ use governance::{
 	pallet_custom_origins, FellowshipAdmin, GeneralAdmin, StakingAdmin, Treasurer, TreasurySpender,
 };
 use polkadot_core_primitives::AccountIndex;
-use polkadot_runtime_constants::time::{DAYS as RC_DAYS, HOURS as RC_HOURS, MINUTES as RC_MINUTES};
+use paseo_runtime_constants::time::{DAYS as RC_DAYS, HOURS as RC_HOURS, MINUTES as RC_MINUTES};
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, ConstU128, Get, OpaqueMetadata};
 use sp_runtime::{
@@ -135,7 +130,7 @@ use frame_system::{
 };
 use pallet_nfts::PalletFeatures;
 use parachains_common::{
-	message_queue::*, AccountId, AssetHubPolkadotAuraId as AuraId, AssetIdForTrustBackedAssets,
+	message_queue::*, AccountId, AuraId, AssetIdForTrustBackedAssets,
 	Balance, BlockNumber, Hash, Header, Nonce, Signature,
 };
 
@@ -145,7 +140,7 @@ use system_parachains_constants::{
 	async_backing::{
 		AVERAGE_ON_INITIALIZE_RATIO, HOURS, MAXIMUM_BLOCK_WEIGHT, NORMAL_DISPATCH_RATIO,
 	},
-	polkadot::{
+	paseo::{
 		consensus::{
 			async_backing::UNINCLUDED_SEGMENT_CAPACITY, BLOCK_PROCESSING_VELOCITY,
 			RELAY_CHAIN_SLOT_DURATION_MILLIS,
@@ -185,11 +180,8 @@ impl_opaque_keys! {
 
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	// Note: "statemint" is the legacy name for this chain. It has been renamed to
-	// "asset-hub-polkadot". Many wallets/tools depend on the `spec_name`, so it remains "statemint"
-	// for the time being. Wallets/tools should update to treat "asset-hub-polkadot" equally.
-	impl_name: Cow::Borrowed("statemint"),
-	spec_name: Cow::Borrowed("statemint"),
+	impl_name: Cow::Borrowed("asset-hub-paseo"),
+	spec_name: Cow::Borrowed("asset-hub-paseo"),
 	authoring_version: 1,
 	spec_version: 1_007_001,
 	impl_version: 0,
@@ -330,7 +322,7 @@ impl pallet_vesting::Config for Runtime {
 
 parameter_types! {
 	/// Relay Chain `TransactionByteFee` / 10
-	pub const TransactionByteFee: Balance = system_parachains_constants::polkadot::fee::TRANSACTION_BYTE_FEE;
+	pub const TransactionByteFee: Balance = system_parachains_constants::paseo::fee::TRANSACTION_BYTE_FEE;
 }
 
 impl pallet_transaction_payment::Config for Runtime {
@@ -930,6 +922,12 @@ impl pallet_asset_conversion_tx_payment::Config for Runtime {
 	type BenchmarkHelper = AssetConversionTxHelper;
 }
 
+impl pallet_sudo::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type WeightInfo = pallet_sudo::weights::SubstrateWeight<Runtime>;
+}
+
 parameter_types! {
 	pub const UniquesCollectionDeposit: Balance = 10 * UNITS; // 10 UNIT deposit to create uniques class
 	pub const UniquesItemDeposit: Balance = UNITS / 100; // 1 / 100 UNIT deposit to create uniques instance
@@ -1432,6 +1430,8 @@ construct_runtime!(
 		MultiBlockElectionVerifier: pallet_election_provider_multi_block::verifier = 86,
 		MultiBlockElectionUnsigned: pallet_election_provider_multi_block::unsigned = 87,
 		MultiBlockElectionSigned: pallet_election_provider_multi_block::signed = 88,
+		// Sudo.
+		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 251,
 
 		// Asset Hub Migration in the 250s
 		AhOps: pallet_ah_ops = 254,
@@ -1574,8 +1574,8 @@ mod benches {
 	use super::*;
 	use alloc::boxed::Box;
 	use frame_support::assert_ok;
-	use polkadot_runtime_constants::system_parachain::PeopleParaId;
-	use system_parachains_constants::polkadot::locations::PeopleLocation;
+	use paseo_runtime_constants::system_parachain::PeopleParaId;
+	use system_parachains_constants::paseo::locations::PeopleLocation;
 
 	frame_benchmarking::define_benchmarks!(
 		[frame_system, SystemBench::<Runtime>]
@@ -1669,14 +1669,14 @@ mod benches {
 
 	impl pallet_xcm::benchmarking::Config for Runtime {
 		type DeliveryHelper = (
-			polkadot_runtime_common::xcm_sender::ToParachainDeliveryHelper<
+			paseo_runtime_common::xcm_sender::ToParachainDeliveryHelper<
 				xcm_config::XcmConfig,
 				ExistentialDepositAsset,
 				PriceForSiblingParachainDelivery,
 				RandomParaId,
 				ParachainSystem,
 			>,
-			polkadot_runtime_common::xcm_sender::ToParachainDeliveryHelper<
+			paseo_runtime_common::xcm_sender::ToParachainDeliveryHelper<
 				xcm_config::XcmConfig,
 				ExistentialDepositAsset,
 				PriceForSiblingParachainDelivery,
@@ -1698,7 +1698,7 @@ mod benches {
 		}
 
 		fn reserve_transferable_asset_and_dest() -> Option<(Asset, Location)> {
-			// We get an account to create USDT and give it enough WND to exist.
+			// We get an account to create USDT and give it enough PAS to exist.
 			let account = frame_benchmarking::whitelisted_caller();
 			assert_ok!(<Balances as fungible::Mutate<_>>::mint_into(
 				&account,
@@ -1796,7 +1796,7 @@ mod benches {
 	impl pallet_xcm_benchmarks::Config for Runtime {
 		type XcmConfig = xcm_config::XcmConfig;
 		type AccountIdConverter = xcm_config::LocationToAccountId;
-		type DeliveryHelper = polkadot_runtime_common::xcm_sender::ToParachainDeliveryHelper<
+		type DeliveryHelper = paseo_runtime_common::xcm_sender::ToParachainDeliveryHelper<
 			xcm_config::XcmConfig,
 			ExistentialDepositAsset,
 			PriceForSiblingParachainDelivery,
@@ -1841,7 +1841,7 @@ mod benches {
 			Asset { fun: Fungible(UNITS), id: AssetId(DotLocation::get()) },
 		));
 		pub const CheckedAccount: Option<(AccountId, xcm_builder::MintLocation)> = None;
-		// AssetHubPolkadot trusts AssetHubKusama as reserve for KSMs
+		// AssetHubPaseo trusts AssetHubKusama as reserve for KSMs
 		pub TrustedReserve: Option<(Location, Asset)> = Some(
 			(
 				xcm_config::bridging::to_kusama::AssetHubKusama::get(),
@@ -2464,7 +2464,7 @@ mod tests {
 	use super::*;
 	use sp_runtime::traits::Zero;
 	use sp_weights::WeightToFee;
-	use system_parachains_constants::polkadot::fee;
+	use system_parachains_constants::paseo::fee;
 
 	/// We can fit at least 1000 transfers in a block.
 	#[test]
@@ -2520,7 +2520,7 @@ mod tests {
 
 	#[test]
 	fn test_transasction_byte_fee_is_one_twentieth_of_relay() {
-		let relay_tbf = polkadot_runtime_constants::fee::TRANSACTION_BYTE_FEE;
+		let relay_tbf = paseo_runtime_constants::fee::TRANSACTION_BYTE_FEE;
 		let parachain_tbf = TransactionByteFee::get();
 		assert_eq!(relay_tbf / 20, parachain_tbf);
 	}
@@ -2528,7 +2528,7 @@ mod tests {
 	#[test]
 	fn create_foreign_asset_deposit_is_equal_to_asset_hub_foreign_asset_pallet_deposit() {
 		assert_eq!(
-			bp_asset_hub_polkadot::CreateForeignAssetDeposit::get(),
+			bp_asset_hub_paseo::CreateForeignAssetDeposit::get(),
 			ForeignAssetsAssetDeposit::get()
 		);
 	}

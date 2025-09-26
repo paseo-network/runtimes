@@ -1,18 +1,18 @@
 // Copyright (C) Parity Technologies (UK) Ltd.
-// This file is part of Polkadot.
+// This file is part of Paseo.
 
-// Polkadot is free software: you can redistribute it and/or modify
+// Paseo is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 
-// Polkadot is distributed in the hope that it will be useful,
+// Paseo is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
 // You should have received a copy of the GNU General Public License
-// along with Polkadot.  If not, see <http://www.gnu.org/licenses/>.
+// along with Paseo.  If not, see <http://www.gnu.org/licenses/>.
 
 //! Config for the nomination pools.
 
@@ -31,8 +31,8 @@ impl pallet_nomination_pools::Config for Runtime {
 	type Currency = Balances;
 	type RuntimeFreezeReason = RuntimeFreezeReason;
 	type RewardCounter = FixedU128;
-	type BalanceToU256 = polkadot_runtime_common::BalanceToU256;
-	type U256ToBalance = polkadot_runtime_common::U256ToBalance;
+	type BalanceToU256 = paseo_runtime_common::BalanceToU256;
+	type U256ToBalance = paseo_runtime_common::U256ToBalance;
 	type StakeAdapter =
 		pallet_nomination_pools::adapter::DelegateStake<Self, Staking, DelegatedStaking>;
 	type PostUnbondingPoolsWindow = frame_support::traits::ConstU32<4>;

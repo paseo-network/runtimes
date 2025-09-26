@@ -46,7 +46,7 @@ use parachains_common::xcm_config::{
 	RelayOrOtherSystemParachains,
 };
 use polkadot_parachain_primitives::primitives::Sibling;
-use polkadot_runtime_constants::{system_parachain, xcm::body::FELLOWSHIP_ADMIN_INDEX};
+use paseo_runtime_constants::{system_parachain, xcm::body::FELLOWSHIP_ADMIN_INDEX};
 use snowbridge_outbound_queue_primitives::v2::exporter::PausableExporter;
 use sp_runtime::traits::TryConvertInto;
 use xcm::latest::prelude::*;
@@ -66,7 +66,7 @@ use xcm_builder::{
 };
 use xcm_executor::{traits::ConvertLocation, XcmExecutor};
 
-pub use system_parachains_constants::polkadot::locations::{AssetHubLocation, RelayChainLocation};
+pub use system_parachains_constants::paseo::locations::{AssetHubLocation, RelayChainLocation};
 
 parameter_types! {
 	pub const RootLocation: Location = Location::here();
@@ -81,7 +81,7 @@ parameter_types! {
 		PalletInstance(TrustBackedAssetsPalletIndex::get()).into();
 	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
 	pub FellowshipLocation: Location = Location::new(1, Parachain(system_parachain::COLLECTIVES_ID));
-	pub RelayTreasuryLocation: Location = (Parent, PalletInstance(polkadot_runtime_constants::TREASURY_PALLET_ID)).into();
+	pub RelayTreasuryLocation: Location = (Parent, PalletInstance(paseo_runtime_constants::TREASURY_PALLET_ID)).into();
 	pub PoolAssetsPalletLocation: Location =
 		PalletInstance(<PoolAssets as PalletInfoAccess>::index() as u8).into();
 	pub StakingPot: AccountId = CollatorSelection::account_id();
@@ -720,7 +720,7 @@ pub mod bridging {
 				2,
 				[
 					GlobalConsensus(KusamaNetwork::get()),
-					Parachain(kusama_runtime_constants::system_parachain::ASSET_HUB_ID),
+					Parachain(paseo_runtime_constants::system_parachain::ASSET_HUB_ID),
 				],
 			);
 			pub KsmLocation: Location = Location::new(2, GlobalConsensus(KusamaNetwork::get()));
@@ -810,8 +810,8 @@ pub mod bridging {
 
 	pub mod to_ethereum {
 		use super::*;
-		pub use bp_bridge_hub_polkadot::snowbridge::EthereumNetwork;
-		use bp_bridge_hub_polkadot::snowbridge::{
+		pub use bp_bridge_hub_paseo::snowbridge::EthereumNetwork;
+		use bp_bridge_hub_paseo::snowbridge::{
 			InboundQueuePalletInstance, InboundQueueV2PalletInstance,
 		};
 
@@ -924,7 +924,7 @@ fn foreign_pallet_has_correct_local_account() {
 	let fellowship_salary =
 		(Parent, Parachain(COLLECTIVES_PARAID), PalletInstance(FELLOWSHIP_SALARY_PALLET_ID));
 	let account = LocationToAccountId::convert_location(&fellowship_salary.into()).unwrap();
-	let polkadot = Ss58AddressFormat::try_from("polkadot").unwrap();
+	let paseo = Ss58AddressFormat::try_from("paseo").unwrap();
 	let address = Ss58Codec::to_ss58check_with_version(&account, polkadot);
 	assert_eq!(address, "13w7NdvSR1Af8xsQTArDtZmVvjE8XhWNdL4yed3iFHrUNCnS");
 }
