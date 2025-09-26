@@ -17,7 +17,7 @@
 #[cfg(feature = "kusama-ahm")]
 use crate::porting_prelude::*;
 
-use asset_hub_polkadot_runtime::{AhMigrator, Runtime as AssetHub, RuntimeEvent as AhRuntimeEvent};
+use asset_hub_paseo_runtime::{AhMigrator, Runtime as AssetHub, RuntimeEvent as AhRuntimeEvent};
 use codec::Decode;
 use cumulus_primitives_core::{
 	AggregateMessageOrigin as ParachainMessageOrigin, InboundDownwardMessage, ParaId,
@@ -178,9 +178,9 @@ pub fn next_block_ah() {
 	log::debug!(target: LOG_AH, "Executing AH block: {now:?}");
 	frame_system::Pallet::<AssetHub>::set_block_number(now);
 	frame_system::Pallet::<AssetHub>::reset_events();
-	let weight = <asset_hub_polkadot_runtime::MessageQueue as OnInitialize<_>>::on_initialize(now);
+	let weight = <asset_hub_paseo_runtime::MessageQueue as OnInitialize<_>>::on_initialize(now);
 	let weight = <AhMigrator as OnInitialize<_>>::on_initialize(now).saturating_add(weight);
-	<asset_hub_polkadot_runtime::MessageQueue as OnFinalize<_>>::on_finalize(now);
+	<asset_hub_paseo_runtime::MessageQueue as OnFinalize<_>>::on_finalize(now);
 	<AhMigrator as OnFinalize<_>>::on_finalize(now);
 
 	let events = frame_system::Pallet::<AssetHub>::events();
@@ -219,10 +219,10 @@ pub fn next_block_ah() {
 pub fn enqueue_dmp(msgs: (Vec<InboundDownwardMessage>, BlockNumberFor<Polkadot>)) {
 	log::info!(target: LOG_AH, "Received {} DMP messages from RC block {}", msgs.0.len(), msgs.1);
 	for msg in msgs.0 {
-		sanity_check_xcm::<asset_hub_polkadot_runtime::RuntimeCall>(&msg.msg);
+		sanity_check_xcm::<asset_hub_paseo_runtime::RuntimeCall>(&msg.msg);
 
 		let bounded_msg: BoundedVec<u8, _> = msg.msg.try_into().expect("DMP message too big");
-		asset_hub_polkadot_runtime::MessageQueue::enqueue_message(
+		asset_hub_paseo_runtime::MessageQueue::enqueue_message(
 			bounded_msg.as_bounded_slice(),
 			ParachainMessageOrigin::Parent,
 		);
@@ -352,13 +352,13 @@ pub fn ah_migrate(asset_hub: &mut TestExternalities, dmp_messages: Vec<InboundDo
 	// Inject the DMP messages into the Asset Hub
 	asset_hub.execute_with(|| {
 		let mut fp =
-			asset_hub_polkadot_runtime::MessageQueue::footprint(ParachainMessageOrigin::Parent);
+			asset_hub_paseo_runtime::MessageQueue::footprint(ParachainMessageOrigin::Parent);
 		enqueue_dmp((dmp_messages, 0u32));
 
 		// Loop until no more DMPs are queued
 		loop {
 			let new_fp =
-				asset_hub_polkadot_runtime::MessageQueue::footprint(ParachainMessageOrigin::Parent);
+				asset_hub_paseo_runtime::MessageQueue::footprint(ParachainMessageOrigin::Parent);
 			if fp == new_fp {
 				log::info!("AH DMP messages left: {}", fp.storage.count);
 				break;

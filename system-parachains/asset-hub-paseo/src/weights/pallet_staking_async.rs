@@ -28,7 +28,7 @@
 // benchmark
 // pallet
 // --extrinsic=*
-// --runtime=target/production/wbuild/asset-hub-polkadot-runtime/asset_hub_polkadot_runtime.wasm
+// --runtime=target/production/wbuild/asset-hub-polkadot-runtime/asset_hub_paseo_runtime.wasm
 // --pallet=pallet_staking_async
 // --header=/_work/fellowship-001/runtimes/runtimes/.github/scripts/cmd/file_header.txt
 // --output=./system-parachains/asset-hubs/asset-hub-polkadot/src/weights

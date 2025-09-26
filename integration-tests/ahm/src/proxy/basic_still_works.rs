@@ -47,7 +47,7 @@ use std::{
 };
 
 type RelayRuntime = polkadot_runtime::Runtime;
-type AssetHubRuntime = asset_hub_polkadot_runtime::Runtime;
+type AssetHubRuntime = asset_hub_paseo_runtime::Runtime;
 
 /// Proxy accounts can still be controlled by their delegates with the correct permissions.
 ///
@@ -308,20 +308,20 @@ impl ProxyBasicWorks {
 	fn can_transfer_impl(
 		delegatee: &AccountId32,
 		delegator: &AccountId32,
-		force_proxy_type: Option<asset_hub_polkadot_runtime::ProxyType>,
+		force_proxy_type: Option<asset_hub_paseo_runtime::ProxyType>,
 		hint: bool,
 	) -> bool {
 		frame_support::hypothetically!({
 			let ed = Self::fund_accounts(delegatee, delegator);
 
-			let transfer: asset_hub_polkadot_runtime::RuntimeCall =
+			let transfer: asset_hub_paseo_runtime::RuntimeCall =
 				pallet_balances::Call::transfer_keep_alive {
 					dest: delegatee.clone().into(), // Transfer to self (does not matter).
 					value: ed * 10,                 // Does not matter.
 				}
 				.into();
 
-			let proxy_call: asset_hub_polkadot_runtime::RuntimeCall = pallet_proxy::Call::proxy {
+			let proxy_call: asset_hub_paseo_runtime::RuntimeCall = pallet_proxy::Call::proxy {
 				real: delegator.clone().into(),
 				force_proxy_type,
 				call: Box::new(transfer),
@@ -338,7 +338,7 @@ impl ProxyBasicWorks {
 
 			frame_system::Pallet::<AssetHubRuntime>::reset_events();
 			let _ = proxy_call
-				.dispatch(asset_hub_polkadot_runtime::RuntimeOrigin::signed(delegatee.clone()));
+				.dispatch(asset_hub_paseo_runtime::RuntimeOrigin::signed(delegatee.clone()));
 
 			Self::find_transfer_event(delegatee, delegator)
 		})
@@ -368,7 +368,7 @@ impl ProxyBasicWorks {
 	fn can_governance_impl(
 		delegatee: &AccountId32,
 		delegator: &AccountId32,
-		force_proxy_type: Option<asset_hub_polkadot_runtime::ProxyType>,
+		force_proxy_type: Option<asset_hub_paseo_runtime::ProxyType>,
 		hint: bool,
 	) -> bool {
 		frame_support::hypothetically!({
@@ -380,14 +380,14 @@ impl ProxyBasicWorks {
 			let proposal =
 				<pallet_preimage::Pallet<AssetHubRuntime> as StorePreimage>::bound(proposal_call)
 					.unwrap();
-			let call: asset_hub_polkadot_runtime::RuntimeCall = pallet_referenda::Call::submit {
+			let call: asset_hub_paseo_runtime::RuntimeCall = pallet_referenda::Call::submit {
 				proposal_origin: Box::new(RawOrigin::Root.into()),
 				proposal,
 				enactment_moment: DispatchTime::At(0),
 			}
 			.into();
 
-			let proxy_call: asset_hub_polkadot_runtime::RuntimeCall = pallet_proxy::Call::proxy {
+			let proxy_call: asset_hub_paseo_runtime::RuntimeCall = pallet_proxy::Call::proxy {
 				real: delegator.clone().into(),
 				force_proxy_type,
 				call: Box::new(call),
@@ -405,7 +405,7 @@ impl ProxyBasicWorks {
 
 			frame_system::Pallet::<AssetHubRuntime>::reset_events();
 			let _ = proxy_call
-				.dispatch(asset_hub_polkadot_runtime::RuntimeOrigin::signed(delegatee.clone()));
+				.dispatch(asset_hub_paseo_runtime::RuntimeOrigin::signed(delegatee.clone()));
 
 			Self::find_referenda_submitted_event()
 		})
@@ -435,7 +435,7 @@ impl ProxyBasicWorks {
 	fn can_stake_impl(
 		delegatee: &AccountId32,
 		delegator: &AccountId32,
-		force_proxy_type: Option<asset_hub_polkadot_runtime::ProxyType>,
+		force_proxy_type: Option<asset_hub_paseo_runtime::ProxyType>,
 		hint: bool,
 	) -> bool {
 		frame_support::hypothetically!({
@@ -455,10 +455,10 @@ impl ProxyBasicWorks {
 				hint
 			);
 
-			let call: asset_hub_polkadot_runtime::RuntimeCall =
+			let call: asset_hub_paseo_runtime::RuntimeCall =
 				pallet_staking_async::Call::set_payee { payee: RewardDestination::Staked }.into();
 
-			let proxy_call: asset_hub_polkadot_runtime::RuntimeCall = pallet_proxy::Call::proxy {
+			let proxy_call: asset_hub_paseo_runtime::RuntimeCall = pallet_proxy::Call::proxy {
 				real: delegator.clone().into(),
 				force_proxy_type,
 				call: Box::new(call.clone()),
@@ -466,7 +466,7 @@ impl ProxyBasicWorks {
 			.into();
 
 			let _ = proxy_call
-				.dispatch(asset_hub_polkadot_runtime::RuntimeOrigin::signed(delegatee.clone()));
+				.dispatch(asset_hub_paseo_runtime::RuntimeOrigin::signed(delegatee.clone()));
 
 			Self::find_proxy_executed_event()
 		})
@@ -492,7 +492,7 @@ impl ProxyBasicWorks {
 	/// Check if there is a `Transfer` event from the `delegator` to the `delegatee`.
 	fn find_transfer_event(delegatee: &AccountId32, delegator: &AccountId32) -> bool {
 		for event in frame_system::Pallet::<AssetHubRuntime>::events() {
-			if let asset_hub_polkadot_runtime::RuntimeEvent::Balances(
+			if let asset_hub_paseo_runtime::RuntimeEvent::Balances(
 				pallet_balances::Event::Transfer { from, to, .. },
 			) = event.event
 			{
@@ -508,7 +508,7 @@ impl ProxyBasicWorks {
 	/// Check if there is a `ReferendaSubmitted` event.
 	fn find_referenda_submitted_event() -> bool {
 		for event in frame_system::Pallet::<AssetHubRuntime>::events() {
-			if let asset_hub_polkadot_runtime::RuntimeEvent::Referenda(
+			if let asset_hub_paseo_runtime::RuntimeEvent::Referenda(
 				pallet_referenda::Event::Submitted { .. },
 			) = event.event
 			{
@@ -525,12 +525,12 @@ impl ProxyBasicWorks {
 	fn find_proxy_executed_event() -> bool {
 		for event in frame_system::Pallet::<AssetHubRuntime>::events() {
 			match event.event {
-				asset_hub_polkadot_runtime::RuntimeEvent::Proxy(
+				asset_hub_paseo_runtime::RuntimeEvent::Proxy(
 					pallet_proxy::Event::ProxyExecuted { result: Ok(()) },
 				) => return true,
 				// Pallet 89 is the staking pallet, if it fails in there then that means that the
 				// proxy already succeeded.
-				asset_hub_polkadot_runtime::RuntimeEvent::Proxy(
+				asset_hub_paseo_runtime::RuntimeEvent::Proxy(
 					pallet_proxy::Event::ProxyExecuted {
 						result: Err(Module(ModuleError { index: 89, .. })),
 					},

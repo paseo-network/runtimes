@@ -60,7 +60,7 @@ use super::{
 	multisig_test::MultisigsAccountIdStaysTheSame,
 	proxy::ProxyBasicWorks,
 };
-use asset_hub_polkadot_runtime::{AhMigrator, Runtime as AssetHub, Runtime as PAH};
+use asset_hub_paseo_runtime::{AhMigrator, Runtime as AssetHub, Runtime as PAH};
 use cumulus_pallet_parachain_system::PendingUpwardMessages;
 use cumulus_primitives_core::{InboundDownwardMessage, Junction, Location, UpwardMessageSender};
 use frame_support::{
@@ -1146,7 +1146,7 @@ fn test_control_flow() {
 			})
 			.dispatch(AhRuntimeOrigin::root());
 
-		asset_hub_polkadot_runtime::ParachainSystem::ensure_successful_delivery();
+		asset_hub_paseo_runtime::ParachainSystem::ensure_successful_delivery();
 
 		assert!(result.is_ok(), "fails with error: {:?}", result.err());
 	});
@@ -1203,8 +1203,8 @@ fn test_control_flow() {
 
 		enqueue_dmp((dmp_messages, 0u32));
 
-		<asset_hub_polkadot_runtime::MessageQueue as OnInitialize<_>>::on_initialize(ah_now);
-		<asset_hub_polkadot_runtime::MessageQueue as OnFinalize<_>>::on_finalize(ah_now);
+		<asset_hub_paseo_runtime::MessageQueue as OnInitialize<_>>::on_initialize(ah_now);
+		<asset_hub_paseo_runtime::MessageQueue as OnFinalize<_>>::on_finalize(ah_now);
 
 		// take the acknowledgement message from the AH.
 		let ump_messages = PendingUpwardMessages::<AhRuntime>::take();
@@ -1308,8 +1308,8 @@ fn test_control_flow() {
 
 		enqueue_dmp((dmp_messages, 0u32));
 
-		<asset_hub_polkadot_runtime::MessageQueue as OnInitialize<_>>::on_initialize(ah_now);
-		<asset_hub_polkadot_runtime::MessageQueue as OnFinalize<_>>::on_finalize(ah_now);
+		<asset_hub_paseo_runtime::MessageQueue as OnInitialize<_>>::on_initialize(ah_now);
+		<asset_hub_paseo_runtime::MessageQueue as OnFinalize<_>>::on_finalize(ah_now);
 
 		// take the acknowledgement message from the AH.
 		let ump_messages = PendingUpwardMessages::<AhRuntime>::take();
@@ -1890,7 +1890,7 @@ async fn low_balance_accounts_migration_works() {
 	let mut ah = new_test_ah_ext();
 
 	let ed = polkadot_runtime::ExistentialDeposit::get();
-	let ah_ed = asset_hub_polkadot_runtime::ExistentialDeposit::get();
+	let ah_ed = asset_hub_paseo_runtime::ExistentialDeposit::get();
 	assert!(ed > ah_ed);
 
 	// user with RC ED

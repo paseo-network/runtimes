@@ -24,7 +24,7 @@ use pallet_rc_migrator::types::RcMigrationCheck;
 use sp_runtime::{traits::TryConvert, AccountId32};
 
 type RelayRuntime = polkadot_runtime::Runtime;
-type AssetHubRuntime = asset_hub_polkadot_runtime::Runtime;
+type AssetHubRuntime = asset_hub_paseo_runtime::Runtime;
 
 /// Whale accounts that have a lot of proxies. We double-check those to make sure that all is well.
 ///

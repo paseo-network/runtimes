@@ -74,11 +74,11 @@ impl TryConvert<rc_proxy_definition::ProxyType, Permission> for Permission {
 }
 
 // AH -> Permission
-impl TryConvert<asset_hub_polkadot_runtime::ProxyType, Permission> for Permission {
+impl TryConvert<asset_hub_paseo_runtime::ProxyType, Permission> for Permission {
 	fn try_convert(
-		proxy: asset_hub_polkadot_runtime::ProxyType,
-	) -> Result<Self, asset_hub_polkadot_runtime::ProxyType> {
-		use asset_hub_polkadot_runtime::ProxyType;
+		proxy: asset_hub_paseo_runtime::ProxyType,
+	) -> Result<Self, asset_hub_paseo_runtime::ProxyType> {
+		use asset_hub_paseo_runtime::ProxyType;
 
 		Ok(match proxy {
 			ProxyType::Any => Permission::Any,
@@ -102,11 +102,11 @@ impl TryConvert<asset_hub_polkadot_runtime::ProxyType, Permission> for Permissio
 }
 
 // Permission -> Maybe(AH)
-impl TryConvert<Permission, asset_hub_polkadot_runtime::ProxyType> for Permission {
+impl TryConvert<Permission, asset_hub_paseo_runtime::ProxyType> for Permission {
 	fn try_convert(
 		permission: Permission,
-	) -> Result<asset_hub_polkadot_runtime::ProxyType, Permission> {
-		use asset_hub_polkadot_runtime::ProxyType;
+	) -> Result<asset_hub_paseo_runtime::ProxyType, Permission> {
+		use asset_hub_paseo_runtime::ProxyType;
 
 		Ok(match permission {
 			Permission::Any => ProxyType::Any,

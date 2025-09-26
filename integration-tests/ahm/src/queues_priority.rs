@@ -16,7 +16,7 @@
 
 use crate::porting_prelude::*;
 
-use asset_hub_polkadot_runtime::{AhMigrator, BuildStorage};
+use asset_hub_paseo_runtime::{AhMigrator, BuildStorage};
 use frame_support::{
 	traits::{DefensiveTruncateFrom, OnFinalize},
 	BoundedSlice,
@@ -42,7 +42,7 @@ fn test_force_dmp_queue_priority() {
 
 	// prioritization is not even attempted if the migration is not ongoing
 	t.execute_with(|| {
-		use asset_hub_polkadot_runtime::MessageQueue;
+		use asset_hub_paseo_runtime::MessageQueue;
 		use cumulus_primitives_core::AggregateMessageOrigin;
 
 		MessageQueue::enqueue_message(

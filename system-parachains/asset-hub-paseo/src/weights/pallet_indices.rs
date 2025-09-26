@@ -13,7 +13,7 @@
 // benchmark
 // pallet
 // --runtime
-// ./target/release/wbuild/asset-hub-polkadot-runtime/asset_hub_polkadot_runtime.wasm
+// ./target/release/wbuild/asset-hub-polkadot-runtime/asset_hub_paseo_runtime.wasm
 // --extrinsic
 // 
 // --pallet

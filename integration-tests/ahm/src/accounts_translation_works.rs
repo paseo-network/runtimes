@@ -25,7 +25,7 @@ use sp_application_crypto::Ss58Codec;
 use sp_runtime::AccountId32;
 
 type RelayRuntime = polkadot_runtime::Runtime;
-type AssetHubRuntime = asset_hub_polkadot_runtime::Runtime;
+type AssetHubRuntime = asset_hub_paseo_runtime::Runtime;
 
 pub struct AccountTranslationWorks;
 

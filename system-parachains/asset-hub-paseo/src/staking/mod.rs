@@ -193,7 +193,7 @@ impl multi_block::verifier::Config for Runtime {
 
 /// ## Example
 /// ```
-/// use asset_hub_polkadot_runtime::staking::GeometricDeposit;
+/// use asset_hub_paseo_runtime::staking::GeometricDeposit;
 /// use pallet_election_provider_multi_block::signed::CalculateBaseDeposit;
 /// use paseo_runtime_constants::currency::UNITS;
 ///
@@ -205,7 +205,7 @@ impl multi_block::verifier::Config for Runtime {
 ///
 /// // Full 16 page deposit, to be paid on top of the above base
 /// sp_io::TestExternalities::default().execute_with(|| {
-/// let deposit = asset_hub_polkadot_runtime::staking::SignedDepositPerPage::get() * 16;
+/// let deposit = asset_hub_paseo_runtime::staking::SignedDepositPerPage::get() * 16;
 ///     assert_eq!(deposit, 10_6_368_000_000); // around 10.6 DOTs
 /// })
 /// ```

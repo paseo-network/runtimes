@@ -117,8 +117,8 @@ impl AhMigrationCheck for PalletsTryStateCheck {
 	fn post_check(_: Self::RcPrePayload, _: Self::AhPrePayload) {
 		#[cfg(feature = "try-runtime")]
 		{
-			let res = asset_hub_polkadot_runtime::AllPalletsWithSystem::try_state(
-				frame_system::Pallet::<asset_hub_polkadot_runtime::Runtime>::block_number(),
+			let res = asset_hub_paseo_runtime::AllPalletsWithSystem::try_state(
+				frame_system::Pallet::<asset_hub_paseo_runtime::Runtime>::block_number(),
 				frame_support::traits::TryStateSelect::All,
 			);
 
@@ -165,7 +165,7 @@ impl AhMigrationCheck for EntireStateDecodes {
 	fn post_check(_: Self::RcPrePayload, _: Self::AhPrePayload) {
 		#[cfg(feature = "try-runtime")]
 		{
-			let res = asset_hub_polkadot_runtime::AllPalletsWithSystem::try_decode_entire_state();
+			let res = asset_hub_paseo_runtime::AllPalletsWithSystem::try_decode_entire_state();
 			if let Err(es) = res {
 				log::error!(
 					"Pallets try-decode-entire-storage check failed with {} errors",

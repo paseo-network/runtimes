@@ -27,7 +27,7 @@ use sp_core::Get;
 use sp_runtime::{traits::StaticLookup, AccountId32};
 
 type RelayRuntime = polkadot_runtime::Runtime;
-type AssetHubRuntime = asset_hub_polkadot_runtime::Runtime;
+type AssetHubRuntime = asset_hub_paseo_runtime::Runtime;
 
 pub struct MultisigStillWork;
 
@@ -175,8 +175,8 @@ impl AhMigrationCheck for MultisigStillWork {
 
 			multisig_works::<
 				AssetHubRuntime,
-				asset_hub_polkadot_runtime::RuntimeCall,
-				asset_hub_polkadot_runtime::RuntimeOrigin,
+				asset_hub_paseo_runtime::RuntimeCall,
+				asset_hub_paseo_runtime::RuntimeOrigin,
 			>(&multisig);
 		}
 	}

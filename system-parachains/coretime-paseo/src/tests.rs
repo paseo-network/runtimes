@@ -15,7 +15,7 @@
 // limitations under the License.
 
 use crate::{
-	coretime::{BrokerPalletId, CoretimeBurnAccount},
+	coretime::{BrokerPalletId, CoretimeBurnAccount, FixedTargetPrice},
 	xcm_config::LocationToAccountId,
 	*,
 };
@@ -40,7 +40,7 @@ const ALICE: [u8; 32] = [1u8; 32];
 
 // We track the relay chain block number via the RelayChainDataProvider, but `set_block_number` is
 // not currently available in tests (only runtime-benchmarks).
-// See https://github.com/paritytech/polkadot-sdk/pull/8537
+// See https://github.com/paritytech/paseo-sdk/pull/8537
 fn set_relay_block_number(b: BlockNumber) {
 	let mut validation_data = ValidationData::<Runtime>::get().unwrap_or_else(||
 			// PersistedValidationData does not impl default in non-std
@@ -65,6 +65,8 @@ fn advance_to(b: BlockNumber) {
 
 #[test]
 fn bulk_revenue_is_burnt() {
+	const ALICE: [u8; 32] = [1u8; 32];
+
 	ExtBuilder::<Runtime>::default()
 		.with_collators(vec![AccountId::from(ALICE)])
 		.with_session_keys(vec![(
@@ -95,7 +97,10 @@ fn bulk_revenue_is_burnt() {
 			let broker_account = BrokerPalletId::get().into_account_truncating();
 			let coretime_burn_account = CoretimeBurnAccount::get();
 			let treasury_account = xcm_config::RelayTreasuryPalletAccount::get();
-			assert_ok!(Balances::mint_into(&AccountId::from(ALICE), 200 * UNITS));
+			assert_ok!(Balances::mint_into(
+				&AccountId::from(ALICE),
+				FixedTargetPrice::get() + 1000 * UNITS
+			));
 			let alice_balance_before = Balances::balance(&AccountId::from(ALICE));
 			let treasury_balance_before = Balances::balance(&treasury_account);
 			let broker_balance_before = Balances::balance(&broker_account);
@@ -104,7 +109,7 @@ fn bulk_revenue_is_burnt() {
 			// Purchase coretime.
 			assert_ok!(Broker::purchase(
 				RuntimeOrigin::signed(AccountId::from(ALICE)),
-				100 * UNITS
+				FixedTargetPrice::get()
 			));
 
 			// Alice decreases.

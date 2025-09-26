@@ -924,7 +924,7 @@ fn foreign_pallet_has_correct_local_account() {
 	let fellowship_salary =
 		(Parent, Parachain(COLLECTIVES_PARAID), PalletInstance(FELLOWSHIP_SALARY_PALLET_ID));
 	let account = LocationToAccountId::convert_location(&fellowship_salary.into()).unwrap();
-	let paseo = Ss58AddressFormat::try_from("paseo").unwrap();
-	let address = Ss58Codec::to_ss58check_with_version(&account, polkadot);
+	let paseo = Ss58AddressFormat::try_from("polkadot").unwrap();
+	let address = Ss58Codec::to_ss58check_with_version(&account, paseo);
 	assert_eq!(address, "13w7NdvSR1Af8xsQTArDtZmVvjE8XhWNdL4yed3iFHrUNCnS");
 }

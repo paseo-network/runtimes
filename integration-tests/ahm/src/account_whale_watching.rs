@@ -26,7 +26,7 @@ use pallet_rc_migrator::types::RcMigrationCheck;
 use sp_runtime::AccountId32;
 
 type RelayRuntime = polkadot_runtime::Runtime;
-type AssetHubRuntime = asset_hub_polkadot_runtime::Runtime;
+type AssetHubRuntime = asset_hub_paseo_runtime::Runtime;
 
 /// Whale accounts that we care about and minimal total resulting balance.
 #[cfg(feature = "polkadot-ahm")]

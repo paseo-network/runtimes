@@ -1,4 +1,4 @@
-use collectives_polkadot_runtime::{
+use collectives_paseo_runtime::{
 	xcm_config::{AssetHubLocation, RelayChainLocation},
 	Runtime, RuntimeOrigin,
 };

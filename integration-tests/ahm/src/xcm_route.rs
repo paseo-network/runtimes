@@ -16,7 +16,7 @@
 
 use crate::porting_prelude::*;
 
-use asset_hub_polkadot_runtime::{
+use asset_hub_paseo_runtime::{
 	xcm_config::XcmRouter as AhXcmRouter, BuildStorage, ParachainSystem as AhParachainSystem,
 };
 use codec::Encode;
@@ -65,7 +65,7 @@ fn test_send_to_rc_from_ah() {
 			})
 			.dispatch(AhRuntimeOrigin::root());
 
-		asset_hub_polkadot_runtime::ParachainSystem::ensure_successful_delivery();
+		asset_hub_paseo_runtime::ParachainSystem::ensure_successful_delivery();
 
 		assert!(result.is_ok(), "fails with error: {:?}", result.err());
 
@@ -275,7 +275,7 @@ fn test_send_to_rc_from_ah_via_extrinsic() {
 		// open the channel between AH and Collectives (1001)
 		AhParachainSystem::open_outbound_hrmp_channel_for_benchmarks_or_tests(1001.into());
 
-		asset_hub_polkadot_runtime::ParachainSystem::ensure_successful_delivery();
+		asset_hub_paseo_runtime::ParachainSystem::ensure_successful_delivery();
 
 		let result =
 			AhRuntimeCall::AhMigrator(pallet_ah_migrator::Call::<AhRuntime>::set_manager {

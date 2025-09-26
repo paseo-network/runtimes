@@ -376,7 +376,12 @@ mod tests {
 	fn ensure_trusted_teleporters() {
 		assert_eq!(
 			TypeId::of::<<XcmConfig as xcm_executor::Config>::IsTeleporter>(),
-			TypeId::of::<TrustedTeleporters>(),
+			TypeId::of::<
+				pallet_rc_migrator::xcm_config::FalseIfMigrating<
+					crate::RcMigrator,
+					TrustedTeleporters,
+				>,
+			>(),
 		);
 	}
 }
