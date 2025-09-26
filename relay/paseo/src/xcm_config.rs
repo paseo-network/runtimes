@@ -1,20 +1,20 @@
 // Copyright (C) Parity Technologies (UK) Ltd.
-// This file is part of Polkadot.
+// This file is part of Paseo.
 
-// Polkadot is free software: you can redistribute it and/or modify
+// Paseo is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 
-// Polkadot is distributed in the hope that it will be useful,
+// Paseo is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
 // You should have received a copy of the GNU General Public License
-// along with Polkadot.  If not, see <http://www.gnu.org/licenses/>.
+// along with Paseo.  If not, see <http://www.gnu.org/licenses/>.
 
-//! XCM configuration for Polkadot.
+//! XCM configuration for Paseo.
 
 use super::{
 	parachains_origin, AccountId, AllPalletsWithSystem, Balances, Dmp, FellowshipAdmin,
@@ -27,12 +27,12 @@ use frame_support::{
 };
 use frame_system::EnsureRoot;
 use pallet_xcm::XcmPassthrough;
+use paseo_runtime_constants::{
+	currency::CENTS, system_parachain::*, xcm::body::FELLOWSHIP_ADMIN_INDEX,
+};
 use polkadot_runtime_common::{
 	xcm_sender::{ChildParachainRouter, ExponentialPrice},
 	ToAuthor,
-};
-use polkadot_runtime_constants::{
-	currency::CENTS, system_parachain::*, xcm::body::FELLOWSHIP_ADMIN_INDEX,
 };
 use sp_core::ConstU32;
 use xcm::latest::{prelude::*, BodyId};
@@ -48,11 +48,11 @@ use xcm_builder::{
 };
 
 parameter_types! {
-	/// The location of the DOT token, from the context of this chain. Since this token is native to this
+	/// The location of the PAS token, from the context of this chain. Since this token is native to this
 	/// chain, we make it synonymous with it and thus it is the `Here` location, which means "equivalent to
 	/// the context".
 	pub const TokenLocation: Location = Here.into_location();
-	/// The Polkadot network ID. This is named.
+	/// The Paseo network ID. This is named.
 	pub const ThisNetwork: NetworkId = NetworkId::Polkadot;
 	/// Our location in the universe of consensus systems.
 	pub UniversalLocation: InteriorLocation = [GlobalConsensus(ThisNetwork::get())].into();
@@ -160,15 +160,17 @@ parameter_types! {
 	pub DotForBridgeHub: (AssetFilter, Location) = (Dot::get(), BridgeHubLocation::get());
 	pub People: Location = Parachain(PEOPLE_ID).into_location();
 	pub DotForPeople: (AssetFilter, Location) = (Dot::get(), People::get());
+	pub PassetHubLocation: (AssetFilter, Location) = (Dot::get(), Parachain(PASSET_HUB_ID).into_location());
 }
 
-/// Polkadot Relay recognizes/respects System Parachains as teleporters.
+/// Paseo Relay recognizes/respects System Parachains as teleporters.
 pub type TrustedTeleporters = (
 	Case<DotForAssetHub>,
 	Case<DotForCollectives>,
 	Case<DotForBridgeHub>,
 	Case<DotForCoretime>,
 	Case<DotForPeople>,
+  Case<PassetHubLocation>
 );
 
 pub struct Fellows;
@@ -237,7 +239,7 @@ impl xcm_executor::Config for XcmConfig {
 	type XcmRecorder = XcmPallet;
 	type AssetTransactor = LocalAssetTransactor;
 	type OriginConverter = LocalOriginConverter;
-	// Polkadot Relay recognises no chains which act as reserves.
+	// Paseo Relay recognises no chains which act as reserves.
 	type IsReserve = ();
 	type IsTeleporter =
 		pallet_rc_migrator::xcm_config::FalseIfMigrating<crate::RcMigrator, TrustedTeleporters>;
@@ -332,7 +334,7 @@ pub type LocalPalletOrSignedOriginToLocation = (
 impl pallet_xcm::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	// This is safe to enable for everyone (save the possibility of someone spamming a parachain
-	// if they're willing to pay the DOT to send from the Relay-chain).
+	// if they're willing to pay the PAS to send from the Relay-chain).
 	type SendXcmOrigin =
 		xcm_builder::EnsureXcmOrigin<RuntimeOrigin, LocalPalletOrSignedOriginToLocation>;
 	type XcmRouter = XcmRouter;
@@ -363,4 +365,18 @@ impl pallet_xcm::Config for Runtime {
 	type AdminOrigin = EnsureRoot<AccountId>;
 	// Custom aliasing is disabled: xcm_executor::Config::Aliasers allows only `AliasChildLocation`.
 	type AuthorizedAliasConsideration = Disabled;
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use std::any::TypeId;
+
+	#[test]
+	fn ensure_trusted_teleporters() {
+		assert_eq!(
+			TypeId::of::<<XcmConfig as xcm_executor::Config>::IsTeleporter>(),
+			TypeId::of::<TrustedTeleporters>(),
+		);
+	}
 }
