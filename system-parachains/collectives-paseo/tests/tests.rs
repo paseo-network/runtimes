@@ -9,7 +9,7 @@ use xcm::prelude::*;
 
 #[test]
 fn governance_authorize_upgrade_works() {
-	use polkadot_runtime_constants::system_parachain::COLLECTIVES_ID;
+	use paseo_runtime_constants::system_parachain::COLLECTIVES_ID;
 
 	// no - random non-system para
 	assert_err!(

@@ -1,4 +1,4 @@
-// Copyright (C) Parity Technologies and the various Polkadot contributors, see Contributions.md
+// Copyright (C) Parity Technologies and the various Paseo contributors, see Contributions.md
 // for a list of specific contributors.
 // SPDX-License-Identifier: Apache-2.0
 
@@ -28,10 +28,10 @@
 // benchmark
 // pallet
 // --extrinsic=*
-// --runtime=target/production/wbuild/collectives-polkadot-runtime/collectives_polkadot_runtime.wasm
+// --runtime=target/production/wbuild/collectives-paseo-runtime/collectives_paseo_runtime.wasm
 // --pallet=pallet_xcm_benchmarks::generic
 // --header=/_work/fellowship-001/runtimes/runtimes/.github/scripts/cmd/file_header.txt
-// --output=./system-parachains/collectives/collectives-polkadot/src/weights/xcm
+// --output=./system-parachains/collectives/collectives-paseo/src/weights/xcm
 // --wasm-execution=compiled
 // --steps=50
 // --repeat=20

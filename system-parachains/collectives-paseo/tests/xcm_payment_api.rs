@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use collectives_polkadot_runtime::{Block, Runtime, RuntimeCall, RuntimeOrigin};
-use system_parachains_constants::polkadot::fee::WeightToFee;
+use collectives_paseo_runtime::{Block, Runtime, RuntimeCall, RuntimeOrigin};
+use system_parachains_constants::paseo::fee::WeightToFee;
 
 #[test]
 fn xcm_payment_api_works() {
