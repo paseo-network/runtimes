@@ -612,7 +612,6 @@ impl pallet_migrations::Config for Runtime {
 	type WeightInfo = weights::pallet_migrations::WeightInfo<Runtime>;
 }
 
-
 impl pallet_sudo::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeCall = RuntimeCall;
@@ -655,8 +654,8 @@ construct_runtime!(
 		// The main stage.
 		Identity: pallet_identity = 50,
 
-    // Sudo 
-    Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 255,
+	// Sudo
+	Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 255,
 	}
 );
 
