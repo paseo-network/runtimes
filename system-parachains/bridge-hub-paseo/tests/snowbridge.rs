@@ -54,8 +54,8 @@ use xcm_executor::traits::{ConvertLocation, FeeManager, FeeReason};
 
 parameter_types! {
 	pub const DefaultBridgeHubEthereumBaseFee: Balance = 3_833_568_200_000;
-    // Local OpenGov
-    pub const Governance: GovernanceOrigin<RuntimeOrigin> = GovernanceOrigin::Origin(RuntimeOrigin::root()); 
+	// Local OpenGov
+	pub const Governance: GovernanceOrigin<RuntimeOrigin> = GovernanceOrigin::Origin(RuntimeOrigin::root());
 }
 type RuntimeHelper<Runtime, AllPalletsWithoutSystem = ()> =
 	parachains_runtimes_test_utils::RuntimeHelper<Runtime, AllPalletsWithoutSystem>;

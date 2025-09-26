@@ -170,7 +170,7 @@ pub type TrustedTeleporters = (
 	Case<DotForBridgeHub>,
 	Case<DotForCoretime>,
 	Case<DotForPeople>,
-  Case<PassetHubLocation>
+	Case<PassetHubLocation>,
 );
 
 pub struct Fellows;

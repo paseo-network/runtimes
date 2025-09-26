@@ -629,8 +629,8 @@ construct_runtime!(
 		// so that messages are processed after the `on_initialize` hooks of bridging pallets.
 		MessageQueue: pallet_message_queue = 175,
 
-    // Sudo
-    Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 255
+	// Sudo
+	Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 255
 	}
 );
 

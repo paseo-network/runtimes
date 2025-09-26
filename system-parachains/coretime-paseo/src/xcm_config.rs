@@ -33,8 +33,8 @@ use parachains_common::xcm_config::{
 	AliasAccountId32FromSiblingSystemChain, AllSiblingSystemParachains, ConcreteAssetFromSystem,
 	ParentRelayOrSiblingParachains, RelayOrOtherSystemParachains,
 };
+use paseo_runtime_constants::system_parachain;
 use polkadot_parachain_primitives::primitives::Sibling;
-use polkadot_runtime_constants::system_parachain;
 use sp_runtime::traits::AccountIdConversion;
 use system_parachains_constants::TREASURY_PALLET_ID;
 use xcm::latest::prelude::*;
@@ -52,14 +52,14 @@ use xcm_builder::{
 };
 use xcm_executor::{traits::ConvertLocation, XcmExecutor};
 
-pub use system_parachains_constants::polkadot::locations::{
+pub use system_parachains_constants::paseo::locations::{
 	AssetHubLocation, AssetHubPlurality, RelayChainLocation,
 };
 
 parameter_types! {
 	pub const RootLocation: Location = Location::here();
 	pub const DotRelayLocation: Location = Location::parent();
-	pub const RelayNetwork: Option<NetworkId> = Some(Polkadot);
+	pub const RelayNetwork: Option<NetworkId> = Some(NetworkId::Polkadot);
 	pub RelayChainOrigin: RuntimeOrigin = cumulus_pallet_xcm::Origin::Relay.into();
 	pub UniversalLocation: InteriorLocation =
 		(GlobalConsensus(RelayNetwork::get().unwrap()), Parachain(ParachainInfo::parachain_id().into())).into();
@@ -201,7 +201,7 @@ pub type Barrier = TrailingSetTopicAsId<
 >;
 
 parameter_types! {
-	pub RelayTreasuryLocation: Location = (Parent, PalletInstance(polkadot_runtime_constants::TREASURY_PALLET_ID)).into();
+	pub RelayTreasuryLocation: Location = (Parent, PalletInstance(paseo_runtime_constants::TREASURY_PALLET_ID)).into();
 	pub TreasuryAccount: AccountId = TREASURY_PALLET_ID.into_account_truncating();
 	// Test [`crate::tests::treasury_pallet_account_not_none`] ensures that the result of location
 	// conversion is not `None`.

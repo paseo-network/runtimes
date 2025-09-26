@@ -818,8 +818,8 @@ construct_runtime!(
 		// pub type SecretarySalaryInstance = pallet_salary::Instance3;
 		SecretarySalary: pallet_salary::<Instance3> = 81,
 
-    // Sudo  
-    Sudo: pallet_sudo = 255,
+	// Sudo
+	Sudo: pallet_sudo = 255,
 	}
 );
 

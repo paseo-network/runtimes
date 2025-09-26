@@ -72,7 +72,7 @@ use sp_runtime::{
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use system_parachains_constants::{
-	polkadot::{consensus::*, currency::*, fee::WeightToFee},
+	paseo::{consensus::*, currency::*, fee::WeightToFee},
 	AVERAGE_ON_INITIALIZE_RATIO, HOURS, MAXIMUM_BLOCK_WEIGHT, NORMAL_DISPATCH_RATIO, SLOT_DURATION,
 };
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
@@ -158,8 +158,8 @@ impl_opaque_keys! {
 
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: Cow::Borrowed("coretime-polkadot"),
-	impl_name: Cow::Borrowed("coretime-polkadot"),
+	spec_name: Cow::Borrowed("coretime-paseo"),
+	impl_name: Cow::Borrowed("coretime-paseo"),
 	authoring_version: 1,
 	spec_version: 1_007_001,
 	impl_version: 0,
@@ -659,6 +659,12 @@ impl pallet_utility::Config for Runtime {
 	type WeightInfo = weights::pallet_utility::WeightInfo<Runtime>;
 }
 
+impl pallet_sudo::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type WeightInfo = pallet_sudo::weights::SubstrateWeight<Runtime>;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime
@@ -693,6 +699,9 @@ construct_runtime!(
 
 		// The main stage.
 		Broker: pallet_broker = 50,
+
+		// Sudo.
+		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 255,
 	}
 );
 
@@ -700,8 +709,8 @@ construct_runtime!(
 mod benches {
 	use super::*;
 	use alloc::boxed::Box;
-	use polkadot_runtime_constants::system_parachain::AssetHubParaId;
-	use system_parachains_constants::polkadot::locations::AssetHubLocation;
+	use paseo_runtime_constants::system_parachain::AssetHubParaId;
+	use system_parachains_constants::paseo::locations::AssetHubLocation;
 
 	frame_benchmarking::define_benchmarks!(
 		[frame_system, SystemBench::<Runtime>]
@@ -822,7 +831,7 @@ mod benches {
 
 	impl pallet_xcm_benchmarks::Config for Runtime {
 		type XcmConfig = xcm_config::XcmConfig;
-		type DeliveryHelper = polkadot_runtime_common::xcm_sender::ToParachainDeliveryHelper<
+		type DeliveryHelper = paseo_runtime_common::xcm_sender::ToParachainDeliveryHelper<
 			xcm_config::XcmConfig,
 			ExistentialDepositAsset,
 			PriceForSiblingParachainDelivery,

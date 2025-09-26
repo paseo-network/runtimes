@@ -31,7 +31,7 @@ use frame_support::{
 };
 use pallet_broker::{ConfigRecordOf, RCBlockNumberOf, SaleInfo};
 use parachains_runtimes_test_utils::{ExtBuilder, GovernanceOrigin};
-use polkadot_runtime_constants::system_parachain::coretime::TIMESLICE_PERIOD;
+use paseo_runtime_constants::system_parachain::coretime::TIMESLICE_PERIOD;
 use sp_core::crypto::Ss58Codec;
 use sp_runtime::{traits::AccountIdConversion, Either};
 use xcm_runtime_apis::conversions::LocationToAccountHelper;
@@ -249,7 +249,7 @@ fn xcm_payment_api_works() {
 
 #[test]
 fn governance_authorize_upgrade_works() {
-	use polkadot_runtime_constants::system_parachain::COLLECTIVES_ID;
+	use paseo_runtime_constants::system_parachain::COLLECTIVES_ID;
 
 	// no - random non-system para
 	assert_err!(

@@ -36,8 +36,8 @@ use parachains_common::xcm_config::{
 	AllSiblingSystemParachains, ConcreteAssetFromSystem, ParentRelayOrSiblingParachains,
 	RelayOrOtherSystemParachains,
 };
-use polkadot_parachain_primitives::primitives::Sibling;
 use paseo_runtime_constants::system_parachain;
+use polkadot_parachain_primitives::primitives::Sibling;
 use sp_runtime::traits::AccountIdConversion;
 use system_parachains_constants::{paseo::locations::EthereumNetwork, TREASURY_PALLET_ID};
 use xcm::latest::prelude::*;
@@ -227,7 +227,7 @@ impl xcm_executor::Config for XcmConfig {
 	type XcmSender = XcmRouter;
 	type AssetTransactor = FungibleTransactor;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
-	// BridgeHub does not recognize a reserve location for any asset. Users must teleport PAS 
+	// BridgeHub does not recognize a reserve location for any asset. Users must teleport PAS
 	// where allowed (e.g. with the Relay Chain).
 	type IsReserve = ();
 	type IsTeleporter = TrustedTeleporters;
