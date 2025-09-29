@@ -174,7 +174,7 @@ pub fn collectives_paseo_local_config() -> Result<Box<dyn sc_chain_spec::ChainSp
 	Ok(Box::new(
 		CollectivesPaseoChainSpec::builder(
 			collectives_paseo_runtime::WASM_BINARY.expect("Collectives wasm not available!"),
-			Extensions { relay_chain: "collectives-local".into(), para_id: 1001 },
+			Extensions { relay_chain: "paseo-local".into(), para_id: 1001 },
 		)
 		.with_name("Paseo Collectives Local")
 		.with_id("paseo-collectives-local")
@@ -195,7 +195,7 @@ pub fn collectives_paseo_live_config() -> Result<Box<dyn sc_chain_spec::ChainSpe
 	Ok(Box::new(
 		CollectivesPaseoChainSpec::builder(
 			collectives_paseo_runtime::WASM_BINARY.expect("Collectives wasm not available!"),
-			Extensions { relay_chain: "collectives-local".into(), para_id: 1001 },
+			Extensions { relay_chain: "paseo".into(), para_id: 1001 },
 		)
 		.with_name("Paseo Collectives")
 		.with_id("paseo-collectives")
