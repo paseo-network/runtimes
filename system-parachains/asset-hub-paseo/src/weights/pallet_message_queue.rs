@@ -28,10 +28,10 @@
 // benchmark
 // pallet
 // --extrinsic=*
-// --runtime=target/production/wbuild/asset-hub-polkadot-runtime/asset_hub_paseo_runtime.wasm
+// --runtime=target/production/wbuild/asset-hub-paseo-runtime/asset_hub_paseo_runtime.wasm
 // --pallet=pallet_message_queue
 // --header=/_work/fellowship-001/runtimes/runtimes/.github/scripts/cmd/file_header.txt
-// --output=./system-parachains/asset-hubs/asset-hub-polkadot/src/weights
+// --output=./system-parachains/asset-hubs/asset-hub-paseo/src/weights
 // --wasm-execution=compiled
 // --steps=50
 // --repeat=20
