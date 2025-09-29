@@ -8823,63 +8823,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "paseo-integration-tests-ahm"
-version = "1.7.1"
-dependencies = [
- "asset-hub-paseo-runtime",
- "cumulus-pallet-parachain-system",
- "cumulus-primitives-core",
- "emulated-integration-tests-common",
- "frame-benchmarking",
- "frame-remote-externalities",
- "frame-support",
- "frame-system",
- "hex",
- "hex-literal",
- "log",
- "pallet-ah-migrator",
- "pallet-ah-ops",
- "pallet-balances",
- "pallet-bounties",
- "pallet-indices",
- "pallet-message-queue",
- "pallet-multisig",
- "pallet-preimage",
- "pallet-proxy",
- "pallet-rc-migrator",
- "pallet-recovery",
- "pallet-referenda",
- "pallet-staking-async",
- "pallet-timestamp",
- "pallet-whitelist",
- "pallet-xcm",
- "parachains-common",
- "parity-scale-codec",
- "paseo-runtime",
- "paseo-runtime-constants",
- "polkadot-parachain-primitives",
- "polkadot-primitives",
- "polkadot-runtime-common",
- "polkadot-runtime-parachains",
- "rand 0.9.2",
- "sc-consensus-grandpa",
- "scale-info",
- "sp-application-crypto",
- "sp-authority-discovery",
- "sp-consensus-babe",
- "sp-consensus-beefy",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-storage",
- "sp-tracing",
- "staging-xcm",
- "staging-xcm-builder",
- "tokio",
- "xcm-emulator",
-]
-
-[[package]]
 name = "paseo-runtime"
 version = "1.7.1"
 dependencies = [
@@ -11799,15 +11742,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 
 [[package]]
-name = "signal-hook-registry"
-version = "1.4.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b2a4719bff48cee6b39d12c020eeb490953ad2443b7055bd0b21fca26bd8c28b"
-dependencies = [
- "libc",
-]
-
-[[package]]
 name = "signature"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -13851,7 +13785,6 @@ dependencies = [
  "mio",
  "parking_lot 0.12.4",
  "pin-project-lite",
- "signal-hook-registry",
  "socket2",
  "tokio-macros",
  "windows-sys 0.52.0",

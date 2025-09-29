@@ -258,7 +258,6 @@ resolver = "2"
 
 members = [
 	"chain-spec-generator",
-	"integration-tests/ahm",
 	"integration-tests/emulated/chains/parachains/assets/asset-hub-paseo",
 	"integration-tests/emulated/chains/parachains/bridges/bridge-hub-paseo",
 	"integration-tests/emulated/chains/parachains/collectives/collectives-paseo",
