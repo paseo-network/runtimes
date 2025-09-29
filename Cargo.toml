@@ -1,5 +1,5 @@
 [workspace.package]
-version = "1.7.1"
+version = "1.7.2"
 authors = ["Paseo Core Team"]
 edition = "2021"
 repository = "https://github.com/paseo-network/runtimes.git"
@@ -47,7 +47,7 @@ people-paseo-emulated-chain = { path = "integration-tests/emulated/chains/parach
 paseo-emulated-chain = { path = "integration-tests/emulated/chains/relays/paseo" }
 assert_matches = { version = "1.5.0" }
 approx = { version = "0.5.1" }
-asset-test-utils = { version = "26.0.0" }
+asset-test-utils = { version = "26.0.1" }
 assets-common = { version = "0.24.0", default-features = false }
 authority-discovery-primitives = { version = "38.0.0", default-features = false, package = "sp-authority-discovery" }
 babe-primitives = { version = "0.44.0", default-features = false, package = "sp-consensus-babe" }
@@ -82,7 +82,7 @@ emulated-integration-tests-common = { version = "24.0.0" }
 enumflags2 = { version = "0.7.7" }
 frame-benchmarking = { version = "42.0.0", default-features = false }
 frame-election-provider-support = { version = "42.0.0", default-features = false }
-frame-executive = { version = "42.0.0", default-features = false }
+frame-executive = { version = "42.0.1", default-features = false }
 frame-support = { version = "42.0.0", default-features = false }
 frame-system = { version = "42.0.0", default-features = false }
 frame-system-benchmarking = { version = "42.0.0", default-features = false }
@@ -115,7 +115,7 @@ pallet-child-bounties = { version = "41.0.0", default-features = false }
 pallet-collator-selection = { version = "23.0.0", default-features = false }
 pallet-collective = { version = "42.0.0", default-features = false }
 pallet-conviction-voting = { version = "42.0.0", default-features = false }
-pallet-core-fellowship = { version = "26.0.0", default-features = false }
+pallet-core-fellowship = { version = "26.0.1", default-features = false }
 pallet-election-provider-multi-phase = { version = "41.0.0", default-features = false }
 pallet-election-provider-support-benchmarking = { version = "41.0.0", default-features = false }
 pallet-fast-unstake = { version = "41.0.0", default-features = false }
@@ -167,7 +167,7 @@ pallet-uniques = { version = "42.0.0", default-features = false }
 pallet-utility = { version = "42.0.0", default-features = false }
 pallet-vesting = { version = "42.0.0", default-features = false }
 pallet-whitelist = { version = "41.0.0", default-features = false }
-pallet-xcm = { version = "22.0.0", default-features = false }
+pallet-xcm = { version = "22.0.1", default-features = false }
 pallet-xcm-benchmarks = { version = "22.0.0", default-features = false }
 pallet-xcm-bridge-hub = { version = "0.18.0", default-features = false }
 pallet-xcm-bridge-hub-router = { version = "0.20.0", default-features = false }
