@@ -1390,7 +1390,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-core",
- "staging-xcm 18.0.0",
+ "staging-xcm",
  "system-parachains-constants 1.7.2",
 ]
 
@@ -1446,7 +1446,7 @@ dependencies = [
  "sp-api",
  "sp-runtime",
  "sp-std",
- "staging-xcm 18.0.0",
+ "staging-xcm",
  "system-parachains-constants 1.7.2",
 ]
 
@@ -2108,7 +2108,7 @@ dependencies = [
  "sp-consensus-beefy",
  "sp-core",
  "sp-runtime",
- "staging-xcm 8.0.1",
+ "staging-xcm",
  "system-parachains-constants 1.7.2",
 ]
 
