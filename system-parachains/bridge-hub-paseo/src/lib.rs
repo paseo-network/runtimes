@@ -211,7 +211,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: Cow::Borrowed("bridge-hub-paseo"),
 	impl_name: Cow::Borrowed("bridge-hub-paseo"),
 	authoring_version: 1,
-	spec_version: 1_007_001,
+	spec_version: 1_007_002,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 4,
@@ -671,7 +671,7 @@ construct_runtime!(
 		// Handy utilities.
 		Utility: pallet_utility = 40,
 		Multisig: pallet_multisig = 41,
-	Proxy: pallet_proxy = 42,
+		Proxy: pallet_proxy = 42,
 
 		// Pallets that may be used by all bridges.
 		BridgeRelayers: pallet_bridge_relayers = 50,
@@ -696,9 +696,7 @@ construct_runtime!(
 		// Message Queue. Importantly, it is registered after Snowbridge pallets
 		// so that messages are processed after the `on_initialize` hooks of bridging pallets.
 		MessageQueue: pallet_message_queue = 175,
-
-	// Sudo
-	Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 255
+		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 255
 	}
 );
 
