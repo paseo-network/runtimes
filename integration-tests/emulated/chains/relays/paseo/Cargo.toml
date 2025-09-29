@@ -27,7 +27,7 @@ emulated-integration-tests-common = { workspace = true }
 
 # Runtimes
 paseo-runtime-constants = { workspace = true, default-features = true }
-paseo-runtime = { workspace = true }
+paseo-runtime = { workspace = true, default-features = true }
 
 [features]
 runtime-benchmarks = [
