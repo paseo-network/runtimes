@@ -93,13 +93,4 @@ impl<T: frame_system::Config> pallet_sudo::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
-	
-	/// Storage: `Sudo::Key` (r:1 w:0)
-	/// Proof: `Sudo::Key` (`max_values`: Some(1), `max_size`: Some(32), added: 527, mode: `MaxEncodedLen`)
-	fn check_only_sudo_account() -> Weight {
-		// Similar to sudo() since both just read the key
-		Weight::from_parts(7_050_000, 0)
-			.saturating_add(Weight::from_parts(0, 1517)) // Adds proof size weight (1517 bytes)
-			.saturating_add(T::DbWeight::get().reads(1)) // Adds the weight of one database read
-	}
 }
