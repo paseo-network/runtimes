@@ -47,8 +47,6 @@ pub mod pallet_custom_origins {
 		/// Origin for spending up to $10,000,000 DOT from the treasury as well as generally
 		/// administering it.
 		Treasurer,
-		/// Origin for managing the composition of the fellowship.
-		FellowshipAdmin,
 		/// Origin for managing the registrar and permissioned HRMP channel operations.
 		GeneralAdmin,
 		/// Origin for starting auctions.
@@ -108,7 +106,6 @@ pub mod pallet_custom_origins {
 	decl_unit_ensures!(
 		StakingAdmin,
 		Treasurer,
-		FellowshipAdmin,
 		GeneralAdmin,
 		AuctionAdmin,
 		LeaseAdmin,

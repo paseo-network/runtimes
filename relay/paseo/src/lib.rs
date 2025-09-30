@@ -127,9 +127,7 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use xcm::prelude::*;
 use xcm_builder::PayOverXcm;
-use xcm_config::{
-	AssetHubLocation, CollectivesLocation, FellowsBodyId, GeneralAdminBodyId, StakingAdminBodyId,
-};
+use xcm_config::{AssetHubLocation, GeneralAdminBodyId, StakingAdminBodyId};
 use xcm_runtime_apis::{
 	dry_run::{CallDryRunEffects, Error as XcmDryRunApiError, XcmDryRunEffects},
 	fees::Error as XcmPaymentApiError,
@@ -150,8 +148,8 @@ pub mod genesis_config_presets;
 pub mod ah_migration;
 pub mod governance;
 use governance::{
-	pallet_custom_origins, AuctionAdmin, FellowshipAdmin, GeneralAdmin, LeaseAdmin, StakingAdmin,
-	Treasurer, TreasurySpender,
+	pallet_custom_origins, AuctionAdmin, GeneralAdmin, LeaseAdmin, StakingAdmin, Treasurer,
+	TreasurySpender,
 };
 pub mod impls;
 pub mod xcm_config;
@@ -1741,13 +1739,8 @@ impl pallet_rc_migrator::Config for Runtime {
 	type RuntimeHoldReason = RuntimeHoldReason;
 	type RuntimeFreezeReason = RuntimeFreezeReason;
 	type RuntimeEvent = RuntimeEvent;
-	type AdminOrigin = EitherOfDiverse<
-		EnsureRoot<AccountId>,
-		EitherOfDiverse<
-			EnsureXcm<IsVoiceOfBody<CollectivesLocation, FellowsBodyId>>,
-			EnsureXcm<Equals<AssetHubLocation>, Location>,
-		>,
-	>;
+	type AdminOrigin =
+		EitherOfDiverse<EnsureRoot<AccountId>, EnsureXcm<Equals<AssetHubLocation>, Location>>;
 	type Currency = Balances;
 	type CheckingAccount = xcm_config::CheckAccount;
 	type TreasuryBlockNumberProvider = System;
@@ -2011,8 +2004,8 @@ mod benches {
 		[pallet_xcm, PalletXcmExtrinsicsBenchmark::<Runtime>]
 		[pallet_xcm_benchmarks::fungible, pallet_xcm_benchmarks::fungible::Pallet::<Runtime>]
 		[pallet_xcm_benchmarks::generic, pallet_xcm_benchmarks::generic::Pallet::<Runtime>]
-	// Sudo
-	[pallet_sudo, Sudo]
+		// Sudo
+		[pallet_sudo, Sudo]
 	);
 
 	pub use frame_benchmarking::{BenchmarkBatch, BenchmarkError, BenchmarkList};

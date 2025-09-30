@@ -17,14 +17,13 @@
 //! New governance configurations for the Paseo runtime.
 
 use super::*;
-use crate::xcm_config::{CollectivesLocation, FellowsBodyId};
 use frame_support::parameter_types;
 use frame_system::EnsureRootWithSuccess;
 
 mod origins;
 pub use origins::{
-	pallet_custom_origins, AuctionAdmin, FellowshipAdmin, GeneralAdmin, LeaseAdmin,
-	ReferendumCanceller, ReferendumKiller, Spender, StakingAdmin, Treasurer, WhitelistedCaller,
+	pallet_custom_origins, AuctionAdmin, GeneralAdmin, LeaseAdmin, ReferendumCanceller,
+	ReferendumKiller, Spender, StakingAdmin, Treasurer, WhitelistedCaller,
 };
 mod tracks;
 pub use tracks::TracksInfo;
@@ -65,10 +64,7 @@ impl pallet_whitelist::Config for Runtime {
 	type WeightInfo = weights::pallet_whitelist::WeightInfo<Self>;
 	type RuntimeCall = RuntimeCall;
 	type RuntimeEvent = RuntimeEvent;
-	type WhitelistOrigin = EitherOfDiverse<
-		EnsureRoot<Self::AccountId>,
-		EnsureXcm<IsVoiceOfBody<CollectivesLocation, FellowsBodyId>>,
-	>;
+	type WhitelistOrigin = EnsureRoot<Self::AccountId>;
 	type DispatchWhitelistedOrigin = EitherOf<EnsureRoot<Self::AccountId>, WhitelistedCaller>;
 	type Preimages = Preimage;
 }
