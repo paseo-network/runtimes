@@ -348,7 +348,11 @@ metadata-hash = ["substrate-wasm-builder?/metadata-hash"]
 # A feature that should be enabled when the runtime should be built for on-chain
 # deployment. This will disable stuff that shouldn't be part of the on-chain wasm
 # to make it smaller, like logging for example.
-on-chain-release-build = ["metadata-hash", "paseo-ahm", "sp-api/disable-logging"]
+on-chain-release-build = [
+	"metadata-hash",
+	"paseo-ahm",
+	"sp-api/disable-logging",
+]
 
 # Set timing constants (e.g. session period) to faster versions to speed up testing.
 fast-runtime = ["paseo-runtime-constants/fast-runtime"]

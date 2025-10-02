@@ -285,8 +285,8 @@ std = [
 	"assets-common/std",
 	"bp-asset-hub-paseo/std",
 	"bp-asset-hub-paseo/std",
-	"bp-bridge-hub-paseo/std",
 	"bp-bridge-hub-kusama/std",
+	"bp-bridge-hub-paseo/std",
 	"bp-bridge-hub-polkadot/std",
 	"codec/std",
 	"cumulus-pallet-aura-ext/std",
@@ -398,7 +398,11 @@ metadata-hash = ["substrate-wasm-builder?/metadata-hash"]
 # A feature that should be enabled when the runtime should be built for on-chain
 # deployment. This will disable stuff that shouldn't be part of the on-chain wasm
 # to make it smaller, like logging for example.
-on-chain-release-build = ["metadata-hash", "paseo-ahm", "sp-api/disable-logging"]
+on-chain-release-build = [
+	"metadata-hash",
+	"paseo-ahm",
+	"sp-api/disable-logging",
+]
 
 fast-runtime = ["paseo-runtime-constants/fast-runtime"]
 force-debug = ["sp-debug-derive/force-debug"]
