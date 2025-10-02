@@ -285,6 +285,7 @@ std = [
 	"assets-common/std",
 	"bp-asset-hub-paseo/std",
 	"bp-asset-hub-paseo/std",
+	"bp-bridge-hub-paseo/std",
 	"bp-bridge-hub-kusama/std",
 	"bp-bridge-hub-polkadot/std",
 	"codec/std",
