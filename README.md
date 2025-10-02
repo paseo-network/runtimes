@@ -25,11 +25,13 @@ The following section presents the differences between testnet and production ru
 
 | Feature | Paseo | Kusama | Polkadot |
 | ---  | ---- | ---- | ---- |
-| [RFC-103](https://github.com/polkadot-fellows/RFCs/pull/103) | ✅ | ✅ | ❌ |
-| Executed Asset Hub Migration | ✅ | ❌ | ❌ |
-| Deployed Pallet Revive | ✅ | ✅ | ❌ |
-| ERC-20 Precompile | ✅ | ❌ | ❌ |
-| XCM Precompile | ✅ | ❌ | ❌ |
+| [Agile Coretime](https://polkadot-fellows.github.io/RFCs/approved/0001-agile-coretime.html?highlight=agile#rfc-1-agile-coretime) | ✅ | ✅ | ✅ |
+| [Async Backing](https://wiki.polkadot.com/learn/learn-async-backing/#asynchronous-backing) | ✅ | ✅ | ✅ |
+| [Elastic Scaling](https://polkadot-fellows.github.io/RFCs/approved/0103-introduce-core-index-commitment.html?highlight=Elastic%20scaling#summary) | ✅ | ✅ | ✅ |
+| Asset Hub Migration | ✅ | ❌ | ❌ |
+| PolkaVM Contracts | ✅ | ✅ | ❌ |
+| Contracts: ERC-20 Precompile | ✅ | ❌ | ❌ |
+| Contracts: XCM Precompile | ✅ | ❌ | ❌ |
 
 
 ### Costs
