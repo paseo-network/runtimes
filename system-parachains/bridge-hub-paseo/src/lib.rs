@@ -973,7 +973,7 @@ mod benches {
 				bridge_common_config::BridgeRelayersInstance,
 			>,
 		> {
-			let bridge_common_config::BridgeReward::PaseoKusamaBridge(reward_kind) = reward_kind
+			let bridge_common_config::BridgeReward::PolkadotKusamaBridge(reward_kind) = reward_kind
 			else {
 				panic!(
 					"Unexpected reward_kind: {reward_kind:?} - not compatible with `bench_reward`!"
@@ -1001,22 +1001,22 @@ mod benches {
 	use pallet_bridge_parachains::benchmarking::Config as BridgeParachainsConfig;
 
 	impl BridgeParachainsConfig<bridge_to_kusama_config::BridgeParachainKusamaInstance> for Runtime {
-		fn parachains() -> Vec<bp_paseo_core::parachains::ParaId> {
+		fn parachains() -> Vec<bp_polkadot_core::parachains::ParaId> {
 			use bp_runtime::Parachain;
-			vec![bp_paseo_core::parachains::ParaId(
+			vec![bp_polkadot_core::parachains::ParaId(
 				bp_bridge_hub_kusama::BridgeHubKusama::PARACHAIN_ID,
 			)]
 		}
 
 		fn prepare_parachain_heads_proof(
-			parachains: &[bp_paseo_core::parachains::ParaId],
+			parachains: &[bp_polkadot_core::parachains::ParaId],
 			parachain_head_size: u32,
 			proof_params: bp_runtime::UnverifiedStorageProofParams,
 		) -> (
 			bp_parachains::RelayBlockNumber,
 			bp_parachains::RelayBlockHash,
-			bp_paseo_core::parachains::ParaHeadsProof,
-			Vec<(bp_paseo_core::parachains::ParaId, bp_paseo_core::parachains::ParaHash)>,
+			bp_polkadot_core::parachains::ParaHeadsProof,
+			Vec<(bp_polkadot_core::parachains::ParaId, bp_polkadot_core::parachains::ParaHash)>,
 		) {
 			prepare_parachain_heads_proof::<
 				Runtime,
@@ -1049,7 +1049,7 @@ mod benches {
 				bridge_common_config::BridgeRelayersInstance,
 			>::relayer_reward(
 				relayer,
-				bridge_common_config::BridgeReward::PaseoKusamaBridge(
+				bridge_common_config::BridgeReward::PolkadotKusamaBridge(
 					bp_relayers::RewardsAccountParams::new(
 						bench_lane_id,
 						bridged_chain_id,
