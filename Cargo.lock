@@ -835,17 +835,17 @@ dependencies = [
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-session-benchmarking",
  "cumulus-pallet-xcm",
- "cumulus-pallet-xcmp-queue",
+ "cumulus-pallet-xcmp-queue 0.22.1",
  "cumulus-primitives-aura",
  "cumulus-primitives-core",
  "cumulus-primitives-utility",
  "frame-benchmarking",
- "frame-election-provider-support",
+ "frame-election-provider-support 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-executive",
  "frame-metadata-hash-extension",
  "frame-support",
  "frame-system",
- "frame-system-benchmarking",
+ "frame-system-benchmarking 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
  "hex-literal",
@@ -854,7 +854,7 @@ dependencies = [
  "pallet-ah-ops",
  "pallet-asset-conversion",
  "pallet-asset-conversion-tx-payment",
- "pallet-asset-rate",
+ "pallet-asset-rate 21.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-assets",
  "pallet-aura",
  "pallet-authorship",
@@ -881,7 +881,7 @@ dependencies = [
  "pallet-referenda",
  "pallet-scheduler",
  "pallet-session",
- "pallet-staking",
+ "pallet-staking 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-staking-async",
  "pallet-staking-async-rc-client",
  "pallet-staking-runtime-api",
@@ -890,10 +890,10 @@ dependencies = [
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
- "pallet-treasury",
+ "pallet-treasury 41.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-uniques",
  "pallet-utility",
- "pallet-vesting",
+ "pallet-vesting 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-whitelist",
  "pallet-xcm",
  "pallet-xcm-benchmarks",
@@ -943,11 +943,10 @@ dependencies = [
 [[package]]
 name = "asset-test-utils"
 version = "26.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "898d74874dfa06cad51722d4c7c69dae3bbb1f17d69aa3e740be7230b9b288c2"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "cumulus-pallet-parachain-system",
- "cumulus-pallet-xcmp-queue",
+ "cumulus-pallet-xcmp-queue 0.22.2",
  "cumulus-primitives-core",
  "frame-support",
  "frame-system",
@@ -978,14 +977,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "623b2980c3c6e01a6fa0cb3e410229f16eb52959c983c7cf1fa79a30d7dcf6ae"
 dependencies = [
  "cumulus-primitives-core",
- "ethereum-standards",
+ "ethereum-standards 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-support",
  "frame-system",
  "impl-trait-for-tuples",
  "pallet-asset-conversion",
  "pallet-assets",
- "pallet-revive",
- "pallet-revive-uapi",
+ "pallet-revive 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pallet-revive-uapi 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-xcm",
  "parachains-common",
  "parity-scale-codec",
@@ -1165,8 +1164,7 @@ checksum = "89e25b6adfb930f02d1981565a6e5d9c547ac15a96606256d3b59040e5cd4ca3"
 [[package]]
 name = "binary-merkle-tree"
 version = "16.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "181f5380e435b8ba6d901f8b16fc8908c6f0f8bea8973113d1c8718d89bb1809"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "hash-db",
  "log",
@@ -1399,8 +1397,7 @@ dependencies = [
 [[package]]
 name = "bp-bridge-hub-cumulus"
 version = "0.24.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5553ffca4df624ce34049b4baaadf930f7e58e97d8150c34c9c2be76fb72b5f2"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "bp-messages",
  "bp-polkadot-core",
@@ -1444,7 +1441,7 @@ dependencies = [
  "frame-support",
  "kusama-runtime-constants",
  "paseo-runtime-constants",
- "snowbridge-core",
+ "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "sp-api",
  "sp-runtime",
  "sp-std",
@@ -1465,7 +1462,7 @@ dependencies = [
  "frame-support",
  "kusama-runtime-constants",
  "polkadot-runtime-constants",
- "snowbridge-core",
+ "snowbridge-core 0.15.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-api",
  "sp-runtime",
  "sp-std",
@@ -1476,8 +1473,7 @@ dependencies = [
 [[package]]
 name = "bp-header-chain"
 version = "0.22.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e8039b26d310a636b4735f223cc00af977bd3fabbd439ea16f3854e648b2e4ab"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "bp-runtime",
  "finality-grandpa",
@@ -1485,7 +1481,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
- "sp-consensus-grandpa",
+ "sp-consensus-grandpa 25.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "sp-core",
  "sp-runtime",
  "sp-std",
@@ -1494,8 +1490,7 @@ dependencies = [
 [[package]]
 name = "bp-messages"
 version = "0.22.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e67236312630a45aa6ca19e60cf128ec46145f6593134277d164e180db2c13d3"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "bp-header-chain",
  "bp-runtime",
@@ -1511,8 +1506,7 @@ dependencies = [
 [[package]]
 name = "bp-parachains"
 version = "0.22.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e0e74325a9f5ccc8263c37e8ad69468398c03fb27fa75e636b0ef5fd39275b7"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "bp-header-chain",
  "bp-polkadot-core",
@@ -1529,8 +1523,7 @@ dependencies = [
 [[package]]
 name = "bp-polkadot-core"
 version = "0.22.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "abaabe9d796a5473cf8d44adf87642ab9a4df18112946257381561055dcc93dd"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "bp-messages",
  "bp-runtime",
@@ -1547,8 +1540,7 @@ dependencies = [
 [[package]]
 name = "bp-relayers"
 version = "0.22.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c2e54c7ba269b41226c36403e3231a49aa363d3461ec12c5592e984da3ba2a87"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "bp-header-chain",
  "bp-messages",
@@ -1566,8 +1558,7 @@ dependencies = [
 [[package]]
 name = "bp-runtime"
 version = "0.22.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d38076def82e139d397a62a0a0ea6a1d29013849a53a60bee918f5e800c4c70"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -1590,8 +1581,7 @@ dependencies = [
 [[package]]
 name = "bp-test-utils"
 version = "0.22.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5fb0592b10e593472f36c283486f16a62cbeebc7ae8ba4ab9420c5a6cd7309f"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "bp-header-chain",
  "bp-parachains",
@@ -1601,7 +1591,7 @@ dependencies = [
  "finality-grandpa",
  "parity-scale-codec",
  "sp-application-crypto",
- "sp-consensus-grandpa",
+ "sp-consensus-grandpa 25.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "sp-core",
  "sp-runtime",
  "sp-std",
@@ -1611,8 +1601,7 @@ dependencies = [
 [[package]]
 name = "bp-xcm-bridge-hub"
 version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "690aa9ce6393794ac000a02d155b3d21ba6527a790595d6ae57c30054f182952"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "bp-messages",
  "bp-runtime",
@@ -1629,8 +1618,7 @@ dependencies = [
 [[package]]
 name = "bp-xcm-bridge-hub-router"
 version = "0.19.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "37ed0da6c853daa543649abd49cdfc075980a91bcaf00d9d2af0992cd870d5b5"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
@@ -1642,15 +1630,14 @@ dependencies = [
 [[package]]
 name = "bridge-hub-common"
 version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cc87afc72a125a959f82aa1e4410cc86b1f8f178bda72fdb9b5be6c8b58ef570"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
  "pallet-message-queue",
  "parity-scale-codec",
  "scale-info",
- "snowbridge-core",
+ "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "sp-core",
  "sp-runtime",
  "sp-std",
@@ -1685,7 +1672,7 @@ dependencies = [
  "bridge-hub-common",
  "bridge-hub-paseo-runtime",
  "cumulus-pallet-parachain-system",
- "cumulus-pallet-xcmp-queue",
+ "cumulus-pallet-xcmp-queue 0.22.1",
  "emulated-integration-tests-common",
  "frame-support",
  "hex-literal",
@@ -1702,7 +1689,7 @@ dependencies = [
  "paseo-system-emulated-network",
  "scale-info",
  "snowbridge-beacon-primitives",
- "snowbridge-core",
+ "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "snowbridge-inbound-queue-primitives",
  "snowbridge-outbound-queue-primitives",
  "snowbridge-pallet-inbound-queue",
@@ -1747,7 +1734,7 @@ dependencies = [
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-session-benchmarking",
  "cumulus-pallet-xcm",
- "cumulus-pallet-xcmp-queue",
+ "cumulus-pallet-xcmp-queue 0.22.1",
  "cumulus-primitives-aura",
  "cumulus-primitives-core",
  "cumulus-primitives-utility",
@@ -1756,7 +1743,7 @@ dependencies = [
  "frame-metadata-hash-extension",
  "frame-support",
  "frame-system",
- "frame-system-benchmarking",
+ "frame-system-benchmarking 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
  "hex-literal",
@@ -1793,7 +1780,7 @@ dependencies = [
  "serde",
  "serde_json",
  "snowbridge-beacon-primitives",
- "snowbridge-core",
+ "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "snowbridge-inbound-queue-primitives",
  "snowbridge-merkle-tree",
  "snowbridge-outbound-queue-primitives",
@@ -1849,7 +1836,7 @@ dependencies = [
  "bp-runtime",
  "bp-test-utils",
  "cumulus-pallet-parachain-system",
- "cumulus-pallet-xcmp-queue",
+ "cumulus-pallet-xcmp-queue 0.22.1",
  "frame-support",
  "frame-system",
  "impl-trait-for-tuples",
@@ -1880,8 +1867,7 @@ dependencies = [
 [[package]]
 name = "bridge-runtime-common"
 version = "0.23.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc1817b3d9c9df0b4ac9f01c599fbed889279b644d414e099fba15261beb06ba"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "bp-header-chain",
  "bp-messages",
@@ -2093,7 +2079,7 @@ dependencies = [
  "coretime-paseo-runtime",
  "cumulus-primitives-core",
  "hex-literal",
- "pallet-staking",
+ "pallet-staking 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parachains-common",
  "paseo-runtime",
  "paseo-runtime-constants",
@@ -2105,8 +2091,8 @@ dependencies = [
  "sc-network",
  "serde",
  "serde_json",
- "sp-authority-discovery",
- "sp-consensus-babe",
+ "sp-authority-discovery 38.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-consensus-babe 0.44.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-consensus-beefy",
  "sp-core",
  "sp-runtime",
@@ -2247,7 +2233,7 @@ dependencies = [
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-session-benchmarking",
  "cumulus-pallet-xcm",
- "cumulus-pallet-xcmp-queue",
+ "cumulus-pallet-xcmp-queue 0.22.1",
  "cumulus-primitives-aura",
  "cumulus-primitives-core",
  "cumulus-primitives-utility",
@@ -2256,13 +2242,13 @@ dependencies = [
  "frame-metadata-hash-extension",
  "frame-support",
  "frame-system",
- "frame-system-benchmarking",
+ "frame-system-benchmarking 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
  "hex-literal",
  "log",
  "pallet-alliance",
- "pallet-asset-rate",
+ "pallet-asset-rate 21.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
@@ -2282,7 +2268,7 @@ dependencies = [
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
- "pallet-treasury",
+ "pallet-treasury 41.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-utility",
  "pallet-xcm",
  "pallet-xcm-benchmarks",
@@ -2500,7 +2486,7 @@ dependencies = [
  "frame-support",
  "integration-tests-helpers",
  "pallet-balances",
- "pallet-broker",
+ "pallet-broker 0.21.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-message-queue",
  "pallet-xcm",
  "parachains-common",
@@ -2524,7 +2510,7 @@ dependencies = [
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-session-benchmarking",
  "cumulus-pallet-xcm",
- "cumulus-pallet-xcmp-queue",
+ "cumulus-pallet-xcmp-queue 0.22.1",
  "cumulus-primitives-aura",
  "cumulus-primitives-core",
  "cumulus-primitives-utility",
@@ -2533,7 +2519,7 @@ dependencies = [
  "frame-metadata-hash-extension",
  "frame-support",
  "frame-system",
- "frame-system-benchmarking",
+ "frame-system-benchmarking 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
  "hex-literal",
@@ -2541,7 +2527,7 @@ dependencies = [
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
- "pallet-broker",
+ "pallet-broker 0.21.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-collator-selection",
  "pallet-message-queue",
  "pallet-multisig",
@@ -2827,8 +2813,7 @@ dependencies = [
 [[package]]
 name = "cumulus-pallet-aura-ext"
 version = "0.22.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "66684acdbeb80b82b4cf5e8a950586795102547c0e0cd5d2523f02899069c1c3"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "cumulus-pallet-parachain-system",
  "frame-support",
@@ -2845,13 +2830,12 @@ dependencies = [
 [[package]]
 name = "cumulus-pallet-parachain-system"
 version = "0.22.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be6f97fba4804477d5c720a2ed4a30083336022157e6f5f2659236b84f0ebe57"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "bytes",
  "cumulus-pallet-parachain-system-proc-macro",
  "cumulus-primitives-core",
- "cumulus-primitives-parachain-inherent",
+ "cumulus-primitives-parachain-inherent 0.20.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "cumulus-primitives-proof-size-hostfunction",
  "environmental",
  "frame-benchmarking",
@@ -2865,7 +2849,7 @@ dependencies = [
  "polkadot-parachain-primitives",
  "polkadot-runtime-parachains",
  "scale-info",
- "sp-consensus-babe",
+ "sp-consensus-babe 0.44.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "sp-core",
  "sp-externalities",
  "sp-inherents",
@@ -2883,8 +2867,7 @@ dependencies = [
 [[package]]
 name = "cumulus-pallet-parachain-system-proc-macro"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "befbaf3a1ce23ac8476481484fef5f4d500cbd15b4dad6380ce1d28134b0c1f7"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "proc-macro-crate 3.3.0",
  "proc-macro2",
@@ -2909,8 +2892,7 @@ dependencies = [
 [[package]]
 name = "cumulus-pallet-xcm"
 version = "0.21.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dac66b002202df011da7fb7184e10c8e68d21354ab690f67f1e89f709efbf17a"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
@@ -2950,10 +2932,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "cumulus-pallet-xcmp-queue"
+version = "0.22.2"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+dependencies = [
+ "approx",
+ "bounded-collections",
+ "bp-xcm-bridge-hub-router",
+ "cumulus-primitives-core",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "pallet-message-queue",
+ "parity-scale-codec",
+ "polkadot-runtime-common",
+ "polkadot-runtime-parachains",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "staging-xcm",
+ "staging-xcm-builder",
+ "staging-xcm-executor",
+]
+
+[[package]]
 name = "cumulus-primitives-aura"
 version = "0.19.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f4094f51bfc2154d36f2ccb982d394899c21de40f0b6876b04aea3a24bbacff"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "sp-api",
  "sp-consensus-aura",
@@ -2962,8 +2969,7 @@ dependencies = [
 [[package]]
 name = "cumulus-primitives-core"
 version = "0.20.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3dd2473d9bf48422b49254467ea422597a6cadc7e7db6e9670807a82c64f2f79"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "parity-scale-codec",
  "polkadot-core-primitives",
@@ -2993,21 +2999,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "cumulus-primitives-parachain-inherent"
+version = "0.20.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+dependencies = [
+ "async-trait",
+ "cumulus-primitives-core",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-inherents",
+ "sp-trie",
+]
+
+[[package]]
 name = "cumulus-primitives-proof-size-hostfunction"
 version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e2c902e7e33f9510b5354b54a68261694da6f37e70c20b3f115f7319da4644a2"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "sp-externalities",
- "sp-runtime-interface",
+ "sp-runtime-interface 31.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "sp-trie",
 ]
 
 [[package]]
 name = "cumulus-primitives-utility"
 version = "0.22.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5348576f0c544b07b2d47a66ef6a1d253d881b0bbdb5ba7abafcd5277824b033"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
@@ -3026,6 +3044,19 @@ name = "cumulus-test-relay-sproof-builder"
 version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a2f6ad919741c5bfe07442b2bb326868620de6488430847cead1fef54b093ca"
+dependencies = [
+ "cumulus-primitives-core",
+ "parity-scale-codec",
+ "polkadot-primitives",
+ "sp-runtime",
+ "sp-state-machine",
+ "sp-trie",
+]
+
+[[package]]
+name = "cumulus-test-relay-sproof-builder"
+version = "0.21.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "cumulus-primitives-core",
  "parity-scale-codec",
@@ -3553,7 +3584,7 @@ dependencies = [
  "bp-messages",
  "bp-xcm-bridge-hub",
  "cumulus-pallet-parachain-system",
- "cumulus-pallet-xcmp-queue",
+ "cumulus-pallet-xcmp-queue 0.22.1",
  "cumulus-primitives-core",
  "frame-support",
  "frame-system",
@@ -3574,8 +3605,8 @@ dependencies = [
  "polkadot-primitives",
  "polkadot-runtime-parachains",
  "sc-consensus-grandpa",
- "sp-authority-discovery",
- "sp-consensus-babe",
+ "sp-authority-discovery 38.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-consensus-babe 0.44.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-consensus-beefy",
  "sp-core",
  "sp-keyring",
@@ -3722,6 +3753,14 @@ name = "ethereum-standards"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c5bb19a698ceb837a145395f230f1ee1c4ec751bc8038dfc616a669cfb4a01de"
+dependencies = [
+ "alloy-core",
+]
+
+[[package]]
+name = "ethereum-standards"
+version = "0.1.2"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "alloy-core",
 ]
@@ -3945,8 +3984,7 @@ checksum = "28dd6caf6059519a65843af8fe2a3ae298b14b80179855aeb4adc2c1934ee619"
 [[package]]
 name = "frame-benchmarking"
 version = "42.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b574ee6e347515ef5009a895e537922f6139f278842897c43c68d93e1d1d00d"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "frame-support",
  "frame-support-procedural",
@@ -3962,7 +4000,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-runtime-interface",
+ "sp-runtime-interface 31.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "sp-storage",
  "static_assertions",
 ]
@@ -3978,7 +4016,7 @@ dependencies = [
  "scale-decode",
  "scale-info",
  "scale-type-resolver",
- "sp-crypto-hashing",
+ "sp-crypto-hashing 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -3994,12 +4032,40 @@ dependencies = [
 ]
 
 [[package]]
+name = "frame-election-provider-solution-type"
+version = "16.1.1"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+dependencies = [
+ "proc-macro-crate 3.3.0",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.104",
+]
+
+[[package]]
 name = "frame-election-provider-support"
 version = "42.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "86eea8dcef5ce472448e2dbef18fda47af32bdd79c8f752be0b166dc56355da7"
 dependencies = [
- "frame-election-provider-solution-type",
+ "frame-election-provider-solution-type 16.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-npos-elections",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "frame-election-provider-support"
+version = "42.0.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+dependencies = [
+ "frame-election-provider-solution-type 16.1.1 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -4014,8 +4080,7 @@ dependencies = [
 [[package]]
 name = "frame-executive"
 version = "42.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3b549213d0074ac66f32a3c566329dd299ef96386f12c8247ca60a8ef0485e3c"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "aquamarine",
  "frame-support",
@@ -4056,8 +4121,7 @@ dependencies = [
 [[package]]
 name = "frame-metadata-hash-extension"
 version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4288ac55b1c0e9ea617833934555b12064b7fd5cbea7f88fb295215584424dc6"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "array-bytes 6.2.3",
  "const-hex",
@@ -4083,7 +4147,7 @@ dependencies = [
  "parity-scale-codec",
  "serde",
  "sp-core",
- "sp-crypto-hashing",
+ "sp-crypto-hashing 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-io",
  "sp-runtime",
  "sp-state-machine",
@@ -4096,8 +4160,7 @@ dependencies = [
 [[package]]
 name = "frame-support"
 version = "42.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "318417cb0d270d4a5bb8fff1619501ffbb5c484735e54113a9d9c381ad43c8fe"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "aquamarine",
  "array-bytes 6.2.3",
@@ -4138,8 +4201,7 @@ dependencies = [
 [[package]]
 name = "frame-support-procedural"
 version = "35.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c481996abeb9027d9a4d62d0c2cb4115c0ee6ef3120ad234fa2776b6313a4ed4"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "Inflector",
  "cfg-expr",
@@ -4152,15 +4214,14 @@ dependencies = [
  "proc-macro-warning",
  "proc-macro2",
  "quote",
- "sp-crypto-hashing",
+ "sp-crypto-hashing 0.1.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "syn 2.0.104",
 ]
 
 [[package]]
 name = "frame-support-procedural-tools"
 version = "13.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81a088fd6fda5f53ff0c17fc7551ce8bd0ead14ba742228443c8196296a7369b"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "frame-support-procedural-tools-derive",
  "proc-macro-crate 3.3.0",
@@ -4172,8 +4233,7 @@ dependencies = [
 [[package]]
 name = "frame-support-procedural-tools-derive"
 version = "12.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed971c6435503a099bdac99fe4c5bea08981709e5b5a0a8535a1856f48561191"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4183,8 +4243,7 @@ dependencies = [
 [[package]]
 name = "frame-system"
 version = "42.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8643078c6b60d4082dd566b25004ca74bce5241a167cde9e87a5ae939eeca471"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "cfg-if",
  "docify",
@@ -4216,10 +4275,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "frame-system-benchmarking"
+version = "42.0.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-runtime",
+]
+
+[[package]]
 name = "frame-system-rpc-runtime-api"
 version = "38.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b776e081559afa5cba5ff6843d743a28a19af561bca26cafaedc98e2f11b6646"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "docify",
  "parity-scale-codec",
@@ -4229,8 +4301,7 @@ dependencies = [
 [[package]]
 name = "frame-try-runtime"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "00fd88cbb88159c2f746de287c5f65447375972b72b3c627472c3d6ee487880d"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -5285,7 +5356,7 @@ dependencies = [
 name = "integration-tests-helpers"
 version = "1.9.1"
 dependencies = [
- "cumulus-pallet-xcmp-queue",
+ "cumulus-pallet-xcmp-queue 0.22.1",
  "emulated-integration-tests-common",
  "hex-literal",
  "pallet-balances",
@@ -7016,7 +7087,7 @@ dependencies = [
  "assets-common",
  "cumulus-primitives-core",
  "frame-benchmarking",
- "frame-election-provider-support",
+ "frame-election-provider-support 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-support",
  "frame-system",
  "hex",
@@ -7024,7 +7095,7 @@ dependencies = [
  "impl-trait-for-tuples",
  "log",
  "pallet-ah-ops",
- "pallet-asset-rate",
+ "pallet-asset-rate 21.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-bags-list",
  "pallet-balances",
  "pallet-bounties",
@@ -7042,12 +7113,12 @@ dependencies = [
  "pallet-referenda",
  "pallet-scheduler",
  "pallet-society",
- "pallet-staking",
+ "pallet-staking 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-staking-async",
  "pallet-state-trie-migration",
  "pallet-timestamp",
- "pallet-treasury",
- "pallet-vesting",
+ "pallet-treasury 41.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pallet-vesting 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-xcm",
  "parachains-common",
  "parity-scale-codec",
@@ -7101,11 +7172,11 @@ dependencies = [
  "frame-system",
  "log",
  "pallet-collective",
- "pallet-identity",
+ "pallet-identity 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
  "scale-info",
  "sp-core",
- "sp-crypto-hashing",
+ "sp-crypto-hashing 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-io",
  "sp-runtime",
 ]
@@ -7113,8 +7184,7 @@ dependencies = [
 [[package]]
 name = "pallet-asset-conversion"
 version = "24.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f24017dbf71a4c6fda76ac7e1072b09c3b351ded74d7536b0ccdf45832596546"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -7132,8 +7202,7 @@ dependencies = [
 [[package]]
 name = "pallet-asset-conversion-tx-payment"
 version = "24.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f3e79609017f5524214b0292379b765304df691e7a917e6f47630289d694adb7"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -7150,6 +7219,20 @@ name = "pallet-asset-rate"
 version = "21.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ee558e822050d32504206c96795fa85e82957f043140f25401731cd38a2d0206"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-runtime",
+]
+
+[[package]]
+name = "pallet-asset-rate"
+version = "21.0.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -7178,18 +7261,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-asset-tx-payment"
+version = "42.0.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-transaction-payment",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
 name = "pallet-assets"
 version = "45.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "37f51281fbe4f98b372272143c4f3bc7c12cac1ca72f87116b4b92e5045ac5f8"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
- "ethereum-standards",
+ "ethereum-standards 0.1.2 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "impl-trait-for-tuples",
  "log",
- "pallet-revive",
+ "pallet-revive 0.9.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "parity-scale-codec",
  "scale-info",
  "sp-core",
@@ -7199,8 +7297,7 @@ dependencies = [
 [[package]]
 name = "pallet-aura"
 version = "41.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5dfbc09fc5d8d227d41913984a831e415d1a9c75fdf265c233c3b1515af49998"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -7225,15 +7322,29 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-application-crypto",
- "sp-authority-discovery",
+ "sp-authority-discovery 38.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-runtime",
+]
+
+[[package]]
+name = "pallet-authority-discovery"
+version = "42.0.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-session",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-application-crypto",
+ "sp-authority-discovery 38.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "sp-runtime",
 ]
 
 [[package]]
 name = "pallet-authorship"
 version = "42.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5029f76c4da58f2fd8de19fa4bd55471624c98da674d25e923b986a214fcdb0f"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -7259,7 +7370,30 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-application-crypto",
- "sp-consensus-babe",
+ "sp-consensus-babe 0.44.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-session",
+ "sp-staking",
+]
+
+[[package]]
+name = "pallet-babe"
+version = "42.0.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "pallet-authorship",
+ "pallet-session",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-application-crypto",
+ "sp-consensus-babe 0.44.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -7276,7 +7410,7 @@ dependencies = [
  "aquamarine",
  "docify",
  "frame-benchmarking",
- "frame-election-provider-support",
+ "frame-election-provider-support 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-support",
  "frame-system",
  "log",
@@ -7292,8 +7426,7 @@ dependencies = [
 [[package]]
 name = "pallet-balances"
 version = "43.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54e1d878d53272e0b47d4a55170ea6966b97ccc6f83107cf6173407c6407c730"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "docify",
  "frame-benchmarking",
@@ -7339,7 +7472,7 @@ dependencies = [
  "frame-system",
  "log",
  "pallet-beefy",
- "pallet-mmr",
+ "pallet-mmr 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-session",
  "parity-scale-codec",
  "scale-info",
@@ -7362,7 +7495,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "log",
- "pallet-treasury",
+ "pallet-treasury 41.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
  "scale-info",
  "sp-core",
@@ -7373,8 +7506,7 @@ dependencies = [
 [[package]]
 name = "pallet-bridge-grandpa"
 version = "0.22.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6564e58c537a4143ea51dfd04b0bcb713f375d28cef9eb714c4c38882cdb156"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "bp-header-chain",
  "bp-runtime",
@@ -7385,7 +7517,7 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "scale-info",
- "sp-consensus-grandpa",
+ "sp-consensus-grandpa 25.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "sp-runtime",
  "sp-std",
 ]
@@ -7393,8 +7525,7 @@ dependencies = [
 [[package]]
 name = "pallet-bridge-messages"
 version = "0.22.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "390fa9406098bccea5cc0d41b9a0f27240f27bba76a26caae4818af7a5d96cf3"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "bp-header-chain",
  "bp-messages",
@@ -7413,8 +7544,7 @@ dependencies = [
 [[package]]
 name = "pallet-bridge-parachains"
 version = "0.22.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "73c82dbd8ac21c95214786f5be5cbf7a39ebb25d858d479b44fbf4a53abe6979"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "bp-header-chain",
  "bp-parachains",
@@ -7434,8 +7564,7 @@ dependencies = [
 [[package]]
 name = "pallet-bridge-relayers"
 version = "0.22.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "055a82112f01bcf234e72bc3980fd420b0cd772c3522814c59802368278b3a84"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "bp-header-chain",
  "bp-messages",
@@ -7475,6 +7604,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-broker"
+version = "0.21.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+dependencies = [
+ "bitvec",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-api",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-runtime",
+]
+
+[[package]]
 name = "pallet-child-bounties"
 version = "41.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7485,7 +7632,7 @@ dependencies = [
  "frame-system",
  "log",
  "pallet-bounties",
- "pallet-treasury",
+ "pallet-treasury 41.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
  "scale-info",
  "sp-core",
@@ -7496,8 +7643,7 @@ dependencies = [
 [[package]]
 name = "pallet-collator-selection"
 version = "23.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dcb164b63124a40ea3819b28b073a16e28b835649c5e6a7a28eb4ae7c75a14f2"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -7590,7 +7736,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6f6b7e9ad0ef845f0f9ddeb7b51df2c9e1448dd23a32be1cb231062b76bdeec9"
 dependencies = [
  "frame-benchmarking",
- "frame-election-provider-support",
+ "frame-election-provider-support 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-support",
  "frame-system",
  "log",
@@ -7612,7 +7758,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f6646255b20771fe899346ff5182046c8373705c4b6650c73aeea31c8f8d7e62"
 dependencies = [
  "frame-benchmarking",
- "frame-election-provider-support",
+ "frame-election-provider-support 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-support",
+ "frame-system",
+ "log",
+ "parity-scale-codec",
+ "rand 0.8.5",
+ "scale-info",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-npos-elections",
+ "sp-runtime",
+ "strum 0.26.3",
+]
+
+[[package]]
+name = "pallet-election-provider-multi-phase"
+version = "41.0.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+dependencies = [
+ "frame-benchmarking",
+ "frame-election-provider-support 42.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "frame-support",
  "frame-system",
  "log",
@@ -7634,7 +7801,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3baf08468977f6d7f6582d93d7bd2de98514bdaef64633cbf21c59311851030"
 dependencies = [
  "frame-benchmarking",
- "frame-election-provider-support",
+ "frame-election-provider-support 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-system",
  "parity-scale-codec",
  "sp-npos-elections",
@@ -7649,7 +7816,25 @@ checksum = "e1034960eb3567664454f985b0fa06e2446abf5cc8e0c19ee45dfd077f6d8227"
 dependencies = [
  "docify",
  "frame-benchmarking",
- "frame-election-provider-support",
+ "frame-election-provider-support 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-support",
+ "frame-system",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-io",
+ "sp-runtime",
+ "sp-staking",
+]
+
+[[package]]
+name = "pallet-fast-unstake"
+version = "41.0.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+dependencies = [
+ "docify",
+ "frame-benchmarking",
+ "frame-election-provider-support 42.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "frame-support",
  "frame-system",
  "log",
@@ -7675,7 +7860,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-application-crypto",
- "sp-consensus-grandpa",
+ "sp-consensus-grandpa 25.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -7688,6 +7873,22 @@ name = "pallet-identity"
 version = "42.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "568deb043dcbb4a209844e73d9b00c569421d592305fc4c1ee47e807039db1a2"
+dependencies = [
+ "enumflags2",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
+name = "pallet-identity"
+version = "42.0.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "enumflags2",
  "frame-benchmarking",
@@ -7739,8 +7940,7 @@ dependencies = [
 [[package]]
 name = "pallet-message-queue"
 version = "45.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9219060ceaeca85118ea8daed9298cc9e969ad0c7f5430060c2f48187261cccc"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "environmental",
  "frame-benchmarking",
@@ -7769,7 +7969,7 @@ dependencies = [
  "impl-trait-for-tuples",
  "log",
  "parity-scale-codec",
- "polkadot-sdk-frame",
+ "polkadot-sdk-frame 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "scale-info",
  "sp-core",
  "sp-io",
@@ -7784,20 +7984,31 @@ checksum = "f27ea738b0d713846246f53718a189838ab83565ad42b3cc6e8e41c622cb0438"
 dependencies = [
  "log",
  "parity-scale-codec",
- "polkadot-sdk-frame",
+ "polkadot-sdk-frame 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "scale-info",
- "sp-mmr-primitives",
+ "sp-mmr-primitives 38.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "pallet-mmr"
+version = "42.0.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+dependencies = [
+ "log",
+ "parity-scale-codec",
+ "polkadot-sdk-frame 0.11.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "scale-info",
+ "sp-mmr-primitives 38.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
 ]
 
 [[package]]
 name = "pallet-multisig"
 version = "42.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "91eef837a15521edb2ef39e5428f4e0a888fb1d05ff40c1c3d1b7f06dd9a9c1a"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "log",
  "parity-scale-codec",
- "polkadot-sdk-frame",
+ "polkadot-sdk-frame 0.11.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "scale-info",
 ]
 
@@ -7855,17 +8066,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d363c3592c52b9b3670bd5d27686934709d1d5e42d7f5b0d73295c739c9055c1"
 dependencies = [
  "frame-benchmarking",
- "frame-election-provider-support",
+ "frame-election-provider-support 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-support",
  "frame-system",
  "pallet-bags-list",
  "pallet-delegated-staking",
  "pallet-nomination-pools",
- "pallet-staking",
+ "pallet-staking 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
  "scale-info",
  "sp-runtime",
- "sp-runtime-interface",
+ "sp-runtime-interface 31.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-staking",
 ]
 
@@ -7903,17 +8114,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7e5b0575133533330b4331e2bafc263af1863dd1eb022371ab1b0258a1b3e14e"
 dependencies = [
  "frame-benchmarking",
- "frame-election-provider-support",
+ "frame-election-provider-support 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-support",
  "frame-system",
  "log",
- "pallet-babe",
+ "pallet-babe 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-balances",
  "pallet-grandpa",
  "pallet-im-online",
  "pallet-offences",
  "pallet-session",
- "pallet-staking",
+ "pallet-staking 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
  "scale-info",
  "sp-runtime",
@@ -7962,7 +8173,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c23a8e2820734e33378a14c483465e347924893e59076a9292eacbc0250658b2"
 dependencies = [
  "parity-scale-codec",
- "polkadot-sdk-frame",
+ "polkadot-sdk-frame 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "scale-info",
 ]
 
@@ -7991,20 +8202,20 @@ version = "0.1.0"
 source = "git+https://github.com/polkadot-fellows/runtimes?rev=39ba53b#39ba53bf55e3c7310a085f0df9f24ed9b8c6ad03"
 dependencies = [
  "frame-benchmarking",
- "frame-election-provider-support",
+ "frame-election-provider-support 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-support",
  "frame-system",
  "hex-literal",
  "impl-trait-for-tuples",
  "log",
- "pallet-asset-rate",
+ "pallet-asset-rate 21.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-bags-list",
  "pallet-balances",
  "pallet-bounties",
  "pallet-child-bounties",
  "pallet-conviction-voting",
  "pallet-delegated-staking",
- "pallet-fast-unstake",
+ "pallet-fast-unstake 41.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-indices",
  "pallet-message-queue",
  "pallet-multisig",
@@ -8016,12 +8227,12 @@ dependencies = [
  "pallet-scheduler",
  "pallet-session",
  "pallet-society",
- "pallet-staking",
+ "pallet-staking 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-staking-async",
  "pallet-staking-async-ah-client",
  "pallet-state-trie-migration",
- "pallet-treasury",
- "pallet-vesting",
+ "pallet-treasury 41.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pallet-vesting 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-xcm",
  "parity-scale-codec",
  "polkadot-parachain-primitives",
@@ -8046,7 +8257,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c5f2db46ae18bed0b88971cd9751e733e169dfa6ade87a9f639b5278985f5a51"
 dependencies = [
  "parity-scale-codec",
- "polkadot-sdk-frame",
+ "polkadot-sdk-frame 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "scale-info",
 ]
 
@@ -8096,7 +8307,7 @@ dependencies = [
  "alloy-core",
  "derive_more 0.99.20",
  "environmental",
- "ethereum-standards",
+ "ethereum-standards 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "ethereum-types",
  "frame-benchmarking",
  "frame-support",
@@ -8108,9 +8319,9 @@ dependencies = [
  "num-bigint",
  "num-integer",
  "num-traits",
- "pallet-revive-fixtures",
- "pallet-revive-proc-macro",
- "pallet-revive-uapi",
+ "pallet-revive-fixtures 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pallet-revive-proc-macro 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pallet-revive-uapi 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-transaction-payment",
  "parity-scale-codec",
  "paste",
@@ -8125,8 +8336,54 @@ dependencies = [
  "sp-api",
  "sp-arithmetic",
  "sp-consensus-aura",
- "sp-consensus-babe",
- "sp-consensus-slots",
+ "sp-consensus-babe 0.44.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-consensus-slots 0.44.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "substrate-bn",
+ "subxt-signer",
+]
+
+[[package]]
+name = "pallet-revive"
+version = "0.9.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+dependencies = [
+ "alloy-core",
+ "derive_more 0.99.20",
+ "environmental",
+ "ethereum-standards 0.1.2 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "ethereum-types",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "humantime-serde",
+ "impl-trait-for-tuples",
+ "log",
+ "num-bigint",
+ "num-integer",
+ "num-traits",
+ "pallet-revive-fixtures 0.6.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "pallet-revive-proc-macro 0.4.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "pallet-revive-uapi 0.7.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "pallet-transaction-payment",
+ "parity-scale-codec",
+ "paste",
+ "polkavm 0.27.0",
+ "polkavm-common 0.27.0",
+ "rand 0.8.5",
+ "rand_pcg",
+ "ripemd",
+ "rlp 0.6.1",
+ "scale-info",
+ "serde",
+ "sp-api",
+ "sp-arithmetic",
+ "sp-consensus-aura",
+ "sp-consensus-babe 0.44.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-consensus-slots 0.44.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -8142,7 +8399,21 @@ checksum = "140b59f0454fd411fce85c0ac0347a5c4efa73b451a342109ac04ec00d870112"
 dependencies = [
  "anyhow",
  "cargo_metadata",
- "pallet-revive-uapi",
+ "pallet-revive-uapi 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "polkavm-linker 0.27.0",
+ "sp-core",
+ "sp-io",
+ "toml 0.8.23",
+]
+
+[[package]]
+name = "pallet-revive-fixtures"
+version = "0.6.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+dependencies = [
+ "anyhow",
+ "cargo_metadata",
+ "pallet-revive-uapi 0.7.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "polkavm-linker 0.27.0",
  "sp-core",
  "sp-io",
@@ -8161,13 +8432,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-revive-proc-macro"
+version = "0.4.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.104",
+]
+
+[[package]]
 name = "pallet-revive-uapi"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e340813d94f380bc531d4cd5f28685065a14dbbff87ab23507f72c7d2792b82c"
 dependencies = [
  "bitflags 1.3.2",
- "pallet-revive-proc-macro",
+ "pallet-revive-proc-macro 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-scale-codec",
+ "polkavm-derive 0.27.0",
+ "scale-info",
+]
+
+[[package]]
+name = "pallet-revive-uapi"
+version = "0.7.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+dependencies = [
+ "bitflags 1.3.2",
+ "pallet-revive-proc-macro 0.4.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "parity-scale-codec",
  "polkavm-derive 0.27.0",
  "scale-info",
@@ -8182,7 +8475,7 @@ dependencies = [
  "log",
  "pallet-ranked-collective",
  "parity-scale-codec",
- "polkadot-sdk-frame",
+ "polkadot-sdk-frame 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "scale-info",
 ]
 
@@ -8207,8 +8500,7 @@ dependencies = [
 [[package]]
 name = "pallet-session"
 version = "42.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3b8784e59ba6e098211819bcc742e263912cbc0715d0dfb0030c840617ff94f1"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -8237,7 +8529,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "pallet-session",
- "pallet-staking",
+ "pallet-staking 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
  "rand 0.8.5",
  "sp-runtime",
@@ -8269,7 +8561,29 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b544e05fb3dc7e794acf27913f066cafe0a9df72a1dfc59f687af3e890afe48"
 dependencies = [
  "frame-benchmarking",
- "frame-election-provider-support",
+ "frame-election-provider-support 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-support",
+ "frame-system",
+ "log",
+ "pallet-authorship",
+ "pallet-session",
+ "parity-scale-codec",
+ "rand_chacha 0.3.1",
+ "scale-info",
+ "serde",
+ "sp-application-crypto",
+ "sp-io",
+ "sp-runtime",
+ "sp-staking",
+]
+
+[[package]]
+name = "pallet-staking"
+version = "42.0.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+dependencies = [
+ "frame-benchmarking",
+ "frame-election-provider-support 42.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "frame-support",
  "frame-system",
  "log",
@@ -8292,7 +8606,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f08e204511964e2fdf7224a3bab431ec071b3ee402b315fd5ca85011e0181a52"
 dependencies = [
  "frame-benchmarking",
- "frame-election-provider-support",
+ "frame-election-provider-support 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-support",
  "frame-system",
  "log",
@@ -8372,6 +8686,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-staking-reward-fn"
+version = "24.0.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+dependencies = [
+ "log",
+ "sp-arithmetic",
+]
+
+[[package]]
 name = "pallet-staking-runtime-api"
 version = "28.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8402,8 +8725,7 @@ dependencies = [
 [[package]]
 name = "pallet-sudo"
 version = "42.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e0660acf8cbfa0f50ba67719c0da751fb759dad06f6bbdfc50a5155306ebdbf4"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "docify",
  "frame-benchmarking",
@@ -8418,8 +8740,7 @@ dependencies = [
 [[package]]
 name = "pallet-timestamp"
 version = "41.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21992790039a56ff9af246896d24d6e209c7db8ab9ebd45674aff12cdd4d0074"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "docify",
  "frame-benchmarking",
@@ -8431,14 +8752,13 @@ dependencies = [
  "sp-inherents",
  "sp-runtime",
  "sp-storage",
- "sp-timestamp",
+ "sp-timestamp 38.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
 ]
 
 [[package]]
 name = "pallet-transaction-payment"
 version = "42.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d0ec07d135d2b3dfe0dcb2de38dd84e9b1ef8d1a8e87ca8172931efdf892ff3"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -8453,8 +8773,7 @@ dependencies = [
 [[package]]
 name = "pallet-transaction-payment-rpc-runtime-api"
 version = "42.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4278dbe286b8a7772308873e0af89602af4949c79fa2f482c56e0302629f8050"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "pallet-transaction-payment",
  "parity-scale-codec",
@@ -8468,6 +8787,25 @@ name = "pallet-treasury"
 version = "41.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bb7d7e56a24b6970c059146e56c891d40e16142d0df37f990065e8d154506ecb"
+dependencies = [
+ "docify",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "impl-trait-for-tuples",
+ "log",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-runtime",
+]
+
+[[package]]
+name = "pallet-treasury"
+version = "41.0.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "docify",
  "frame-benchmarking",
@@ -8501,8 +8839,7 @@ dependencies = [
 [[package]]
 name = "pallet-utility"
 version = "42.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "caa33b0d92d123c8d9e6fc53713d1140e83bcf85a641ebb72dbb54805e498f99"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -8530,21 +8867,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-vesting"
+version = "42.0.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-runtime",
+]
+
+[[package]]
 name = "pallet-whitelist"
 version = "41.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8abb438ee3dc56f847a1b7624c3b4ba36fc2a426986d2236fc923f2a37b680c9"
 dependencies = [
  "parity-scale-codec",
- "polkadot-sdk-frame",
+ "polkadot-sdk-frame 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "scale-info",
 ]
 
 [[package]]
 name = "pallet-xcm"
 version = "22.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "84831f49e34014a04f5ff97872c8d3409788981ee5d49b79dffbe80f7d22c98e"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "bounded-collections",
  "frame-benchmarking",
@@ -8552,7 +8902,7 @@ dependencies = [
  "frame-system",
  "hex-literal",
  "pallet-balances",
- "pallet-revive",
+ "pallet-revive 0.9.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",
@@ -8570,8 +8920,7 @@ dependencies = [
 [[package]]
 name = "pallet-xcm-benchmarks"
 version = "22.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "651ef742e6f07ae96c5e9777160840624f6514468bb3343936806222af457c8d"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -8588,8 +8937,7 @@ dependencies = [
 [[package]]
 name = "pallet-xcm-bridge-hub"
 version = "0.18.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "baac6e68c02cf6e7aa8934c77c85f67a0b785559033c4798f9bfc252815cdfb5"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "bp-messages",
  "bp-runtime",
@@ -8611,8 +8959,7 @@ dependencies = [
 [[package]]
 name = "pallet-xcm-bridge-hub-router"
 version = "0.20.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "da52a3f06fa00aecb403daf477b7dbb174c739e75e6c0566d0c07ea642354510"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "bp-xcm-bridge-hub-router",
  "frame-benchmarking",
@@ -8632,21 +8979,20 @@ dependencies = [
 [[package]]
 name = "parachains-common"
 version = "24.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c2052cb923c8997860ca72f6f2064d66f6ed2bb9f3df8966498a1a2a543e5833"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "cumulus-primitives-core",
  "cumulus-primitives-utility",
  "frame-support",
  "frame-system",
  "log",
- "pallet-asset-tx-payment",
+ "pallet-asset-tx-payment 42.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "pallet-assets",
  "pallet-authorship",
  "pallet-balances",
  "pallet-collator-selection",
  "pallet-message-queue",
- "pallet-treasury",
+ "pallet-treasury 41.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "pallet-xcm",
  "parity-scale-codec",
  "polkadot-primitives",
@@ -8664,14 +9010,13 @@ dependencies = [
 [[package]]
 name = "parachains-runtimes-test-utils"
 version = "25.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6ad95f5a484bf548bcab6f773506bcb56ba3782da6250b72c1a4eb1044b9c726"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "cumulus-pallet-parachain-system",
- "cumulus-pallet-xcmp-queue",
+ "cumulus-pallet-xcmp-queue 0.22.2",
  "cumulus-primitives-core",
- "cumulus-primitives-parachain-inherent",
- "cumulus-test-relay-sproof-builder",
+ "cumulus-primitives-parachain-inherent 0.20.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "cumulus-test-relay-sproof-builder 0.21.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "frame-support",
  "frame-system",
  "pallet-balances",
@@ -8812,14 +9157,14 @@ name = "paseo-emulated-chain"
 version = "1.9.1"
 dependencies = [
  "emulated-integration-tests-common",
- "pallet-staking",
+ "pallet-staking 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parachains-common",
  "paseo-runtime",
  "paseo-runtime-constants",
  "polkadot-primitives",
  "sc-consensus-grandpa",
- "sp-authority-discovery",
- "sp-consensus-babe",
+ "sp-authority-discovery 38.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-consensus-babe 0.44.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-consensus-beefy",
  "sp-core",
  "sp-runtime",
@@ -8832,37 +9177,37 @@ dependencies = [
  "approx",
  "binary-merkle-tree",
  "frame-benchmarking",
- "frame-election-provider-support",
+ "frame-election-provider-support 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-executive",
  "frame-metadata-hash-extension",
  "frame-remote-externalities",
  "frame-support",
  "frame-system",
- "frame-system-benchmarking",
+ "frame-system-benchmarking 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
  "hex-literal",
  "log",
- "pallet-asset-rate",
- "pallet-authority-discovery",
+ "pallet-asset-rate 21.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pallet-authority-discovery 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-authorship",
- "pallet-babe",
+ "pallet-babe 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-bags-list",
  "pallet-balances",
  "pallet-beefy",
  "pallet-beefy-mmr",
  "pallet-bounties",
- "pallet-broker",
+ "pallet-broker 0.21.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-child-bounties",
  "pallet-conviction-voting",
  "pallet-delegated-staking",
- "pallet-election-provider-multi-phase",
+ "pallet-election-provider-multi-phase 41.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-election-provider-support-benchmarking",
- "pallet-fast-unstake",
+ "pallet-fast-unstake 41.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-grandpa",
  "pallet-indices",
  "pallet-message-queue",
- "pallet-mmr",
+ "pallet-mmr 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-multisig",
  "pallet-nomination-pools",
  "pallet-nomination-pools-benchmarking",
@@ -8876,20 +9221,20 @@ dependencies = [
  "pallet-scheduler",
  "pallet-session",
  "pallet-session-benchmarking",
- "pallet-staking",
+ "pallet-staking 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-staking-async-ah-client",
  "pallet-staking-async-rc-client",
  "pallet-staking-reward-curve",
- "pallet-staking-reward-fn",
+ "pallet-staking-reward-fn 24.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-staking-runtime-api",
  "pallet-state-trie-migration",
  "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
- "pallet-treasury",
+ "pallet-treasury 41.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-utility",
- "pallet-vesting",
+ "pallet-vesting 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-whitelist",
  "pallet-xcm",
  "pallet-xcm-benchmarks",
@@ -8906,9 +9251,9 @@ dependencies = [
  "sp-api",
  "sp-application-crypto",
  "sp-arithmetic",
- "sp-authority-discovery",
+ "sp-authority-discovery 38.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-block-builder",
- "sp-consensus-babe",
+ "sp-consensus-babe 0.44.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-consensus-beefy",
  "sp-core",
  "sp-debug-derive",
@@ -9031,7 +9376,7 @@ dependencies = [
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-session-benchmarking",
  "cumulus-pallet-xcm",
- "cumulus-pallet-xcmp-queue",
+ "cumulus-pallet-xcmp-queue 0.22.1",
  "cumulus-primitives-core",
  "cumulus-primitives-utility",
  "frame-benchmarking",
@@ -9039,20 +9384,20 @@ dependencies = [
  "frame-metadata-hash-extension",
  "frame-support",
  "frame-system",
- "frame-system-benchmarking",
+ "frame-system-benchmarking 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
  "hex-literal",
  "log",
  "pallet-asset-conversion",
- "pallet-asset-tx-payment",
+ "pallet-asset-tx-payment 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-assets",
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
  "pallet-collator-selection",
  "pallet-message-queue",
- "pallet-revive",
+ "pallet-revive 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-session",
  "pallet-sudo",
  "pallet-timestamp",
@@ -9113,7 +9458,7 @@ dependencies = [
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-session-benchmarking",
  "cumulus-pallet-xcm",
- "cumulus-pallet-xcmp-queue",
+ "cumulus-pallet-xcmp-queue 0.22.1",
  "cumulus-primitives-aura",
  "cumulus-primitives-core",
  "cumulus-primitives-utility",
@@ -9123,7 +9468,7 @@ dependencies = [
  "frame-metadata-hash-extension",
  "frame-support",
  "frame-system",
- "frame-system-benchmarking",
+ "frame-system-benchmarking 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
  "hex-literal",
@@ -9132,7 +9477,7 @@ dependencies = [
  "pallet-authorship",
  "pallet-balances",
  "pallet-collator-selection",
- "pallet-identity",
+ "pallet-identity 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-message-queue",
  "pallet-migrations",
  "pallet-multisig",
@@ -9263,8 +9608,7 @@ dependencies = [
 [[package]]
 name = "polkadot-core-primitives"
 version = "19.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e4877ad0d359828f1e2aa6462a34b6424987d0c4bfde79ce9411144d80c8520c"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
@@ -9275,8 +9619,7 @@ dependencies = [
 [[package]]
 name = "polkadot-parachain-primitives"
 version = "18.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "020fe431f0b594f4d6b22ecc62e86dfc03dc4cab727abcded1253dd44c27d952"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "bounded-collections",
  "derive_more 0.99.20",
@@ -9292,8 +9635,7 @@ dependencies = [
 [[package]]
 name = "polkadot-primitives"
 version = "20.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e784fcdae5b2a8e889f4fb4ec9d2c993ec07a6a599247892d0efa3ce4a9e79f"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "bitvec",
  "bounded-collections",
@@ -9307,12 +9649,12 @@ dependencies = [
  "sp-api",
  "sp-application-crypto",
  "sp-arithmetic",
- "sp-authority-discovery",
- "sp-consensus-slots",
+ "sp-authority-discovery 38.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-consensus-slots 0.44.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "sp-core",
  "sp-inherents",
  "sp-io",
- "sp-keystore",
+ "sp-keystore 0.44.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "sp-runtime",
  "sp-staking",
  "sp-std",
@@ -9322,32 +9664,31 @@ dependencies = [
 [[package]]
 name = "polkadot-runtime-common"
 version = "21.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56b432d2cff7323d6f7e82ff201917b9fc918dbb011cbe0f069c43c8396ecaf4"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "bitvec",
  "frame-benchmarking",
- "frame-election-provider-support",
+ "frame-election-provider-support 42.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "frame-support",
  "frame-system",
  "impl-trait-for-tuples",
  "libsecp256k1",
  "log",
- "pallet-asset-rate",
+ "pallet-asset-rate 21.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "pallet-authorship",
- "pallet-babe",
+ "pallet-babe 42.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "pallet-balances",
- "pallet-broker",
- "pallet-election-provider-multi-phase",
- "pallet-fast-unstake",
- "pallet-identity",
+ "pallet-broker 0.21.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "pallet-election-provider-multi-phase 41.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "pallet-fast-unstake 41.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "pallet-identity 42.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "pallet-session",
- "pallet-staking",
- "pallet-staking-reward-fn",
+ "pallet-staking 42.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "pallet-staking-reward-fn 24.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "pallet-timestamp",
  "pallet-transaction-payment",
- "pallet-treasury",
- "pallet-vesting",
+ "pallet-treasury 41.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "pallet-vesting 42.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "parity-scale-codec",
  "polkadot-primitives",
  "polkadot-runtime-parachains",
@@ -9392,8 +9733,7 @@ dependencies = [
 [[package]]
 name = "polkadot-runtime-metrics"
 version = "22.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c9672c198aa4eff49a7a9b9bf8e1755f2f76da459398fde6b2768325f31674bf"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "bs58",
  "frame-benchmarking",
@@ -9405,26 +9745,25 @@ dependencies = [
 [[package]]
 name = "polkadot-runtime-parachains"
 version = "21.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d8bbe69378962effffbd00375055ab8d722613e494765f0e205053bbf8e3d9e"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "bitflags 1.3.2",
  "bitvec",
  "frame-benchmarking",
- "frame-election-provider-support",
+ "frame-election-provider-support 42.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "frame-support",
  "frame-system",
  "impl-trait-for-tuples",
  "log",
- "pallet-authority-discovery",
+ "pallet-authority-discovery 42.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "pallet-authorship",
- "pallet-babe",
+ "pallet-babe 42.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "pallet-balances",
- "pallet-broker",
+ "pallet-broker 0.21.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "pallet-message-queue",
- "pallet-mmr",
+ "pallet-mmr 42.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "pallet-session",
- "pallet-staking",
+ "pallet-staking 42.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "pallet-timestamp",
  "parity-scale-codec",
  "polkadot-core-primitives",
@@ -9441,7 +9780,7 @@ dependencies = [
  "sp-core",
  "sp-inherents",
  "sp-io",
- "sp-keystore",
+ "sp-keystore 0.44.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "sp-runtime",
  "sp-session",
  "sp-staking",
@@ -9463,7 +9802,7 @@ dependencies = [
  "frame-executive",
  "frame-support",
  "frame-system",
- "frame-system-benchmarking",
+ "frame-system-benchmarking 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
  "log",
@@ -9474,7 +9813,42 @@ dependencies = [
  "sp-arithmetic",
  "sp-block-builder",
  "sp-consensus-aura",
- "sp-consensus-grandpa",
+ "sp-consensus-grandpa 25.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-core",
+ "sp-genesis-builder",
+ "sp-inherents",
+ "sp-io",
+ "sp-keyring",
+ "sp-offchain",
+ "sp-runtime",
+ "sp-session",
+ "sp-storage",
+ "sp-transaction-pool",
+ "sp-version",
+]
+
+[[package]]
+name = "polkadot-sdk-frame"
+version = "0.11.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+dependencies = [
+ "docify",
+ "frame-benchmarking",
+ "frame-executive",
+ "frame-support",
+ "frame-system",
+ "frame-system-benchmarking 42.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "frame-system-rpc-runtime-api",
+ "frame-try-runtime",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-api",
+ "sp-arithmetic",
+ "sp-block-builder",
+ "sp-consensus-aura",
+ "sp-consensus-grandpa 25.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "sp-core",
  "sp-genesis-builder",
  "sp-inherents",
@@ -10369,7 +10743,7 @@ checksum = "2b15c43186be67a4fd63bee50d0303afffcef381492ebe2c5d87f324e1b8815c"
 name = "relay-common"
 version = "1.9.1"
 dependencies = [
- "pallet-staking-reward-fn",
+ "pallet-staking-reward-fn 24.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
  "polkadot-primitives",
  "scale-info",
@@ -10765,7 +11139,7 @@ checksum = "7329ce3b230fd59149df2743291a2e1f58ea769eb87e2678ea11e00d118b7cc0"
 dependencies = [
  "log",
  "sp-core",
- "sp-wasm-interface",
+ "sp-wasm-interface 23.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.69",
 ]
 
@@ -10804,7 +11178,7 @@ dependencies = [
  "serde_json",
  "sp-blockchain",
  "sp-core",
- "sp-crypto-hashing",
+ "sp-crypto-hashing 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-genesis-builder",
  "sp-io",
  "sp-runtime",
@@ -10848,7 +11222,7 @@ dependencies = [
  "sp-state-machine",
  "sp-storage",
  "sp-trie",
- "substrate-prometheus-endpoint",
+ "substrate-prometheus-endpoint 0.17.7",
 ]
 
 [[package]]
@@ -10871,7 +11245,7 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-state-machine",
- "substrate-prometheus-endpoint",
+ "substrate-prometheus-endpoint 0.17.7",
  "thiserror 1.0.69",
 ]
 
@@ -10911,12 +11285,12 @@ dependencies = [
  "sp-arithmetic",
  "sp-blockchain",
  "sp-consensus",
- "sp-consensus-grandpa",
+ "sp-consensus-grandpa 25.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-core",
- "sp-crypto-hashing",
- "sp-keystore",
+ "sp-crypto-hashing 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-keystore 0.44.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-runtime",
- "substrate-prometheus-endpoint",
+ "substrate-prometheus-endpoint 0.17.7",
  "thiserror 1.0.69",
 ]
 
@@ -10936,11 +11310,11 @@ dependencies = [
  "sp-core",
  "sp-externalities",
  "sp-io",
- "sp-panic-handler",
- "sp-runtime-interface",
+ "sp-panic-handler 13.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-runtime-interface 31.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-trie",
  "sp-version",
- "sp-wasm-interface",
+ "sp-wasm-interface 23.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tracing",
 ]
 
@@ -10953,7 +11327,7 @@ dependencies = [
  "polkavm 0.26.0",
  "sc-allocator",
  "sp-maybe-compressed-blob",
- "sp-wasm-interface",
+ "sp-wasm-interface 23.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.69",
  "wasm-instrument",
 ]
@@ -10967,7 +11341,7 @@ dependencies = [
  "log",
  "polkavm 0.26.0",
  "sc-executor-common",
- "sp-wasm-interface",
+ "sp-wasm-interface 23.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -10982,8 +11356,8 @@ dependencies = [
  "rustix 0.36.17",
  "sc-allocator",
  "sc-executor-common",
- "sp-runtime-interface",
- "sp-wasm-interface",
+ "sp-runtime-interface 31.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-wasm-interface 23.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "wasmtime",
 ]
 
@@ -11010,7 +11384,7 @@ dependencies = [
  "sp-api",
  "sp-consensus",
  "sp-core",
- "sp-keystore",
+ "sp-keystore 0.44.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-mixnet",
  "sp-runtime",
  "thiserror 1.0.69",
@@ -11057,7 +11431,7 @@ dependencies = [
  "sp-blockchain",
  "sp-core",
  "sp-runtime",
- "substrate-prometheus-endpoint",
+ "substrate-prometheus-endpoint 0.17.7",
  "thiserror 1.0.69",
  "tokio",
  "tokio-stream",
@@ -11094,7 +11468,7 @@ dependencies = [
  "sc-network-types",
  "schnellru",
  "sp-runtime",
- "substrate-prometheus-endpoint",
+ "substrate-prometheus-endpoint 0.17.7",
  "tracing",
 ]
 
@@ -11125,10 +11499,10 @@ dependencies = [
  "sp-arithmetic",
  "sp-blockchain",
  "sp-consensus",
- "sp-consensus-grandpa",
+ "sp-consensus-grandpa 25.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-core",
  "sp-runtime",
- "substrate-prometheus-endpoint",
+ "substrate-prometheus-endpoint 0.17.7",
  "thiserror 1.0.69",
  "tokio",
  "tokio-stream",
@@ -11797,8 +12171,7 @@ checksum = "826167069c09b99d56f31e9ae5c99049e932a98c9dc2dac47645b08dbbf76ba7"
 [[package]]
 name = "slot-range-helper"
 version = "19.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16b143ebffebf7b7cfbcaa72dcdbd7ff77d16a96f3a7531649273540cfaac647"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "enumn",
  "parity-scale-codec",
@@ -11842,8 +12215,7 @@ dependencies = [
 [[package]]
 name = "snowbridge-beacon-primitives"
 version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e1c6aeef6731354a2e312c2cec4c02dc3f2c077b07794853be874da9d67864f"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "byte-slice-cast",
  "frame-support",
@@ -11888,10 +12260,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "snowbridge-core"
+version = "0.15.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+dependencies = [
+ "bp-relayers",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "log",
+ "parity-scale-codec",
+ "polkadot-parachain-primitives",
+ "scale-info",
+ "serde",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "staging-xcm",
+ "staging-xcm-builder",
+ "staging-xcm-executor",
+]
+
+[[package]]
 name = "snowbridge-ethereum"
 version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb10d39eb22a8ad079721c60ec74787480024ba1227337dbad9e2229ba97477d"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "ethabi-decode",
  "ethbloom",
@@ -11911,8 +12306,7 @@ dependencies = [
 [[package]]
 name = "snowbridge-inbound-queue-primitives"
 version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e7b15aaa471afe13d81c2e75d9c3f2ade6d53da67401c8e2e805d0c06adbce8d"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "alloy-core",
  "frame-support",
@@ -11922,7 +12316,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "snowbridge-beacon-primitives",
- "snowbridge-core",
+ "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "snowbridge-verification-primitives",
  "sp-core",
  "sp-io",
@@ -11936,8 +12330,7 @@ dependencies = [
 [[package]]
 name = "snowbridge-merkle-tree"
 version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "45827ffba95c4ffb890574024db3824b48acb76bf6fb49b7cda52c6fe51235a9"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
@@ -11963,8 +12356,7 @@ dependencies = [
 [[package]]
 name = "snowbridge-outbound-queue-primitives"
 version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a342cbd8b04ec50ebbd9d1ee22556954515f77a62eb9fb21cbcc674c84e09d49"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "alloy-core",
  "ethabi-decode",
@@ -11975,7 +12367,7 @@ dependencies = [
  "parity-scale-codec",
  "polkadot-parachain-primitives",
  "scale-info",
- "snowbridge-core",
+ "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "snowbridge-verification-primitives",
  "sp-arithmetic",
  "sp-core",
@@ -11990,12 +12382,11 @@ dependencies = [
 [[package]]
 name = "snowbridge-outbound-queue-runtime-api"
 version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fd53433524cffde01dbee403e2a4410b859a21826a320425bec05cf72bf09191"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
- "snowbridge-core",
+ "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "snowbridge-merkle-tree",
  "snowbridge-outbound-queue-primitives",
  "sp-api",
@@ -12005,8 +12396,7 @@ dependencies = [
 [[package]]
 name = "snowbridge-pallet-ethereum-client"
 version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eae824fae922436ee680b322365c9ade4bd2fb8c59c8face0f84158c4b563ebf"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -12018,7 +12408,7 @@ dependencies = [
  "scale-info",
  "serde",
  "snowbridge-beacon-primitives",
- "snowbridge-core",
+ "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "snowbridge-ethereum",
  "snowbridge-pallet-ethereum-client-fixtures",
  "snowbridge-verification-primitives",
@@ -12032,8 +12422,7 @@ dependencies = [
 [[package]]
 name = "snowbridge-pallet-ethereum-client-fixtures"
 version = "0.23.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b4c15c1d9e059bd99b151a9930e34ca7efe4c5b6a9a9d3e36662c207b78e199d"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "hex-literal",
  "snowbridge-beacon-primitives",
@@ -12045,8 +12434,7 @@ dependencies = [
 [[package]]
 name = "snowbridge-pallet-inbound-queue"
 version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8d8504aec94045aec51bf46b5fcddced97dabe48c38776349cc1142cec961f8"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "alloy-core",
  "frame-benchmarking",
@@ -12058,7 +12446,7 @@ dependencies = [
  "scale-info",
  "serde",
  "snowbridge-beacon-primitives",
- "snowbridge-core",
+ "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "snowbridge-inbound-queue-primitives",
  "snowbridge-pallet-inbound-queue-fixtures",
  "sp-core",
@@ -12072,12 +12460,11 @@ dependencies = [
 [[package]]
 name = "snowbridge-pallet-inbound-queue-fixtures"
 version = "0.23.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a08ddbbd6eb27fbc01eff65df8409d1cc0660bed8890ff9221a6de076ea2c68"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "hex-literal",
  "snowbridge-beacon-primitives",
- "snowbridge-core",
+ "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "snowbridge-inbound-queue-primitives",
  "sp-core",
  "sp-std",
@@ -12086,8 +12473,7 @@ dependencies = [
 [[package]]
 name = "snowbridge-pallet-inbound-queue-v2"
 version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95fcbdf36c77e56c1192fcd3f45179d85ff6a7075dedf3bcb0f6abb46a3cf3c6"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "alloy-core",
  "bp-relayers",
@@ -12100,7 +12486,7 @@ dependencies = [
  "scale-info",
  "serde",
  "snowbridge-beacon-primitives",
- "snowbridge-core",
+ "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "snowbridge-inbound-queue-primitives",
  "snowbridge-pallet-inbound-queue-v2-fixtures",
  "sp-core",
@@ -12116,12 +12502,11 @@ dependencies = [
 [[package]]
 name = "snowbridge-pallet-inbound-queue-v2-fixtures"
 version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61d72022a1b4776a2394f324e031e7ce9e9bfacae28287f93c84e0a38714a2e8"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "hex-literal",
  "snowbridge-beacon-primitives",
- "snowbridge-core",
+ "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "snowbridge-inbound-queue-primitives",
  "sp-core",
  "sp-std",
@@ -12130,8 +12515,7 @@ dependencies = [
 [[package]]
 name = "snowbridge-pallet-outbound-queue"
 version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "142eedda1ead2712b344def7c6eded90b3bd8038faebec87dfff9a4d4ac3d34c"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "bridge-hub-common",
  "ethabi-decode",
@@ -12141,7 +12525,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
- "snowbridge-core",
+ "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "snowbridge-merkle-tree",
  "snowbridge-outbound-queue-primitives",
  "sp-arithmetic",
@@ -12154,8 +12538,7 @@ dependencies = [
 [[package]]
 name = "snowbridge-pallet-outbound-queue-v2"
 version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "349a1a8e50ccf34b2df404af49969f1ead3bd3a55faac8865dd8d8e4ce91c15d"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "alloy-core",
  "bp-relayers",
@@ -12169,7 +12552,7 @@ dependencies = [
  "scale-info",
  "serde",
  "snowbridge-beacon-primitives",
- "snowbridge-core",
+ "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "snowbridge-merkle-tree",
  "snowbridge-outbound-queue-primitives",
  "snowbridge-verification-primitives",
@@ -12186,8 +12569,7 @@ dependencies = [
 [[package]]
 name = "snowbridge-pallet-system"
 version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e56f715e9a902f7f9bf7fd63359438e7c68411e21e1f4f4854336f741bd79bf"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -12195,7 +12577,7 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "scale-info",
- "snowbridge-core",
+ "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "snowbridge-outbound-queue-primitives",
  "sp-core",
  "sp-io",
@@ -12208,8 +12590,7 @@ dependencies = [
 [[package]]
 name = "snowbridge-pallet-system-frontend"
 version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "823e590b3d44669b35848c7367dc92a98842e296a52b6aaba68f66d7492afb19"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -12218,7 +12599,7 @@ dependencies = [
  "pallet-asset-conversion",
  "parity-scale-codec",
  "scale-info",
- "snowbridge-core",
+ "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -12231,8 +12612,7 @@ dependencies = [
 [[package]]
 name = "snowbridge-pallet-system-v2"
 version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "651de16e94a248c933eaba05f4bf59777e5bbfc746f414518e2a82a163c3dc07"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -12240,7 +12620,7 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "scale-info",
- "snowbridge-core",
+ "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "snowbridge-outbound-queue-primitives",
  "snowbridge-pallet-system",
  "sp-core",
@@ -12255,15 +12635,14 @@ dependencies = [
 [[package]]
 name = "snowbridge-runtime-common"
 version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1ec6cf765ac0ccd83605895fdfb3ed224a94dac3d8c3c68099157e63872c43d9"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "frame-support",
  "frame-system",
  "log",
  "pallet-xcm",
  "parity-scale-codec",
- "snowbridge-core",
+ "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "snowbridge-outbound-queue-primitives",
  "sp-arithmetic",
  "sp-std",
@@ -12275,8 +12654,7 @@ dependencies = [
 [[package]]
 name = "snowbridge-runtime-test-common"
 version = "0.18.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1ceb9c9ece50925fbb3b5cf16a5bef5941462c46370ba1d32ec9948b0a88429a"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "cumulus-pallet-parachain-system",
  "frame-support",
@@ -12290,7 +12668,7 @@ dependencies = [
  "pallet-xcm",
  "parachains-runtimes-test-utils",
  "parity-scale-codec",
- "snowbridge-core",
+ "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "snowbridge-pallet-ethereum-client",
  "snowbridge-pallet-ethereum-client-fixtures",
  "snowbridge-pallet-outbound-queue",
@@ -12307,11 +12685,10 @@ dependencies = [
 [[package]]
 name = "snowbridge-system-runtime-api"
 version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a67e999bee83f205802816ce43455530e6715167a333d4520fb58a6eb24d802"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "parity-scale-codec",
- "snowbridge-core",
+ "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "sp-api",
  "sp-std",
  "staging-xcm",
@@ -12320,8 +12697,7 @@ dependencies = [
 [[package]]
 name = "snowbridge-verification-primitives"
 version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c71fbcb3058339d2a5668d2854428868103ea08f3dca749804165ab314bd6f5"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -12359,8 +12735,7 @@ dependencies = [
 [[package]]
 name = "sp-api"
 version = "38.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d91062b6183f20a6c5fb02d055eeacb4791c8ad32fa1d280c75c0b29aa74acf"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "docify",
  "hash-db",
@@ -12372,7 +12747,7 @@ dependencies = [
  "sp-externalities",
  "sp-metadata-ir",
  "sp-runtime",
- "sp-runtime-interface",
+ "sp-runtime-interface 31.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "sp-state-machine",
  "sp-trie",
  "sp-version",
@@ -12382,8 +12757,7 @@ dependencies = [
 [[package]]
 name = "sp-api-proc-macro"
 version = "24.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8124c25cffbde85d2ef5978fa710bb900d89c368821e04d59040788a0ece3e25"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "Inflector",
  "blake2 0.10.6",
@@ -12397,8 +12771,7 @@ dependencies = [
 [[package]]
 name = "sp-application-crypto"
 version = "42.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5fb8f2382e7b06f3754d66d781bb57021e415715b48a3a65ea452f9ca7e13ec8"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
@@ -12410,8 +12783,7 @@ dependencies = [
 [[package]]
 name = "sp-arithmetic"
 version = "28.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c5f4755af7cc57f4a2a830e134b403fc832caa5d93dacb970ffc7ac717f38c40"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "docify",
  "integer-sqrt",
@@ -12436,10 +12808,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "sp-authority-discovery"
+version = "38.0.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "sp-api",
+ "sp-application-crypto",
+ "sp-runtime",
+]
+
+[[package]]
 name = "sp-block-builder"
 version = "38.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "090c35a7ce8057aa1882cd096863533300ff3805e6fd31eb2c0d25298cec2896"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "sp-api",
  "sp-inherents",
@@ -12484,18 +12867,17 @@ dependencies = [
 [[package]]
 name = "sp-consensus-aura"
 version = "0.44.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11ae4c25ce19f4b0527d26a2d4225c3ddc1fcf0b4dfc8d1f02f874ecfa64eb7d"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "async-trait",
  "parity-scale-codec",
  "scale-info",
  "sp-api",
  "sp-application-crypto",
- "sp-consensus-slots",
+ "sp-consensus-slots 0.44.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "sp-inherents",
  "sp-runtime",
- "sp-timestamp",
+ "sp-timestamp 38.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
 ]
 
 [[package]]
@@ -12510,11 +12892,29 @@ dependencies = [
  "serde",
  "sp-api",
  "sp-application-crypto",
- "sp-consensus-slots",
+ "sp-consensus-slots 0.44.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-core",
  "sp-inherents",
  "sp-runtime",
- "sp-timestamp",
+ "sp-timestamp 38.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "sp-consensus-babe"
+version = "0.44.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+dependencies = [
+ "async-trait",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-api",
+ "sp-application-crypto",
+ "sp-consensus-slots 0.44.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-core",
+ "sp-inherents",
+ "sp-runtime",
+ "sp-timestamp 38.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
 ]
 
 [[package]]
@@ -12529,10 +12929,10 @@ dependencies = [
  "sp-api",
  "sp-application-crypto",
  "sp-core",
- "sp-crypto-hashing",
+ "sp-crypto-hashing 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-io",
- "sp-keystore",
- "sp-mmr-primitives",
+ "sp-keystore 0.44.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-mmr-primitives 38.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-runtime",
  "sp-weights",
  "strum 0.26.3",
@@ -12552,7 +12952,24 @@ dependencies = [
  "sp-api",
  "sp-application-crypto",
  "sp-core",
- "sp-keystore",
+ "sp-keystore 0.44.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-runtime",
+]
+
+[[package]]
+name = "sp-consensus-grandpa"
+version = "25.0.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+dependencies = [
+ "finality-grandpa",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-api",
+ "sp-application-crypto",
+ "sp-core",
+ "sp-keystore 0.44.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "sp-runtime",
 ]
 
@@ -12565,14 +12982,24 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
- "sp-timestamp",
+ "sp-timestamp 38.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "sp-consensus-slots"
+version = "0.44.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-timestamp 38.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
 ]
 
 [[package]]
 name = "sp-core"
 version = "38.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9eb651e016aa5556f5401596d764566240fe44f7a989dc46ebdefa684e9aeaaa"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "ark-vrf",
  "array-bytes 6.2.3",
@@ -12603,10 +13030,10 @@ dependencies = [
  "secrecy 0.8.0",
  "serde",
  "sha2 0.10.9",
- "sp-crypto-hashing",
+ "sp-crypto-hashing 0.1.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "sp-debug-derive",
  "sp-externalities",
- "sp-runtime-interface",
+ "sp-runtime-interface 31.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "sp-std",
  "sp-storage",
  "ss58-registry",
@@ -12632,13 +13059,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "sp-crypto-hashing"
+version = "0.1.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+dependencies = [
+ "blake2b_simd",
+ "byteorder",
+ "digest 0.10.7",
+ "sha2 0.10.9",
+ "sha3",
+ "twox-hash",
+]
+
+[[package]]
 name = "sp-crypto-hashing-proc-macro"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b85d0f1f1e44bd8617eb2a48203ee854981229e3e79e6f468c7175d5fd37489b"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "quote",
- "sp-crypto-hashing",
+ "sp-crypto-hashing 0.1.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "syn 2.0.104",
 ]
 
@@ -12655,8 +13094,7 @@ dependencies = [
 [[package]]
 name = "sp-debug-derive"
 version = "14.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "48d09fa0a5f7299fb81ee25ae3853d26200f7a348148aed6de76be905c007dbe"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -12666,8 +13104,7 @@ dependencies = [
 [[package]]
 name = "sp-externalities"
 version = "0.30.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30cbf059dce180a8bf8b6c8b08b6290fa3d1c7f069a60f1df038ab5dd5fc0ba6"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "environmental",
  "parity-scale-codec",
@@ -12677,8 +13114,7 @@ dependencies = [
 [[package]]
 name = "sp-genesis-builder"
 version = "0.19.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e16e1046045e47124c09a9c9c03bfd1933926d67512aa1e66b778b81e51f4bb"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
@@ -12690,8 +13126,7 @@ dependencies = [
 [[package]]
 name = "sp-inherents"
 version = "38.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d91ae44bf5232bff4e1a804b8eda9cecbf56921c0d67699f7b638db4ea1b776"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "async-trait",
  "impl-trait-for-tuples",
@@ -12704,8 +13139,7 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "42.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d0f8eb3f6c8824549b9482d71516324cf6e2fd650fcc0845d7a4080233898da"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "bytes",
  "docify",
@@ -12717,10 +13151,10 @@ dependencies = [
  "rustversion",
  "secp256k1 0.28.2",
  "sp-core",
- "sp-crypto-hashing",
+ "sp-crypto-hashing 0.1.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "sp-externalities",
- "sp-keystore",
- "sp-runtime-interface",
+ "sp-keystore 0.44.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-runtime-interface 31.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "sp-state-machine",
  "sp-tracing",
  "sp-trie",
@@ -12731,8 +13165,7 @@ dependencies = [
 [[package]]
 name = "sp-keyring"
 version = "43.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0152e8b42857f1764a2ce6abda725d8be008423cc054b747c33a69cbc2a3dd7c"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "sp-core",
  "sp-runtime",
@@ -12744,6 +13177,17 @@ name = "sp-keystore"
 version = "0.44.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f63da3f73c67601452dde155804233f76e993802d4b106e33ae7d88577f46b6a"
+dependencies = [
+ "parity-scale-codec",
+ "parking_lot 0.12.4",
+ "sp-core",
+ "sp-externalities",
+]
+
+[[package]]
+name = "sp-keystore"
+version = "0.44.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "parity-scale-codec",
  "parking_lot 0.12.4",
@@ -12764,8 +13208,7 @@ dependencies = [
 [[package]]
 name = "sp-metadata-ir"
 version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1464c9e76f97c80a8dbccfe3f9fd4be0f25d0cc372efcf8fdf8791619b0998b9"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "frame-metadata 23.0.0",
  "parity-scale-codec",
@@ -12803,10 +13246,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "sp-mmr-primitives"
+version = "38.0.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+dependencies = [
+ "log",
+ "parity-scale-codec",
+ "polkadot-ckb-merkle-mountain-range",
+ "scale-info",
+ "serde",
+ "sp-api",
+ "sp-core",
+ "sp-debug-derive",
+ "sp-runtime",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "sp-npos-elections"
 version = "38.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "db55883feff59ac34d221f97030d1a0b0699ab259838cb28a5ed19d56de40519"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
@@ -12819,8 +13278,7 @@ dependencies = [
 [[package]]
 name = "sp-offchain"
 version = "38.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba4ddad79b8992fe2cc2b285816ae3814a351139c742da924fcf17c23dd1c145"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "sp-api",
  "sp-core",
@@ -12832,6 +13290,15 @@ name = "sp-panic-handler"
 version = "13.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c8b52e69a577cbfdea62bfaf16f59eb884422ce98f78b5cd8d9bf668776bced1"
+dependencies = [
+ "backtrace",
+ "regex",
+]
+
+[[package]]
+name = "sp-panic-handler"
+version = "13.0.2"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "backtrace",
  "regex",
@@ -12851,8 +13318,7 @@ dependencies = [
 [[package]]
 name = "sp-runtime"
 version = "43.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3992bd6026675946f12fc3c891c863f017a01449a5a15d07656ea1b6503f3ba2"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "binary-merkle-tree",
  "docify",
@@ -12890,11 +13356,30 @@ dependencies = [
  "polkavm-derive 0.26.0",
  "primitive-types 0.13.1",
  "sp-externalities",
- "sp-runtime-interface-proc-macro",
+ "sp-runtime-interface-proc-macro 20.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-std",
  "sp-storage",
  "sp-tracing",
- "sp-wasm-interface",
+ "sp-wasm-interface 23.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "static_assertions",
+]
+
+[[package]]
+name = "sp-runtime-interface"
+version = "31.0.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+dependencies = [
+ "bytes",
+ "impl-trait-for-tuples",
+ "parity-scale-codec",
+ "polkavm-derive 0.26.0",
+ "primitive-types 0.13.1",
+ "sp-externalities",
+ "sp-runtime-interface-proc-macro 20.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-std",
+ "sp-storage",
+ "sp-tracing",
+ "sp-wasm-interface 23.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "static_assertions",
 ]
 
@@ -12913,16 +13398,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "sp-runtime-interface-proc-macro"
+version = "20.0.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+dependencies = [
+ "Inflector",
+ "expander",
+ "proc-macro-crate 3.3.0",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.104",
+]
+
+[[package]]
 name = "sp-session"
 version = "40.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "860f9c9f4681c99341f8d12640788924f73b92118982638cae0ef2f483e79dd2"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-api",
  "sp-core",
- "sp-keystore",
+ "sp-keystore 0.44.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "sp-runtime",
  "sp-staking",
 ]
@@ -12930,8 +13427,7 @@ dependencies = [
 [[package]]
 name = "sp-staking"
 version = "40.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa9945ce70bbfb9b1c876f94a81017915bc932a576b8a9735b88aabfa01ea4e5"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "impl-trait-for-tuples",
  "parity-scale-codec",
@@ -12944,8 +13440,7 @@ dependencies = [
 [[package]]
 name = "sp-state-machine"
 version = "0.47.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eaa59c3fdf73700dd3e9dcce503fb15c3ef59dfed3ed34f0eec78d8f5b5d1c45"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "hash-db",
  "log",
@@ -12955,7 +13450,7 @@ dependencies = [
  "smallvec",
  "sp-core",
  "sp-externalities",
- "sp-panic-handler",
+ "sp-panic-handler 13.0.2 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
  "sp-trie",
  "thiserror 1.0.69",
  "tracing",
@@ -12965,14 +13460,12 @@ dependencies = [
 [[package]]
 name = "sp-std"
 version = "14.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "12f8ee986414b0a9ad741776762f4083cd3a5128449b982a3919c4df36874834"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 
 [[package]]
 name = "sp-storage"
 version = "22.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee3b70ca340e41cde9d2e069d354508a6e37a6573d66f7cc38f11549002f64ec"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "impl-serde",
  "parity-scale-codec",
@@ -12995,10 +13488,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "sp-timestamp"
+version = "38.0.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+dependencies = [
+ "async-trait",
+ "parity-scale-codec",
+ "sp-inherents",
+ "sp-runtime",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "sp-tracing"
 version = "18.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b7fa3a9161173fa99b4455afc52811eb8251e90ca37a2cbebb8be9c47dc55c00"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "parity-scale-codec",
  "regex",
@@ -13010,8 +13514,7 @@ dependencies = [
 [[package]]
 name = "sp-transaction-pool"
 version = "38.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2ec2ce1712ceb1111418ebe3855f017c5d68e954d376d8bf97dcb720a950edc9"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "sp-api",
  "sp-runtime",
@@ -13020,8 +13523,7 @@ dependencies = [
 [[package]]
 name = "sp-trie"
 version = "41.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c17205dd7df84be66e55a136b5d80dfb6c23806376c0ef5e847ea9344c0478cf"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "ahash",
  "foldhash",
@@ -13036,7 +13538,7 @@ dependencies = [
  "schnellru",
  "sp-core",
  "sp-externalities",
- "substrate-prometheus-endpoint",
+ "substrate-prometheus-endpoint 0.17.4",
  "thiserror 1.0.69",
  "tracing",
  "trie-db",
@@ -13046,8 +13548,7 @@ dependencies = [
 [[package]]
 name = "sp-version"
 version = "41.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e0d7b57b6577ddab5b363c2d6e9d49609749e041ee50e7232ecb413bc1cfa3f"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "impl-serde",
  "parity-scale-codec",
@@ -13064,8 +13565,7 @@ dependencies = [
 [[package]]
 name = "sp-version-proc-macro"
 version = "15.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54cabc8279e835cd9c608d70cb00e693bddec94fe8478e9f3104dad1da5f93ca"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "parity-scale-codec",
  "proc-macro-warning",
@@ -13088,10 +13588,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "sp-wasm-interface"
+version = "23.0.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+dependencies = [
+ "anyhow",
+ "impl-trait-for-tuples",
+ "log",
+ "parity-scale-codec",
+]
+
+[[package]]
 name = "sp-weights"
 version = "33.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cae0642af5f2dd0b1cddcd06f91c36f7abe0528713e97b6e3c36faf0b8229114"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "bounded-collections",
  "parity-scale-codec",
@@ -13182,8 +13692,7 @@ checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 [[package]]
 name = "staging-parachain-info"
 version = "0.22.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8cef67f61c821d8b69a7d69b87d24d2b829049e5c2ff1bbfe7d73894e4f1ee8"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
@@ -13196,8 +13705,7 @@ dependencies = [
 [[package]]
 name = "staging-xcm"
 version = "18.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16708a8ff2bf701090ca8146ad4a0eb8ab00f2a03108f8c889d4eb2eccd7233d"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "array-bytes 6.2.3",
  "bounded-collections",
@@ -13218,8 +13726,7 @@ dependencies = [
 [[package]]
 name = "staging-xcm-builder"
 version = "22.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4dbadbc3bd1a8142fce70e6979357f2db2590185fd14caddfb4d72cdf08b09f7"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "environmental",
  "frame-support",
@@ -13243,8 +13750,7 @@ dependencies = [
 [[package]]
 name = "staging-xcm-executor"
 version = "21.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41e3997c812e17ebcdc34fe92ab4c438cbe6647a2fc05ec0a9f8e5d9f3dccf88"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "environmental",
  "frame-benchmarking",
@@ -13320,8 +13826,7 @@ dependencies = [
 [[package]]
 name = "substrate-bip39"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ca58ffd742f693dc13d69bdbb2e642ae239e0053f6aab3b104252892f856700a"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "hmac 0.12.1",
  "pbkdf2",
@@ -13341,6 +13846,20 @@ dependencies = [
  "lazy_static",
  "rand 0.8.5",
  "rustc-hex",
+]
+
+[[package]]
+name = "substrate-prometheus-endpoint"
+version = "0.17.4"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+dependencies = [
+ "http-body-util",
+ "hyper 1.6.0",
+ "hyper-util",
+ "log",
+ "prometheus",
+ "thiserror 1.0.69",
+ "tokio",
 ]
 
 [[package]]
@@ -13439,7 +13958,7 @@ dependencies = [
  "scale-value",
  "serde",
  "serde_json",
- "sp-crypto-hashing",
+ "sp-crypto-hashing 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "subxt-metadata",
  "thiserror 2.0.12",
  "tracing",
@@ -13456,7 +13975,7 @@ dependencies = [
  "hashbrown 0.14.5",
  "parity-scale-codec",
  "scale-info",
- "sp-crypto-hashing",
+ "sp-crypto-hashing 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.12",
 ]
 
@@ -13484,7 +14003,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.10.9",
- "sp-crypto-hashing",
+ "sp-crypto-hashing 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "subxt-core",
  "thiserror 2.0.12",
  "zeroize",
@@ -15332,8 +15851,8 @@ dependencies = [
  "array-bytes 6.2.3",
  "cumulus-pallet-parachain-system",
  "cumulus-primitives-core",
- "cumulus-primitives-parachain-inherent",
- "cumulus-test-relay-sproof-builder",
+ "cumulus-primitives-parachain-inherent 0.20.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cumulus-test-relay-sproof-builder 0.21.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-support",
  "frame-system",
  "impl-trait-for-tuples",
@@ -15349,7 +15868,7 @@ dependencies = [
  "polkadot-runtime-parachains",
  "sp-arithmetic",
  "sp-core",
- "sp-crypto-hashing",
+ "sp-crypto-hashing 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-io",
  "sp-runtime",
  "sp-tracing",
@@ -15361,8 +15880,7 @@ dependencies = [
 [[package]]
 name = "xcm-procedural"
 version = "11.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d3d21c65cbf847ae0b1a8e6411b614d269d3108c6c649b039bffcf225e89aa4"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "Inflector",
  "proc-macro2",
@@ -15373,8 +15891,7 @@ dependencies = [
 [[package]]
 name = "xcm-runtime-apis"
 version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a280f8647fdf16e3705064d732f0afe49c39e0f5bb0e18878f2c4587751fb89"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -15627,3 +16144,18 @@ dependencies = [
  "cc",
  "pkg-config",
 ]
+
+[[patch.unused]]
+name = "bp-beefy"
+version = "0.1.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+
+[[patch.unused]]
+name = "bp-polkadot-bulletin"
+version = "0.19.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+
+[[patch.unused]]
+name = "cumulus-primitives-storage-weight-reclaim"
+version = "13.0.0"
+source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
