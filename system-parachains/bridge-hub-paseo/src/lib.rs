@@ -37,6 +37,7 @@ use bridge_hub_common::message_queue::{
 	AggregateMessageOrigin, NarrowOriginToSibling, ParaIdToSibling,
 };
 use bridge_to_kusama_config::bp_kusama;
+use codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
 use cumulus_pallet_parachain_system::RelayNumberMonotonicallyIncreases;
 use cumulus_primitives_core::ParaId;
 use snowbridge_core::{AgentId, PricingParameters};
@@ -48,7 +49,7 @@ use sp_runtime::{
 	generic, impl_opaque_keys,
 	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, Get},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult,
+	ApplyExtrinsicResult, RuntimeDebug,
 };
 
 #[cfg(feature = "std")]
@@ -61,8 +62,8 @@ use frame_support::{
 	genesis_builder_helper::{build_state, get_preset},
 	parameter_types,
 	traits::{
-		tokens::imbalance::ResolveTo, ConstBool, ConstU32, ConstU64, ConstU8, EitherOfDiverse,
-		Everything, TransformOrigin,
+		tokens::imbalance::ResolveTo, ConstBool, ConstU32, ConstU64, ConstU8, EitherOf,
+		EitherOfDiverse, Everything, InstanceFilter, TransformOrigin,
 	},
 	weights::{ConstantMultiplier, Weight},
 	PalletId,
@@ -75,7 +76,8 @@ use pallet_xcm::{EnsureXcm, IsVoiceOfBody};
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
 use xcm_config::{
-	FellowshipLocation, GovernanceLocation, StakingPot, XcmOriginToTransactDispatchOrigin,
+	AssetHubLocation, FellowshipLocation, RelayChainLocation, StakingPot,
+	XcmOriginToTransactDispatchOrigin,
 };
 
 #[cfg(any(feature = "std", test))]
@@ -209,7 +211,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: Cow::Borrowed("bridge-hub-paseo"),
 	impl_name: Cow::Borrowed("bridge-hub-paseo"),
 	authoring_version: 1,
-	spec_version: 1_007_001,
+	spec_version: 1_009_001,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 4,
@@ -520,7 +522,10 @@ parameter_types! {
 /// We allow root, the StakingAdmin to execute privileged collator selection operations.
 pub type CollatorSelectionUpdateOrigin = EitherOfDiverse<
 	EnsureRoot<AccountId>,
-	EnsureXcm<IsVoiceOfBody<GovernanceLocation, StakingAdminBodyId>>,
+	EitherOf<
+		EnsureXcm<IsVoiceOfBody<RelayChainLocation, StakingAdminBodyId>>,
+		EnsureXcm<IsVoiceOfBody<AssetHubLocation, StakingAdminBodyId>>,
+	>,
 >;
 
 impl pallet_collator_selection::Config for Runtime {
@@ -554,6 +559,72 @@ impl pallet_multisig::Config for Runtime {
 	type DepositFactor = DepositFactor;
 	type MaxSignatories = ConstU32<100>;
 	type WeightInfo = weights::pallet_multisig::WeightInfo<Runtime>;
+	type BlockNumberProvider = System;
+}
+
+/// The type used to represent the kinds of proxying allowed.
+/// BridgeHub doesn't support pallet_proxy neither in Polkadot nor in KSM.
+/// We're just including it here to help us with sudo operations, so let's support
+/// just fully permissioned proxies for simplicity
+#[derive(
+	Copy,
+	Clone,
+	Eq,
+	PartialEq,
+	Ord,
+	PartialOrd,
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	RuntimeDebug,
+	MaxEncodedLen,
+	scale_info::TypeInfo,
+)]
+pub enum ProxyType {
+	/// Fully permissioned proxy. Can execute any call on behalf of _proxied_.
+	Any,
+}
+impl Default for ProxyType {
+	fn default() -> Self {
+		Self::Any
+	}
+}
+
+impl InstanceFilter<RuntimeCall> for ProxyType {
+	fn filter(&self, _c: &RuntimeCall) -> bool {
+		true
+	}
+
+	fn is_superset(&self, _o: &Self) -> bool {
+		true
+	}
+}
+
+parameter_types! {
+	// One storage item; key size 32, value size 8.
+	pub const ProxyDepositBase: Balance = system_para_deposit(1, 40);
+	// Additional storage item size of 33 bytes.
+	pub const ProxyDepositFactor: Balance = system_para_deposit(0, 33);
+	pub const MaxProxies: u16 = 32;
+	// One storage item; key size 32, value size 16.
+	pub const AnnouncementDepositBase: Balance = system_para_deposit(1, 48);
+	pub const AnnouncementDepositFactor: Balance = system_para_deposit(0, 66);
+	pub const MaxPending: u16 = 32;
+}
+
+impl pallet_proxy::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type Currency = Balances;
+	type ProxyType = ProxyType;
+	type ProxyDepositBase = ProxyDepositBase;
+	type ProxyDepositFactor = ProxyDepositFactor;
+	type MaxProxies = MaxProxies;
+	type WeightInfo = weights::pallet_proxy::WeightInfo<Runtime>;
+	type MaxPending = MaxPending;
+	type CallHasher = BlakeTwo256;
+	type AnnouncementDepositBase = AnnouncementDepositBase;
+	type AnnouncementDepositFactor = AnnouncementDepositFactor;
 	type BlockNumberProvider = System;
 }
 
@@ -600,6 +671,7 @@ construct_runtime!(
 		// Handy utilities.
 		Utility: pallet_utility = 40,
 		Multisig: pallet_multisig = 41,
+		Proxy: pallet_proxy = 42,
 
 		// Pallets that may be used by all bridges.
 		BridgeRelayers: pallet_bridge_relayers = 50,
@@ -624,9 +696,7 @@ construct_runtime!(
 		// Message Queue. Importantly, it is registered after Snowbridge pallets
 		// so that messages are processed after the `on_initialize` hooks of bridging pallets.
 		MessageQueue: pallet_message_queue = 175,
-
-		// Sudo.
-		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 255,
+		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 255
 	}
 );
 
@@ -646,6 +716,7 @@ mod benches {
 		[pallet_balances, Balances]
 		[pallet_message_queue, MessageQueue]
 		[pallet_multisig, Multisig]
+	[pallet_proxy, Proxy]
 		[pallet_session, SessionBench::<Runtime>]
 		[pallet_utility, Utility]
 		[pallet_timestamp, Timestamp]
@@ -699,7 +770,7 @@ mod benches {
 	}
 
 	impl pallet_xcm::benchmarking::Config for Runtime {
-		type DeliveryHelper = paseo_runtime_common::xcm_sender::ToParachainDeliveryHelper<
+		type DeliveryHelper = polkadot_runtime_common::xcm_sender::ToParachainDeliveryHelper<
 			xcm_config::XcmConfig,
 			ExistentialDepositAsset,
 			PriceForSiblingParachainDelivery,
@@ -743,7 +814,7 @@ mod benches {
 	impl pallet_xcm_benchmarks::Config for Runtime {
 		type XcmConfig = xcm_config::XcmConfig;
 		type AccountIdConverter = xcm_config::LocationToAccountId;
-		type DeliveryHelper = paseo_runtime_common::xcm_sender::ToParachainDeliveryHelper<
+		type DeliveryHelper = polkadot_runtime_common::xcm_sender::ToParachainDeliveryHelper<
 			xcm_config::XcmConfig,
 			ExistentialDepositAsset,
 			PriceForSiblingParachainDelivery,
@@ -902,7 +973,7 @@ mod benches {
 				bridge_common_config::BridgeRelayersInstance,
 			>,
 		> {
-			let bridge_common_config::BridgeReward::PaseoKusamaBridge(reward_kind) = reward_kind
+			let bridge_common_config::BridgeReward::PolkadotKusamaBridge(reward_kind) = reward_kind
 			else {
 				panic!(
 					"Unexpected reward_kind: {reward_kind:?} - not compatible with `bench_reward`!"
@@ -930,22 +1001,22 @@ mod benches {
 	use pallet_bridge_parachains::benchmarking::Config as BridgeParachainsConfig;
 
 	impl BridgeParachainsConfig<bridge_to_kusama_config::BridgeParachainKusamaInstance> for Runtime {
-		fn parachains() -> Vec<bp_paseo_core::parachains::ParaId> {
+		fn parachains() -> Vec<bp_polkadot_core::parachains::ParaId> {
 			use bp_runtime::Parachain;
-			vec![bp_paseo_core::parachains::ParaId(
+			vec![bp_polkadot_core::parachains::ParaId(
 				bp_bridge_hub_kusama::BridgeHubKusama::PARACHAIN_ID,
 			)]
 		}
 
 		fn prepare_parachain_heads_proof(
-			parachains: &[bp_paseo_core::parachains::ParaId],
+			parachains: &[bp_polkadot_core::parachains::ParaId],
 			parachain_head_size: u32,
 			proof_params: bp_runtime::UnverifiedStorageProofParams,
 		) -> (
 			bp_parachains::RelayBlockNumber,
 			bp_parachains::RelayBlockHash,
-			bp_paseo_core::parachains::ParaHeadsProof,
-			Vec<(bp_paseo_core::parachains::ParaId, bp_paseo_core::parachains::ParaHash)>,
+			bp_polkadot_core::parachains::ParaHeadsProof,
+			Vec<(bp_polkadot_core::parachains::ParaId, bp_polkadot_core::parachains::ParaHash)>,
 		) {
 			prepare_parachain_heads_proof::<
 				Runtime,
@@ -978,7 +1049,7 @@ mod benches {
 				bridge_common_config::BridgeRelayersInstance,
 			>::relayer_reward(
 				relayer,
-				bridge_common_config::BridgeReward::PaseoKusamaBridge(
+				bridge_common_config::BridgeReward::PolkadotKusamaBridge(
 					bp_relayers::RewardsAccountParams::new(
 						bench_lane_id,
 						bridged_chain_id,

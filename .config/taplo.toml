@@ -1,8 +1,6 @@
 # all options https://taplo.tamasfe.dev/configuration/formatter-options.html
 
-exclude = [
-	"target/**",
-]
+exclude = ["target/**"]
 
 # global rules
 [formatting]

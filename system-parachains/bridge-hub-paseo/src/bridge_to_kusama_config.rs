@@ -276,7 +276,7 @@ where
 	// insert bridge metadata
 	let lane_id = with;
 	let sibling_parachain = Location::new(1, [Parachain(sibling_para_id)]);
-	let universal_source = [GlobalConsensus(Paseo), Parachain(sibling_para_id)].into();
+	let universal_source = [GlobalConsensus(Polkadot), Parachain(sibling_para_id)].into();
 	let universal_destination = [GlobalConsensus(Kusama), Parachain(2075)].into();
 	let bridge_id = BridgeId::new(&universal_source, &universal_destination);
 

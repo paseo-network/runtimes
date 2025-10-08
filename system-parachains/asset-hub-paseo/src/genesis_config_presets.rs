@@ -80,6 +80,10 @@ fn asset_hub_paseo_genesis(
 		"polkadotXcm": {
 			"safeXcmVersion": Some(SAFE_XCM_VERSION),
 		},
+	"staking": {
+		"validatorCount": 100,
+		"devStakers": Some((2_000,25_000))
+	},
 		"foreignAssets": ForeignAssetsConfig {
 			assets: foreign_assets
 				.into_iter()
