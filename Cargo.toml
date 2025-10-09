@@ -63,7 +63,7 @@ bp-relayers = { version = "0.22.0", default-features = false }
 bp-runtime = { version = "0.22.0", default-features = false }
 bp-xcm-bridge-hub = { version = "0.8.0", default-features = false }
 bp-xcm-bridge-hub-router = { version = "0.19.0", default-features = false }
-bridge-hub-common = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu", default-features = false }
+bridge-hub-common = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507", default-features = false }
 bridge-hub-test-utils = { version = "0.25.0" }
 bridge-runtime-common = { version = "0.23.0", default-features = false }
 clap = { version = "4.5.0" }
@@ -194,25 +194,25 @@ separator = { version = "0.4.1" }
 serde = { version = "1.0.214" }
 serde_json = { version = "1.0.132", default-features = false }
 smallvec = { version = "1.13.1" }
-snowbridge-beacon-primitives = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu", default-features = false }
-snowbridge-core = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu", default-features = false }
-snowbridge-merkle-tree = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu", default-features = false }
-snowbridge-outbound-queue-runtime-api = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu", default-features = false }
-snowbridge-outbound-queue-primitives = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu", default-features = false }
-snowbridge-pallet-ethereum-client = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu", default-features = false }
-snowbridge-pallet-inbound-queue = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu", default-features = false }
-snowbridge-pallet-inbound-queue-v2 = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu", default-features = false }
-snowbridge-pallet-inbound-queue-fixtures = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-snowbridge-pallet-ethereum-client-fixtures = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-snowbridge-pallet-outbound-queue = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu", default-features = false }
-snowbridge-pallet-outbound-queue-v2 = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu", default-features = false }
-snowbridge-pallet-system = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu", default-features = false }
-snowbridge-pallet-system-v2 = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu", default-features = false }
-snowbridge-pallet-system-frontend = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu", default-features = false }
-snowbridge-inbound-queue-primitives = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu", default-features = false }
-snowbridge-runtime-common = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu", default-features = false }
-snowbridge-runtime-test-common = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-snowbridge-system-runtime-api = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu", default-features = false }
+snowbridge-beacon-primitives = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507", default-features = false }
+snowbridge-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507", default-features = false }
+snowbridge-merkle-tree = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507", default-features = false }
+snowbridge-outbound-queue-runtime-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507", default-features = false }
+snowbridge-outbound-queue-primitives = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507", default-features = false }
+snowbridge-pallet-ethereum-client = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507", default-features = false }
+snowbridge-pallet-inbound-queue = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507", default-features = false }
+snowbridge-pallet-inbound-queue-v2 = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507", default-features = false }
+snowbridge-pallet-inbound-queue-fixtures = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+snowbridge-pallet-ethereum-client-fixtures = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+snowbridge-pallet-outbound-queue = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507", default-features = false }
+snowbridge-pallet-outbound-queue-v2 = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507", default-features = false }
+snowbridge-pallet-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507", default-features = false }
+snowbridge-pallet-system-v2 = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507", default-features = false }
+snowbridge-pallet-system-frontend = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507", default-features = false }
+snowbridge-inbound-queue-primitives = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507", default-features = false }
+snowbridge-runtime-common = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507", default-features = false }
+snowbridge-runtime-test-common = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+snowbridge-system-runtime-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507", default-features = false }
 sp-api = { version = "38.0.0", default-features = false }
 sp-application-crypto = { version = "42.0.0", default-features = false }
 sp-arithmetic = { version = "28.0.0", default-features = false }
@@ -284,99 +284,99 @@ members = [
 ]
 
 [patch.crates-io]
-# Patch ALL polkadot-sdk crates to use versions from clara/fulu branch
+# Patch ALL polkadot-sdk crates to use versions from backport-9938-to-unstable2507 branch
 # This ensures all transitive dependencies use the same version
-sp-io = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-sp-core = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-sp-std = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-sp-runtime = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-sp-arithmetic = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-sp-api = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-sp-state-machine = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-sp-externalities = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-sp-storage = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-sp-trie = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-sp-application-crypto = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-sp-keyring = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-sp-consensus-aura = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-sp-block-builder = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-sp-inherents = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-sp-offchain = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-sp-session = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-sp-transaction-pool = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-sp-version = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-sp-weights = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-sp-genesis-builder = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-sp-debug-derive = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-sp-staking = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-frame-support = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-frame-system = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-frame-executive = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-frame-benchmarking = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-pallet-balances = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-pallet-timestamp = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-pallet-message-queue = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-pallet-aura = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-pallet-authorship = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-pallet-session = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-pallet-sudo = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-pallet-transaction-payment = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-pallet-utility = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-pallet-multisig = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-pallet-xcm = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-pallet-collator-selection = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-polkadot-primitives = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-polkadot-core-primitives = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-polkadot-parachain-primitives = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-polkadot-runtime-common = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-polkadot-runtime-parachains = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-cumulus-primitives-core = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-cumulus-primitives-utility = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-cumulus-primitives-aura = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-cumulus-pallet-parachain-system = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-cumulus-pallet-aura-ext = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-cumulus-pallet-xcm = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-cumulus-pallet-xcmp-queue = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-staging-xcm = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-staging-xcm-builder = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-staging-xcm-executor = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-binary-merkle-tree = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-parachains-common = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-staging-parachain-info = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-xcm-runtime-apis = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-bp-beefy = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-bp-bridge-hub-cumulus = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-bp-header-chain = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-bp-messages = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-bp-parachains = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-bp-polkadot-bulletin = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-bp-polkadot-core = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-bp-runtime = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-bp-relayers = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-bp-test-utils = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-bp-xcm-bridge-hub = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-bp-xcm-bridge-hub-router = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-pallet-bridge-grandpa = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-pallet-bridge-messages = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-pallet-bridge-parachains = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-pallet-bridge-relayers = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-pallet-xcm-bridge-hub = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-pallet-xcm-bridge-hub-router = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-bridge-runtime-common = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-pallet-assets = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-asset-test-utils = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-pallet-asset-conversion = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-pallet-asset-conversion-tx-payment = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-frame-try-runtime = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-frame-system-rpc-runtime-api = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-frame-metadata-hash-extension = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-pallet-xcm-benchmarks = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-sp-npos-elections = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-sp-tracing = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-parachains-runtimes-test-utils = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-cumulus-primitives-storage-weight-reclaim = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
-cumulus-primitives-proof-size-hostfunction = { git = "https://github.com/claravanstaden/polkadot-sdk", branch = "clara/fulu" }
+sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+sp-std = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+sp-arithmetic = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+sp-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+sp-state-machine = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+sp-externalities = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+sp-storage = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+sp-trie = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+sp-application-crypto = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+sp-keyring = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+sp-consensus-aura = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+sp-block-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+sp-inherents = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+sp-offchain = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+sp-session = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+sp-transaction-pool = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+sp-version = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+sp-weights = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+sp-genesis-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+sp-debug-derive = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+sp-staking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+frame-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+frame-executive = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+pallet-timestamp = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+pallet-message-queue = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+pallet-aura = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+pallet-authorship = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+pallet-session = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+pallet-sudo = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+pallet-transaction-payment = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+pallet-utility = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+pallet-multisig = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+pallet-xcm = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+pallet-collator-selection = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+polkadot-primitives = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+polkadot-core-primitives = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+polkadot-parachain-primitives = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+polkadot-runtime-common = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+polkadot-runtime-parachains = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+cumulus-primitives-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+cumulus-primitives-utility = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+cumulus-primitives-aura = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+cumulus-pallet-aura-ext = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+cumulus-pallet-xcm = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+cumulus-pallet-xcmp-queue = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+staging-xcm = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+staging-xcm-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+staging-xcm-executor = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+binary-merkle-tree = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+parachains-common = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+staging-parachain-info = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+xcm-runtime-apis = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+bp-beefy = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+bp-bridge-hub-cumulus = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+bp-header-chain = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+bp-messages = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+bp-parachains = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+bp-polkadot-bulletin = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+bp-polkadot-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+bp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+bp-relayers = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+bp-test-utils = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+bp-xcm-bridge-hub = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+bp-xcm-bridge-hub-router = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+pallet-bridge-grandpa = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+pallet-bridge-messages = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+pallet-bridge-parachains = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+pallet-bridge-relayers = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+pallet-xcm-bridge-hub = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+pallet-xcm-bridge-hub-router = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+bridge-runtime-common = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+pallet-assets = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+asset-test-utils = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+pallet-asset-conversion = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+pallet-asset-conversion-tx-payment = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+frame-try-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+frame-metadata-hash-extension = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+pallet-xcm-benchmarks = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+sp-npos-elections = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+sp-tracing = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+parachains-runtimes-test-utils = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+cumulus-primitives-storage-weight-reclaim = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
+cumulus-primitives-proof-size-hostfunction = { git = "https://github.com/paritytech/polkadot-sdk", branch = "backport-9938-to-unstable2507" }
 
 [profile.release]
 # Polkadot runtime requires unwinding.

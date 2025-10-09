@@ -943,7 +943,7 @@ dependencies = [
 [[package]]
 name = "asset-test-utils"
 version = "26.0.1"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-xcmp-queue 0.22.2",
@@ -1164,7 +1164,7 @@ checksum = "89e25b6adfb930f02d1981565a6e5d9c547ac15a96606256d3b59040e5cd4ca3"
 [[package]]
 name = "binary-merkle-tree"
 version = "16.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "hash-db",
  "log",
@@ -1397,7 +1397,7 @@ dependencies = [
 [[package]]
 name = "bp-bridge-hub-cumulus"
 version = "0.24.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "bp-messages",
  "bp-polkadot-core",
@@ -1441,7 +1441,7 @@ dependencies = [
  "frame-support",
  "kusama-runtime-constants",
  "paseo-runtime-constants",
- "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "snowbridge-core 0.15.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "sp-api",
  "sp-runtime",
  "sp-std",
@@ -1473,7 +1473,7 @@ dependencies = [
 [[package]]
 name = "bp-header-chain"
 version = "0.22.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "bp-runtime",
  "finality-grandpa",
@@ -1481,7 +1481,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
- "sp-consensus-grandpa 25.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-consensus-grandpa 25.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "sp-core",
  "sp-runtime",
  "sp-std",
@@ -1490,7 +1490,7 @@ dependencies = [
 [[package]]
 name = "bp-messages"
 version = "0.22.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "bp-header-chain",
  "bp-runtime",
@@ -1506,7 +1506,7 @@ dependencies = [
 [[package]]
 name = "bp-parachains"
 version = "0.22.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "bp-header-chain",
  "bp-polkadot-core",
@@ -1523,7 +1523,7 @@ dependencies = [
 [[package]]
 name = "bp-polkadot-core"
 version = "0.22.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "bp-messages",
  "bp-runtime",
@@ -1540,7 +1540,7 @@ dependencies = [
 [[package]]
 name = "bp-relayers"
 version = "0.22.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "bp-header-chain",
  "bp-messages",
@@ -1558,7 +1558,7 @@ dependencies = [
 [[package]]
 name = "bp-runtime"
 version = "0.22.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -1581,7 +1581,7 @@ dependencies = [
 [[package]]
 name = "bp-test-utils"
 version = "0.22.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "bp-header-chain",
  "bp-parachains",
@@ -1591,7 +1591,7 @@ dependencies = [
  "finality-grandpa",
  "parity-scale-codec",
  "sp-application-crypto",
- "sp-consensus-grandpa 25.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-consensus-grandpa 25.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "sp-core",
  "sp-runtime",
  "sp-std",
@@ -1601,7 +1601,7 @@ dependencies = [
 [[package]]
 name = "bp-xcm-bridge-hub"
 version = "0.8.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "bp-messages",
  "bp-runtime",
@@ -1618,7 +1618,7 @@ dependencies = [
 [[package]]
 name = "bp-xcm-bridge-hub-router"
 version = "0.19.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
@@ -1630,14 +1630,14 @@ dependencies = [
 [[package]]
 name = "bridge-hub-common"
 version = "0.15.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
  "pallet-message-queue",
  "parity-scale-codec",
  "scale-info",
- "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "snowbridge-core 0.15.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "sp-core",
  "sp-runtime",
  "sp-std",
@@ -1689,7 +1689,7 @@ dependencies = [
  "paseo-system-emulated-network",
  "scale-info",
  "snowbridge-beacon-primitives",
- "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "snowbridge-core 0.15.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "snowbridge-inbound-queue-primitives",
  "snowbridge-outbound-queue-primitives",
  "snowbridge-pallet-inbound-queue",
@@ -1780,7 +1780,7 @@ dependencies = [
  "serde",
  "serde_json",
  "snowbridge-beacon-primitives",
- "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "snowbridge-core 0.15.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "snowbridge-inbound-queue-primitives",
  "snowbridge-merkle-tree",
  "snowbridge-outbound-queue-primitives",
@@ -1867,7 +1867,7 @@ dependencies = [
 [[package]]
 name = "bridge-runtime-common"
 version = "0.23.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "bp-header-chain",
  "bp-messages",
@@ -2813,7 +2813,7 @@ dependencies = [
 [[package]]
 name = "cumulus-pallet-aura-ext"
 version = "0.22.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "cumulus-pallet-parachain-system",
  "frame-support",
@@ -2830,12 +2830,12 @@ dependencies = [
 [[package]]
 name = "cumulus-pallet-parachain-system"
 version = "0.22.1"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "bytes",
  "cumulus-pallet-parachain-system-proc-macro",
  "cumulus-primitives-core",
- "cumulus-primitives-parachain-inherent 0.20.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "cumulus-primitives-parachain-inherent 0.20.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "cumulus-primitives-proof-size-hostfunction",
  "environmental",
  "frame-benchmarking",
@@ -2849,7 +2849,7 @@ dependencies = [
  "polkadot-parachain-primitives",
  "polkadot-runtime-parachains",
  "scale-info",
- "sp-consensus-babe 0.44.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-consensus-babe 0.44.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "sp-core",
  "sp-externalities",
  "sp-inherents",
@@ -2867,7 +2867,7 @@ dependencies = [
 [[package]]
 name = "cumulus-pallet-parachain-system-proc-macro"
 version = "0.6.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "proc-macro-crate 3.3.0",
  "proc-macro2",
@@ -2892,7 +2892,7 @@ dependencies = [
 [[package]]
 name = "cumulus-pallet-xcm"
 version = "0.21.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
@@ -2934,7 +2934,7 @@ dependencies = [
 [[package]]
 name = "cumulus-pallet-xcmp-queue"
 version = "0.22.2"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "approx",
  "bounded-collections",
@@ -2960,7 +2960,7 @@ dependencies = [
 [[package]]
 name = "cumulus-primitives-aura"
 version = "0.19.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "sp-api",
  "sp-consensus-aura",
@@ -2969,7 +2969,7 @@ dependencies = [
 [[package]]
 name = "cumulus-primitives-core"
 version = "0.20.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "parity-scale-codec",
  "polkadot-core-primitives",
@@ -3001,7 +3001,7 @@ dependencies = [
 [[package]]
 name = "cumulus-primitives-parachain-inherent"
 version = "0.20.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "async-trait",
  "cumulus-primitives-core",
@@ -3015,17 +3015,17 @@ dependencies = [
 [[package]]
 name = "cumulus-primitives-proof-size-hostfunction"
 version = "0.14.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "sp-externalities",
- "sp-runtime-interface 31.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-runtime-interface 31.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "sp-trie",
 ]
 
 [[package]]
 name = "cumulus-primitives-utility"
 version = "0.22.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
@@ -3056,7 +3056,7 @@ dependencies = [
 [[package]]
 name = "cumulus-test-relay-sproof-builder"
 version = "0.21.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "cumulus-primitives-core",
  "parity-scale-codec",
@@ -3760,7 +3760,7 @@ dependencies = [
 [[package]]
 name = "ethereum-standards"
 version = "0.1.2"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "alloy-core",
 ]
@@ -3984,7 +3984,7 @@ checksum = "28dd6caf6059519a65843af8fe2a3ae298b14b80179855aeb4adc2c1934ee619"
 [[package]]
 name = "frame-benchmarking"
 version = "42.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "frame-support",
  "frame-support-procedural",
@@ -4000,7 +4000,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-runtime-interface 31.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-runtime-interface 31.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "sp-storage",
  "static_assertions",
 ]
@@ -4034,7 +4034,7 @@ dependencies = [
 [[package]]
 name = "frame-election-provider-solution-type"
 version = "16.1.1"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "proc-macro-crate 3.3.0",
  "proc-macro2",
@@ -4063,9 +4063,9 @@ dependencies = [
 [[package]]
 name = "frame-election-provider-support"
 version = "42.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
- "frame-election-provider-solution-type 16.1.1 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "frame-election-provider-solution-type 16.1.1 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -4080,7 +4080,7 @@ dependencies = [
 [[package]]
 name = "frame-executive"
 version = "42.0.1"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "aquamarine",
  "frame-support",
@@ -4121,7 +4121,7 @@ dependencies = [
 [[package]]
 name = "frame-metadata-hash-extension"
 version = "0.10.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "array-bytes 6.2.3",
  "const-hex",
@@ -4160,7 +4160,7 @@ dependencies = [
 [[package]]
 name = "frame-support"
 version = "42.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "aquamarine",
  "array-bytes 6.2.3",
@@ -4201,7 +4201,7 @@ dependencies = [
 [[package]]
 name = "frame-support-procedural"
 version = "35.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "Inflector",
  "cfg-expr",
@@ -4214,14 +4214,14 @@ dependencies = [
  "proc-macro-warning",
  "proc-macro2",
  "quote",
- "sp-crypto-hashing 0.1.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-crypto-hashing 0.1.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "syn 2.0.104",
 ]
 
 [[package]]
 name = "frame-support-procedural-tools"
 version = "13.0.1"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "frame-support-procedural-tools-derive",
  "proc-macro-crate 3.3.0",
@@ -4233,7 +4233,7 @@ dependencies = [
 [[package]]
 name = "frame-support-procedural-tools-derive"
 version = "12.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4243,7 +4243,7 @@ dependencies = [
 [[package]]
 name = "frame-system"
 version = "42.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "cfg-if",
  "docify",
@@ -4277,7 +4277,7 @@ dependencies = [
 [[package]]
 name = "frame-system-benchmarking"
 version = "42.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -4291,7 +4291,7 @@ dependencies = [
 [[package]]
 name = "frame-system-rpc-runtime-api"
 version = "38.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "docify",
  "parity-scale-codec",
@@ -4301,7 +4301,7 @@ dependencies = [
 [[package]]
 name = "frame-try-runtime"
 version = "0.48.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -7184,7 +7184,7 @@ dependencies = [
 [[package]]
 name = "pallet-asset-conversion"
 version = "24.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -7202,7 +7202,7 @@ dependencies = [
 [[package]]
 name = "pallet-asset-conversion-tx-payment"
 version = "24.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -7232,7 +7232,7 @@ dependencies = [
 [[package]]
 name = "pallet-asset-rate"
 version = "21.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -7263,7 +7263,7 @@ dependencies = [
 [[package]]
 name = "pallet-asset-tx-payment"
 version = "42.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -7279,15 +7279,15 @@ dependencies = [
 [[package]]
 name = "pallet-assets"
 version = "45.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
- "ethereum-standards 0.1.2 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "ethereum-standards 0.1.2 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "impl-trait-for-tuples",
  "log",
- "pallet-revive 0.9.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "pallet-revive 0.9.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "parity-scale-codec",
  "scale-info",
  "sp-core",
@@ -7297,7 +7297,7 @@ dependencies = [
 [[package]]
 name = "pallet-aura"
 version = "41.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -7329,7 +7329,7 @@ dependencies = [
 [[package]]
 name = "pallet-authority-discovery"
 version = "42.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -7337,14 +7337,14 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-application-crypto",
- "sp-authority-discovery 38.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-authority-discovery 38.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "sp-runtime",
 ]
 
 [[package]]
 name = "pallet-authorship"
 version = "42.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -7381,7 +7381,7 @@ dependencies = [
 [[package]]
 name = "pallet-babe"
 version = "42.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -7393,7 +7393,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-application-crypto",
- "sp-consensus-babe 0.44.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-consensus-babe 0.44.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -7426,7 +7426,7 @@ dependencies = [
 [[package]]
 name = "pallet-balances"
 version = "43.0.1"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "docify",
  "frame-benchmarking",
@@ -7506,7 +7506,7 @@ dependencies = [
 [[package]]
 name = "pallet-bridge-grandpa"
 version = "0.22.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "bp-header-chain",
  "bp-runtime",
@@ -7517,7 +7517,7 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "scale-info",
- "sp-consensus-grandpa 25.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-consensus-grandpa 25.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "sp-runtime",
  "sp-std",
 ]
@@ -7525,7 +7525,7 @@ dependencies = [
 [[package]]
 name = "pallet-bridge-messages"
 version = "0.22.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "bp-header-chain",
  "bp-messages",
@@ -7544,7 +7544,7 @@ dependencies = [
 [[package]]
 name = "pallet-bridge-parachains"
 version = "0.22.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "bp-header-chain",
  "bp-parachains",
@@ -7564,7 +7564,7 @@ dependencies = [
 [[package]]
 name = "pallet-bridge-relayers"
 version = "0.22.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "bp-header-chain",
  "bp-messages",
@@ -7606,7 +7606,7 @@ dependencies = [
 [[package]]
 name = "pallet-broker"
 version = "0.21.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "bitvec",
  "frame-benchmarking",
@@ -7643,7 +7643,7 @@ dependencies = [
 [[package]]
 name = "pallet-collator-selection"
 version = "23.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -7776,10 +7776,10 @@ dependencies = [
 [[package]]
 name = "pallet-election-provider-multi-phase"
 version = "41.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "frame-benchmarking",
- "frame-election-provider-support 42.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "frame-election-provider-support 42.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "frame-support",
  "frame-system",
  "log",
@@ -7830,11 +7830,11 @@ dependencies = [
 [[package]]
 name = "pallet-fast-unstake"
 version = "41.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "docify",
  "frame-benchmarking",
- "frame-election-provider-support 42.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "frame-election-provider-support 42.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "frame-support",
  "frame-system",
  "log",
@@ -7888,7 +7888,7 @@ dependencies = [
 [[package]]
 name = "pallet-identity"
 version = "42.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "enumflags2",
  "frame-benchmarking",
@@ -7940,7 +7940,7 @@ dependencies = [
 [[package]]
 name = "pallet-message-queue"
 version = "45.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "environmental",
  "frame-benchmarking",
@@ -7992,23 +7992,23 @@ dependencies = [
 [[package]]
 name = "pallet-mmr"
 version = "42.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "log",
  "parity-scale-codec",
- "polkadot-sdk-frame 0.11.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "polkadot-sdk-frame 0.11.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "scale-info",
- "sp-mmr-primitives 38.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-mmr-primitives 38.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
 ]
 
 [[package]]
 name = "pallet-multisig"
 version = "42.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "log",
  "parity-scale-codec",
- "polkadot-sdk-frame 0.11.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "polkadot-sdk-frame 0.11.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "scale-info",
 ]
 
@@ -8348,12 +8348,12 @@ dependencies = [
 [[package]]
 name = "pallet-revive"
 version = "0.9.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "alloy-core",
  "derive_more 0.99.20",
  "environmental",
- "ethereum-standards 0.1.2 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "ethereum-standards 0.1.2 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "ethereum-types",
  "frame-benchmarking",
  "frame-support",
@@ -8365,9 +8365,9 @@ dependencies = [
  "num-bigint",
  "num-integer",
  "num-traits",
- "pallet-revive-fixtures 0.6.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
- "pallet-revive-proc-macro 0.4.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
- "pallet-revive-uapi 0.7.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "pallet-revive-fixtures 0.6.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
+ "pallet-revive-proc-macro 0.4.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
+ "pallet-revive-uapi 0.7.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "pallet-transaction-payment",
  "parity-scale-codec",
  "paste",
@@ -8382,8 +8382,8 @@ dependencies = [
  "sp-api",
  "sp-arithmetic",
  "sp-consensus-aura",
- "sp-consensus-babe 0.44.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
- "sp-consensus-slots 0.44.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-consensus-babe 0.44.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
+ "sp-consensus-slots 0.44.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -8409,11 +8409,11 @@ dependencies = [
 [[package]]
 name = "pallet-revive-fixtures"
 version = "0.6.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "anyhow",
  "cargo_metadata",
- "pallet-revive-uapi 0.7.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "pallet-revive-uapi 0.7.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "polkavm-linker 0.27.0",
  "sp-core",
  "sp-io",
@@ -8434,7 +8434,7 @@ dependencies = [
 [[package]]
 name = "pallet-revive-proc-macro"
 version = "0.4.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -8457,10 +8457,10 @@ dependencies = [
 [[package]]
 name = "pallet-revive-uapi"
 version = "0.7.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "bitflags 1.3.2",
- "pallet-revive-proc-macro 0.4.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "pallet-revive-proc-macro 0.4.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "parity-scale-codec",
  "polkavm-derive 0.27.0",
  "scale-info",
@@ -8500,7 +8500,7 @@ dependencies = [
 [[package]]
 name = "pallet-session"
 version = "42.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -8580,10 +8580,10 @@ dependencies = [
 [[package]]
 name = "pallet-staking"
 version = "42.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "frame-benchmarking",
- "frame-election-provider-support 42.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "frame-election-provider-support 42.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "frame-support",
  "frame-system",
  "log",
@@ -8688,7 +8688,7 @@ dependencies = [
 [[package]]
 name = "pallet-staking-reward-fn"
 version = "24.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "log",
  "sp-arithmetic",
@@ -8725,7 +8725,7 @@ dependencies = [
 [[package]]
 name = "pallet-sudo"
 version = "42.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "docify",
  "frame-benchmarking",
@@ -8740,7 +8740,7 @@ dependencies = [
 [[package]]
 name = "pallet-timestamp"
 version = "41.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "docify",
  "frame-benchmarking",
@@ -8752,13 +8752,13 @@ dependencies = [
  "sp-inherents",
  "sp-runtime",
  "sp-storage",
- "sp-timestamp 38.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-timestamp 38.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
 ]
 
 [[package]]
 name = "pallet-transaction-payment"
 version = "42.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -8773,7 +8773,7 @@ dependencies = [
 [[package]]
 name = "pallet-transaction-payment-rpc-runtime-api"
 version = "42.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "pallet-transaction-payment",
  "parity-scale-codec",
@@ -8805,7 +8805,7 @@ dependencies = [
 [[package]]
 name = "pallet-treasury"
 version = "41.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "docify",
  "frame-benchmarking",
@@ -8839,7 +8839,7 @@ dependencies = [
 [[package]]
 name = "pallet-utility"
 version = "42.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -8869,7 +8869,7 @@ dependencies = [
 [[package]]
 name = "pallet-vesting"
 version = "42.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -8894,7 +8894,7 @@ dependencies = [
 [[package]]
 name = "pallet-xcm"
 version = "22.0.1"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "bounded-collections",
  "frame-benchmarking",
@@ -8902,7 +8902,7 @@ dependencies = [
  "frame-system",
  "hex-literal",
  "pallet-balances",
- "pallet-revive 0.9.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "pallet-revive 0.9.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",
@@ -8920,7 +8920,7 @@ dependencies = [
 [[package]]
 name = "pallet-xcm-benchmarks"
 version = "22.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -8937,7 +8937,7 @@ dependencies = [
 [[package]]
 name = "pallet-xcm-bridge-hub"
 version = "0.18.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "bp-messages",
  "bp-runtime",
@@ -8959,7 +8959,7 @@ dependencies = [
 [[package]]
 name = "pallet-xcm-bridge-hub-router"
 version = "0.20.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "bp-xcm-bridge-hub-router",
  "frame-benchmarking",
@@ -8979,20 +8979,20 @@ dependencies = [
 [[package]]
 name = "parachains-common"
 version = "24.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "cumulus-primitives-core",
  "cumulus-primitives-utility",
  "frame-support",
  "frame-system",
  "log",
- "pallet-asset-tx-payment 42.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "pallet-asset-tx-payment 42.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "pallet-assets",
  "pallet-authorship",
  "pallet-balances",
  "pallet-collator-selection",
  "pallet-message-queue",
- "pallet-treasury 41.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "pallet-treasury 41.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "pallet-xcm",
  "parity-scale-codec",
  "polkadot-primitives",
@@ -9010,13 +9010,13 @@ dependencies = [
 [[package]]
 name = "parachains-runtimes-test-utils"
 version = "25.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-xcmp-queue 0.22.2",
  "cumulus-primitives-core",
- "cumulus-primitives-parachain-inherent 0.20.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
- "cumulus-test-relay-sproof-builder 0.21.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "cumulus-primitives-parachain-inherent 0.20.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
+ "cumulus-test-relay-sproof-builder 0.21.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "frame-support",
  "frame-system",
  "pallet-balances",
@@ -9608,7 +9608,7 @@ dependencies = [
 [[package]]
 name = "polkadot-core-primitives"
 version = "19.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
@@ -9619,7 +9619,7 @@ dependencies = [
 [[package]]
 name = "polkadot-parachain-primitives"
 version = "18.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "bounded-collections",
  "derive_more 0.99.20",
@@ -9635,7 +9635,7 @@ dependencies = [
 [[package]]
 name = "polkadot-primitives"
 version = "20.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "bitvec",
  "bounded-collections",
@@ -9649,12 +9649,12 @@ dependencies = [
  "sp-api",
  "sp-application-crypto",
  "sp-arithmetic",
- "sp-authority-discovery 38.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
- "sp-consensus-slots 0.44.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-authority-discovery 38.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
+ "sp-consensus-slots 0.44.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "sp-core",
  "sp-inherents",
  "sp-io",
- "sp-keystore 0.44.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-keystore 0.44.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "sp-runtime",
  "sp-staking",
  "sp-std",
@@ -9664,31 +9664,31 @@ dependencies = [
 [[package]]
 name = "polkadot-runtime-common"
 version = "21.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "bitvec",
  "frame-benchmarking",
- "frame-election-provider-support 42.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "frame-election-provider-support 42.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "frame-support",
  "frame-system",
  "impl-trait-for-tuples",
  "libsecp256k1",
  "log",
- "pallet-asset-rate 21.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "pallet-asset-rate 21.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "pallet-authorship",
- "pallet-babe 42.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "pallet-babe 42.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "pallet-balances",
- "pallet-broker 0.21.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
- "pallet-election-provider-multi-phase 41.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
- "pallet-fast-unstake 41.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
- "pallet-identity 42.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "pallet-broker 0.21.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
+ "pallet-election-provider-multi-phase 41.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
+ "pallet-fast-unstake 41.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
+ "pallet-identity 42.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "pallet-session",
- "pallet-staking 42.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
- "pallet-staking-reward-fn 24.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "pallet-staking 42.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
+ "pallet-staking-reward-fn 24.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "pallet-timestamp",
  "pallet-transaction-payment",
- "pallet-treasury 41.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
- "pallet-vesting 42.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "pallet-treasury 41.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
+ "pallet-vesting 42.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "parity-scale-codec",
  "polkadot-primitives",
  "polkadot-runtime-parachains",
@@ -9733,7 +9733,7 @@ dependencies = [
 [[package]]
 name = "polkadot-runtime-metrics"
 version = "22.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "bs58",
  "frame-benchmarking",
@@ -9745,25 +9745,25 @@ dependencies = [
 [[package]]
 name = "polkadot-runtime-parachains"
 version = "21.0.1"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "bitflags 1.3.2",
  "bitvec",
  "frame-benchmarking",
- "frame-election-provider-support 42.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "frame-election-provider-support 42.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "frame-support",
  "frame-system",
  "impl-trait-for-tuples",
  "log",
- "pallet-authority-discovery 42.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "pallet-authority-discovery 42.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "pallet-authorship",
- "pallet-babe 42.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "pallet-babe 42.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "pallet-balances",
- "pallet-broker 0.21.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "pallet-broker 0.21.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "pallet-message-queue",
- "pallet-mmr 42.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "pallet-mmr 42.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "pallet-session",
- "pallet-staking 42.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "pallet-staking 42.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "pallet-timestamp",
  "parity-scale-codec",
  "polkadot-core-primitives",
@@ -9780,7 +9780,7 @@ dependencies = [
  "sp-core",
  "sp-inherents",
  "sp-io",
- "sp-keystore 0.44.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-keystore 0.44.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "sp-runtime",
  "sp-session",
  "sp-staking",
@@ -9830,14 +9830,14 @@ dependencies = [
 [[package]]
 name = "polkadot-sdk-frame"
 version = "0.11.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "docify",
  "frame-benchmarking",
  "frame-executive",
  "frame-support",
  "frame-system",
- "frame-system-benchmarking 42.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "frame-system-benchmarking 42.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
  "log",
@@ -9848,7 +9848,7 @@ dependencies = [
  "sp-arithmetic",
  "sp-block-builder",
  "sp-consensus-aura",
- "sp-consensus-grandpa 25.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-consensus-grandpa 25.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "sp-core",
  "sp-genesis-builder",
  "sp-inherents",
@@ -12171,7 +12171,7 @@ checksum = "826167069c09b99d56f31e9ae5c99049e932a98c9dc2dac47645b08dbbf76ba7"
 [[package]]
 name = "slot-range-helper"
 version = "19.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "enumn",
  "parity-scale-codec",
@@ -12215,7 +12215,7 @@ dependencies = [
 [[package]]
 name = "snowbridge-beacon-primitives"
 version = "0.15.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "byte-slice-cast",
  "frame-support",
@@ -12262,7 +12262,7 @@ dependencies = [
 [[package]]
 name = "snowbridge-core"
 version = "0.15.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "bp-relayers",
  "frame-support",
@@ -12286,7 +12286,7 @@ dependencies = [
 [[package]]
 name = "snowbridge-ethereum"
 version = "0.14.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "ethabi-decode",
  "ethbloom",
@@ -12306,7 +12306,7 @@ dependencies = [
 [[package]]
 name = "snowbridge-inbound-queue-primitives"
 version = "0.4.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "alloy-core",
  "frame-support",
@@ -12316,7 +12316,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "snowbridge-beacon-primitives",
- "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "snowbridge-core 0.15.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "snowbridge-verification-primitives",
  "sp-core",
  "sp-io",
@@ -12330,7 +12330,7 @@ dependencies = [
 [[package]]
 name = "snowbridge-merkle-tree"
 version = "0.4.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
@@ -12356,7 +12356,7 @@ dependencies = [
 [[package]]
 name = "snowbridge-outbound-queue-primitives"
 version = "0.4.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "alloy-core",
  "ethabi-decode",
@@ -12367,7 +12367,7 @@ dependencies = [
  "parity-scale-codec",
  "polkadot-parachain-primitives",
  "scale-info",
- "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "snowbridge-core 0.15.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "snowbridge-verification-primitives",
  "sp-arithmetic",
  "sp-core",
@@ -12382,11 +12382,11 @@ dependencies = [
 [[package]]
 name = "snowbridge-outbound-queue-runtime-api"
 version = "0.15.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
- "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "snowbridge-core 0.15.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "snowbridge-merkle-tree",
  "snowbridge-outbound-queue-primitives",
  "sp-api",
@@ -12396,7 +12396,7 @@ dependencies = [
 [[package]]
 name = "snowbridge-pallet-ethereum-client"
 version = "0.15.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -12408,7 +12408,7 @@ dependencies = [
  "scale-info",
  "serde",
  "snowbridge-beacon-primitives",
- "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "snowbridge-core 0.15.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "snowbridge-ethereum",
  "snowbridge-pallet-ethereum-client-fixtures",
  "snowbridge-verification-primitives",
@@ -12422,7 +12422,7 @@ dependencies = [
 [[package]]
 name = "snowbridge-pallet-ethereum-client-fixtures"
 version = "0.23.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "hex-literal",
  "snowbridge-beacon-primitives",
@@ -12434,7 +12434,7 @@ dependencies = [
 [[package]]
 name = "snowbridge-pallet-inbound-queue"
 version = "0.15.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "alloy-core",
  "frame-benchmarking",
@@ -12446,7 +12446,7 @@ dependencies = [
  "scale-info",
  "serde",
  "snowbridge-beacon-primitives",
- "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "snowbridge-core 0.15.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "snowbridge-inbound-queue-primitives",
  "snowbridge-pallet-inbound-queue-fixtures",
  "sp-core",
@@ -12460,11 +12460,11 @@ dependencies = [
 [[package]]
 name = "snowbridge-pallet-inbound-queue-fixtures"
 version = "0.23.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "hex-literal",
  "snowbridge-beacon-primitives",
- "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "snowbridge-core 0.15.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "snowbridge-inbound-queue-primitives",
  "sp-core",
  "sp-std",
@@ -12473,7 +12473,7 @@ dependencies = [
 [[package]]
 name = "snowbridge-pallet-inbound-queue-v2"
 version = "0.4.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "alloy-core",
  "bp-relayers",
@@ -12486,7 +12486,7 @@ dependencies = [
  "scale-info",
  "serde",
  "snowbridge-beacon-primitives",
- "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "snowbridge-core 0.15.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "snowbridge-inbound-queue-primitives",
  "snowbridge-pallet-inbound-queue-v2-fixtures",
  "sp-core",
@@ -12502,11 +12502,11 @@ dependencies = [
 [[package]]
 name = "snowbridge-pallet-inbound-queue-v2-fixtures"
 version = "0.4.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "hex-literal",
  "snowbridge-beacon-primitives",
- "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "snowbridge-core 0.15.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "snowbridge-inbound-queue-primitives",
  "sp-core",
  "sp-std",
@@ -12515,7 +12515,7 @@ dependencies = [
 [[package]]
 name = "snowbridge-pallet-outbound-queue"
 version = "0.15.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "bridge-hub-common",
  "ethabi-decode",
@@ -12525,7 +12525,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
- "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "snowbridge-core 0.15.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "snowbridge-merkle-tree",
  "snowbridge-outbound-queue-primitives",
  "sp-arithmetic",
@@ -12538,7 +12538,7 @@ dependencies = [
 [[package]]
 name = "snowbridge-pallet-outbound-queue-v2"
 version = "0.4.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "alloy-core",
  "bp-relayers",
@@ -12552,7 +12552,7 @@ dependencies = [
  "scale-info",
  "serde",
  "snowbridge-beacon-primitives",
- "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "snowbridge-core 0.15.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "snowbridge-merkle-tree",
  "snowbridge-outbound-queue-primitives",
  "snowbridge-verification-primitives",
@@ -12569,7 +12569,7 @@ dependencies = [
 [[package]]
 name = "snowbridge-pallet-system"
 version = "0.15.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -12577,7 +12577,7 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "scale-info",
- "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "snowbridge-core 0.15.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "snowbridge-outbound-queue-primitives",
  "sp-core",
  "sp-io",
@@ -12590,7 +12590,7 @@ dependencies = [
 [[package]]
 name = "snowbridge-pallet-system-frontend"
 version = "0.4.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -12599,7 +12599,7 @@ dependencies = [
  "pallet-asset-conversion",
  "parity-scale-codec",
  "scale-info",
- "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "snowbridge-core 0.15.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -12612,7 +12612,7 @@ dependencies = [
 [[package]]
 name = "snowbridge-pallet-system-v2"
 version = "0.4.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -12620,7 +12620,7 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "scale-info",
- "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "snowbridge-core 0.15.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "snowbridge-outbound-queue-primitives",
  "snowbridge-pallet-system",
  "sp-core",
@@ -12635,14 +12635,14 @@ dependencies = [
 [[package]]
 name = "snowbridge-runtime-common"
 version = "0.16.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "frame-support",
  "frame-system",
  "log",
  "pallet-xcm",
  "parity-scale-codec",
- "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "snowbridge-core 0.15.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "snowbridge-outbound-queue-primitives",
  "sp-arithmetic",
  "sp-std",
@@ -12654,7 +12654,7 @@ dependencies = [
 [[package]]
 name = "snowbridge-runtime-test-common"
 version = "0.18.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "cumulus-pallet-parachain-system",
  "frame-support",
@@ -12668,7 +12668,7 @@ dependencies = [
  "pallet-xcm",
  "parachains-runtimes-test-utils",
  "parity-scale-codec",
- "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "snowbridge-core 0.15.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "snowbridge-pallet-ethereum-client",
  "snowbridge-pallet-ethereum-client-fixtures",
  "snowbridge-pallet-outbound-queue",
@@ -12685,10 +12685,10 @@ dependencies = [
 [[package]]
 name = "snowbridge-system-runtime-api"
 version = "0.15.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "parity-scale-codec",
- "snowbridge-core 0.15.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "snowbridge-core 0.15.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "sp-api",
  "sp-std",
  "staging-xcm",
@@ -12697,7 +12697,7 @@ dependencies = [
 [[package]]
 name = "snowbridge-verification-primitives"
 version = "0.4.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -12735,7 +12735,7 @@ dependencies = [
 [[package]]
 name = "sp-api"
 version = "38.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "docify",
  "hash-db",
@@ -12747,7 +12747,7 @@ dependencies = [
  "sp-externalities",
  "sp-metadata-ir",
  "sp-runtime",
- "sp-runtime-interface 31.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-runtime-interface 31.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "sp-state-machine",
  "sp-trie",
  "sp-version",
@@ -12757,7 +12757,7 @@ dependencies = [
 [[package]]
 name = "sp-api-proc-macro"
 version = "24.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "Inflector",
  "blake2 0.10.6",
@@ -12771,7 +12771,7 @@ dependencies = [
 [[package]]
 name = "sp-application-crypto"
 version = "42.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
@@ -12783,7 +12783,7 @@ dependencies = [
 [[package]]
 name = "sp-arithmetic"
 version = "28.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "docify",
  "integer-sqrt",
@@ -12810,7 +12810,7 @@ dependencies = [
 [[package]]
 name = "sp-authority-discovery"
 version = "38.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
@@ -12822,7 +12822,7 @@ dependencies = [
 [[package]]
 name = "sp-block-builder"
 version = "38.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "sp-api",
  "sp-inherents",
@@ -12867,17 +12867,17 @@ dependencies = [
 [[package]]
 name = "sp-consensus-aura"
 version = "0.44.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "async-trait",
  "parity-scale-codec",
  "scale-info",
  "sp-api",
  "sp-application-crypto",
- "sp-consensus-slots 0.44.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-consensus-slots 0.44.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "sp-inherents",
  "sp-runtime",
- "sp-timestamp 38.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-timestamp 38.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
 ]
 
 [[package]]
@@ -12902,7 +12902,7 @@ dependencies = [
 [[package]]
 name = "sp-consensus-babe"
 version = "0.44.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "async-trait",
  "parity-scale-codec",
@@ -12910,11 +12910,11 @@ dependencies = [
  "serde",
  "sp-api",
  "sp-application-crypto",
- "sp-consensus-slots 0.44.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-consensus-slots 0.44.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "sp-core",
  "sp-inherents",
  "sp-runtime",
- "sp-timestamp 38.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-timestamp 38.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
 ]
 
 [[package]]
@@ -12959,7 +12959,7 @@ dependencies = [
 [[package]]
 name = "sp-consensus-grandpa"
 version = "25.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "finality-grandpa",
  "log",
@@ -12969,7 +12969,7 @@ dependencies = [
  "sp-api",
  "sp-application-crypto",
  "sp-core",
- "sp-keystore 0.44.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-keystore 0.44.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "sp-runtime",
 ]
 
@@ -12988,18 +12988,18 @@ dependencies = [
 [[package]]
 name = "sp-consensus-slots"
 version = "0.44.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
- "sp-timestamp 38.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-timestamp 38.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
 ]
 
 [[package]]
 name = "sp-core"
 version = "38.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "ark-vrf",
  "array-bytes 6.2.3",
@@ -13030,10 +13030,10 @@ dependencies = [
  "secrecy 0.8.0",
  "serde",
  "sha2 0.10.9",
- "sp-crypto-hashing 0.1.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-crypto-hashing 0.1.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "sp-debug-derive",
  "sp-externalities",
- "sp-runtime-interface 31.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-runtime-interface 31.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "sp-std",
  "sp-storage",
  "ss58-registry",
@@ -13061,7 +13061,7 @@ dependencies = [
 [[package]]
 name = "sp-crypto-hashing"
 version = "0.1.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "blake2b_simd",
  "byteorder",
@@ -13074,10 +13074,10 @@ dependencies = [
 [[package]]
 name = "sp-crypto-hashing-proc-macro"
 version = "0.1.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "quote",
- "sp-crypto-hashing 0.1.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-crypto-hashing 0.1.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "syn 2.0.104",
 ]
 
@@ -13094,7 +13094,7 @@ dependencies = [
 [[package]]
 name = "sp-debug-derive"
 version = "14.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -13104,7 +13104,7 @@ dependencies = [
 [[package]]
 name = "sp-externalities"
 version = "0.30.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "environmental",
  "parity-scale-codec",
@@ -13114,7 +13114,7 @@ dependencies = [
 [[package]]
 name = "sp-genesis-builder"
 version = "0.19.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
@@ -13126,7 +13126,7 @@ dependencies = [
 [[package]]
 name = "sp-inherents"
 version = "38.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "async-trait",
  "impl-trait-for-tuples",
@@ -13139,7 +13139,7 @@ dependencies = [
 [[package]]
 name = "sp-io"
 version = "42.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "bytes",
  "docify",
@@ -13151,10 +13151,10 @@ dependencies = [
  "rustversion",
  "secp256k1 0.28.2",
  "sp-core",
- "sp-crypto-hashing 0.1.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-crypto-hashing 0.1.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "sp-externalities",
- "sp-keystore 0.44.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
- "sp-runtime-interface 31.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-keystore 0.44.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
+ "sp-runtime-interface 31.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "sp-state-machine",
  "sp-tracing",
  "sp-trie",
@@ -13165,7 +13165,7 @@ dependencies = [
 [[package]]
 name = "sp-keyring"
 version = "43.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "sp-core",
  "sp-runtime",
@@ -13187,7 +13187,7 @@ dependencies = [
 [[package]]
 name = "sp-keystore"
 version = "0.44.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "parity-scale-codec",
  "parking_lot 0.12.4",
@@ -13208,7 +13208,7 @@ dependencies = [
 [[package]]
 name = "sp-metadata-ir"
 version = "0.12.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "frame-metadata 23.0.0",
  "parity-scale-codec",
@@ -13248,7 +13248,7 @@ dependencies = [
 [[package]]
 name = "sp-mmr-primitives"
 version = "38.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "log",
  "parity-scale-codec",
@@ -13265,7 +13265,7 @@ dependencies = [
 [[package]]
 name = "sp-npos-elections"
 version = "38.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
@@ -13278,7 +13278,7 @@ dependencies = [
 [[package]]
 name = "sp-offchain"
 version = "38.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "sp-api",
  "sp-core",
@@ -13298,7 +13298,7 @@ dependencies = [
 [[package]]
 name = "sp-panic-handler"
 version = "13.0.2"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "backtrace",
  "regex",
@@ -13318,7 +13318,7 @@ dependencies = [
 [[package]]
 name = "sp-runtime"
 version = "43.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "binary-merkle-tree",
  "docify",
@@ -13367,7 +13367,7 @@ dependencies = [
 [[package]]
 name = "sp-runtime-interface"
 version = "31.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "bytes",
  "impl-trait-for-tuples",
@@ -13375,11 +13375,11 @@ dependencies = [
  "polkavm-derive 0.26.0",
  "primitive-types 0.13.1",
  "sp-externalities",
- "sp-runtime-interface-proc-macro 20.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-runtime-interface-proc-macro 20.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "sp-std",
  "sp-storage",
  "sp-tracing",
- "sp-wasm-interface 23.0.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-wasm-interface 23.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "static_assertions",
 ]
 
@@ -13400,7 +13400,7 @@ dependencies = [
 [[package]]
 name = "sp-runtime-interface-proc-macro"
 version = "20.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "Inflector",
  "expander",
@@ -13413,13 +13413,13 @@ dependencies = [
 [[package]]
 name = "sp-session"
 version = "40.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-api",
  "sp-core",
- "sp-keystore 0.44.0 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-keystore 0.44.0 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "sp-runtime",
  "sp-staking",
 ]
@@ -13427,7 +13427,7 @@ dependencies = [
 [[package]]
 name = "sp-staking"
 version = "40.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "impl-trait-for-tuples",
  "parity-scale-codec",
@@ -13440,7 +13440,7 @@ dependencies = [
 [[package]]
 name = "sp-state-machine"
 version = "0.47.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "hash-db",
  "log",
@@ -13450,7 +13450,7 @@ dependencies = [
  "smallvec",
  "sp-core",
  "sp-externalities",
- "sp-panic-handler 13.0.2 (git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu)",
+ "sp-panic-handler 13.0.2 (git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507)",
  "sp-trie",
  "thiserror 1.0.69",
  "tracing",
@@ -13460,12 +13460,12 @@ dependencies = [
 [[package]]
 name = "sp-std"
 version = "14.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 
 [[package]]
 name = "sp-storage"
 version = "22.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "impl-serde",
  "parity-scale-codec",
@@ -13490,7 +13490,7 @@ dependencies = [
 [[package]]
 name = "sp-timestamp"
 version = "38.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "async-trait",
  "parity-scale-codec",
@@ -13502,7 +13502,7 @@ dependencies = [
 [[package]]
 name = "sp-tracing"
 version = "18.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "parity-scale-codec",
  "regex",
@@ -13514,7 +13514,7 @@ dependencies = [
 [[package]]
 name = "sp-transaction-pool"
 version = "38.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "sp-api",
  "sp-runtime",
@@ -13523,7 +13523,7 @@ dependencies = [
 [[package]]
 name = "sp-trie"
 version = "41.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "ahash",
  "foldhash",
@@ -13548,7 +13548,7 @@ dependencies = [
 [[package]]
 name = "sp-version"
 version = "41.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "impl-serde",
  "parity-scale-codec",
@@ -13565,7 +13565,7 @@ dependencies = [
 [[package]]
 name = "sp-version-proc-macro"
 version = "15.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "parity-scale-codec",
  "proc-macro-warning",
@@ -13590,7 +13590,7 @@ dependencies = [
 [[package]]
 name = "sp-wasm-interface"
 version = "23.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "anyhow",
  "impl-trait-for-tuples",
@@ -13601,7 +13601,7 @@ dependencies = [
 [[package]]
 name = "sp-weights"
 version = "33.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "bounded-collections",
  "parity-scale-codec",
@@ -13692,7 +13692,7 @@ checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 [[package]]
 name = "staging-parachain-info"
 version = "0.22.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
@@ -13705,7 +13705,7 @@ dependencies = [
 [[package]]
 name = "staging-xcm"
 version = "18.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "array-bytes 6.2.3",
  "bounded-collections",
@@ -13726,7 +13726,7 @@ dependencies = [
 [[package]]
 name = "staging-xcm-builder"
 version = "22.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "environmental",
  "frame-support",
@@ -13750,7 +13750,7 @@ dependencies = [
 [[package]]
 name = "staging-xcm-executor"
 version = "21.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "environmental",
  "frame-benchmarking",
@@ -13826,7 +13826,7 @@ dependencies = [
 [[package]]
 name = "substrate-bip39"
 version = "0.6.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "hmac 0.12.1",
  "pbkdf2",
@@ -13851,7 +13851,7 @@ dependencies = [
 [[package]]
 name = "substrate-prometheus-endpoint"
 version = "0.17.4"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "http-body-util",
  "hyper 1.6.0",
@@ -15880,7 +15880,7 @@ dependencies = [
 [[package]]
 name = "xcm-procedural"
 version = "11.0.2"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "Inflector",
  "proc-macro2",
@@ -15891,7 +15891,7 @@ dependencies = [
 [[package]]
 name = "xcm-runtime-apis"
 version = "0.9.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -16148,14 +16148,14 @@ dependencies = [
 [[patch.unused]]
 name = "bp-beefy"
 version = "0.1.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 
 [[patch.unused]]
 name = "bp-polkadot-bulletin"
 version = "0.19.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
 
 [[patch.unused]]
 name = "cumulus-primitives-storage-weight-reclaim"
 version = "13.0.0"
-source = "git+https://github.com/claravanstaden/polkadot-sdk?branch=clara%2Ffulu#1196aadebd55a263bb9dfab9bf28d825eddff9bd"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=backport-9938-to-unstable2507#2aa0944b8ae85f133f94d9b00375e3cac93112fb"
