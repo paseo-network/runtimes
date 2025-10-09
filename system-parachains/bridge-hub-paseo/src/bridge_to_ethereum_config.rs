@@ -243,7 +243,7 @@ parameter_types! {
 		},
 		fulu: Fork {
 			version: hex!("06000000"),
-			epoch: 0,
+			epoch: 5000000,
 		}
 	};
 }
