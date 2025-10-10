@@ -178,7 +178,7 @@ jobs:
         id: srtool_build
         uses: paritytech/srtool-actions@v0.9.4
         env:
-          BUILD_OPTS: "--locked --features on-chain-release-build"
+          BUILD_OPTS: "--features on-chain-release-build"
         with:
           chain: ${{ matrix.name }}
           package: "${{ matrix.name }}-runtime"
