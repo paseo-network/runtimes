@@ -42,21 +42,6 @@ on:
         default: false
 
 jobs:
-  generate-chain-specs:
-    uses: ./.github/workflows/generate-chain-specs.yaml
-    permissions:
-      contents: write
-      packages: write
-    with:
-      tag_version: ${{ github.event.inputs.tag_version }}
-      tag_suffix: ${{ github.event.inputs.tag_suffix }}
-      build_paseo: ${{ fromJSON(github.event.inputs.build_paseo) }}
-      build_asset_hub_paseo: ${{ fromJSON(github.event.inputs.build_asset_hub_paseo) }}
-      build_bridge_hub_paseo: ${{ fromJSON(github.event.inputs.build_bridge_hub_paseo) }}
-      build_collectives_paseo: ${{ fromJSON(github.event.inputs.build_collectives_paseo) }}
-      build_people_paseo: ${{ fromJSON(github.event.inputs.build_people_paseo) }}
-      build_coretime_paseo: ${{ fromJSON(github.event.inputs.build_coretime_paseo) }}
-
   create-tag:
     needs: generate-chain-specs
     runs-on: ubuntu-latest
