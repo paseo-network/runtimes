@@ -4,67 +4,51 @@ on:
   workflow_dispatch:
     inputs:
       tag_version:
-        description: 'Tag version for the release'
+        description: "Tag version for the release"
         required: true
         type: string
       tag_suffix:
-        description: 'Tag suffix to use (none for all packages)'
+        description: "Tag suffix to use (none for all packages)"
         required: true
         type: choice
         options:
           - none
           - relay
           - parachains
-        default: 'none'
+        default: "none"
       build_paseo:
-        description: 'Build paseo relay runtime'
+        description: "Build paseo relay runtime"
         type: boolean
         default: false
       build_asset_hub_paseo:
-        description: 'Build asset-hub-paseo runtime'
+        description: "Build asset-hub-paseo runtime"
         type: boolean
         default: false
       build_bridge_hub_paseo:
-        description: 'Build bridge-hub-paseo runtime'
+        description: "Build bridge-hub-paseo runtime"
         type: boolean
         default: false
       build_collectives_paseo:
-        description: 'Build collectives-paseo runtime'
+        description: "Build collectives-paseo runtime"
         type: boolean
         default: false
       build_people_paseo:
-        description: 'Build people-paseo runtime'
+        description: "Build people-paseo runtime"
         type: boolean
         default: false
       build_coretime_paseo:
-        description: 'Build coretime-paseo runtime'
+        description: "Build coretime-paseo runtime"
         type: boolean
         default: false
 
 jobs:
-  generate-chain-specs:
-    uses: ./.github/workflows/generate-chain-specs.yaml
-    permissions:
-      contents: write
-      packages: write
-    with:
-      tag_version: ${{ github.event.inputs.tag_version }}
-      tag_suffix: ${{ github.event.inputs.tag_suffix }}
-      build_paseo: ${{ fromJSON(github.event.inputs.build_paseo) }}
-      build_asset_hub_paseo: ${{ fromJSON(github.event.inputs.build_asset_hub_paseo) }}
-      build_bridge_hub_paseo: ${{ fromJSON(github.event.inputs.build_bridge_hub_paseo) }}
-      build_collectives_paseo: ${{ fromJSON(github.event.inputs.build_collectives_paseo) }}
-      build_people_paseo: ${{ fromJSON(github.event.inputs.build_people_paseo) }}
-      build_coretime_paseo: ${{ fromJSON(github.event.inputs.build_coretime_paseo) }}
-
   create-tag:
-    needs: generate-chain-specs
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history for all branches and tags
+          fetch-depth: 0 # Fetch all history for all branches and tags
 
       - name: Setup Git
         run: |
@@ -84,7 +68,7 @@ jobs:
           fi
           git tag $TAG
           git push origin $TAG
-        
+
       - name: Set outputs
         id: set_outputs
         run: |
@@ -170,8 +154,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.create-tag.outputs.release_tag }}
-          fetch-depth: 0  # Fetch all history and tags
-          fetch-tags: true  # Explicitly fetch all tags
+          fetch-depth: 0 # Fetch all history and tags
+          fetch-tags: true # Explicitly fetch all tags
 
       - name: Cache runtime target dir
         if: steps.check_package.outputs.should_run == 'true'
@@ -251,9 +235,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.create-tag.outputs.release_tag }}
-          fetch-depth: 0  # Fetch all history and tags
-          fetch-tags: true  # Explicitly fetch all tags
-      
+          fetch-depth: 0 # Fetch all history and tags
+          fetch-tags: true # Explicitly fetch all tags
+
       - name: Ensure all tags are fetched
         run: |
           git fetch --tags --force
@@ -292,7 +276,7 @@ jobs:
             echo "  - Coretime Paseo" >> release_notes.md
           fi
           echo "" >> release_notes.md
-          
+
           # Get the latest release tag of the same kind
           if [ "${{ github.event.inputs.tag_suffix }}" == "none" ]; then
             # For "none" tag suffix, look for tags without suffixes or with v prefix
@@ -302,7 +286,7 @@ jobs:
             git tag
             echo "2. Command output test:"
             git tag --sort=-v:refname | grep -v "${{ needs.create-tag.outputs.release_tag }}" | grep -E "^v?[0-9]+\.[0-9]+\.[0-9]+" | head -n 1
-            
+
             # Get previous tag excluding current tag, filtering by version-like pattern
             LATEST_RELEASE_TAG=$(git tag --sort=-v:refname | grep -v "${{ needs.create-tag.outputs.release_tag }}" | grep -E "^v?[0-9]+\.[0-9]+\.[0-9]+" | head -n 1)
           else
@@ -312,10 +296,10 @@ jobs:
             git tag
             echo "2. Command output test:"
             git tag --sort=-v:refname | grep -v "${{ needs.create-tag.outputs.release_tag }}" | grep -- "-${{ github.event.inputs.tag_suffix }}$" | head -n 1
-            
+
             LATEST_RELEASE_TAG=$(git tag --sort=-v:refname | grep -v "${{ needs.create-tag.outputs.release_tag }}" | grep -- "-${{ github.event.inputs.tag_suffix }}\$" | head -n 1)
           fi
-          
+
           echo "Debug: Latest release tag found: $LATEST_RELEASE_TAG"
           # Add list of changes since the last release
           if [ -n "$LATEST_RELEASE_TAG" ]; then
@@ -325,7 +309,7 @@ jobs:
             echo "" >> release_notes.md
             # First try to get commits that include issue numbers
             COMMITS_WITH_ISSUES=$(git log --pretty=format:"* %h %s (%an)" --grep="#[0-9]" $LATEST_RELEASE_TAG..${{ needs.create-tag.outputs.release_tag }})
-            
+
             # If we didn't find any, just get all non-merge commits
             if [ -z "$COMMITS_WITH_ISSUES" ]; then
               # Not commits with issues found, get all merge commits
@@ -342,10 +326,10 @@ jobs:
             echo "No previous release of the same kind was found to compare changes." >> release_notes.md
             echo "" >> release_notes.md
           fi
-          
+
           echo "## Runtime Details" >> release_notes.md
           echo "" >> release_notes.md
-          
+
           # Look for all release note files
           if ls artifacts/release-notes-*/runtime_notes_*.md 1> /dev/null 2>&1; then
             for notes_file in artifacts/release-notes-*/runtime_notes_*.md; do
@@ -355,19 +339,19 @@ jobs:
           else
             echo "No runtime notes were found. This could indicate that no runtimes were built for the selected tag suffix." >> release_notes.md
           fi
-          
+
           cat release_notes.md
 
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.PASEO_CI_PAT }}
-        run: |         
+        run: |
           # Prepare files for upload
           UPLOAD_FILES=""
           for file in artifacts/*-runtime-*/*_runtime.compressed.wasm artifacts/*-runtime-*/*-srtool-digest.json; do
             UPLOAD_FILES="$UPLOAD_FILES $file"
           done
-          
+
           # Create the release with the notes
           gh release create ${{ needs.create-tag.outputs.release_tag }} \
             --title "Release ${{ needs.create-tag.outputs.release_tag }}" \
