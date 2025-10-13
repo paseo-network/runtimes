@@ -311,6 +311,7 @@ sp-weights = { git = "https://github.com/paritytech/polkadot-sdk", branch = "uns
 sp-genesis-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "unstable2507" }
 sp-debug-derive = { git = "https://github.com/paritytech/polkadot-sdk", branch = "unstable2507" }
 sp-staking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "unstable2507" }
+substrate-wasm-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "unstable2507" }
 frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "unstable2507" }
 frame-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "unstable2507" }
 frame-executive = { git = "https://github.com/paritytech/polkadot-sdk", branch = "unstable2507" }
