@@ -11118,18 +11118,6 @@ dependencies = [
 [[package]]
 name = "sc-allocator"
 version = "33.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7329ce3b230fd59149df2743291a2e1f58ea769eb87e2678ea11e00d118b7cc0"
-dependencies = [
- "log",
- "sp-core",
- "sp-wasm-interface 23.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "thiserror 1.0.69",
-]
-
-[[package]]
-name = "sc-allocator"
-version = "33.0.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=unstable2507#c07886b28ab088cc65686c075cfc3ea79d5f6b38"
 dependencies = [
  "log",
@@ -11164,7 +11152,7 @@ dependencies = [
  "parity-scale-codec",
  "sc-chain-spec-derive",
  "sc-client-api",
- "sc-executor 0.44.0 (git+https://github.com/paritytech/polkadot-sdk?branch=unstable2507)",
+ "sc-executor",
  "sc-network",
  "sc-telemetry",
  "serde",
@@ -11200,7 +11188,7 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "parking_lot 0.12.5",
- "sc-executor 0.44.0 (git+https://github.com/paritytech/polkadot-sdk?branch=unstable2507)",
+ "sc-executor",
  "sc-transaction-pool-api",
  "sc-utils",
  "sp-api",
@@ -11286,43 +11274,19 @@ dependencies = [
 [[package]]
 name = "sc-executor"
 version = "0.44.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9208cad4fa8142858cd02237205a9792d2819f7c0563d2b28d7bbf2d12dd430a"
-dependencies = [
- "parity-scale-codec",
- "parking_lot 0.12.5",
- "sc-executor-common 0.40.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sc-executor-polkavm 0.37.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sc-executor-wasmtime 0.40.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "schnellru",
- "sp-api",
- "sp-core",
- "sp-externalities",
- "sp-io",
- "sp-panic-handler 13.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-runtime-interface 31.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-trie",
- "sp-version",
- "sp-wasm-interface 23.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tracing",
-]
-
-[[package]]
-name = "sc-executor"
-version = "0.44.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=unstable2507#c07886b28ab088cc65686c075cfc3ea79d5f6b38"
 dependencies = [
  "parity-scale-codec",
  "parking_lot 0.12.5",
- "sc-executor-common 0.40.0 (git+https://github.com/paritytech/polkadot-sdk?branch=unstable2507)",
- "sc-executor-polkavm 0.37.0 (git+https://github.com/paritytech/polkadot-sdk?branch=unstable2507)",
- "sc-executor-wasmtime 0.40.0 (git+https://github.com/paritytech/polkadot-sdk?branch=unstable2507)",
+ "sc-executor-common",
+ "sc-executor-polkavm",
+ "sc-executor-wasmtime",
  "schnellru",
  "sp-api",
  "sp-core",
  "sp-externalities",
  "sp-io",
- "sp-panic-handler 13.0.2 (git+https://github.com/paritytech/polkadot-sdk?branch=unstable2507)",
+ "sp-panic-handler",
  "sp-runtime-interface 31.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=unstable2507)",
  "sp-trie",
  "sp-version",
@@ -11333,40 +11297,14 @@ dependencies = [
 [[package]]
 name = "sc-executor-common"
 version = "0.40.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c88ba9c113644a21ce48cfecd8f2c99a34a1b3f8a869fb91c0e6a5c72c3a7ac8"
-dependencies = [
- "polkavm 0.26.0",
- "sc-allocator 33.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-maybe-compressed-blob 11.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-wasm-interface 23.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "thiserror 1.0.69",
- "wasm-instrument",
-]
-
-[[package]]
-name = "sc-executor-common"
-version = "0.40.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=unstable2507#c07886b28ab088cc65686c075cfc3ea79d5f6b38"
 dependencies = [
  "polkavm 0.26.0",
- "sc-allocator 33.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=unstable2507)",
- "sp-maybe-compressed-blob 11.0.1 (git+https://github.com/paritytech/polkadot-sdk?branch=unstable2507)",
+ "sc-allocator",
+ "sp-maybe-compressed-blob",
  "sp-wasm-interface 23.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=unstable2507)",
  "thiserror 1.0.69",
  "wasm-instrument",
-]
-
-[[package]]
-name = "sc-executor-polkavm"
-version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62d4405eff470c6b20e883bc6e7ad855130ac5c99ada0f2265191e21caa2fd85"
-dependencies = [
- "log",
- "polkavm 0.26.0",
- "sc-executor-common 0.40.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-wasm-interface 23.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -11376,25 +11314,8 @@ source = "git+https://github.com/paritytech/polkadot-sdk?branch=unstable2507#c07
 dependencies = [
  "log",
  "polkavm 0.26.0",
- "sc-executor-common 0.40.0 (git+https://github.com/paritytech/polkadot-sdk?branch=unstable2507)",
+ "sc-executor-common",
  "sp-wasm-interface 23.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=unstable2507)",
-]
-
-[[package]]
-name = "sc-executor-wasmtime"
-version = "0.40.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "250e3469323c427bcf4402909731c07f71e93d3314ffdbbe57c683e8c9349615"
-dependencies = [
- "anyhow",
- "log",
- "parking_lot 0.12.5",
- "rustix 0.36.17",
- "sc-allocator 33.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sc-executor-common 0.40.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-runtime-interface 31.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-wasm-interface 23.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "wasmtime",
 ]
 
 [[package]]
@@ -11406,8 +11327,8 @@ dependencies = [
  "log",
  "parking_lot 0.12.5",
  "rustix 0.36.17",
- "sc-allocator 33.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=unstable2507)",
- "sc-executor-common 0.40.0 (git+https://github.com/paritytech/polkadot-sdk?branch=unstable2507)",
+ "sc-allocator",
+ "sc-executor-common",
  "sp-runtime-interface 31.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=unstable2507)",
  "sp-wasm-interface 23.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=unstable2507)",
  "wasmtime",
@@ -13261,16 +13182,6 @@ dependencies = [
 [[package]]
 name = "sp-maybe-compressed-blob"
 version = "11.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c9d204064a17660455603ae152b02fc7ea4cfff2d14796f6483d7a35c4cca336"
-dependencies = [
- "thiserror 1.0.69",
- "zstd 0.12.4",
-]
-
-[[package]]
-name = "sp-maybe-compressed-blob"
-version = "11.0.1"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=unstable2507#c07886b28ab088cc65686c075cfc3ea79d5f6b38"
 dependencies = [
  "thiserror 1.0.69",
@@ -13354,16 +13265,6 @@ dependencies = [
  "sp-api",
  "sp-core",
  "sp-runtime",
-]
-
-[[package]]
-name = "sp-panic-handler"
-version = "13.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8b52e69a577cbfdea62bfaf16f59eb884422ce98f78b5cd8d9bf668776bced1"
-dependencies = [
- "backtrace",
- "regex",
 ]
 
 [[package]]
@@ -13520,7 +13421,7 @@ dependencies = [
  "smallvec",
  "sp-core",
  "sp-externalities",
- "sp-panic-handler 13.0.2 (git+https://github.com/paritytech/polkadot-sdk?branch=unstable2507)",
+ "sp-panic-handler",
  "sp-trie",
  "thiserror 1.0.69",
  "tracing",
@@ -13654,7 +13555,6 @@ dependencies = [
  "impl-trait-for-tuples",
  "log",
  "parity-scale-codec",
- "wasmtime",
 ]
 
 [[package]]
@@ -13949,8 +13849,7 @@ dependencies = [
 [[package]]
 name = "substrate-wasm-builder"
 version = "28.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6aee064cabed85bf5e753e8bac1f6302936927c840691461078ad359d12947aa"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=unstable2507#c07886b28ab088cc65686c075cfc3ea79d5f6b38"
 dependencies = [
  "array-bytes 6.2.3",
  "build-helper",
@@ -13963,11 +13862,11 @@ dependencies = [
  "parity-scale-codec",
  "parity-wasm",
  "polkavm-linker 0.26.0",
- "sc-executor 0.44.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sc-executor",
  "shlex",
  "sp-core",
  "sp-io",
- "sp-maybe-compressed-blob 11.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-maybe-compressed-blob",
  "sp-tracing",
  "sp-version",
  "strum 0.26.3",
