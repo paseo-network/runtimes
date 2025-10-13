@@ -286,6 +286,9 @@ members = [
 [patch.crates-io]
 # Patch ALL polkadot-sdk crates to use versions from unstable2507 branch
 # This ensures all transitive dependencies use the same version
+sc-chain-spec = { git = "https://github.com/paritytech/polkadot-sdk", branch = "unstable2507" }
+sc-consensus-grandpa = { git = "https://github.com/paritytech/polkadot-sdk", branch = "unstable2507" }
+sc-network = { git = "https://github.com/paritytech/polkadot-sdk", branch = "unstable2507" }
 sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "unstable2507" }
 sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "unstable2507" }
 sp-std = { git = "https://github.com/paritytech/polkadot-sdk", branch = "unstable2507" }
