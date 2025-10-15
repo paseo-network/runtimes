@@ -141,7 +141,7 @@ pub fn call_allowed_status(call: &<Runtime as frame_system::Config>::RuntimeCall
     Sudo(..) => (ON, ON),
     ParaSudoWrapper(..) => (OFF, ON),
 		Beefy(..) => (ON, ON), // For reporting equivocation proofs; security relevant
-		RcMigrator(..) => (ON, ON), // Required for the migration, only permissioned calls
+		RcMigrator(..) => (ON, OFF), // Required for the migration, only permissioned calls
 	}
 	// Exhaustive match. Compiler ensures that we did not miss any.
 }
