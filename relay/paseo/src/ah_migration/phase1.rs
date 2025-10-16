@@ -82,7 +82,7 @@ pub fn call_allowed_status(call: &<Runtime as frame_system::Config>::RuntimeCall
 
 	match call {
 		System(..) => (ON, ON), // Remarks, root calls and `set_code` if we need for emergency.
-		Scheduler(..) => (OFF, OFF), // Only for governance, hence disabled.
+		Scheduler(..) => (OFF, ON), // Only for governance, hence disabled.
 		Preimage(..) => (OFF, OFF), // Only for governance, hence disabled.
 		Babe(..) => (ON, ON),   // For equivocation proof submissions; security relevant
 		Timestamp(..) => (ON, ON), // only `set` inherit
@@ -141,7 +141,7 @@ pub fn call_allowed_status(call: &<Runtime as frame_system::Config>::RuntimeCall
     Sudo(..) => (ON, ON),
     ParaSudoWrapper(..) => (OFF, ON),
 		Beefy(..) => (ON, ON), // For reporting equivocation proofs; security relevant
-		RcMigrator(..) => (ON, ON), // Required for the migration, only permissioned calls
+		RcMigrator(..) => (ON, OFF), // Required for the migration, only permissioned calls
 	}
 	// Exhaustive match. Compiler ensures that we did not miss any.
 }

@@ -27,6 +27,7 @@ use frame_support::{traits::tokens::imbalance::ResolveTo, BoundedVec};
 use pallet_election_provider_multi_block::{self as multi_block, SolutionAccuracyOf};
 use pallet_staking_async::UseValidatorsMap;
 use pallet_staking_async_rc_client as rc_client;
+use scale_info::TypeInfo;
 use sp_arithmetic::FixedU128;
 use sp_runtime::{
 	traits::Convert, transaction_validity::TransactionPriority, FixedPointNumber,
@@ -363,6 +364,7 @@ impl pallet_staking_async_rc_client::Config for Runtime {
 	type RelayChainOrigin = EnsureRoot<AccountId>;
 	type AHStakingInterface = Staking;
 	type SendToRelayChain = StakingXcmToRelayChain;
+	type MaxValidatorSetRetries = ConstU32<64>;
 }
 
 #[derive(Encode, Decode)]
@@ -381,9 +383,7 @@ pub enum AhClientCalls {
 }
 
 pub struct ValidatorSetToXcm;
-impl sp_runtime::traits::Convert<rc_client::ValidatorSetReport<AccountId>, Xcm<()>>
-	for ValidatorSetToXcm
-{
+impl Convert<rc_client::ValidatorSetReport<AccountId>, Xcm<()>> for ValidatorSetToXcm {
 	fn convert(report: rc_client::ValidatorSetReport<AccountId>) -> Xcm<()> {
 		Xcm(vec![
 			Instruction::UnpaidExecution {
@@ -409,13 +409,13 @@ pub struct StakingXcmToRelayChain;
 
 impl rc_client::SendToRelayChain for StakingXcmToRelayChain {
 	type AccountId = AccountId;
-	fn validator_set(report: rc_client::ValidatorSetReport<Self::AccountId>) {
-		// TODO: after https://github.com/paritytech/polkadot-sdk/pull/9619, use `XCMSender::send`
-		let message = ValidatorSetToXcm::convert(report);
-		let dest = RelayLocation::get();
-		let _ = crate::send_xcm::<xcm_config::XcmRouter>(dest, message).inspect_err(|err| {
-			log::error!(target: "runtime::ah-client", "Failed to send validator set report: {err:?}");
-		});
+	fn validator_set(report: rc_client::ValidatorSetReport<Self::AccountId>) -> Result<(), ()> {
+		rc_client::XCMSender::<
+			xcm_config::XcmRouter,
+			RelayLocation,
+			rc_client::ValidatorSetReport<Self::AccountId>,
+			ValidatorSetToXcm,
+		>::send(report)
 	}
 }
 
@@ -434,7 +434,7 @@ where
 	type Extension = TxExtension;
 
 	fn create_transaction(call: RuntimeCall, extension: TxExtension) -> UncheckedExtrinsic {
-		UncheckedExtrinsic::new_transaction(call, extension)
+		<UncheckedExtrinsic as TypeInfo>::Identity::new_transaction(call, extension).into()
 	}
 }
 
@@ -443,7 +443,7 @@ where
 	RuntimeCall: From<LocalCall>,
 {
 	fn create_bare(call: RuntimeCall) -> UncheckedExtrinsic {
-		UncheckedExtrinsic::new_bare(call)
+		<UncheckedExtrinsic as TypeInfo>::Identity::new_bare(call).into()
 	}
 }
 
@@ -534,19 +534,20 @@ mod tests {
 			use pallet_staking_async_rc_client as rc_client;
 
 			sp_io::TestExternalities::new_empty().execute_with(|| {
-				// up to a 1/3 of the validators are reported in a single batch of offences
-				let hefty_offences = (0..333)
+				// MaxOffenceBatchSize in RC is 32;
+				let hefty_offences = (0..32)
 					.map(|i| {
-						rc_client::Offence {
-							offender: <AccountId>::from([i as u8; 32]), /* overflows, but
-							                                             * whatever,
-							                                             * don't matter */
-							reporters: vec![<AccountId>::from([1u8; 32])],
-							slash_fraction: Perbill::from_percent(10),
-						}
+						(
+							42,
+							rc_client::Offence {
+								offender: <AccountId>::from([i as u8; 32]),
+								reporters: vec![<AccountId>::from([1u8; 32])],
+								slash_fraction: Perbill::from_percent(10),
+							},
+						)
 					})
 					.collect();
-				let di = rc_client::Call::<Runtime>::relay_new_offence {
+				let di = rc_client::Call::<Runtime>::relay_new_offence_paged {
 					slash_session: 42,
 					offences: hefty_offences,
 				}
