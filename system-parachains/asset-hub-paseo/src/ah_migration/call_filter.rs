@@ -106,7 +106,8 @@ pub fn call_allowed_status(
 		MultiBlockElectionSigned(..) => OFF,
 		MultiBlockElectionUnsigned(..) => OFF,
 		MultiBlockElectionVerifier(..) => OFF,
-		MessageQueue(..) => ON, // contains non-permissioned service calls
+		MultiBlockMigrations(..) => OFF, //Has not calls
+		MessageQueue(..) => ON,          // contains non-permissioned service calls
 		Multisig(..) => OFF,
 		Nfts(..) => ON, // no reason to disable it, just convenience
 		NominationPools(..) => OFF,
@@ -139,6 +140,7 @@ pub fn call_allowed_status(
 		Whitelist(..) => OFF,
 		XcmpQueue(..) => ON, // Allow updating XCM settings. Only by Fellowship and root.
 		Parameters(..) => ON, // allow governance to still update any params if needed
+		Revive(..) => OFF,
 	};
 	// Exhaustive match. Compiler ensures that we did not miss any.
 
@@ -165,6 +167,7 @@ pub fn call_allowed_before_migration(
 		MultiBlockElectionVerifier(..) => OFF,
 		NominationPools(..) => OFF,
 		VoterList(..) => OFF,
+		MultiBlockMigrations(..) => OFF, // Has not calls
 		// To avoid insert issues.
 		Indices(..) => OFF,
 		Vesting(..) => OFF,
@@ -208,6 +211,7 @@ pub fn call_allowed_before_migration(
 		Utility(..) |
 		Whitelist(..) |
 		XcmpQueue(..) |
+		Revive(..) |
 		Parameters(..) => ON,
 	}
 }

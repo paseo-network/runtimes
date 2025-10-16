@@ -27,6 +27,7 @@ use frame_support::{traits::tokens::imbalance::ResolveTo, BoundedVec};
 use pallet_election_provider_multi_block::{self as multi_block, SolutionAccuracyOf};
 use pallet_staking_async::UseValidatorsMap;
 use pallet_staking_async_rc_client as rc_client;
+use scale_info::TypeInfo;
 use sp_arithmetic::FixedU128;
 use sp_runtime::{
 	traits::Convert, transaction_validity::TransactionPriority, FixedPointNumber,
@@ -433,7 +434,7 @@ where
 	type Extension = TxExtension;
 
 	fn create_transaction(call: RuntimeCall, extension: TxExtension) -> UncheckedExtrinsic {
-		UncheckedExtrinsic::new_transaction(call, extension)
+		<UncheckedExtrinsic as TypeInfo>::Identity::new_transaction(call, extension).into()
 	}
 }
 
@@ -442,7 +443,7 @@ where
 	RuntimeCall: From<LocalCall>,
 {
 	fn create_bare(call: RuntimeCall) -> UncheckedExtrinsic {
-		UncheckedExtrinsic::new_bare(call)
+		<UncheckedExtrinsic as TypeInfo>::Identity::new_bare(call).into()
 	}
 }
 
