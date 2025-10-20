@@ -471,22 +471,19 @@ impl frame_support::traits::OnRuntimeUpgrade for InitiateStakingAsync {
 			multi_block::signed::Invulnerables::<Runtime>::put(bounded);
 		}
 
-		// Set the minimum score for the election, as per the Polkadot RC state.
+		// Set the minimum score for the election, as per the Paseo RC state.
 		//
-		// This value is set from block 27,730,872 of Polkadot RC.
-		// Recent election scores in Polkadot can be found on:
-		// https://polkadot.subscan.io/event?page=1&time_dimension=date&module=electionprovidermultiphase&event_id=electionfinalized
+		// Paseo's validators are kinda controlled by sudo, as only well-known actors can get enough
+		// economic support. So these values are just used to ensure our validators need 100K PAS
+		// bounded and enough nominations
 		//
-		// The last example, at block [27721215](https://polkadot.subscan.io/event/27721215-0) being:
-		//
-		// * minimal_stake: 10907549130714057 (1.28x the minimum)
-		// * sum_stake: 8028519336725652293 (2.44x the minimum)
-		// * sum_stake_squared: 108358993218278434700023844467997545 (0.4 the minimum, the lower the
-		//   better)
+		// * minimal_stake: 1_000_000_000_000_000 (1x the minimum)
+		// * sum_stake: 0 (0x the minimum)
+		// * sum_stake_squared: 340_282_366_920_938_463_463_374_607_431_768_211_455
 		let minimum_score = sp_npos_elections::ElectionScore {
-			minimal_stake: 8474057820699941,
-			sum_stake: 3276970719352749444,
-			sum_stake_squared: 244059208045236715654727835467163294,
+			minimal_stake: 1_000_000_000_000_000,
+			sum_stake: 0,
+			sum_stake_squared: 340_282_366_920_938_463_463_374_607_431_768_211_455,
 		};
 		<Runtime as multi_block::Config>::Verifier::set_minimum_score(minimum_score);
 
