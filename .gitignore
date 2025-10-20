@@ -40,3 +40,5 @@ target/
 **/tmp_hub
 *.log
 *.patch
+*.db.*
+db.*
