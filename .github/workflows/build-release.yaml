@@ -43,7 +43,6 @@ on:
 
 jobs:
   create-tag:
-    needs: generate-chain-specs
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
