@@ -157,11 +157,6 @@ jobs:
           fetch-depth: 0  # Fetch all history and tags
           fetch-tags: true  # Explicitly fetch all tags
 
-      - name: Rust cache
-        uses: Swatinem/rust-cache@v2.7.3
-        with:
-          cache-on-failure: true
-
       - name: Cache runtime target dir
         if: steps.check_package.outputs.should_run == 'true'
         uses: actions/cache@v3
