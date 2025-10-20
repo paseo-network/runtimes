@@ -32,6 +32,7 @@ The following section presents the differences between testnet and production ru
 | PolkaVM Contracts | ✅ | ✅ | ❌ |
 | Contracts: ERC-20 Precompile | ✅ | ❌ | ❌ |
 | Contracts: XCM Precompile | ✅ | ❌ | ❌ |
+| Coretime interlude period | 2 days | 7 days | 7 days |
 
 
 ### Costs
