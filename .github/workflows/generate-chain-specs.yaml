@@ -1,80 +1,7 @@
-name: Generate Chain Specs
+name: Generate Local Chain Specs
 
 on:
   workflow_dispatch:
-    inputs:
-      tag_version:
-        description: 'Tag version for the release'
-        required: true
-        type: string
-      tag_suffix:
-        description: 'Tag suffix to use (none for all packages)'
-        required: true
-        type: choice
-        options:
-          - none
-          - relay
-          - parachains
-        default: 'none'
-      build_paseo:
-        description: 'Build paseo relay runtime'
-        type: boolean
-        default: false
-      build_asset_hub_paseo:
-        description: 'Build asset-hub-paseo runtime'
-        type: boolean
-        default: false
-      build_bridge_hub_paseo:
-        description: 'Build bridge-hub-paseo runtime'
-        type: boolean
-        default: false
-      build_collectives_paseo:
-        description: 'Build collectives-paseo runtime'
-        type: boolean
-        default: false
-      build_people_paseo:
-        description: 'Build people-paseo runtime'
-        type: boolean
-        default: false
-      build_coretime_paseo:
-        description: 'Build coretime-paseo runtime'
-        type: boolean
-        default: false
-  workflow_call:
-    inputs:
-      tag_version:
-        description: 'Tag version for the release'
-        required: true
-        type: string
-      tag_suffix:
-        description: 'Tag suffix (none, relay, parachains)'
-        required: true
-        type: string
-        default: 'none'
-      build_paseo:
-        description: 'Build paseo relay runtime'
-        type: boolean
-        default: false
-      build_asset_hub_paseo:
-        description: 'Build asset-hub-paseo runtime'
-        type: boolean
-        default: false
-      build_bridge_hub_paseo:
-        description: 'Build bridge-hub-paseo runtime'
-        type: boolean
-        default: false
-      build_collectives_paseo:
-        description: 'Build collectives-paseo runtime'
-        type: boolean
-        default: false
-      build_people_paseo:
-        description: 'Build people-paseo runtime'
-        type: boolean
-        default: false
-      build_coretime_paseo:
-        description: 'Build coretime-paseo runtime'
-        type: boolean
-        default: false
 
 permissions:
   contents: write
@@ -106,61 +33,136 @@ jobs:
       - name: Add rust-src
         run: rustup component add rust-src --toolchain 1.81.0-x86_64-unknown-linux-gnu
 
-      - name: Build chain-spec-generator
-        run: cargo build --package chain-spec-generator --features=fast-runtime --release
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2.8.1
+        with:
+          cache-on-failure: true
+
+      - name: Install pop
+        run: |
+          cargo install --git https://github.com/r0gue-io/pop-cli.git --branch main
 
       - name: Generate chain specs
         run: |
           mkdir -p chain-specs/local
-          
-          # Initialize empty array for packages
-          PACKAGES=()
-          
-          # Add relay packages if selected
-          if [[ "${{ inputs.build_paseo }}" == "true" ]]; then
-            PACKAGES+=("paseo-local" "paseo-dev")
-          fi
-          
-          # Add parachain packages if selected
-          if [[ "${{ inputs.build_asset_hub_paseo }}" == "true" ]]; then
-            PACKAGES+=("asset-hub-paseo-local")
-          fi
-          
-          if [[ "${{ inputs.build_bridge_hub_paseo }}" == "true" ]]; then
-            PACKAGES+=("bridge-hub-paseo-local")
-          fi
-          
-          if [[ "${{ inputs.build_collectives_paseo }}" == "true" ]]; then
-            PACKAGES+=("collectives-paseo-local")
-          fi
-          
-          if [[ "${{ inputs.build_people_paseo }}" == "true" ]]; then
-            PACKAGES+=("people-paseo-local")
-          fi
-          
-          if [[ "${{ inputs.build_coretime_paseo }}" == "true" ]]; then
-            PACKAGES+=("coretime-paseo-local")
-          fi
-          
-          # If no packages are selected, build all
-          if [[ ${#PACKAGES[@]} -eq 0 ]]; then
-            PACKAGES=(
-              "paseo-local"
-              "paseo-dev"
-              "asset-hub-paseo-local"
-              "bridge-hub-paseo-local"
-              "collectives-paseo-local"
-              "people-paseo-local"
-              "coretime-paseo-local"
-            )
-          fi
-          
-          # Generate specs for each package
+        
+          PACKAGES=(
+            "paseo-local"
+            "paseo-dev"
+            "asset-hub-paseo-local"
+            "bridge-hub-paseo-local"
+            "collectives-paseo-local"
+            "people-paseo-local"
+            "coretime-paseo-local"
+          )
+
+          get_package_params() {
+            local pkg="$1"
+
+            ## Clean variables just in case
+            NAME="" ID="" PARA_ID="" RUNTIME="" RELAY="" PROTOCOL_ID="" TYPE="" CHAIN=""
+            case "$pkg" in
+              paseo-local)
+                NAME="Paseo Local Testnet"
+                ID="paseo-local"
+                RUNTIME="relay/paseo"
+                PROTOCOL_ID="pas"
+                TYPE="local"
+                CHAIN="local_tesnet"
+                ;;
+              paseo-dev)
+                NAME="Paseo Dev"
+                ID="paseo-dev"
+                RUNTIME="relay/paseo"
+                PROTOCOL_ID="pas"
+                TYPE="development"
+                CHAIN="development"
+                ;;
+              asset-hub-paseo-local)
+                NAME="Asset Hub Paseo Local"
+                ID="asset-hub-paseo-local"
+                PARA_ID=1000
+                RUNTIME="system-parachains/asset-hub-paseo"
+                RELAY="paseo-local"
+                PROTOCOL_ID="ah-pas"
+                TYPE="local"
+                CHAIN="local_tesnet"
+                ;;
+              bridge-hub-paseo-local)
+                NAME="Bridge Hub Paseo Local"
+                ID="bridge-hub-paseo-local"
+                PARA_ID=1002
+                RUNTIME="system-parachains/bridge-hub-paseo"
+                RELAY="paseo-local"
+                PROTOCOL_ID="bh-pas"
+                TYPE="local"
+                CHAIN="local_tesnet"
+                ;;
+              collectives-paseo-local)
+                NAME="Collectives Paseo Local"
+                ID="collectives-paseo-local"
+                PARA_ID=1001
+                RUNTIME="system-parachains/collectives-paseo"
+                RELAY="paseo-local"
+                PROTOCOL_ID="col-pas"
+                TYPE="local"
+                CHAIN="local_tesnet"
+                ;;
+              people-paseo-local)
+                NAME="People Paseo Local"
+                ID="people-paseo-local"
+                PARA_ID=1004
+                RUNTIME="system-parachains/people-paseo"
+                RELAY="paseo-local"
+                PROTOCOL_ID="pc-pas"
+                TYPE="local"
+                CHAIN="local_tesnet"
+                ;;
+              coretime-paseo-local)
+                NAME="Coretime Paseo Local"
+                ID="coretime-paseo-local"
+                PARA_ID=1005
+                RUNTIME="system-parachains/coretime-paseo"
+                RELAY="paseo-local"
+                PROTOCOL_ID="ct-pas"
+                TYPE="local"
+                CHAIN="local_tesnet"
+                ;;
+              *)
+                echo "⚠️  No config found for $pkg"
+                return 1
+                ;;
+            esac
+          }
+
           for pkg in "${PACKAGES[@]}"; do
-            ./target/release/chain-spec-generator "$pkg" --raw > "chain-specs/local/$pkg.json"
-            echo "Generated chain-specs/local/$pkg.json"
+            echo "🚀 Generating spec para $pkg..."
+            get_package_params "$pkg"
+
+            ARGS=(
+              --profile release 
+              --name "$NAME"
+              --id "$ID"
+              --type "$TYPE" 
+              --chain "$CHAIN" 
+              --output "chain_specs/local/${pkg}.json"
+              --properties ss58Format=0,tokenDecimals=10,tokenSymbol="PAS"
+              --protocol-id "$PROTOCOL_ID"
+              --default-bootnode=false 
+              --genesis-code=true
+              --genesis-state=true
+              --deterministic=false
+            )
+
+            [[ -n "${PARA_ID:-}" ]] && ARGS+=(--para-id "$PARA_ID")
+            [[ -n "${RELAY:-}" ]] && ARGS+=(--relay "$RELAY")
+            [[ -n "${RUNTIME:-}" ]] && ARGS+=(--runtime "$RUNTIME")
+
+            pop build spec "${ARGS[@]}"
+
+            echo "✅ Spec generated for: ${pkg}"
           done
-      
+
       - name: Upload chain specs as artifact
         uses: actions/upload-artifact@v4
         with:
@@ -207,3 +209,4 @@ jobs:
             git push
             echo "Changes committed and pushed successfully."
           fi
+         fi
