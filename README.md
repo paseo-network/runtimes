@@ -28,7 +28,7 @@ The following section presents the differences between testnet and production ru
 | [Agile Coretime](https://polkadot-fellows.github.io/RFCs/approved/0001-agile-coretime.html?highlight=agile#rfc-1-agile-coretime) | ✅ | ✅ | ✅ |
 | [Async Backing](https://wiki.polkadot.com/learn/learn-async-backing/#asynchronous-backing) | ✅ | ✅ | ✅ |
 | [Elastic Scaling](https://polkadot-fellows.github.io/RFCs/approved/0103-introduce-core-index-commitment.html?highlight=Elastic%20scaling#summary) | ✅ | ✅ | ✅ |
-| Asset Hub Migration | ✅ | ❌ | ❌ |
+| Asset Hub Migration | ✅ | ✅ | ❌ |
 | PolkaVM Contracts | ✅ | ✅ | ❌ |
 | Contracts: ERC-20 Precompile | ✅ | ❌ | ❌ |
 | Contracts: XCM Precompile | ✅ | ❌ | ❌ |
