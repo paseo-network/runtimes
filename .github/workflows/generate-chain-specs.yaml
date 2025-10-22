@@ -209,4 +209,3 @@ jobs:
             git push
             echo "Changes committed and pushed successfully."
           fi
-         fi
