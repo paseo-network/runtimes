@@ -47,9 +47,9 @@ jobs:
         run: |
           mkdir -p chain-specs/local
 
-          chmod +x .scripts/generate_chain_specs.sh
+          chmod +x ./scripts/generate_chain_specs.sh
 
-          .scripts/generate_chain_specs.sh
+          ./scripts/generate_chain_specs.sh
         
       - name: Upload chain specs as artifact
         uses: actions/upload-artifact@v4
