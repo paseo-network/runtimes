@@ -211,7 +211,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: Cow::Borrowed("bridge-hub-paseo"),
 	impl_name: Cow::Borrowed("bridge-hub-paseo"),
 	authoring_version: 1,
-	spec_version: 1_009_002,
+	spec_version: 1_009_003,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 4,
