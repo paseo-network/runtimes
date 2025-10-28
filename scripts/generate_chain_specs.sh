@@ -121,7 +121,9 @@ done
 ## Only interested in the raw files
 find chain-specs/local -type f -name "*.json" ! -name "*-raw.json" -exec rm -f {} \;
 
-for f in chain_specs/local/*-raw.json; do
+for f in chain-specs/local/*-raw.json; do
   [ -e "$f" ] || continue
   mv "chain-specs/local/$f" "chain-specs/local/${f%-raw.json}.json"
 done
+
+echo "✅ Chain specs correctly saved"
