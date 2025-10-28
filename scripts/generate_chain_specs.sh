@@ -20,7 +20,7 @@ get_package_params() {
       RUNTIME="relay/paseo"
       PROTOCOL_ID="pas"
       TYPE="local"
-      CHAIN="local_tesnet"
+      CHAIN="local_testnet"
     ;;
     paseo-dev)
       NAME="Paseo Dev"
@@ -38,7 +38,7 @@ get_package_params() {
       RELAY="paseo-local"
       PROTOCOL_ID="ah-pas"
       TYPE="local"
-      CHAIN="local_tesnet"
+      CHAIN="local_testnet"
     ;;
     bridge-hub-paseo-local)
       NAME="Bridge Hub Paseo Local"
@@ -48,7 +48,7 @@ get_package_params() {
       RELAY="paseo-local"
       PROTOCOL_ID="bh-pas"
       TYPE="local"
-      CHAIN="local_tesnet"
+      CHAIN="local_testnet"
     ;;
     collectives-paseo-local)
       NAME="Collectives Paseo Local"
@@ -58,7 +58,7 @@ get_package_params() {
       RELAY="paseo-local"
       PROTOCOL_ID="col-pas"
       TYPE="local"
-      CHAIN="local_tesnet"
+      CHAIN="local_testnet"
     ;;
     people-paseo-local)
       NAME="People Paseo Local"
@@ -68,7 +68,7 @@ get_package_params() {
       RELAY="paseo-local"
       PROTOCOL_ID="pc-pas"
       TYPE="local"
-      CHAIN="local_tesnet"
+      CHAIN="local_testnet"
     ;;
     coretime-paseo-local)
       NAME="Coretime Paseo Local"
@@ -78,7 +78,7 @@ get_package_params() {
       RELAY="paseo-local"
       PROTOCOL_ID="ct-pas"
       TYPE="local"
-      CHAIN="local_tesnet"
+      CHAIN="local_testnet"
     ;;
     *)
       echo "⚠️  No config found for $pkg"
@@ -88,7 +88,7 @@ get_package_params() {
 }
 
 for pkg in "${PACKAGES[@]}"; do
-  echo "🚀 Generating spec para $pkg..."
+  echo "🚀 Generating spec for $pkg..."
   get_package_params "$pkg"
 
   ARGS=(
@@ -98,7 +98,7 @@ for pkg in "${PACKAGES[@]}"; do
     --id "$ID"
     --type "$TYPE" 
     --chain "$CHAIN" 
-    --output "chain_specs/local/${pkg}.json"
+    --output "chain-specs/local/${pkg}.json"
     --properties ss58Format=0,tokenDecimals=10,tokenSymbol="PAS"
     --protocol-id "$PROTOCOL_ID"
     --default-bootnode=false 
@@ -110,17 +110,18 @@ for pkg in "${PACKAGES[@]}"; do
 
   [[ -n "${PARA_ID:-}" ]] && ARGS+=(--para-id "$PARA_ID")
   [[ -n "${RELAY:-}" ]] && ARGS+=(--relay "$RELAY")
+  [[ -z "${PARA_ID:-}" && -z "${RELAY:-}" ]] && ARGS+=(--is-relay)
 
-
+  ## Generate specs with Pop-CLI: https://github.com/r0gue-io/pop-cli
   pop build spec "${ARGS[@]}"
 
   echo "✅ Spec generated for: ${pkg}"
 done
 
 ## Only interested in the raw files
-find chain_specs/local -type f -name "*.json" ! -name "*-raw.json" -exec rm -f {} \;
+find chain-specs/local -type f -name "*.json" ! -name "*-raw.json" -exec rm -f {} \;
 
 for f in chain_specs/local/*-raw.json; do
   [ -e "$f" ] || continue
-  mv "chain_specs/local/$f" "chain_specs/local/${f%-raw.json}.json"
+  mv "chain-specs/local/$f" "chain-specs/local/${f%-raw.json}.json"
 done
