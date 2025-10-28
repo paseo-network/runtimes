@@ -32,6 +32,10 @@ use alloc::{borrow::Cow, vec, vec::Vec};
 use codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
 use cumulus_pallet_parachain_system::RelayNumberMonotonicallyIncreases;
 use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
+use xcm::latest::prelude::Location;
+use frame_support::traits::AsEnsureOriginWithArg;
+use frame_support::traits::fungibles::Balanced;
+use indiv_support::fungibles::CombineAssetsWithHolder;
 use frame_support::{
 	construct_runtime, derive_impl,
 	dispatch::DispatchClass,
@@ -85,7 +89,6 @@ use xcm_runtime_apis::{
 	dry_run::{CallDryRunEffects, Error as XcmDryRunApiError, XcmDryRunEffects},
 	fees::Error as XcmPaymentApiError,
 };
-use xcm::latest::prelude::Assets as XcmAssets;
 
 /// The address format for describing accounts.
 pub type Address = MultiAddress<AccountId, ()>;
@@ -814,9 +817,9 @@ construct_runtime!(
 		// The main stage.
 		Identity: pallet_identity = 50,
 		VerifySignature: pallet_verify_signature = 51,
-		OriginRestriction: pallet_origin_restriction = 52,
-		PeopleLite: pallet_people_lite = 53,
-		Resources: pallet_resources = 54,
+		OriginRestriction: indiv_pallet_origin_restriction = 52,
+		PeopleLite: indiv_pallet_people_lite = 53,
+		Resources: indiv_pallet_resources = 54,
 		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 255,
 	}
 );
@@ -840,10 +843,10 @@ mod benches {
 		[pallet_message_queue, MessageQueue]
 		[pallet_migrations, MultiBlockMigrations]
 		[pallet_multisig, Multisig]
-		[pallet_origin_restriction, OriginRestriction]
-		[pallet_people_lite, PeopleLite]
+		[indiv_pallet_origin_restriction, OriginRestriction]
+		[indiv_pallet_people_lite, PeopleLite]
 		[pallet_proxy, Proxy]
-		[pallet_resources, Resources]
+		[indiv_pallet_resources, Resources]
 		[pallet_session, SessionBench::<Runtime>]
 		[pallet_transaction_payment, TransactionPayment]
 		[pallet_timestamp, Timestamp]

@@ -16,9 +16,10 @@
 use super::{
 	AccountId, AllPalletsWithSystem, Balance, Balances, CollatorSelection, ParachainInfo,
 	ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeHoldReason,
-	RuntimeOrigin, WeightToFee, XcmpQueue,
+	RuntimeOrigin, WeightToFee, XcmpQueue, Assets,
 };
 use crate::{TransactionByteFee, CENTS};
+use frame_support::traits::tokens::ConversionToAssetBalance;
 use frame_support::{
 	parameter_types,
 	traits::{
@@ -26,7 +27,9 @@ use frame_support::{
 		Everything, LinearStoragePrice, Nothing,
 	},
 };
+use frame_support::traits::fungible::ItemOf;
 use frame_system::EnsureRoot;
+use frame_support::traits::ContainsPair;
 use pallet_xcm::{AuthorizedAliasers, XcmPassthrough};
 use parachains_common::{
 	xcm_config::{
@@ -50,7 +53,14 @@ use xcm_builder::{
 	SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit, TrailingSetTopicAsId,
 	UsingComponents, WeightInfoBounds, WithComputedOrigin, WithUniqueTopic,
 	XcmFeeManagerFromComponents,
+	FungiblesAdapter,
+	ConvertedConcreteId,
 };
+use sp_runtime::traits::Identity;
+use xcm_builder::NoChecking;
+use crate::AssetRate;
+use crate::people::StableAssetLocation;
+use xcm_executor::traits::JustTry;
 use xcm_executor::{traits::ConvertLocation, XcmExecutor};
 
 pub use system_parachains_constants::paseo::locations::{

@@ -28,6 +28,14 @@ use sp_runtime::{
 	RuntimeDebug,
 };
 use xcm::latest::prelude::BodyId;
+use xcm::latest::prelude::Location;
+use xcm::latest::prelude::Parachain;
+use sp_runtime::MultiSignature;
+use sp_runtime::MultiSigner;
+use indiv_pallet_origin_restriction::Allowance;
+use frame_support::traits::ContainsPair;
+use verifiable::ring_vrf_impl::BandersnatchVrfVerifiable;
+use indiv_support::traits::Alias;
 
 parameter_types! {
 	//   27 | Min encoded size of `Registration`
@@ -274,7 +282,7 @@ pub enum RestrictedEntity {
 	LitePerson(AccountId),
 }
 
-impl pallet_origin_restriction::RestrictedEntity<OriginCaller, Balance> for RestrictedEntity {
+impl indiv_pallet_origin_restriction::RestrictedEntity<OriginCaller, Balance> for RestrictedEntity {
 	fn allowance(&self) -> Allowance<Balance> {
 		match self {
 			RestrictedEntity::LitePerson(_) => Allowance {
@@ -285,7 +293,7 @@ impl pallet_origin_restriction::RestrictedEntity<OriginCaller, Balance> for Rest
 	}
 
 	fn restricted_entity(origin_caller: &OriginCaller) -> Option<Self> {
-		use pallet_people_lite::Origin::*;
+		use indiv_pallet_people_lite::Origin::*;
 		use OriginCaller::*;
 		match origin_caller {
 			PeopleLite(LitePerson(account_id)) => {
@@ -303,7 +311,7 @@ impl pallet_origin_restriction::RestrictedEntity<OriginCaller, Balance> for Rest
 			.expect("static values are valid; qed");
 		let signer = MultiSigner::Sr25519(pair.public());
 		let account_id = signer.into_account();
-		OriginCaller::PeopleLite(pallet_people_lite::Origin::LitePerson(account_id))
+		OriginCaller::PeopleLite(indiv_pallet_people_lite::Origin::LitePerson(account_id))
 	}
 }
 
@@ -314,7 +322,7 @@ impl ContainsPair<RestrictedEntity, RuntimeCall> for OperationAllowedOneTimeExce
 	}
 }
 
-impl pallet_origin_restriction::Config for Runtime {
+impl indiv_pallet_origin_restriction::Config for Runtime {
 	type WeightInfo = ();
 	type RestrictedEntity = RestrictedEntity;
 	type OperationAllowedOneTimeExcess = OperationAllowedOneTimeExcess;
@@ -324,7 +332,7 @@ impl pallet_origin_restriction::Config for Runtime {
 pub struct PeopleLiteBenchmarkHelper;
 
 #[cfg(feature = "runtime-benchmarks")]
-impl pallet_people_lite::BenchmarkHelper<AccountId, MultiSignature> for PeopleLiteBenchmarkHelper {
+impl indiv_pallet_people_lite::BenchmarkHelper<AccountId, MultiSignature> for PeopleLiteBenchmarkHelper {
 	fn sign_message(message: &[u8]) -> (AccountId, MultiSignature) {
 		use sp_core::Pair;
 		use sp_runtime::traits::IdentifyAccount;
@@ -337,7 +345,7 @@ impl pallet_people_lite::BenchmarkHelper<AccountId, MultiSignature> for PeopleLi
 	}
 }
 
-impl pallet_people_lite::Config for Runtime {
+impl indiv_pallet_people_lite::Config for Runtime {
 	type WeightInfo = ();
 	type AttestationAllowanceManager = EnsureRoot<AccountId>;
 	type Crypto = BandersnatchVrfVerifiable;
@@ -358,7 +366,7 @@ parameter_types! {
 	};
 }
 
-impl pallet_resources::Config for Runtime {
+impl indiv_pallet_resources::Config for Runtime {
 	type WeightInfo = ();
 	type Crypto = BandersnatchVrfVerifiable;
 	type MaxUsernameLength = ResourcesMaxUsernameLength;
@@ -366,7 +374,7 @@ impl pallet_resources::Config for Runtime {
 	type PersonAuthDuration = ResourcesPersonAuthDuration;
 	type MinPersonAuthUpdateInterval = ResourcesMinPersonAuthUpdateInterval;
 	type EnsurePerson = frame_system::EnsureNever<Alias>;
-	type EnsureLitePerson = pallet_people_lite::EnsureLitePerson<Runtime>;
+	type EnsureLitePerson = indiv_pallet_people_lite::EnsureLitePerson<Runtime>;
 	type Clock = Timestamp;
 	type OffchainSignature = MultiSignature;
 	type UsernameReservationDuration = ResourcesUsernameReservationDuration;
