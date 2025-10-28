@@ -32,18 +32,15 @@ use alloc::{borrow::Cow, vec, vec::Vec};
 use codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
 use cumulus_pallet_parachain_system::RelayNumberMonotonicallyIncreases;
 use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
-use xcm::latest::prelude::Location;
-use frame_support::traits::AsEnsureOriginWithArg;
-use frame_support::traits::fungibles::Balanced;
-use indiv_support::fungibles::CombineAssetsWithHolder;
 use frame_support::{
 	construct_runtime, derive_impl,
 	dispatch::DispatchClass,
 	genesis_builder_helper::{build_state, get_preset},
 	parameter_types,
 	traits::{
-		tokens::imbalance::ResolveTo, ConstBool, ConstU32, ConstU64, ConstU8, EitherOf,
-		EitherOfDiverse, Everything, InstanceFilter, TransformOrigin,
+		fungibles::Balanced, tokens::imbalance::ResolveTo, AsEnsureOriginWithArg, ConstBool,
+		ConstU32, ConstU64, ConstU8, EitherOf, EitherOfDiverse, Everything, InstanceFilter,
+		TransformOrigin,
 	},
 	weights::{ConstantMultiplier, Weight},
 	PalletId,
@@ -52,6 +49,7 @@ use frame_system::{
 	limits::{BlockLength, BlockWeights},
 	EnsureRoot,
 };
+use indiv_support::fungibles::CombineAssetsWithHolder;
 use pallet_xcm::{EnsureXcm, IsVoiceOfBody};
 use parachains_common::{
 	message_queue::{NarrowOriginToSibling, ParaIdToSibling},
@@ -77,7 +75,7 @@ use sp_version::RuntimeVersion;
 use system_parachains_constants::paseo::{consensus::*, currency::*, fee::WeightToFee};
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 use xcm::{
-	latest::prelude::{AssetId, BodyId},
+	latest::prelude::{AssetId, BodyId, Location},
 	Version as XcmVersion, VersionedAsset, VersionedAssetId, VersionedAssets, VersionedLocation,
 	VersionedXcm,
 };
@@ -324,7 +322,7 @@ impl pallet_assets::Config for Runtime {
 	type Extra = ();
 	// TODO: real weight
 	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
-		type CallbackHandle = ();
+	type CallbackHandle = ();
 	type AssetAccountDeposit = ForeignAssetsAssetAccountDeposit;
 	type RemoveItemsLimit = ConstU32<1000>;
 	#[cfg(feature = "runtime-benchmarks")]
@@ -900,7 +898,8 @@ mod benches {
 			None
 		}
 
-		fn set_up_complex_asset_transfer() -> Option<(XcmAssets, u32, Location, Box<dyn FnOnce()>)> {
+		fn set_up_complex_asset_transfer() -> Option<(XcmAssets, u32, Location, Box<dyn FnOnce()>)>
+		{
 			// Only supports native token teleports to system parachain
 			let native_location = Parent.into();
 			let dest = AssetHubLocation::get();

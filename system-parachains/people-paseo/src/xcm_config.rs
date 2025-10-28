@@ -14,22 +14,20 @@
 // limitations under the License.
 
 use super::{
-	AccountId, AllPalletsWithSystem, Balance, Balances, CollatorSelection, ParachainInfo,
+	AccountId, AllPalletsWithSystem, Assets, Balance, Balances, CollatorSelection, ParachainInfo,
 	ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeHoldReason,
-	RuntimeOrigin, WeightToFee, XcmpQueue, Assets,
+	RuntimeOrigin, WeightToFee, XcmpQueue,
 };
-use crate::{TransactionByteFee, CENTS};
-use frame_support::traits::tokens::ConversionToAssetBalance;
+use crate::{people::StableAssetLocation, AssetRate, TransactionByteFee, CENTS};
 use frame_support::{
 	parameter_types,
 	traits::{
-		fungible::HoldConsideration, tokens::imbalance::ResolveTo, ConstU32, Contains, Equals,
-		Everything, LinearStoragePrice, Nothing,
+		fungible::{HoldConsideration, ItemOf},
+		tokens::{imbalance::ResolveTo, ConversionToAssetBalance},
+		ConstU32, Contains, ContainsPair, Equals, Everything, LinearStoragePrice, Nothing,
 	},
 };
-use frame_support::traits::fungible::ItemOf;
 use frame_system::EnsureRoot;
-use frame_support::traits::ContainsPair;
 use pallet_xcm::{AuthorizedAliasers, XcmPassthrough};
 use parachains_common::{
 	xcm_config::{
@@ -40,28 +38,24 @@ use parachains_common::{
 };
 use paseo_runtime_constants::system_parachain;
 use polkadot_parachain_primitives::primitives::Sibling;
-use sp_runtime::traits::AccountIdConversion;
+use sp_runtime::traits::{AccountIdConversion, Identity};
 use xcm::latest::prelude::*;
 use xcm_builder::{
 	AccountId32Aliases, AliasChildLocation, AliasOriginRootUsingFilter,
 	AllowExplicitUnpaidExecutionFrom, AllowKnownQueryResponses, AllowSubscriptionsFrom,
-	AllowTopLevelPaidExecutionFrom, DenyReserveTransferToRelayChain, DenyThenTry,
-	DescribeAllTerminal, DescribeFamily, DescribeTerminus, EnsureXcmOrigin,
-	FrameTransactionalProcessor, FungibleAdapter, HashedDescription, IsConcrete,
-	LocationAsSuperuser, ParentIsPreset, RelayChainAsNative, SendXcmFeeToAccount,
+	AllowTopLevelPaidExecutionFrom, ConvertedConcreteId, DenyReserveTransferToRelayChain,
+	DenyThenTry, DescribeAllTerminal, DescribeFamily, DescribeTerminus, EnsureXcmOrigin,
+	FrameTransactionalProcessor, FungibleAdapter, FungiblesAdapter, HashedDescription, IsConcrete,
+	LocationAsSuperuser, NoChecking, ParentIsPreset, RelayChainAsNative, SendXcmFeeToAccount,
 	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
 	SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit, TrailingSetTopicAsId,
 	UsingComponents, WeightInfoBounds, WithComputedOrigin, WithUniqueTopic,
 	XcmFeeManagerFromComponents,
-	FungiblesAdapter,
-	ConvertedConcreteId,
 };
-use sp_runtime::traits::Identity;
-use xcm_builder::NoChecking;
-use crate::AssetRate;
-use crate::people::StableAssetLocation;
-use xcm_executor::traits::JustTry;
-use xcm_executor::{traits::ConvertLocation, XcmExecutor};
+use xcm_executor::{
+	traits::{ConvertLocation, JustTry},
+	XcmExecutor,
+};
 
 pub use system_parachains_constants::paseo::locations::{
 	AssetHubLocation, AssetHubPlurality, RelayChainLocation,
@@ -134,7 +128,6 @@ pub type FungibleTransactor = FungibleAdapter<
 	// We don't track any teleports of `Balances`.
 	(),
 >;
-
 
 parameter_types! {
 	/// A checking account for foreign assets - will be used as a fallback
@@ -245,7 +238,8 @@ impl ContainsPair<Asset, Location> for AssetHubAssets {
 		}
 
 		// Accept Asset Hub assets with pattern:
-		// Location { parents: 1, interior: X3([Parachain(1000), PalletInstance(50), GeneralIndex(_)]) }
+		// Location { parents: 1, interior: X3([Parachain(1000), PalletInstance(50),
+		// GeneralIndex(_)]) }
 		matches!(asset.id.0.unpack(), (1, [Parachain(1000), PalletInstance(50), GeneralIndex(_)]))
 	}
 }

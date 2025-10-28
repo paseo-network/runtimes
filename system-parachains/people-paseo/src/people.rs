@@ -18,24 +18,20 @@ use crate::xcm_config::LocationToAccountId;
 use codec::{Decode, Encode, MaxEncodedLen};
 use enumflags2::{bitflags, BitFlags};
 use frame_support::{
-	parameter_types, CloneNoBound, EqNoBound, PartialEqNoBound, RuntimeDebugNoBound,
+	parameter_types, traits::ContainsPair, CloneNoBound, EqNoBound, PartialEqNoBound,
+	RuntimeDebugNoBound,
 };
+use indiv_pallet_origin_restriction::Allowance;
+use indiv_support::traits::Alias;
 use pallet_identity::{Data, IdentityInformationProvider};
 use parachains_common::{impls::ToParentTreasury, DAYS};
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{AccountIdConversion, Verify},
-	RuntimeDebug,
+	MultiSignature, MultiSigner, RuntimeDebug,
 };
-use xcm::latest::prelude::BodyId;
-use xcm::latest::prelude::Location;
-use xcm::latest::prelude::Parachain;
-use sp_runtime::MultiSignature;
-use sp_runtime::MultiSigner;
-use indiv_pallet_origin_restriction::Allowance;
-use frame_support::traits::ContainsPair;
 use verifiable::ring_vrf_impl::BandersnatchVrfVerifiable;
-use indiv_support::traits::Alias;
+use xcm::latest::prelude::{BodyId, Location, Parachain};
 
 parameter_types! {
 	//   27 | Min encoded size of `Registration`
@@ -296,9 +292,8 @@ impl indiv_pallet_origin_restriction::RestrictedEntity<OriginCaller, Balance> fo
 		use indiv_pallet_people_lite::Origin::*;
 		use OriginCaller::*;
 		match origin_caller {
-			PeopleLite(LitePerson(account_id)) => {
-				Some(RestrictedEntity::LitePerson(account_id.clone()))
-			},
+			PeopleLite(LitePerson(account_id)) =>
+				Some(RestrictedEntity::LitePerson(account_id.clone())),
 			_ => None,
 		}
 	}
@@ -332,7 +327,9 @@ impl indiv_pallet_origin_restriction::Config for Runtime {
 pub struct PeopleLiteBenchmarkHelper;
 
 #[cfg(feature = "runtime-benchmarks")]
-impl indiv_pallet_people_lite::BenchmarkHelper<AccountId, MultiSignature> for PeopleLiteBenchmarkHelper {
+impl indiv_pallet_people_lite::BenchmarkHelper<AccountId, MultiSignature>
+	for PeopleLiteBenchmarkHelper
+{
 	fn sign_message(message: &[u8]) -> (AccountId, MultiSignature) {
 		use sp_core::Pair;
 		use sp_runtime::traits::IdentifyAccount;
