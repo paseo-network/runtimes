@@ -85,6 +85,7 @@ use xcm_runtime_apis::{
 	dry_run::{CallDryRunEffects, Error as XcmDryRunApiError, XcmDryRunEffects},
 	fees::Error as XcmPaymentApiError,
 };
+use xcm::latest::prelude::Assets as XcmAssets;
 
 /// The address format for describing accounts.
 pub type Address = MultiAddress<AccountId, ()>;
@@ -107,7 +108,7 @@ pub type TxExtension = (
 	frame_system::CheckEra<Runtime>,
 	frame_system::CheckNonce<Runtime>,
 	frame_system::CheckWeight<Runtime>,
-	pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
+	pallet_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
 	frame_metadata_hash_extension::CheckMetadataHash<Runtime>,
 );
 
@@ -163,7 +164,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: Cow::Borrowed("people-paseo"),
 	impl_name: Cow::Borrowed("people-paseo"),
 	authoring_version: 1,
-	spec_version: 1_009_002,
+	spec_version: 1_009_003,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 0,
@@ -270,6 +271,161 @@ impl pallet_transaction_payment::Config for Runtime {
 	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 	type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
 	type WeightInfo = weights::pallet_transaction_payment::WeightInfo<Self>;
+}
+
+parameter_types! {
+	pub const ForeignAssetsAssetDeposit: Balance = deposit(1, 190);
+	pub const ForeignAssetsAssetAccountDeposit: Balance = deposit(1, 16);
+	pub const ForeignAssetsAssetsStringLimit: u32 = 50;
+	pub const ForeignAssetsMetadataDepositBase: Balance = deposit(1, 68);
+	pub const ForeignAssetsMetadataDepositPerByte: Balance = deposit(0, 1);
+}
+
+const fn deposit(items: u32, bytes: u32) -> Balance {
+	(items as Balance * UNITS + (bytes as Balance) * (5 * MILLICENTS / 100)) / 10
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+pub struct AssetsBenchmarkHelper;
+
+#[cfg(feature = "runtime-benchmarks")]
+impl pallet_assets::BenchmarkHelper<Location> for AssetsBenchmarkHelper {
+	fn create_asset_id_parameter(id: u32) -> Location {
+		Location::new(
+			1,
+			[
+				xcm::latest::Junction::Parachain(1000),
+				xcm::latest::Junction::PalletInstance(50),
+				xcm::latest::Junction::GeneralIndex(id as u128),
+			],
+		)
+	}
+}
+
+/// Assets managed by some foreign location.
+impl pallet_assets::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Balance = Balance;
+	type AssetId = Location;
+	type AssetIdParameter = Location;
+	type Currency = Balances;
+	type CreateOrigin = AsEnsureOriginWithArg<frame_system::EnsureSigned<AccountId>>;
+	type ForceOrigin = EnsureRoot<AccountId>;
+	type AssetDeposit = ForeignAssetsAssetDeposit;
+	type MetadataDepositBase = ForeignAssetsMetadataDepositBase;
+	type MetadataDepositPerByte = ForeignAssetsMetadataDepositPerByte;
+	type ApprovalDeposit = ExistentialDeposit;
+	type StringLimit = ForeignAssetsAssetsStringLimit;
+	type Holder = AssetsHolder;
+	type Freezer = ();
+	type Extra = ();
+	// TODO: real weight
+	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
+		type CallbackHandle = ();
+	type AssetAccountDeposit = ForeignAssetsAssetAccountDeposit;
+	type RemoveItemsLimit = ConstU32<1000>;
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = AssetsBenchmarkHelper;
+}
+
+impl pallet_assets_holder::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeHoldReason = RuntimeHoldReason;
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+pub struct AssetRateBenchmarkHelper;
+
+#[cfg(feature = "runtime-benchmarks")]
+impl pallet_asset_rate::AssetKindFactory<Location> for AssetRateBenchmarkHelper {
+	fn create_asset_kind(seed: u32) -> Location {
+		Location::new(
+			1,
+			[
+				xcm::latest::Junction::Parachain(1000),
+				xcm::latest::Junction::GeneralIndex(seed as u128),
+			],
+		)
+	}
+}
+
+impl pallet_asset_rate::Config for Runtime {
+	type WeightInfo = ();
+	type RuntimeEvent = RuntimeEvent;
+	type CreateOrigin = EnsureRoot<AccountId>;
+	type RemoveOrigin = EnsureRoot<AccountId>;
+	type UpdateOrigin = EnsureRoot<AccountId>;
+	type Currency = Balances;
+	type AssetKind = <Runtime as pallet_assets::Config>::AssetId;
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = AssetRateBenchmarkHelper;
+}
+
+/// The full featured fungibles implementation with both regular and hold functionality.
+pub type AssetsWithHolder = CombineAssetsWithHolder<Assets, AssetsHolder>;
+
+/// Handles crediting transaction fees to the staking pot.
+pub struct CreditToStakingPot;
+impl pallet_asset_tx_payment::HandleCredit<AccountId, Assets> for CreditToStakingPot {
+	fn handle_credit(credit: frame_support::traits::fungibles::Credit<AccountId, Assets>) {
+		use sp_core::TypedGet;
+		let staking_pot = pallet_collator_selection::StakingPotAccountId::<Runtime>::get();
+		let _ = Assets::resolve(&staking_pot, credit);
+	}
+}
+
+type OnChargeStableTransaction =
+	pallet_asset_tx_payment::FungiblesAdapter<AssetRate, CreditToStakingPot>;
+
+#[cfg(feature = "runtime-benchmarks")]
+pub struct AssetTxPaymentBenchmarkHelper;
+#[cfg(feature = "runtime-benchmarks")]
+impl pallet_asset_tx_payment::BenchmarkHelperTrait<AccountId, Location, Location>
+	for AssetTxPaymentBenchmarkHelper
+{
+	fn create_asset_id_parameter(id: u32) -> (Location, Location) {
+		assert_eq!(id, 1);
+		let l = Location::new(
+			1,
+			[
+				xcm::latest::Junction::Parachain(1000),
+				xcm::latest::Junction::PalletInstance(50),
+				xcm::latest::Junction::GeneralIndex(1337),
+			],
+		);
+		(l.clone(), l)
+	}
+
+	fn setup_balances_and_pool(asset_id: Location, account: AccountId) {
+		use alloc::boxed::Box;
+		use frame_support::traits::{
+			fungible::Mutate as _,
+			fungibles::{Inspect as _, Mutate as _},
+		};
+
+		AssetRate::create(RuntimeOrigin::root(), Box::new(asset_id.clone()), 1.into()).unwrap();
+		if !Assets::asset_exists(asset_id.clone()) {
+			Assets::force_create(
+				RuntimeOrigin::root(),
+				asset_id.clone(),
+				account.clone().into(),
+				true,
+				1,
+			)
+			.unwrap();
+		}
+		Assets::mint_into(asset_id, &account, 10_000 * UNITS).unwrap();
+		Balances::mint_into(&account, 10_000 * UNITS).unwrap();
+	}
+}
+
+impl pallet_asset_tx_payment::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Fungibles = Assets;
+	type OnChargeAssetTransaction = OnChargeStableTransaction;
+	type WeightInfo = ();
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = AssetTxPaymentBenchmarkHelper;
 }
 
 parameter_types! {
@@ -632,6 +788,10 @@ construct_runtime!(
 		// Monetary stuff.
 		Balances: pallet_balances = 10,
 		TransactionPayment: pallet_transaction_payment = 11,
+		Assets: pallet_assets = 12,
+		AssetRate: pallet_asset_rate = 13,
+		AssetTxPayment: pallet_asset_tx_payment = 14,
+		AssetsHolder: pallet_assets_holder = 15,
 
 		// Collator support. The order of these 5 are important and shall not change.
 		Authorship: pallet_authorship = 20,
@@ -653,6 +813,10 @@ construct_runtime!(
 
 		// The main stage.
 		Identity: pallet_identity = 50,
+		VerifySignature: pallet_verify_signature = 51,
+		OriginRestriction: pallet_origin_restriction = 52,
+		PeopleLite: pallet_people_lite = 53,
+		Resources: pallet_resources = 54,
 		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 255,
 	}
 );
@@ -668,12 +832,18 @@ mod benches {
 		// Substrate
 		[frame_system, SystemBench::<Runtime>]
 		[frame_system_extensions, SystemExtensionsBench::<Runtime>]
+		[pallet_asset_tx_payment, AssetTxPayment]
+		[pallet_asset_rate, AssetRate]
+		[pallet_assets, Assets]
 		[pallet_balances, Balances]
 		[pallet_identity, Identity]
 		[pallet_message_queue, MessageQueue]
 		[pallet_migrations, MultiBlockMigrations]
 		[pallet_multisig, Multisig]
+		[pallet_origin_restriction, OriginRestriction]
+		[pallet_people_lite, PeopleLite]
 		[pallet_proxy, Proxy]
+		[pallet_resources, Resources]
 		[pallet_session, SessionBench::<Runtime>]
 		[pallet_transaction_payment, TransactionPayment]
 		[pallet_timestamp, Timestamp]
@@ -727,7 +897,7 @@ mod benches {
 			None
 		}
 
-		fn set_up_complex_asset_transfer() -> Option<(Assets, u32, Location, Box<dyn FnOnce()>)> {
+		fn set_up_complex_asset_transfer() -> Option<(XcmAssets, u32, Location, Box<dyn FnOnce()>)> {
 			// Only supports native token teleports to system parachain
 			let native_location = Parent.into();
 			let dest = AssetHubLocation::get();
@@ -766,7 +936,7 @@ mod benches {
 		fn valid_destination() -> Result<Location, BenchmarkError> {
 			Ok(AssetHubLocation::get())
 		}
-		fn worst_case_holding(_depositable_count: u32) -> Assets {
+		fn worst_case_holding(_depositable_count: u32) -> XcmAssets {
 			// just concrete assets according to relay chain.
 			let assets: Vec<Asset> =
 				vec![Asset { id: AssetId(RelayLocation::get()), fun: Fungible(1_000_000 * UNITS) }];
@@ -803,7 +973,7 @@ mod benches {
 			(0u64, Response::Version(Default::default()))
 		}
 
-		fn worst_case_asset_exchange() -> Result<(Assets, Assets), BenchmarkError> {
+		fn worst_case_asset_exchange() -> Result<(XcmAssets, XcmAssets), BenchmarkError> {
 			Err(BenchmarkError::Skip)
 		}
 
@@ -822,9 +992,9 @@ mod benches {
 			Ok(AssetHubLocation::get())
 		}
 
-		fn claimable_asset() -> Result<(Location, Location, Assets), BenchmarkError> {
+		fn claimable_asset() -> Result<(Location, Location, XcmAssets), BenchmarkError> {
 			let origin = AssetHubLocation::get();
-			let assets: Assets = (AssetId(RelayLocation::get()), 1_000 * UNITS).into();
+			let assets: XcmAssets = (AssetId(RelayLocation::get()), 1_000 * UNITS).into();
 			let ticket = Location::new(0, []);
 			Ok((origin, ticket, assets))
 		}

@@ -97,6 +97,7 @@ pallet-asset-conversion-tx-payment = { version = "24.0.0", default-features = fa
 pallet-asset-rate = { version = "21.0.0", default-features = false }
 pallet-asset-tx-payment = { version = "42.0.0", default-features = false }
 pallet-assets = { version = "45.0.0", default-features = false }
+pallet-assets-holder = { version = "0.5.0", default-features = false }
 pallet-aura = { version = "41.0.0", default-features = false }
 pallet-authority-discovery = { version = "42.0.0", default-features = false }
 pallet-authorship = { version = "42.0.0", default-features = false }
@@ -165,6 +166,7 @@ pallet-transaction-payment-rpc-runtime-api = { version = "42.0.0", default-featu
 pallet-treasury = { version = "41.0.0", default-features = false }
 pallet-uniques = { version = "42.0.0", default-features = false }
 pallet-utility = { version = "42.0.0", default-features = false }
+pallet-verify-signature = { version = "0.5.0", default-features = false }
 pallet-vesting = { version = "42.0.0", default-features = false }
 pallet-whitelist = { version = "41.0.0", default-features = false }
 pallet-xcm = { version = "22.0.1", default-features = false }
@@ -231,6 +233,7 @@ sp-session = { version = "40.0.0", default-features = false }
 sp-staking = { version = "40.0.0", default-features = false }
 sp-std = { version = "14.0.0", default-features = false }
 sp-state-machine = { version = "0.47.0", default-features = false }
+sp-statement-store = { version = "22.0.0", default-features = false }
 sp-storage = { version = "22.0.0", default-features = false }
 sp-tracing = { version = "18.0.0", default-features = false }
 sp-transaction-pool = { version = "38.0.0", default-features = false }
@@ -252,6 +255,12 @@ zombienet-sdk = { version = "0.3.12" }
 tuplex = { version = "0.1.0", default-features = false }
 relay-common = { path = "relay/common", default-features = false }
 ss58-registry = { version = "1.47.0" }
+ed25519-zebra = { version = "4.0.3", default-features = false }
+verifiable = { version = "0.2.0", default-features = false, features = ["small-ring"] }
+indiv-pallet-origin-restriction = { package = "pallet-origin-restriction", git = "ssh://git@github.com/paritytech/individuality", branch = "gui-update-to-unstable2507", default-features = false }
+indiv-pallet-people-lite = { package = "pallet-people-lite", git = "ssh://git@github.com/paritytech/individuality", branch = "gui-update-to-unstable2507", default-features = false }
+indiv-pallet-resources = { package = "pallet-resources", git = "ssh://git@github.com/paritytech/individuality", branch = "gui-update-to-unstable2507", default-features = false }
+indiv-support = { package = "individuality-support", git = "ssh://git@github.com/paritytech/individuality", branch = "gui-update-to-unstable2507", default-features = false }
 
 [workspace]
 resolver = "2"

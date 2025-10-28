@@ -125,6 +125,48 @@ pub type FungibleTransactor = FungibleAdapter<
 	(),
 >;
 
+
+parameter_types! {
+	/// A checking account for foreign assets - will be used as a fallback
+	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
+}
+
+/// Means for transacting assets besides the native currency on this chain.
+pub type FungiblesTransactor = FungiblesAdapter<
+	// Use this fungibles implementation:
+	Assets,
+	// Use Location directly as asset ID:
+	ConvertedConcreteId<Location, Balance, Identity, JustTry>,
+	// Convert an XCM `Location` into a local account ID:
+	LocationToAccountId,
+	// Our chain's account ID type:
+	AccountId,
+	// No checking for teleports
+	NoChecking,
+	// Use the checking account for tracking
+	CheckingAccount,
+>;
+
+/// Combined asset transactor for both native currency and foreign assets
+pub type AssetTransactors = (FungibleTransactor, FungiblesTransactor);
+
+pub type WeightToNativeFee = WeightToFee;
+pub struct WeightToStableFee;
+impl frame_support::weights::WeightToFee for WeightToStableFee {
+	type Balance = Balance;
+
+	fn weight_to_fee(weight: &Weight) -> Self::Balance {
+		let native_fee = WeightToNativeFee::weight_to_fee(weight);
+
+		AssetRate::to_asset_balance(native_fee, StableAssetLocation::get())
+			// Using max value will make the payment fail and go to the next trader component.
+			.unwrap_or(Balance::MAX)
+	}
+}
+
+/// A fungible adapter for the stable asset
+pub type FungibleStableAsset = ItemOf<Assets, StableAssetLocation, AccountId>;
+
 /// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
 /// ready for dispatching a transaction with XCM's `Transact`.
 ///
@@ -181,6 +223,23 @@ impl Contains<Location> for FellowsPlurality {
 	}
 }
 
+/// Custom reserve filter for Asset Hub assets coming from Asset Hub perspective.
+/// Accepts assets with specific patterns from Asset Hub (parachain 1000).
+pub struct AssetHubAssets;
+impl ContainsPair<Asset, Location> for AssetHubAssets {
+	fn contains(asset: &Asset, origin: &Location) -> bool {
+		// Check if origin is Asset Hub
+		let asset_hub_origin = AssetHubLocation::get();
+		if origin != &asset_hub_origin {
+			return false;
+		}
+
+		// Accept Asset Hub assets with pattern:
+		// Location { parents: 1, interior: X3([Parachain(1000), PalletInstance(50), GeneralIndex(_)]) }
+		matches!(asset.id.0.unpack(), (1, [Parachain(1000), PalletInstance(50), GeneralIndex(_)]))
+	}
+}
+
 pub type Barrier = TrailingSetTopicAsId<
 	DenyThenTry<
 		DenyReserveTransferToRelayChain,
@@ -195,13 +254,18 @@ pub type Barrier = TrailingSetTopicAsId<
 					// allow it.
 					AllowTopLevelPaidExecutionFrom<Everything>,
 					// Parent and its pluralities (i.e. governance bodies) get free execution.
-					AllowExplicitUnpaidExecutionFrom<(
-						ParentOrParentsPlurality,
-						FellowsPlurality,
-						Equals<RelayTreasuryLocation>,
-						Equals<AssetHubLocation>,
-						AssetHubPlurality,
-					)>,
+					AllowExplicitUnpaidExecutionFrom<
+						(
+							ParentOrParentsPlurality,
+							FellowsPlurality,
+							Equals<RelayTreasuryLocation>,
+							Equals<AssetHubLocation>,
+							// Because of InitiateTransfer {preserve_origin: true}
+							Equals<RootLocation>,
+						),
+						// Because of InitiateTransfer {preserve_origin: true}
+						AliasOriginRootUsingFilter<AssetHubLocation, Everything>,
+					>,
 					// Subscriptions for version tracking are OK.
 					AllowSubscriptionsFrom<ParentRelayOrSiblingParachains>,
 				),
@@ -239,11 +303,9 @@ pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
 	type RuntimeCall = RuntimeCall;
 	type XcmSender = XcmRouter;
-	type AssetTransactor = FungibleTransactor;
+	type AssetTransactor = AssetTransactors;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
-	// People chain does not recognize a reserve location for any asset. Users must teleport DOT
-	// where allowed (e.g. with the Relay Chain).
-	type IsReserve = ();
+	type IsReserve = AssetHubAssets; // TODO: HOLLAR
 	/// Only allow teleportation of DOT.
 	type IsTeleporter = ConcreteAssetFromSystem<RelayLocation>;
 	type UniversalLocation = UniversalLocation;
@@ -253,13 +315,22 @@ impl xcm_executor::Config for XcmConfig {
 		RuntimeCall,
 		MaxInstructions,
 	>;
-	type Trader = UsingComponents<
-		WeightToFee,
-		RelayLocation,
-		AccountId,
-		Balances,
-		ResolveTo<StakingPot, Balances>,
-	>;
+	type Trader = (
+		UsingComponents<
+			WeightToNativeFee,
+			RelayLocation,
+			AccountId,
+			Balances,
+			ResolveTo<StakingPot, Balances>,
+		>,
+		UsingComponents<
+			WeightToStableFee,
+			StableAssetLocation,
+			AccountId,
+			FungibleStableAsset,
+			ResolveTo<StakingPot, FungibleStableAsset>,
+		>,
+	);
 	type ResponseHandler = PolkadotXcm;
 	type AssetTrap = PolkadotXcm;
 	type AssetClaims = PolkadotXcm;

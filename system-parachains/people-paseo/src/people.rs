@@ -41,6 +41,10 @@ parameter_types! {
 	pub RelayTreasuryAccount: AccountId =
 		parachains_common::TREASURY_PALLET_ID.into_account_truncating();
 	pub const GeneralAdminBodyId: BodyId = BodyId::Administration;
+	pub StableAssetLocation: Location = Location::new(
+		1,
+		[Parachain(1000), xcm::latest::Junction::PalletInstance(50), xcm::latest::Junction::GeneralIndex(3)],
+	);
 }
 
 pub type IdentityAdminOrigin = EitherOfDiverse<
@@ -241,4 +245,130 @@ impl Default for IdentityInfo {
 			discord: Data::None,
 		}
 	}
+}
+
+impl pallet_verify_signature::Config for Runtime {
+	type Signature = MultiSignature;
+	type AccountIdentifier = MultiSigner;
+	type WeightInfo = ();
+}
+
+parameter_types! {
+	// TODO: good values and reasoning
+	pub const OriginRestrictionAllowanceMax: Balance = 100 * UNITS;
+	pub const OriginRestrictionAllowanceRecovery: Balance = UNITS / 100;
+}
+
+#[derive(
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	Clone,
+	PartialEq,
+	Eq,
+	RuntimeDebug,
+	MaxEncodedLen,
+	scale_info::TypeInfo,
+)]
+pub enum RestrictedEntity {
+	LitePerson(AccountId),
+}
+
+impl pallet_origin_restriction::RestrictedEntity<OriginCaller, Balance> for RestrictedEntity {
+	fn allowance(&self) -> Allowance<Balance> {
+		match self {
+			RestrictedEntity::LitePerson(_) => Allowance {
+				max: OriginRestrictionAllowanceMax::get(),
+				recovery_per_block: OriginRestrictionAllowanceRecovery::get(),
+			},
+		}
+	}
+
+	fn restricted_entity(origin_caller: &OriginCaller) -> Option<Self> {
+		use pallet_people_lite::Origin::*;
+		use OriginCaller::*;
+		match origin_caller {
+			PeopleLite(LitePerson(account_id)) => {
+				Some(RestrictedEntity::LitePerson(account_id.clone()))
+			},
+			_ => None,
+		}
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn benchmarked_restricted_origin() -> OriginCaller {
+		use sp_core::crypto::Pair as _;
+		use sp_runtime::traits::IdentifyAccount;
+		let pair = sp_core::sr25519::Pair::from_string("//Alice", None)
+			.expect("static values are valid; qed");
+		let signer = MultiSigner::Sr25519(pair.public());
+		let account_id = signer.into_account();
+		OriginCaller::PeopleLite(pallet_people_lite::Origin::LitePerson(account_id))
+	}
+}
+
+pub struct OperationAllowedOneTimeExcess;
+impl ContainsPair<RestrictedEntity, RuntimeCall> for OperationAllowedOneTimeExcess {
+	fn contains(_entity: &RestrictedEntity, _call: &RuntimeCall) -> bool {
+		false
+	}
+}
+
+impl pallet_origin_restriction::Config for Runtime {
+	type WeightInfo = ();
+	type RestrictedEntity = RestrictedEntity;
+	type OperationAllowedOneTimeExcess = OperationAllowedOneTimeExcess;
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+pub struct PeopleLiteBenchmarkHelper;
+
+#[cfg(feature = "runtime-benchmarks")]
+impl pallet_people_lite::BenchmarkHelper<AccountId, MultiSignature> for PeopleLiteBenchmarkHelper {
+	fn sign_message(message: &[u8]) -> (AccountId, MultiSignature) {
+		use sp_core::Pair;
+		use sp_runtime::traits::IdentifyAccount;
+		let entropy = [1u8; 32];
+		let pair = sp_core::ed25519::Pair::from_seed(&entropy);
+		let account = pair.public().into_account().into();
+		let secret = ed25519_zebra::SigningKey::from(entropy);
+		let signature = sp_core::ed25519::Signature::from_raw(secret.sign(message).into());
+		(account, signature.into())
+	}
+}
+
+impl pallet_people_lite::Config for Runtime {
+	type WeightInfo = ();
+	type AttestationAllowanceManager = EnsureRoot<AccountId>;
+	type Crypto = BandersnatchVrfVerifiable;
+	type AttestationSignature = MultiSignature;
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = PeopleLiteBenchmarkHelper;
+}
+
+parameter_types! {
+	pub const ResourcesMaxUsernameLength: u32 = 32;
+	pub const ResourcesMinUsernameLength: u32 = 7;
+	pub const ResourcesPersonAuthDuration: u32 = 90 * DAYS;
+	pub const ResourcesMinPersonAuthUpdateInterval: u32 = 30 * DAYS;
+	pub const ResourcesUsernameReservationDuration: u64 = 7 * DAYS as u64;
+	pub const ResourcesLitePersonStatementLimit: sp_statement_store::runtime_api::ValidStatement = sp_statement_store::runtime_api::ValidStatement {
+		max_count: 10,
+		max_size: 1024,
+	};
+}
+
+impl pallet_resources::Config for Runtime {
+	type WeightInfo = ();
+	type Crypto = BandersnatchVrfVerifiable;
+	type MaxUsernameLength = ResourcesMaxUsernameLength;
+	type MinUsernameLength = ResourcesMinUsernameLength;
+	type PersonAuthDuration = ResourcesPersonAuthDuration;
+	type MinPersonAuthUpdateInterval = ResourcesMinPersonAuthUpdateInterval;
+	type EnsurePerson = frame_system::EnsureNever<Alias>;
+	type EnsureLitePerson = pallet_people_lite::EnsureLitePerson<Runtime>;
+	type Clock = Timestamp;
+	type OffchainSignature = MultiSignature;
+	type UsernameReservationDuration = ResourcesUsernameReservationDuration;
+	type LitePersonStatementLimit = ResourcesLitePersonStatementLimit;
 }

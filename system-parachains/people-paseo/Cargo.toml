@@ -12,10 +12,12 @@ version.workspace = true
 enumflags2 = { workspace = true }
 serde = { optional = true, features = ["derive"], workspace = true }
 codec = { features = ["derive", "max-encoded-len"], workspace = true }
+ed25519-zebra = { optional = true, workspace = true }
 hex-literal = { workspace = true }
 log = { workspace = true }
 scale-info = { features = ["derive"], workspace = true }
 serde_json = { features = ["alloc"], workspace = true }
+verifiable = { workspace = true }
 
 # Substrate
 frame-benchmarking = { optional = true, workspace = true }
@@ -26,6 +28,11 @@ frame-system = { workspace = true }
 frame-system-benchmarking = { optional = true, workspace = true }
 frame-system-rpc-runtime-api = { workspace = true }
 frame-try-runtime = { optional = true, workspace = true }
+indiv-support = { workspace = true }
+pallet-asset-tx-payment = { workspace = true }
+pallet-asset-rate = { workspace = true }
+pallet-assets = { workspace = true }
+pallet-assets-holder = { workspace = true }
 pallet-aura = { workspace = true }
 pallet-authorship = { workspace = true }
 pallet-balances = { workspace = true }
@@ -40,6 +47,10 @@ pallet-timestamp = { workspace = true }
 pallet-transaction-payment = { workspace = true }
 pallet-transaction-payment-rpc-runtime-api = { workspace = true }
 pallet-utility = { workspace = true }
+indiv-pallet-origin-restriction = { workspace = true }
+indiv-pallet-people-lite = { workspace = true }
+indiv-pallet-resources = { workspace = true }
+pallet-verify-signature = { workspace = true }
 sp-api = { workspace = true }
 sp-block-builder = { workspace = true }
 sp-consensus-aura = { workspace = true }
@@ -49,6 +60,7 @@ sp-inherents = { workspace = true }
 sp-offchain = { workspace = true }
 sp-runtime = { workspace = true }
 sp-session = { workspace = true }
+sp-statement-store = { workspace = true }
 sp-storage = { workspace = true }
 sp-transaction-pool = { workspace = true }
 sp-version = { workspace = true }
@@ -77,6 +89,7 @@ pallet-collator-selection = { workspace = true }
 parachain-info = { workspace = true }
 parachains-common = { workspace = true }
 system-parachains-constants = { workspace = true }
+assets-common = { workspace = true }
 
 [dev-dependencies]
 parachains-runtimes-test-utils = { workspace = true }
@@ -149,6 +162,19 @@ std = [
 	"xcm-executor/std",
 	"xcm-runtime-apis/std",
 	"xcm/std",
+	"assets-common/std",
+	"ed25519-zebra?/std",
+	"indiv-support/std",
+	"pallet-asset-rate/std",
+	"pallet-asset-tx-payment/std",
+	"pallet-assets/std",
+	"pallet-assets-holder/std",
+	"indiv-pallet-origin-restriction/std",
+	"indiv-pallet-people-lite/std",
+	"indiv-pallet-resources/std",
+	"pallet-verify-signature/std",
+	"sp-statement-store/std",
+	"verifiable/std"
 ]
 
 runtime-benchmarks = [
@@ -184,6 +210,16 @@ runtime-benchmarks = [
 	"xcm-executor/runtime-benchmarks",
 	"xcm-runtime-apis/runtime-benchmarks",
 	"xcm/runtime-benchmarks",
+	"assets-common/runtime-benchmarks",
+	"indiv-support/runtime-benchmarks",
+	"pallet-asset-rate/runtime-benchmarks",
+	"pallet-asset-tx-payment/runtime-benchmarks",
+	"pallet-assets/runtime-benchmarks",
+	"pallet-assets-holder/runtime-benchmarks",
+	"indiv-pallet-origin-restriction/runtime-benchmarks",
+	"indiv-pallet-people-lite/runtime-benchmarks",
+	"indiv-pallet-resources/runtime-benchmarks",
+	"pallet-verify-signature/runtime-benchmarks"
 ]
 
 try-runtime = [
@@ -214,6 +250,15 @@ try-runtime = [
 	"parachains-common/try-runtime",
 	"polkadot-runtime-common/try-runtime",
 	"sp-runtime/try-runtime",
+	"assets-common/try-runtime",
+	"pallet-asset-rate/try-runtime",
+	"pallet-asset-tx-payment/try-runtime",
+	"pallet-assets/try-runtime",
+	"pallet-assets-holder/try-runtime",
+	"indiv-pallet-origin-restriction/try-runtime",
+	"indiv-pallet-people-lite/try-runtime",
+	"indiv-pallet-resources/try-runtime",
+	"pallet-verify-signature/try-runtime"
 ]
 
 # Enable metadata hash generation at compile time for the `CheckMetadataHash` extension.
