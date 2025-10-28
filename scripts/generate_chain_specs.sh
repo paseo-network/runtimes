@@ -123,7 +123,7 @@ find chain-specs/local -type f -name "*.json" ! -name "*-raw.json" -exec rm -f {
 
 for f in chain-specs/local/*-raw.json; do
   [ -e "$f" ] || continue
-  mv "$f" "chain-specs/local/${f%-raw.json}.json"
+  mv "$f" "${f%-raw.json}.json"
 done
 
 echo "✅ Chain specs correctly saved"
