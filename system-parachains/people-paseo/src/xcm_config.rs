@@ -226,21 +226,21 @@ impl Contains<Location> for FellowsPlurality {
 	}
 }
 
-/// Custom reserve filter for Asset Hub assets coming from Asset Hub perspective.
-/// Accepts assets with specific patterns from Asset Hub (parachain 1000).
-pub struct AssetHubAssets;
-impl ContainsPair<Asset, Location> for AssetHubAssets {
+/// Custom reserve filter for Hollar asset coming from hydration perspective.
+pub struct Hollar;
+impl ContainsPair<Asset, Location> for Hollar {
 	fn contains(asset: &Asset, origin: &Location) -> bool {
-		// Check if origin is Asset Hub
-		let asset_hub_origin = AssetHubLocation::get();
-		if origin != &asset_hub_origin {
+		const HYDRATION_PARA_ID: u32 = 2000; // TODO: find value
+		const PALLET_INSTANCE_HOLLAR: u8 = 50; // TODO: find value
+		const GENERAL_INDEX_HOLLAR: u128 = 1; // TODO: find value
+
+		// Check if origin is Hydration.
+		let hydration_origin = Location::new(1, Parachain(HYDRATION_PARA_ID));
+		if origin != &hydration_origin {
 			return false;
 		}
 
-		// Accept Asset Hub assets with pattern:
-		// Location { parents: 1, interior: X3([Parachain(1000), PalletInstance(50),
-		// GeneralIndex(_)]) }
-		matches!(asset.id.0.unpack(), (1, [Parachain(1000), PalletInstance(50), GeneralIndex(_)]))
+		matches!(asset.id.0.unpack(), (1, [Parachain(HYDRATION_PARA_ID), PalletInstance(PALLET_INSTANCE_HOLLAR), GeneralIndex(GENERAL_INDEX_HOLLAR)]))
 	}
 }
 
@@ -309,7 +309,7 @@ impl xcm_executor::Config for XcmConfig {
 	type XcmSender = XcmRouter;
 	type AssetTransactor = AssetTransactors;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
-	type IsReserve = AssetHubAssets; // TODO: HOLLAR
+	type IsReserve = Hollar;
 	/// Only allow teleportation of DOT.
 	type IsTeleporter = ConcreteAssetFromSystem<RelayLocation>;
 	type UniversalLocation = UniversalLocation;
