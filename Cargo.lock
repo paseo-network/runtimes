@@ -5300,9 +5300,70 @@ dependencies = [
 ]
 
 [[package]]
-name = "individuality-support"
+name = "indiv-pallet-origin-restriction"
 version = "0.1.0"
-source = "git+ssh://git@github.com/paritytech/individuality?branch=gui-update-to-unstable2507#2627ce87bbf11af3601092157e1d4ca435404ac5"
+source = "git+ssh://git@github.com/paritytech/individuality-public#b7b9cce4f77ae77744790a741bf259fecbc0c547"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "indiv-support",
+ "log",
+ "pallet-transaction-payment",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
+name = "indiv-pallet-people-lite"
+version = "0.1.0"
+source = "git+ssh://git@github.com/paritytech/individuality-public#b7b9cce4f77ae77744790a741bf259fecbc0c547"
+dependencies = [
+ "ed25519-zebra",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "indiv-support",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "staging-xcm",
+ "verifiable",
+]
+
+[[package]]
+name = "indiv-pallet-resources"
+version = "0.1.0"
+source = "git+ssh://git@github.com/paritytech/individuality-public#b7b9cce4f77ae77744790a741bf259fecbc0c547"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "indiv-support",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-statement-store",
+ "staging-xcm",
+ "verifiable",
+]
+
+[[package]]
+name = "indiv-support"
+version = "0.1.0"
+source = "git+ssh://git@github.com/paritytech/individuality-public#b7b9cce4f77ae77744790a741bf259fecbc0c547"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -7996,25 +8057,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-origin-restriction"
-version = "4.0.0-dev"
-source = "git+ssh://git@github.com/paritytech/individuality?branch=gui-update-to-unstable2507#2627ce87bbf11af3601092157e1d4ca435404ac5"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "individuality-support",
- "log",
- "pallet-transaction-payment",
- "parity-scale-codec",
- "scale-info",
- "sp-arithmetic",
- "sp-core",
- "sp-io",
- "sp-runtime",
-]
-
-[[package]]
 name = "pallet-parameters"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8030,27 +8072,6 @@ dependencies = [
  "serde",
  "sp-core",
  "sp-runtime",
-]
-
-[[package]]
-name = "pallet-people-lite"
-version = "4.0.0-dev"
-source = "git+ssh://git@github.com/paritytech/individuality?branch=gui-update-to-unstable2507#2627ce87bbf11af3601092157e1d4ca435404ac5"
-dependencies = [
- "ed25519-zebra",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "individuality-support",
- "log",
- "parity-scale-codec",
- "scale-info",
- "sp-arithmetic",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "staging-xcm",
- "verifiable",
 ]
 
 [[package]]
@@ -8200,27 +8221,6 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-trie",
-]
-
-[[package]]
-name = "pallet-resources"
-version = "4.0.0-dev"
-source = "git+ssh://git@github.com/paritytech/individuality?branch=gui-update-to-unstable2507#2627ce87bbf11af3601092157e1d4ca435404ac5"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "individuality-support",
- "log",
- "parity-scale-codec",
- "scale-info",
- "sp-arithmetic",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-statement-store",
- "staging-xcm",
- "verifiable",
 ]
 
 [[package]]
@@ -9281,7 +9281,10 @@ dependencies = [
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
  "hex-literal",
- "individuality-support",
+ "indiv-pallet-origin-restriction",
+ "indiv-pallet-people-lite",
+ "indiv-pallet-resources",
+ "indiv-support",
  "log",
  "pallet-asset-rate",
  "pallet-asset-tx-payment",
@@ -9295,10 +9298,7 @@ dependencies = [
  "pallet-message-queue",
  "pallet-migrations",
  "pallet-multisig",
- "pallet-origin-restriction",
- "pallet-people-lite",
  "pallet-proxy",
- "pallet-resources",
  "pallet-session",
  "pallet-sudo",
  "pallet-timestamp",

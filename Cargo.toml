@@ -257,10 +257,10 @@ relay-common = { path = "relay/common", default-features = false }
 ss58-registry = { version = "1.47.0" }
 ed25519-zebra = { version = "4.0.3", default-features = false }
 verifiable = { version = "0.2.0", default-features = false, features = ["small-ring"] }
-indiv-pallet-origin-restriction = { package = "pallet-origin-restriction", git = "ssh://git@github.com/paritytech/individuality", branch = "gui-update-to-unstable2507", default-features = false }
-indiv-pallet-people-lite = { package = "pallet-people-lite", git = "ssh://git@github.com/paritytech/individuality", branch = "gui-update-to-unstable2507", default-features = false }
-indiv-pallet-resources = { package = "pallet-resources", git = "ssh://git@github.com/paritytech/individuality", branch = "gui-update-to-unstable2507", default-features = false }
-indiv-support = { package = "individuality-support", git = "ssh://git@github.com/paritytech/individuality", branch = "gui-update-to-unstable2507", default-features = false }
+indiv-pallet-origin-restriction = { git = "ssh://git@github.com/paritytech/individuality-public", default-features = false }
+indiv-pallet-people-lite = { git = "ssh://git@github.com/paritytech/individuality-public", default-features = false }
+indiv-pallet-resources = { git = "ssh://git@github.com/paritytech/individuality-public", default-features = false }
+indiv-support = { git = "ssh://git@github.com/paritytech/individuality-public", default-features = false }
 
 [workspace]
 resolver = "2"
