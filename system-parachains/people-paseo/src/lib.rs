@@ -40,7 +40,7 @@ use frame_support::{
 	traits::{
 		fungibles::Balanced, tokens::imbalance::ResolveTo, AsEnsureOriginWithArg, ConstBool,
 		ConstU32, ConstU64, ConstU8, EitherOf, EitherOfDiverse, Everything, InstanceFilter,
-		TransformOrigin,
+		MapSuccess, TransformOrigin,
 	},
 	weights::{ConstantMultiplier, Weight},
 	PalletId,
@@ -64,7 +64,7 @@ use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 pub use sp_runtime::BuildStorage;
 use sp_runtime::{
 	generic, impl_opaque_keys,
-	traits::{BlakeTwo256, Block as BlockT},
+	traits::{AccountIdConversion, BlakeTwo256, Block as BlockT, Replace},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, MultiSignature, MultiSigner, RuntimeDebug,
 };
@@ -281,6 +281,7 @@ parameter_types! {
 	pub const ForeignAssetsAssetsStringLimit: u32 = 50;
 	pub const ForeignAssetsMetadataDepositBase: Balance = deposit(1, 68);
 	pub const ForeignAssetsMetadataDepositPerByte: Balance = deposit(0, 1);
+	pub AssetsAccount: AccountId = PalletId(*b"py/asset").into_account_truncating();
 }
 
 const fn deposit(items: u32, bytes: u32) -> Balance {
@@ -311,7 +312,8 @@ impl pallet_assets::Config for Runtime {
 	type AssetId = Location;
 	type AssetIdParameter = Location;
 	type Currency = Balances;
-	type CreateOrigin = EnsureRoot<AccountId>;
+	type CreateOrigin =
+		AsEnsureOriginWithArg<MapSuccess<EnsureRoot<AccountId>, Replace<AssetsAccount>>>;
 	type ForceOrigin = EnsureRoot<AccountId>;
 	type AssetDeposit = ForeignAssetsAssetDeposit;
 	type MetadataDepositBase = ForeignAssetsMetadataDepositBase;
