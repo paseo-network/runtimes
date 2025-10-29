@@ -28,7 +28,7 @@ use parachains_common::{impls::ToParentTreasury, DAYS};
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{AccountIdConversion, Verify},
-	MultiSignature, MultiSigner, RuntimeDebug,
+	MultiSignature, RuntimeDebug,
 };
 use verifiable::ring_vrf_impl::BandersnatchVrfVerifiable;
 use xcm::latest::prelude::{BodyId, Location, Parachain};
@@ -251,12 +251,6 @@ impl Default for IdentityInfo {
 	}
 }
 
-impl pallet_verify_signature::Config for Runtime {
-	type Signature = MultiSignature;
-	type AccountIdentifier = MultiSigner;
-	type WeightInfo = ();
-}
-
 parameter_types! {
 	// TODO: good values and reasoning
 	pub const OriginRestrictionAllowanceMax: Balance = 100 * UNITS;
@@ -301,6 +295,7 @@ impl indiv_pallet_origin_restriction::RestrictedEntity<OriginCaller, Balance> fo
 	#[cfg(feature = "runtime-benchmarks")]
 	fn benchmarked_restricted_origin() -> OriginCaller {
 		use sp_core::crypto::Pair as _;
+		use sp_runtime::MultiSigner;
 		use sp_runtime::traits::IdentifyAccount;
 		let pair = sp_core::sr25519::Pair::from_string("//Alice", None)
 			.expect("static values are valid; qed");
@@ -318,7 +313,7 @@ impl ContainsPair<RestrictedEntity, RuntimeCall> for OperationAllowedOneTimeExce
 }
 
 impl indiv_pallet_origin_restriction::Config for Runtime {
-	type WeightInfo = ();
+	type WeightInfo = (); // TODO: weight
 	type RestrictedEntity = RestrictedEntity;
 	type OperationAllowedOneTimeExcess = OperationAllowedOneTimeExcess;
 }
@@ -343,12 +338,34 @@ impl indiv_pallet_people_lite::BenchmarkHelper<AccountId, MultiSignature>
 }
 
 impl indiv_pallet_people_lite::Config for Runtime {
-	type WeightInfo = ();
+	type WeightInfo = (); // TODO: weight
 	type AttestationAllowanceManager = EnsureRoot<AccountId>;
 	type Crypto = BandersnatchVrfVerifiable;
 	type AttestationSignature = MultiSignature;
+	type LiteConsumerRegistrar = Resources;
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = PeopleLiteBenchmarkHelper;
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+pub struct ResourcesBenchmarkHelper;
+#[cfg(feature = "runtime-benchmarks")]
+impl indiv_pallet_resources::benchmarking::BenchmarkHelper<Runtime> for ResourcesBenchmarkHelper {
+	fn set_time(now: core::time::Duration) {
+		// We don't call `set_timestamp` directly because it triggers checks such as aura slot
+		pallet_timestamp::Now::<Runtime>::put(now.as_millis() as u64);
+	}
+
+	fn sign_message(message: &[u8]) -> (sp_runtime::AccountId32, MultiSignature) {
+		use sp_core::Pair;
+		use sp_runtime::traits::IdentifyAccount;
+		let entropy = [1u8; 32];
+		let pair = sp_core::ed25519::Pair::from_seed(&entropy);
+		let account = pair.public().into_account().into();
+		let secret = ed25519_zebra::SigningKey::from(entropy);
+		let signature = sp_core::ed25519::Signature::from_raw(secret.sign(message).into());
+		(account, signature.into())
+	}
 }
 
 parameter_types! {
@@ -364,7 +381,7 @@ parameter_types! {
 }
 
 impl indiv_pallet_resources::Config for Runtime {
-	type WeightInfo = ();
+	type WeightInfo = (); // TODO: weight
 	type Crypto = BandersnatchVrfVerifiable;
 	type MaxUsernameLength = ResourcesMaxUsernameLength;
 	type MinUsernameLength = ResourcesMinUsernameLength;
@@ -376,4 +393,6 @@ impl indiv_pallet_resources::Config for Runtime {
 	type OffchainSignature = MultiSignature;
 	type UsernameReservationDuration = ResourcesUsernameReservationDuration;
 	type LitePersonStatementLimit = ResourcesLitePersonStatementLimit;
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = ResourcesBenchmarkHelper;
 }

@@ -87,6 +87,8 @@ use xcm_runtime_apis::{
 	dry_run::{CallDryRunEffects, Error as XcmDryRunApiError, XcmDryRunEffects},
 	fees::Error as XcmPaymentApiError,
 };
+use sp_runtime::MultiSignature;
+use sp_runtime::MultiSigner;
 
 /// The address format for describing accounts.
 pub type Address = MultiAddress<AccountId, ()>;
@@ -424,7 +426,7 @@ impl pallet_asset_tx_payment::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Fungibles = Assets;
 	type OnChargeAssetTransaction = OnChargeStableTransaction;
-	type WeightInfo = ();
+	type WeightInfo = (); // TODO: weight
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = AssetTxPaymentBenchmarkHelper;
 }
@@ -775,6 +777,30 @@ impl pallet_sudo::Config for Runtime {
 	type WeightInfo = pallet_sudo::weights::SubstrateWeight<Runtime>;
 }
 
+#[cfg(feature = "runtime-benchmarks")]
+pub struct VerifySignatureBenchmarkHelper;
+#[cfg(feature = "runtime-benchmarks")]
+impl pallet_verify_signature::BenchmarkHelper<MultiSignature, AccountId>
+	for VerifySignatureBenchmarkHelper
+{
+	fn create_signature(_entropy: &[u8], msg: &[u8]) -> (MultiSignature, AccountId) {
+		use sp_io::crypto::{sr25519_generate, sr25519_sign};
+		use sp_runtime::traits::IdentifyAccount;
+		let public = sr25519_generate(0.into(), None);
+		let who_account: AccountId = MultiSigner::Sr25519(public).into_account();
+		let signature = MultiSignature::Sr25519(sr25519_sign(0.into(), &public, msg).unwrap());
+		(signature, who_account)
+	}
+}
+
+impl pallet_verify_signature::Config for Runtime {
+	type Signature = MultiSignature;
+	type AccountIdentifier = MultiSigner;
+	type WeightInfo = (); // TODO: weight
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = VerifySignatureBenchmarkHelper;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime
@@ -828,6 +854,8 @@ mod benches {
 	use alloc::boxed::Box;
 	use paseo_runtime_constants::system_parachain::AssetHubParaId;
 	use system_parachains_constants::paseo::locations::AssetHubLocation;
+	use xcm::latest::prelude::{*, Assets as XcmAssets};
+	use xcm_config::RelayLocation;
 
 	frame_benchmarking::define_benchmarks!(
 		// Substrate
@@ -914,9 +942,6 @@ mod benches {
 			Asset { id: AssetId(Location::parent()), fun: Fungible(ExistentialDeposit::get()) }
 		}
 	}
-
-	use xcm::latest::prelude::*;
-	use xcm_config::RelayLocation;
 
 	parameter_types! {
 		pub ExistentialDepositAsset: Option<Asset> = Some((
