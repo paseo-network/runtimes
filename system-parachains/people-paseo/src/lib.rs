@@ -66,7 +66,7 @@ use sp_runtime::{
 	generic, impl_opaque_keys,
 	traits::{BlakeTwo256, Block as BlockT},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, RuntimeDebug,
+	ApplyExtrinsicResult, MultiSignature, MultiSigner, RuntimeDebug,
 };
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
 #[cfg(feature = "std")]
@@ -87,8 +87,6 @@ use xcm_runtime_apis::{
 	dry_run::{CallDryRunEffects, Error as XcmDryRunApiError, XcmDryRunEffects},
 	fees::Error as XcmPaymentApiError,
 };
-use sp_runtime::MultiSignature;
-use sp_runtime::MultiSigner;
 
 /// The address format for describing accounts.
 pub type Address = MultiAddress<AccountId, ()>;
@@ -854,7 +852,7 @@ mod benches {
 	use alloc::boxed::Box;
 	use paseo_runtime_constants::system_parachain::AssetHubParaId;
 	use system_parachains_constants::paseo::locations::AssetHubLocation;
-	use xcm::latest::prelude::{*, Assets as XcmAssets};
+	use xcm::latest::prelude::{Assets as XcmAssets, *};
 	use xcm_config::RelayLocation;
 
 	frame_benchmarking::define_benchmarks!(

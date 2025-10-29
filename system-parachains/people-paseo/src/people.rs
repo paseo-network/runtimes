@@ -295,8 +295,7 @@ impl indiv_pallet_origin_restriction::RestrictedEntity<OriginCaller, Balance> fo
 	#[cfg(feature = "runtime-benchmarks")]
 	fn benchmarked_restricted_origin() -> OriginCaller {
 		use sp_core::crypto::Pair as _;
-		use sp_runtime::MultiSigner;
-		use sp_runtime::traits::IdentifyAccount;
+		use sp_runtime::{traits::IdentifyAccount, MultiSigner};
 		let pair = sp_core::sr25519::Pair::from_string("//Alice", None)
 			.expect("static values are valid; qed");
 		let signer = MultiSigner::Sr25519(pair.public());
