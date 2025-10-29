@@ -1,5 +1,5 @@
 [workspace.package]
-version = "1.9.2"
+version = "1.9.3"
 authors = ["Paseo Core Team"]
 edition = "2021"
 repository = "https://github.com/paseo-network/runtimes.git"
@@ -12,7 +12,7 @@ pallet-rc-migrator = { git = "https://github.com/polkadot-fellows/runtimes", rev
 system-parachains-common = { git = "https://github.com/polkadot-fellows/runtimes", rev = "5188726", default-features = false }
 
 pallet-election-provider-multi-block = { version = "0.3.2", default-features = false }
-pallet-staking-async = { version = "0.6.0", default-features = false }
+pallet-staking-async = { version = "0.6.2", default-features = false }
 hex = { version = "0.4.3", default-features = false }
 rand = { version = "0.9.2" }
 impl-trait-for-tuples = { version = "0.2.3", default-features = false }
