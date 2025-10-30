@@ -68,6 +68,10 @@ use sp_runtime::{
 	ApplyExtrinsicResult, MultiSignature, MultiSigner, RuntimeDebug,
 };
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
+use sp_statement_store::{
+	runtime_api::{InvalidStatement, ValidStatement},
+	Statement, StatementSource,
+};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
@@ -794,6 +798,29 @@ impl pallet_verify_signature::Config for Runtime {
 	type BenchmarkHelper = VerifySignatureBenchmarkHelper;
 }
 
+pub fn validate_statement_for_store(
+	source: StatementSource,
+	statement: Statement,
+) -> Result<ValidStatement, InvalidStatement> {
+	use sp_statement_store::SignatureVerificationResult::Valid;
+
+	// Signature verification
+	let Valid(account) = statement.verify_signature() else {
+		return Err(InvalidStatement::BadProof);
+	};
+	let account: AccountId = account.into();
+
+	if let Ok(valid) = Resources::validate_statement_with_reason_and_account(
+		source,
+		statement.clone(),
+		Some(account.clone()),
+	) {
+		return Ok(valid);
+	}
+
+	Ok(ValidStatement { max_size: 0, max_count: 0 })
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime
@@ -1346,6 +1373,15 @@ impl_runtime_apis! {
 
 		fn preset_names() -> Vec<sp_genesis_builder::PresetId> {
 			genesis_config_presets::preset_names()
+		}
+	}
+
+	impl sp_statement_store::runtime_api::ValidateStatement<Block> for Runtime {
+		fn validate_statement(
+			source: StatementSource,
+			statement: Statement,
+		) -> Result<ValidStatement, InvalidStatement> {
+			validate_statement_for_store(source, statement)
 		}
 	}
 }

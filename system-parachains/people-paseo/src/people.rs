@@ -30,6 +30,7 @@ use sp_runtime::{
 	traits::{AccountIdConversion, Verify},
 	MultiSignature, RuntimeDebug,
 };
+use sp_statement_store::runtime_api::ValidStatement;
 use verifiable::ring_vrf_impl::BandersnatchVrfVerifiable;
 use xcm::latest::prelude::{BodyId, Location, Parachain};
 
@@ -373,7 +374,7 @@ parameter_types! {
 	pub const ResourcesPersonAuthDuration: u32 = 90 * DAYS;
 	pub const ResourcesMinPersonAuthUpdateInterval: u32 = 30 * DAYS;
 	pub const ResourcesUsernameReservationDuration: u64 = 7 * DAYS as u64;
-	pub const ResourcesLitePersonStatementLimit: sp_statement_store::runtime_api::ValidStatement = sp_statement_store::runtime_api::ValidStatement {
+	pub const ResourcesLitePersonStatementLimit: ValidStatement = ValidStatement {
 		max_count: 50,
 		max_size: 5 * 1024,
 	};
