@@ -32,7 +32,6 @@ indiv-support = { workspace = true }
 pallet-asset-tx-payment = { workspace = true }
 pallet-asset-rate = { workspace = true }
 pallet-assets = { workspace = true }
-pallet-assets-holder = { workspace = true }
 pallet-aura = { workspace = true }
 pallet-authorship = { workspace = true }
 pallet-balances = { workspace = true }
@@ -169,7 +168,6 @@ std = [
 	"pallet-asset-rate/std",
 	"pallet-asset-tx-payment/std",
 	"pallet-assets/std",
-	"pallet-assets-holder/std",
 	"indiv-pallet-origin-restriction/std",
 	"indiv-pallet-people-lite/std",
 	"indiv-pallet-resources/std",
@@ -217,7 +215,6 @@ runtime-benchmarks = [
 	"pallet-asset-rate/runtime-benchmarks",
 	"pallet-asset-tx-payment/runtime-benchmarks",
 	"pallet-assets/runtime-benchmarks",
-	"pallet-assets-holder/runtime-benchmarks",
 	"indiv-pallet-origin-restriction/runtime-benchmarks",
 	"indiv-pallet-people-lite/runtime-benchmarks",
 	"indiv-pallet-resources/runtime-benchmarks",
@@ -257,7 +254,6 @@ try-runtime = [
 	"pallet-asset-rate/try-runtime",
 	"pallet-asset-tx-payment/try-runtime",
 	"pallet-assets/try-runtime",
-	"pallet-assets-holder/try-runtime",
 	"indiv-pallet-origin-restriction/try-runtime",
 	"indiv-pallet-people-lite/try-runtime",
 	"indiv-pallet-resources/try-runtime",

@@ -252,9 +252,9 @@ impl Default for IdentityInfo {
 }
 
 parameter_types! {
-	// TODO: good values and reasoning
-	pub const OriginRestrictionAllowanceMax: Balance = 100 * UNITS;
-	pub const OriginRestrictionAllowanceRecovery: Balance = UNITS / 100;
+	pub const OriginRestrictionAllowanceMax: Balance = 10 * UNITS;
+	pub const OriginRestrictionAllowanceRecovery: Balance =
+		OriginRestrictionAllowanceMax::get() / (24 * 60 * 10); // fully recovers in one day.
 }
 
 #[derive(
@@ -374,8 +374,8 @@ parameter_types! {
 	pub const ResourcesMinPersonAuthUpdateInterval: u32 = 30 * DAYS;
 	pub const ResourcesUsernameReservationDuration: u64 = 7 * DAYS as u64;
 	pub const ResourcesLitePersonStatementLimit: sp_statement_store::runtime_api::ValidStatement = sp_statement_store::runtime_api::ValidStatement {
-		max_count: 10,
-		max_size: 1024,
+		max_count: 50,
+		max_size: 5 * 1024,
 	};
 }
 

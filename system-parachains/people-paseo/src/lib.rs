@@ -49,7 +49,6 @@ use frame_system::{
 	limits::{BlockLength, BlockWeights},
 	EnsureRoot,
 };
-use indiv_support::fungibles::CombineAssetsWithHolder;
 use pallet_xcm::{EnsureXcm, IsVoiceOfBody};
 use parachains_common::{
 	message_queue::{NarrowOriginToSibling, ParaIdToSibling},
@@ -103,6 +102,7 @@ pub type BlockId = generic::BlockId<Block>;
 /// The TransactionExtension to the basic transaction logic.
 pub type TxExtension = (
 	pallet_verify_signature::VerifySignature<Runtime>,
+	indiv_pallet_people_lite::PeopleLiteAuth<Runtime>,
 	frame_system::CheckNonZeroSender<Runtime>,
 	frame_system::CheckSpecVersion<Runtime>,
 	frame_system::CheckTxVersion<Runtime>,
@@ -320,7 +320,7 @@ impl pallet_assets::Config for Runtime {
 	type MetadataDepositPerByte = ForeignAssetsMetadataDepositPerByte;
 	type ApprovalDeposit = ExistentialDeposit;
 	type StringLimit = ForeignAssetsAssetsStringLimit;
-	type Holder = AssetsHolder;
+	type Holder = ();
 	type Freezer = ();
 	type Extra = ();
 	// TODO: real weight
@@ -330,11 +330,6 @@ impl pallet_assets::Config for Runtime {
 	type RemoveItemsLimit = ConstU32<1000>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = AssetsBenchmarkHelper;
-}
-
-impl pallet_assets_holder::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type RuntimeHoldReason = RuntimeHoldReason;
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -364,9 +359,6 @@ impl pallet_asset_rate::Config for Runtime {
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = AssetRateBenchmarkHelper;
 }
-
-/// The full featured fungibles implementation with both regular and hold functionality.
-pub type AssetsWithHolder = CombineAssetsWithHolder<Assets, AssetsHolder>;
 
 /// Handles crediting transaction fees to the staking pot.
 pub struct CreditToStakingPot;
@@ -819,7 +811,6 @@ construct_runtime!(
 		Assets: pallet_assets = 12,
 		AssetRate: pallet_asset_rate = 13,
 		AssetTxPayment: pallet_asset_tx_payment = 14,
-		AssetsHolder: pallet_assets_holder = 15,
 
 		// Collator support. The order of these 5 are important and shall not change.
 		Authorship: pallet_authorship = 20,
@@ -862,6 +853,9 @@ mod benches {
 		// Substrate
 		[frame_system, SystemBench::<Runtime>]
 		[frame_system_extensions, SystemExtensionsBench::<Runtime>]
+		[indiv_pallet_origin_restriction, OriginRestriction]
+		[indiv_pallet_people_lite, PeopleLite]
+		[indiv_pallet_resources, Resources]
 		[pallet_asset_tx_payment, AssetTxPayment]
 		[pallet_asset_rate, AssetRate]
 		[pallet_assets, Assets]
@@ -870,14 +864,12 @@ mod benches {
 		[pallet_message_queue, MessageQueue]
 		[pallet_migrations, MultiBlockMigrations]
 		[pallet_multisig, Multisig]
-		[indiv_pallet_origin_restriction, OriginRestriction]
-		[indiv_pallet_people_lite, PeopleLite]
 		[pallet_proxy, Proxy]
-		[indiv_pallet_resources, Resources]
 		[pallet_session, SessionBench::<Runtime>]
 		[pallet_transaction_payment, TransactionPayment]
 		[pallet_timestamp, Timestamp]
 		[pallet_utility, Utility]
+		[pallet_verify_signature, VerifySignature]
 		// Cumulus
 		[cumulus_pallet_parachain_system, ParachainSystem]
 		[cumulus_pallet_xcmp_queue, XcmpQueue]

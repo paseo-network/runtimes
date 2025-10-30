@@ -5302,7 +5302,7 @@ dependencies = [
 [[package]]
 name = "indiv-pallet-origin-restriction"
 version = "0.1.0"
-source = "git+ssh://git@github.com/paritytech/individuality-public#b7b9cce4f77ae77744790a741bf259fecbc0c547"
+source = "git+https://github.com/paritytech/individuality-public?rev=b7b9cce#b7b9cce4f77ae77744790a741bf259fecbc0c547"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5321,7 +5321,7 @@ dependencies = [
 [[package]]
 name = "indiv-pallet-people-lite"
 version = "0.1.0"
-source = "git+ssh://git@github.com/paritytech/individuality-public#b7b9cce4f77ae77744790a741bf259fecbc0c547"
+source = "git+https://github.com/paritytech/individuality-public?rev=b7b9cce#b7b9cce4f77ae77744790a741bf259fecbc0c547"
 dependencies = [
  "ed25519-zebra",
  "frame-benchmarking",
@@ -5342,7 +5342,7 @@ dependencies = [
 [[package]]
 name = "indiv-pallet-resources"
 version = "0.1.0"
-source = "git+ssh://git@github.com/paritytech/individuality-public#b7b9cce4f77ae77744790a741bf259fecbc0c547"
+source = "git+https://github.com/paritytech/individuality-public?rev=b7b9cce#b7b9cce4f77ae77744790a741bf259fecbc0c547"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5363,7 +5363,7 @@ dependencies = [
 [[package]]
 name = "indiv-support"
 version = "0.1.0"
-source = "git+ssh://git@github.com/paritytech/individuality-public#b7b9cce4f77ae77744790a741bf259fecbc0c547"
+source = "git+https://github.com/paritytech/individuality-public?rev=b7b9cce#b7b9cce4f77ae77744790a741bf259fecbc0c547"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -7313,22 +7313,6 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-core",
- "sp-runtime",
-]
-
-[[package]]
-name = "pallet-assets-holder"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c549038f0699df1d8370cea5e78de5e652a1bab42f06a7a07c860c5b97baf1c8"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "log",
- "pallet-assets",
- "parity-scale-codec",
- "scale-info",
  "sp-runtime",
 ]
 
@@ -9289,7 +9273,6 @@ dependencies = [
  "pallet-asset-rate",
  "pallet-asset-tx-payment",
  "pallet-assets",
- "pallet-assets-holder",
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
