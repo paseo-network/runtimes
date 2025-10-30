@@ -268,18 +268,13 @@ pub type Barrier = TrailingSetTopicAsId<
 					// allow it.
 					AllowTopLevelPaidExecutionFrom<Everything>,
 					// Parent and its pluralities (i.e. governance bodies) get free execution.
-					AllowExplicitUnpaidExecutionFrom<
-						(
-							ParentOrParentsPlurality,
-							FellowsPlurality,
-							Equals<RelayTreasuryLocation>,
-							Equals<AssetHubLocation>,
-							// Because of InitiateTransfer {preserve_origin: true}
-							Equals<RootLocation>,
-						),
-						// Because of InitiateTransfer {preserve_origin: true}
-						AliasOriginRootUsingFilter<AssetHubLocation, Everything>,
-					>,
+					AllowExplicitUnpaidExecutionFrom<(
+						ParentOrParentsPlurality,
+						FellowsPlurality,
+						Equals<RelayTreasuryLocation>,
+						Equals<AssetHubLocation>,
+						AssetHubPlurality,
+					)>,
 					// Subscriptions for version tracking are OK.
 					AllowSubscriptionsFrom<ParentRelayOrSiblingParachains>,
 				),
