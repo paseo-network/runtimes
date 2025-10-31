@@ -165,7 +165,6 @@ pallet-transaction-payment-rpc-runtime-api = { version = "42.0.0", default-featu
 pallet-treasury = { version = "41.0.0", default-features = false }
 pallet-uniques = { version = "42.0.0", default-features = false }
 pallet-utility = { version = "42.0.0", default-features = false }
-pallet-verify-signature = { version = "0.5.0", default-features = false }
 pallet-vesting = { version = "42.0.0", default-features = false }
 pallet-whitelist = { version = "41.0.0", default-features = false }
 pallet-xcm = { version = "22.0.1", default-features = false }

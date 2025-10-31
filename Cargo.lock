@@ -8527,22 +8527,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-verify-signature"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ee262bac222ec53e20dcc12d45103d99e38828b6400726ab2639027830044b4"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "scale-info",
- "sp-io",
- "sp-runtime",
- "sp-weights",
-]
-
-[[package]]
 name = "pallet-vesting"
 version = "42.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9180,7 +9164,6 @@ dependencies = [
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
  "pallet-utility",
- "pallet-verify-signature",
  "pallet-xcm",
  "pallet-xcm-benchmarks",
  "parachains-common",

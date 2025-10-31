@@ -49,7 +49,6 @@ pallet-utility = { workspace = true }
 indiv-pallet-origin-restriction = { workspace = true }
 indiv-pallet-people-lite = { workspace = true }
 indiv-pallet-resources = { workspace = true }
-pallet-verify-signature = { workspace = true }
 sp-api = { workspace = true }
 sp-block-builder = { workspace = true }
 sp-consensus-aura = { workspace = true }
@@ -171,7 +170,6 @@ std = [
 	"indiv-pallet-origin-restriction/std",
 	"indiv-pallet-people-lite/std",
 	"indiv-pallet-resources/std",
-	"pallet-verify-signature/std",
 	"sp-statement-store/std",
 	"verifiable/std",
     "sp-io/std"
@@ -218,7 +216,6 @@ runtime-benchmarks = [
 	"indiv-pallet-origin-restriction/runtime-benchmarks",
 	"indiv-pallet-people-lite/runtime-benchmarks",
 	"indiv-pallet-resources/runtime-benchmarks",
-	"pallet-verify-signature/runtime-benchmarks",
     "ed25519-zebra"
 ]
 
@@ -257,7 +254,6 @@ try-runtime = [
 	"indiv-pallet-origin-restriction/try-runtime",
 	"indiv-pallet-people-lite/try-runtime",
 	"indiv-pallet-resources/try-runtime",
-	"pallet-verify-signature/try-runtime"
 ]
 
 # Enable metadata hash generation at compile time for the `CheckMetadataHash` extension.
