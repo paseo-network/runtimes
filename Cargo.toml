@@ -256,10 +256,10 @@ relay-common = { path = "relay/common", default-features = false }
 ss58-registry = { version = "1.47.0" }
 ed25519-zebra = { version = "4.0.3", default-features = false }
 verifiable = { version = "0.2.0", default-features = false, features = ["small-ring"] }
-indiv-pallet-origin-restriction = { git = "https://github.com/paritytech/individuality-public", rev = "b7b9cce", default-features = false }
-indiv-pallet-people-lite = { git = "https://github.com/paritytech/individuality-public", rev = "b7b9cce", default-features = false }
-indiv-pallet-resources = { git = "https://github.com/paritytech/individuality-public", rev = "b7b9cce", default-features = false }
-indiv-support = { git = "https://github.com/paritytech/individuality-public", rev = "b7b9cce", default-features = false }
+indiv-pallet-origin-restriction = { git = "https://github.com/paritytech/individuality-public", rev = "16fd576", default-features = false }
+indiv-pallet-people-lite = { git = "https://github.com/paritytech/individuality-public", rev = "16fd576", default-features = false }
+indiv-pallet-resources = { git = "https://github.com/paritytech/individuality-public", rev = "16fd576", default-features = false }
+indiv-support = { git = "https://github.com/paritytech/individuality-public", rev = "16fd576", default-features = false }
 
 [workspace]
 resolver = "2"

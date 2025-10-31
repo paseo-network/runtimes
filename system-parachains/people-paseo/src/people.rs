@@ -313,7 +313,7 @@ impl ContainsPair<RestrictedEntity, RuntimeCall> for OperationAllowedOneTimeExce
 }
 
 impl indiv_pallet_origin_restriction::Config for Runtime {
-	type WeightInfo = (); // TODO: weight
+	type WeightInfo = weights::indiv_pallet_origin_restriction::WeightInfo<Runtime>;
 	type RestrictedEntity = RestrictedEntity;
 	type OperationAllowedOneTimeExcess = OperationAllowedOneTimeExcess;
 }
@@ -338,7 +338,7 @@ impl indiv_pallet_people_lite::BenchmarkHelper<AccountId, MultiSignature>
 }
 
 impl indiv_pallet_people_lite::Config for Runtime {
-	type WeightInfo = (); // TODO: weight
+	type WeightInfo = weights::indiv_pallet_people_lite::WeightInfo<Runtime>;
 	type AttestationAllowanceManager = EnsureRoot<AccountId>;
 	type Crypto = BandersnatchVrfVerifiable;
 	type AttestationSignature = MultiSignature;
@@ -381,7 +381,7 @@ parameter_types! {
 }
 
 impl indiv_pallet_resources::Config for Runtime {
-	type WeightInfo = (); // TODO: weight
+	type WeightInfo = weights::indiv_pallet_resources::WeightInfo<Runtime>;
 	type Crypto = BandersnatchVrfVerifiable;
 	type MaxUsernameLength = ResourcesMaxUsernameLength;
 	type MinUsernameLength = ResourcesMinUsernameLength;

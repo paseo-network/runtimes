@@ -326,8 +326,7 @@ impl pallet_assets::Config for Runtime {
 	type Holder = ();
 	type Freezer = ();
 	type Extra = ();
-	// TODO: real weight
-	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::pallet_assets::WeightInfo<Runtime>;
 	type CallbackHandle = ();
 	type AssetAccountDeposit = ForeignAssetsAssetAccountDeposit;
 	type RemoveItemsLimit = ConstU32<1000>;
@@ -352,7 +351,7 @@ impl pallet_asset_rate::AssetKindFactory<Location> for AssetRateBenchmarkHelper 
 }
 
 impl pallet_asset_rate::Config for Runtime {
-	type WeightInfo = ();
+	type WeightInfo = weights::pallet_asset_rate::WeightInfo<Runtime>;
 	type RuntimeEvent = RuntimeEvent;
 	type CreateOrigin = EnsureRoot<AccountId>;
 	type RemoveOrigin = EnsureRoot<AccountId>;
@@ -422,7 +421,7 @@ impl pallet_asset_tx_payment::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Fungibles = Assets;
 	type OnChargeAssetTransaction = OnChargeStableTransaction;
-	type WeightInfo = (); // TODO: weight
+	type WeightInfo = weights::pallet_asset_tx_payment::WeightInfo<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = AssetTxPaymentBenchmarkHelper;
 }

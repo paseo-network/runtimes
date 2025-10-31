@@ -5206,7 +5206,7 @@ dependencies = [
 [[package]]
 name = "indiv-pallet-origin-restriction"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-public?rev=b7b9cce#b7b9cce4f77ae77744790a741bf259fecbc0c547"
+source = "git+https://github.com/paritytech/individuality-public?rev=16fd576#16fd57601bb7b3737514d2b15a2d49498acb9a07"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5225,7 +5225,7 @@ dependencies = [
 [[package]]
 name = "indiv-pallet-people-lite"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-public?rev=b7b9cce#b7b9cce4f77ae77744790a741bf259fecbc0c547"
+source = "git+https://github.com/paritytech/individuality-public?rev=16fd576#16fd57601bb7b3737514d2b15a2d49498acb9a07"
 dependencies = [
  "ed25519-zebra",
  "frame-benchmarking",
@@ -5246,7 +5246,7 @@ dependencies = [
 [[package]]
 name = "indiv-pallet-resources"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-public?rev=b7b9cce#b7b9cce4f77ae77744790a741bf259fecbc0c547"
+source = "git+https://github.com/paritytech/individuality-public?rev=16fd576#16fd57601bb7b3737514d2b15a2d49498acb9a07"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5267,7 +5267,7 @@ dependencies = [
 [[package]]
 name = "indiv-support"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-public?rev=b7b9cce#b7b9cce4f77ae77744790a741bf259fecbc0c547"
+source = "git+https://github.com/paritytech/individuality-public?rev=16fd576#16fd57601bb7b3737514d2b15a2d49498acb9a07"
 dependencies = [
  "frame-support",
  "frame-system",
