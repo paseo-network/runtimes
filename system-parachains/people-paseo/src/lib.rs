@@ -65,12 +65,12 @@ use sp_runtime::{
 	generic, impl_opaque_keys,
 	traits::{AccountIdConversion, BlakeTwo256, Block as BlockT, Replace},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, MultiSignature, MultiSigner, RuntimeDebug,
+	ApplyExtrinsicResult, RuntimeDebug,
 };
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
 use sp_statement_store::{
-	runtime_api::{InvalidStatement, ValidStatement},
-	Statement, StatementSource,
+	runtime_api::{InvalidStatement, ValidStatement, StatementSource},
+	Statement,
 };
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
@@ -105,7 +105,6 @@ pub type BlockId = generic::BlockId<Block>;
 
 /// The TransactionExtension to the basic transaction logic.
 pub type TxExtension = (
-	pallet_verify_signature::VerifySignature<Runtime>,
 	indiv_pallet_people_lite::PeopleLiteAuth<Runtime>,
 	frame_system::CheckNonZeroSender<Runtime>,
 	frame_system::CheckSpecVersion<Runtime>,
@@ -774,30 +773,6 @@ impl pallet_sudo::Config for Runtime {
 	type WeightInfo = pallet_sudo::weights::SubstrateWeight<Runtime>;
 }
 
-#[cfg(feature = "runtime-benchmarks")]
-pub struct VerifySignatureBenchmarkHelper;
-#[cfg(feature = "runtime-benchmarks")]
-impl pallet_verify_signature::BenchmarkHelper<MultiSignature, AccountId>
-	for VerifySignatureBenchmarkHelper
-{
-	fn create_signature(_entropy: &[u8], msg: &[u8]) -> (MultiSignature, AccountId) {
-		use sp_io::crypto::{sr25519_generate, sr25519_sign};
-		use sp_runtime::traits::IdentifyAccount;
-		let public = sr25519_generate(0.into(), None);
-		let who_account: AccountId = MultiSigner::Sr25519(public).into_account();
-		let signature = MultiSignature::Sr25519(sr25519_sign(0.into(), &public, msg).unwrap());
-		(signature, who_account)
-	}
-}
-
-impl pallet_verify_signature::Config for Runtime {
-	type Signature = MultiSignature;
-	type AccountIdentifier = MultiSigner;
-	type WeightInfo = (); // TODO: weight
-	#[cfg(feature = "runtime-benchmarks")]
-	type BenchmarkHelper = VerifySignatureBenchmarkHelper;
-}
-
 pub fn validate_statement_for_store(
 	source: StatementSource,
 	statement: Statement,
@@ -859,10 +834,9 @@ construct_runtime!(
 
 		// The main stage.
 		Identity: pallet_identity = 50,
-		VerifySignature: pallet_verify_signature = 51,
-		OriginRestriction: indiv_pallet_origin_restriction = 52,
-		PeopleLite: indiv_pallet_people_lite = 53,
-		Resources: indiv_pallet_resources = 54,
+		OriginRestriction: indiv_pallet_origin_restriction = 51,
+		PeopleLite: indiv_pallet_people_lite = 52,
+		Resources: indiv_pallet_resources = 53,
 		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 255,
 	}
 );
@@ -896,7 +870,6 @@ mod benches {
 		[pallet_transaction_payment, TransactionPayment]
 		[pallet_timestamp, Timestamp]
 		[pallet_utility, Utility]
-		[pallet_verify_signature, VerifySignature]
 		// Cumulus
 		[cumulus_pallet_parachain_system, ParachainSystem]
 		[cumulus_pallet_xcmp_queue, XcmpQueue]
