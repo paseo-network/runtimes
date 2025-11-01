@@ -231,7 +231,6 @@ pub struct Hollar;
 impl ContainsPair<Asset, Location> for Hollar {
 	fn contains(asset: &Asset, origin: &Location) -> bool {
 		const HYDRATION_PARA_ID: u32 = 2034;
-		const PALLET_INSTANCE_HOLLAR: u8 = 51;
 		const GENERAL_INDEX_HOLLAR: u128 = 222;
 
 		// Check if origin is Hydration.
@@ -246,7 +245,6 @@ impl ContainsPair<Asset, Location> for Hollar {
 				1,
 				[
 					Parachain(HYDRATION_PARA_ID),
-					PalletInstance(PALLET_INSTANCE_HOLLAR),
 					GeneralIndex(GENERAL_INDEX_HOLLAR)
 				]
 			)
