@@ -225,8 +225,104 @@ jobs:
           name: release-notes-${{ matrix.name }}
           path: ${{ steps.release_notes.outputs.notes_file }}
 
+  generate-chain-specs:
+    needs: create-tag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.create-tag.outputs.release_tag }}
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Install Dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y git protobuf-compiler
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.90.0
+          target: wasm32v1-none
+          components: rust-src
+          override: true
+
+      - name: Add rust-src
+        run: rustup component add rust-src --toolchain 1.90.0-x86_64-unknown-linux-gnu
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2.8.1
+        with:
+          shared-key: "paseo-global-cache"
+          cache-on-failure: true
+
+      - name: Install pop
+        run: |
+          cargo install --git https://github.com/r0gue-io/pop-cli.git --branch main --locked
+
+      - name: Generate chain specs
+        run: |
+          mkdir -p chain-specs
+          chmod +x ./scripts/generate_chain_specs.sh
+
+          # Initialize empty array for packages
+          PACKAGES=()
+
+          # Add relay packages if selected
+          if [[ "${{ github.event.inputs.build_paseo }}" == "true" ]]; then
+            PACKAGES+=("paseo-local" "paseo-dev")
+          fi
+
+          # Add parachain packages if selected
+          if [[ "${{ github.event.inputs.build_asset_hub_paseo }}" == "true" ]]; then
+            PACKAGES+=("asset-hub-paseo-local")
+          fi
+
+          if [[ "${{ github.event.inputs.build_bridge_hub_paseo }}" == "true" ]]; then
+            PACKAGES+=("bridge-hub-paseo-local")
+          fi
+
+          if [[ "${{ github.event.inputs.build_collectives_paseo }}" == "true" ]]; then
+            PACKAGES+=("collectives-paseo-local")
+          fi
+
+          if [[ "${{ github.event.inputs.build_people_paseo }}" == "true" ]]; then
+            PACKAGES+=("people-paseo-local")
+          fi
+
+          if [[ "${{ github.event.inputs.build_coretime_paseo }}" == "true" ]]; then
+            PACKAGES+=("coretime-paseo-local")
+          fi
+
+          # If no packages are selected, build all
+          if [[ ${#PACKAGES[@]} -eq 0 ]]; then
+            PACKAGES=(
+              "paseo-local"
+              "paseo-dev"
+              "asset-hub-paseo-local"
+              "bridge-hub-paseo-local"
+              "collectives-paseo-local"
+              "people-paseo-local"
+              "coretime-paseo-local"
+            )
+          fi
+
+          # Export packages as space-separated string for the script
+          export CHAIN_SPEC_PACKAGES="${PACKAGES[*]}"
+
+          # Generate specs for selected packages
+          ./scripts/generate_chain_specs.sh
+
+      - name: Upload chain specs as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: chain-specs
+          path: chain-specs/
+
   create-release:
-    needs: [create-tag, build-runtimes]
+    needs: [create-tag, build-runtimes, generate-chain-specs]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -345,13 +441,22 @@ jobs:
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.PASEO_CI_PAT }}
-        run: |         
+        run: |
           # Prepare files for upload
           UPLOAD_FILES=""
           for file in artifacts/*-runtime-*/*_runtime.compressed.wasm artifacts/*-runtime-*/*-srtool-digest.json; do
             UPLOAD_FILES="$UPLOAD_FILES $file"
           done
-          
+
+          # Add chain spec files if they exist
+          if [ -d "artifacts/chain-specs" ]; then
+            for file in artifacts/chain-specs/*.json; do
+              if [ -f "$file" ]; then
+                UPLOAD_FILES="$UPLOAD_FILES $file"
+              fi
+            done
+          fi
+
           # Create the release with the notes
           gh release create ${{ needs.create-tag.outputs.release_tag }} \
             --title "Release ${{ needs.create-tag.outputs.release_tag }}" \
