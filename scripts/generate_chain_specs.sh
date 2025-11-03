@@ -103,6 +103,7 @@ for pkg in "${PACKAGES[@]}"; do
   ARGS=(
     --profile release
     --skip-build
+    --raw
     --name "$NAME"
     --id "$ID"
     --type "$TYPE"
