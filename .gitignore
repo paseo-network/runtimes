@@ -1,5 +1,6 @@
 !polkadot.service
 .cargo-remote.toml
+.claude/
 .direnv/
 .DS_Store
 .env*
