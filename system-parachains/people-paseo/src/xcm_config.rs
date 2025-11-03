@@ -241,13 +241,7 @@ impl ContainsPair<Asset, Location> for Hollar {
 
 		matches!(
 			asset.id.0.unpack(),
-			(
-				1,
-				[
-					Parachain(HYDRATION_PARA_ID),
-					GeneralIndex(GENERAL_INDEX_HOLLAR)
-				]
-			)
+			(1, [Parachain(HYDRATION_PARA_ID), GeneralIndex(GENERAL_INDEX_HOLLAR)])
 		)
 	}
 }

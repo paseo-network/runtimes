@@ -69,7 +69,7 @@ use sp_runtime::{
 };
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
 use sp_statement_store::{
-	runtime_api::{InvalidStatement, ValidStatement, StatementSource},
+	runtime_api::{InvalidStatement, StatementSource, ValidStatement},
 	Statement,
 };
 #[cfg(feature = "std")]
