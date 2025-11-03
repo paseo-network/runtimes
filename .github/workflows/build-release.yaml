@@ -225,8 +225,80 @@ jobs:
           name: release-notes-${{ matrix.name }}
           path: ${{ steps.release_notes.outputs.notes_file }}
 
+  check-runtime:
+    needs: build-runtimes
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: "paseo"
+            rpc_uri: "wss://paseo.rpc.amforc.com"
+          - name: "asset-hub-paseo"
+            rpc_uri: "wss://sys.ibp.network/asset-hub-paseo"
+          - name: "bridge-hub-paseo"
+            rpc_uri: "wss://bridge-hub-paseo.dotters.network"
+          - name: "collectives-paseo"
+            rpc_uri: "wss://collectives-paseo.ibp.network"
+          - name: "people-paseo"
+            rpc_uri: "wss://people-paseo.dotters.network"
+          - name: "coretime-paseo"
+            rpc_uri: "wss://coretime-paseo.dotters.network"
+
+    steps:
+      - name: Check if runtime should run
+        id: check_package
+        run: |
+          should_run=false
+          case "${{ matrix.name }}" in
+            "paseo")
+              if [[ "${{ github.event.inputs.build_paseo }}" == "true" ]]; then should_run=true; fi ;;
+            "asset-hub-paseo")
+              if [[ "${{ github.event.inputs.build_asset_hub_paseo }}" == "true" ]]; then should_run=true; fi ;;
+            "bridge-hub-paseo")
+              if [[ "${{ github.event.inputs.build_bridge_hub_paseo }}" == "true" ]]; then should_run=true; fi ;;
+            "collectives-paseo")
+              if [[ "${{ github.event.inputs.build_collectives_paseo }}" == "true" ]]; then should_run=true; fi ;;
+            "people-paseo")
+              if [[ "${{ github.event.inputs.build_people_paseo }}" == "true" ]]; then should_run=true; fi ;;
+            "coretime-paseo")
+              if [[ "${{ github.event.inputs.build_coretime_paseo }}" == "true" ]]; then should_run=true; fi ;;
+          esac
+          echo "should_run=$should_run" >> $GITHUB_OUTPUT
+
+      - name: Checkout sources
+        if: steps.check_package.outputs.should_run == 'true'
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        if: steps.check_package.outputs.should_run == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Download all artifacts
+        if: steps.check_package.outputs.should_run == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Run runtime check
+        if: steps.check_package.outputs.should_run == 'true'
+        run: |
+          WASM_FILE=$(find artifacts -type f -name "${{ matrix.name }}_runtime.compressed.wasm" | head -n 1)
+
+          if [ -z "$WASM_FILE" ]; then
+            echo "❌ No WASM file found for ${{ matrix.name }}"
+            exit 1
+          fi
+
+          echo "🧩 Checking runtime: ${{ matrix.name }}"
+
+          npx @polkadot-api/check-runtime problems ${{ matrix.rpc_uri }} --wasm "$WASM_FILE"
+
+          echo "✅ Runtime check completed for ${{ matrix.name }}"
+
   create-release:
-    needs: [create-tag, build-runtimes]
+    needs: check-runtime 
     runs-on: ubuntu-latest
     permissions:
       contents: write
