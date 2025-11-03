@@ -322,7 +322,7 @@ parameter_types! {
 	pub const BrokerPalletId: PalletId = PalletId(*b"py/broke");
 	pub const MinimumCreditPurchase: Balance = UNITS / 10;
 	pub const MinimumEndPrice: Balance = 500 * UNITS;
-	pub const FixedTargetPrice: Balance = 5000 * UNITS;
+	pub const FixedTargetPrice: Balance = 750 * UNITS;
 }
 
 pub struct SovereignAccountOf;
