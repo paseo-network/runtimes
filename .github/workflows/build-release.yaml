@@ -319,7 +319,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: chain-specs
-          path: chain-specs/
+          path: chain-specs
 
   check-runtime:
     needs: build-runtimes
