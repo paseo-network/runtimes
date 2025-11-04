@@ -258,9 +258,14 @@ jobs:
           shared-key: "paseo-global-cache"
           cache-on-failure: true
 
+      - name: Install Homebrew
+        run: |
+          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+          echo "/home/linuxbrew/.linuxbrew/bin" >> $GITHUB_PATH
+
       - name: Install pop
         run: |
-          cargo install --git https://github.com/r0gue-io/pop-cli.git --branch main --locked
+          brew install r0gue-io/pop-cli/pop
 
       - name: Generate chain specs
         run: |
