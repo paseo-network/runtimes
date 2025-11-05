@@ -225,80 +225,109 @@ jobs:
           name: release-notes-${{ matrix.name }}
           path: ${{ steps.release_notes.outputs.notes_file }}
 
-  check-runtime:
-    needs: build-runtimes
+  generate-chain-specs:
+    needs: create-tag
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - name: "paseo"
-            rpc_uri: "wss://paseo.rpc.amforc.com"
-          - name: "asset-hub-paseo"
-            rpc_uri: "wss://sys.ibp.network/asset-hub-paseo"
-          - name: "bridge-hub-paseo"
-            rpc_uri: "wss://bridge-hub-paseo.dotters.network"
-          - name: "collectives-paseo"
-            rpc_uri: "wss://collectives-paseo.ibp.network"
-          - name: "people-paseo"
-            rpc_uri: "wss://people-paseo.dotters.network"
-          - name: "coretime-paseo"
-            rpc_uri: "wss://coretime-paseo.dotters.network"
-
     steps:
-      - name: Check if runtime should run
-        id: check_package
-        run: |
-          should_run=false
-          case "${{ matrix.name }}" in
-            "paseo")
-              if [[ "${{ github.event.inputs.build_paseo }}" == "true" ]]; then should_run=true; fi ;;
-            "asset-hub-paseo")
-              if [[ "${{ github.event.inputs.build_asset_hub_paseo }}" == "true" ]]; then should_run=true; fi ;;
-            "bridge-hub-paseo")
-              if [[ "${{ github.event.inputs.build_bridge_hub_paseo }}" == "true" ]]; then should_run=true; fi ;;
-            "collectives-paseo")
-              if [[ "${{ github.event.inputs.build_collectives_paseo }}" == "true" ]]; then should_run=true; fi ;;
-            "people-paseo")
-              if [[ "${{ github.event.inputs.build_people_paseo }}" == "true" ]]; then should_run=true; fi ;;
-            "coretime-paseo")
-              if [[ "${{ github.event.inputs.build_coretime_paseo }}" == "true" ]]; then should_run=true; fi ;;
-          esac
-          echo "should_run=$should_run" >> $GITHUB_OUTPUT
-
       - name: Checkout sources
-        if: steps.check_package.outputs.should_run == 'true'
         uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        if: steps.check_package.outputs.should_run == 'true'
-        uses: actions/setup-node@v4
         with:
-          node-version: 22
+          ref: ${{ needs.create-tag.outputs.release_tag }}
+          fetch-depth: 0
+          fetch-tags: true
 
-      - name: Download all artifacts
-        if: steps.check_package.outputs.should_run == 'true'
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Run runtime check
-        if: steps.check_package.outputs.should_run == 'true'
+      - name: Install Dependencies
         run: |
-          WASM_FILE=$(find artifacts -type f -name "${{ matrix.name }}_runtime.compressed.wasm" | head -n 1)
+          sudo apt update
+          sudo apt install -y git protobuf-compiler
 
-          if [ -z "$WASM_FILE" ]; then
-            echo "❌ No WASM file found for ${{ matrix.name }}"
-            exit 1
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.90.0
+          target: wasm32v1-none
+          components: rust-src
+          override: true
+
+      - name: Add rust-src
+        run: rustup component add rust-src --toolchain 1.90.0-x86_64-unknown-linux-gnu
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2.8.1
+        with:
+          shared-key: "paseo-global-cache"
+          cache-on-failure: true
+
+      - name: Install Homebrew
+        run: |
+          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+          echo "/home/linuxbrew/.linuxbrew/bin" >> $GITHUB_PATH
+
+      - name: Install pop
+        run: |
+          brew install r0gue-io/pop-cli/pop
+
+      - name: Generate chain specs
+        run: |
+          mkdir -p chain-specs
+          chmod +x ./scripts/generate_chain_specs.sh
+
+          # Initialize empty array for packages
+          PACKAGES=()
+
+          # Add relay packages if selected
+          if [[ "${{ github.event.inputs.build_paseo }}" == "true" ]]; then
+            PACKAGES+=("paseo-local" "paseo-dev")
           fi
 
-          echo "🧩 Checking runtime: ${{ matrix.name }}"
+          # Add parachain packages if selected
+          if [[ "${{ github.event.inputs.build_asset_hub_paseo }}" == "true" ]]; then
+            PACKAGES+=("asset-hub-paseo-local")
+          fi
 
-          npx @polkadot-api/check-runtime problems ${{ matrix.rpc_uri }} --wasm "$WASM_FILE"
+          if [[ "${{ github.event.inputs.build_bridge_hub_paseo }}" == "true" ]]; then
+            PACKAGES+=("bridge-hub-paseo-local")
+          fi
 
-          echo "✅ Runtime check completed for ${{ matrix.name }}"
+          if [[ "${{ github.event.inputs.build_collectives_paseo }}" == "true" ]]; then
+            PACKAGES+=("collectives-paseo-local")
+          fi
+
+          if [[ "${{ github.event.inputs.build_people_paseo }}" == "true" ]]; then
+            PACKAGES+=("people-paseo-local")
+          fi
+
+          if [[ "${{ github.event.inputs.build_coretime_paseo }}" == "true" ]]; then
+            PACKAGES+=("coretime-paseo-local")
+          fi
+
+          # If no packages are selected, build all
+          if [[ ${#PACKAGES[@]} -eq 0 ]]; then
+            PACKAGES=(
+              "paseo-local"
+              "paseo-dev"
+              "asset-hub-paseo-local"
+              "bridge-hub-paseo-local"
+              "collectives-paseo-local"
+              "people-paseo-local"
+              "coretime-paseo-local"
+            )
+          fi
+
+          # Export packages as space-separated string for the script
+          export CHAIN_SPEC_PACKAGES="${PACKAGES[*]}"
+
+          # Generate specs for selected packages
+          ./scripts/generate_chain_specs.sh
+
+      - name: Upload chain specs as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: chain-specs
+          path: chain-specs
 
   create-release:
-    needs: check-runtime 
+    needs: [generate-chain-specs, build-runtimes]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -417,13 +446,22 @@ jobs:
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.PASEO_CI_PAT }}
-        run: |         
+        run: |
           # Prepare files for upload
           UPLOAD_FILES=""
           for file in artifacts/*-runtime-*/*_runtime.compressed.wasm artifacts/*-runtime-*/*-srtool-digest.json; do
             UPLOAD_FILES="$UPLOAD_FILES $file"
           done
-          
+
+          # Add chain spec files if they exist
+          if [ -d "artifacts/chain-specs" ]; then
+            for file in artifacts/chain-specs/*.json; do
+              if [ -f "$file" ]; then
+                UPLOAD_FILES="$UPLOAD_FILES $file"
+              fi
+            done
+          fi
+
           # Create the release with the notes
           gh release create ${{ needs.create-tag.outputs.release_tag }} \
             --title "Release ${{ needs.create-tag.outputs.release_tag }}" \

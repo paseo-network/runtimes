@@ -1,12 +1,21 @@
-PACKAGES=(
-  "paseo-local"
-  "paseo-dev"
-  "asset-hub-paseo-local"
-  "bridge-hub-paseo-local"
-  "collectives-paseo-local"
-  "people-paseo-local"
-  "coretime-paseo-local"
-)
+# If CHAIN_SPEC_PACKAGES is set via environment variable, use it
+# Otherwise, default to all packages
+if [ -n "${CHAIN_SPEC_PACKAGES:-}" ]; then
+  # Convert space-separated string to array
+  read -ra PACKAGES <<< "$CHAIN_SPEC_PACKAGES"
+  echo "📦 Generating chain specs for selected packages: ${PACKAGES[*]}"
+else
+  PACKAGES=(
+    "paseo-local"
+    "paseo-dev"
+    "asset-hub-paseo-local"
+    "bridge-hub-paseo-local"
+    "collectives-paseo-local"
+    "people-paseo-local"
+    "coretime-paseo-local"
+  )
+  echo "📦 Generating chain specs for all packages"
+fi
 
 get_package_params() {
   local pkg="$1"
@@ -92,16 +101,17 @@ for pkg in "${PACKAGES[@]}"; do
   get_package_params "$pkg"
 
   ARGS=(
-    --profile release 
+    --profile release
     --skip-build
+    --raw
     --name "$NAME"
     --id "$ID"
-    --type "$TYPE" 
-    --chain "$CHAIN" 
-    --output "chain-specs/local/${pkg}.json"
+    --type "$TYPE"
+    --chain "$CHAIN"
+    --output "chain-specs/${pkg}.json"
     --properties ss58Format=0,tokenDecimals=10,tokenSymbol="PAS"
     --protocol-id "$PROTOCOL_ID"
-    --default-bootnode=false 
+    --default-bootnode=false
     --genesis-code=false
     --genesis-state=false
     --deterministic=false
@@ -119,9 +129,9 @@ for pkg in "${PACKAGES[@]}"; do
 done
 
 ## Only interested in the raw files
-find chain-specs/local -type f -name "*.json" ! -name "*-raw.json" -exec rm -f {} \;
+find chain-specs -type f -name "*.json" ! -name "*-raw.json" -exec rm -f {} \;
 
-for f in chain-specs/local/*-raw.json; do
+for f in chain-specs/*-raw.json; do
   [ -e "$f" ] || continue
   mv "$f" "${f%-raw.json}.json"
 done
