@@ -90,21 +90,19 @@ fn people_paseo_development_genesis(para_id: ParaId) -> serde_json::Value {
 fn people_paseo_live_genesis(para_id: ParaId) -> serde_json::Value {
 	people_paseo_genesis(
 		Vec::from([
-			// TODO: Update invulnerables.
-			/*
-			// Stash
-			hex!("548479101af891b02dadd4577fc80d27f57525b2b4f668d7e9489c779aa7ef0a").into(),
-			// Aura key
-			hex!("fa981a07aa770cc65ba4edf414e2956f7a702cf4fdfd09a9ba3bc445e79e7928")
-				.unchecked_into(),
-			 */
 			(
-				get_account_id_from_seed::<sr25519::Public>("Alice"),
-				get_from_seed::<parachains_common::AuraId>("Alice"),
+				// Stash
+				hex!("607a87a6979098f401b0e81561157357c233dd4e71812fe63f4a65f1e1174366").into(),
+				// Aura key
+				hex!("607a87a6979098f401b0e81561157357c233dd4e71812fe63f4a65f1e1174366")
+					.unchecked_into(),
 			),
 			(
-				get_account_id_from_seed::<sr25519::Public>("Bob"),
-				get_from_seed::<parachains_common::AuraId>("Bob"),
+				// Stash
+				hex!("cc8f22970cce5fe0cc329de6acedb31d160ce94ff5ca527f5864f35ae8993b23").into(),
+				// Aura key
+				hex!("cc8f22970cce5fe0cc329de6acedb31d160ce94ff5ca527f5864f35ae8993b23")
+					.unchecked_into(),
 			),
 		]),
 		testnet_accounts_with([
