@@ -327,7 +327,7 @@ jobs:
           path: chain-specs
 
   create-release:
-    needs: [generate-chain-specs, build-runtimes]
+    needs: [create-tag, generate-chain-specs, build-runtimes]
     runs-on: ubuntu-latest
     permissions:
       contents: write
