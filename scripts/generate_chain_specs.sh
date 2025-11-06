@@ -101,7 +101,7 @@ for pkg in "${PACKAGES[@]}"; do
   get_package_params "$pkg"
 
   ARGS=(
-    --profile release
+    --profile debug
     --skip-build
     --raw
     --name "$NAME"
