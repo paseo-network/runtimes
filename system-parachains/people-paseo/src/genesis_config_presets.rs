@@ -18,18 +18,23 @@
 
 use crate::*;
 use hex_literal::hex;
-use sp_core::sr25519;
+use sp_core::{crypto::UncheckedInto, sr25519};
 use sp_genesis_builder::PresetId;
 use system_parachains_constants::genesis_presets::*;
 
 const LIVE_RUNTIME_PRESET: &str = "live";
 const PEOPLE_POLKADOT_ED: Balance = ExistentialDeposit::get();
+const PARA_ID: u32 = 1044;
 
 fn people_paseo_genesis(
 	invulnerables: Vec<(AccountId, parachains_common::AuraId)>,
 	endowed_accounts: Vec<AccountId>,
 	id: ParaId,
+	sudo: AccountId,
 ) -> serde_json::Value {
+	let mut endowed_accounts = endowed_accounts;
+	endowed_accounts.push(sudo.clone());
+
 	serde_json::json!({
 		"balances": BalancesConfig {
 			balances: endowed_accounts
@@ -62,7 +67,7 @@ fn people_paseo_genesis(
 			..Default::default()
 		},
 		"sudo": {
-			"key": Some(get_account_id_from_seed::<sr25519::Public>("Alice"))
+			"key": Some(sudo)
 		},
 		"polkadotXcm": {
 			"safeXcmVersion": Some(SAFE_XCM_VERSION),
@@ -73,7 +78,12 @@ fn people_paseo_genesis(
 }
 
 pub fn people_paseo_local_testnet_genesis(para_id: ParaId) -> serde_json::Value {
-	people_paseo_genesis(invulnerables(), testnet_accounts(), para_id)
+	people_paseo_genesis(
+		invulnerables(),
+		testnet_accounts(),
+		para_id,
+		get_account_id_from_seed::<sr25519::Public>("Alice"),
+	)
 }
 
 fn people_paseo_development_genesis(para_id: ParaId) -> serde_json::Value {
@@ -84,6 +94,7 @@ fn people_paseo_development_genesis(para_id: ParaId) -> serde_json::Value {
 			StakingPot::get(),
 		]),
 		para_id,
+		get_account_id_from_seed::<sr25519::Public>("Alice"),
 	)
 }
 
@@ -110,6 +121,7 @@ fn people_paseo_live_genesis(para_id: ParaId) -> serde_json::Value {
 			StakingPot::get(),
 		]),
 		para_id,
+		hex!("bcc61f8c1a75aa26fa7dc56001ff41c1fcae46f9271e37a95804f150bd837242").into(),
 	)
 }
 
@@ -125,10 +137,11 @@ pub fn preset_names() -> Vec<PresetId> {
 /// Provides the JSON representation of predefined genesis config for given `id`.
 pub fn get_preset(id: &PresetId) -> Option<Vec<u8>> {
 	let patch = match id.as_ref() {
-		sp_genesis_builder::DEV_RUNTIME_PRESET => people_paseo_development_genesis(1044.into()),
-		sp_genesis_builder::LOCAL_TESTNET_RUNTIME_PRESET =>
-			people_paseo_local_testnet_genesis(1044.into()),
-		LIVE_RUNTIME_PRESET => people_paseo_live_genesis(1044.into()),
+		sp_genesis_builder::DEV_RUNTIME_PRESET => people_paseo_development_genesis(PARA_ID.into()),
+		sp_genesis_builder::LOCAL_TESTNET_RUNTIME_PRESET => {
+			people_paseo_local_testnet_genesis(PARA_ID.into())
+		},
+		LIVE_RUNTIME_PRESET => people_paseo_live_genesis(PARA_ID.into()),
 
 		_ => return None,
 	};
