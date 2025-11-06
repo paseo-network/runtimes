@@ -257,54 +257,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "anstream"
-version = "0.6.21"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43d5b281e737544384e969a5ccad3f1cdd24b48086a0fc1b2a5262a26b8f4f4a"
-dependencies = [
- "anstyle",
- "anstyle-parse",
- "anstyle-query",
- "anstyle-wincon",
- "colorchoice",
- "is_terminal_polyfill",
- "utf8parse",
-]
-
-[[package]]
 name = "anstyle"
 version = "1.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5192cca8006f1fd4f7237516f40fa183bb07f8fbdfedaa0036de5ea9b0b45e78"
-
-[[package]]
-name = "anstyle-parse"
-version = "0.2.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e7644824f0aa2c7b9384579234ef10eb7efb6a0deb83f9630a49594dd9c15c2"
-dependencies = [
- "utf8parse",
-]
-
-[[package]]
-name = "anstyle-query"
-version = "1.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e231f6134f61b71076a3eab506c379d4f36122f2af15a9ff04415ea4c3339e2"
-dependencies = [
- "windows-sys 0.60.2",
-]
-
-[[package]]
-name = "anstyle-wincon"
-version = "3.0.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3e0633414522a32ffaac8ac6cc8f748e090c5717661fddeea04219e2344f5f2a"
-dependencies = [
- "anstyle",
- "once_cell_polyfill",
- "windows-sys 0.60.2",
-]
 
 [[package]]
 name = "anyhow"
@@ -806,7 +762,7 @@ checksum = "9b34d609dfbaf33d6889b2b7106d3ca345eacad44200913df5ba02bfd31d2ba9"
 
 [[package]]
 name = "asset-hub-paseo-emulated-chain"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "asset-hub-paseo-runtime",
  "cumulus-primitives-core",
@@ -825,7 +781,7 @@ dependencies = [
 
 [[package]]
 name = "asset-hub-paseo-runtime"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "asset-test-utils",
  "assets-common",
@@ -871,6 +827,7 @@ dependencies = [
  "pallet-election-provider-multi-block",
  "pallet-indices",
  "pallet-message-queue",
+ "pallet-migrations",
  "pallet-multisig",
  "pallet-nfts",
  "pallet-nfts-runtime-api",
@@ -882,6 +839,7 @@ dependencies = [
  "pallet-proxy",
  "pallet-rc-migrator",
  "pallet-referenda",
+ "pallet-revive 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-scheduler",
  "pallet-session",
  "pallet-staking 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -939,7 +897,7 @@ dependencies = [
  "staging-xcm-builder",
  "staging-xcm-executor",
  "substrate-wasm-builder",
- "system-parachains-constants 2.0.0",
+ "system-parachains-constants 2.0.1",
  "xcm-runtime-apis",
 ]
 
@@ -1384,7 +1342,7 @@ dependencies = [
 
 [[package]]
 name = "bp-asset-hub-paseo"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "bp-xcm-bridge-hub-router",
  "frame-support",
@@ -1392,7 +1350,7 @@ dependencies = [
  "scale-info",
  "sp-core",
  "staging-xcm",
- "system-parachains-constants 2.0.0",
+ "system-parachains-constants 2.0.1",
 ]
 
 [[package]]
@@ -1432,7 +1390,7 @@ dependencies = [
 
 [[package]]
 name = "bp-bridge-hub-paseo"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "bp-bridge-hub-cumulus",
  "bp-header-chain",
@@ -1447,7 +1405,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "staging-xcm",
- "system-parachains-constants 2.0.0",
+ "system-parachains-constants 2.0.1",
 ]
 
 [[package]]
@@ -1649,7 +1607,7 @@ dependencies = [
 
 [[package]]
 name = "bridge-hub-paseo-emulated-chain"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "bp-messages",
  "bridge-hub-common",
@@ -1664,7 +1622,7 @@ dependencies = [
 
 [[package]]
 name = "bridge-hub-paseo-integration-tests"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "asset-hub-paseo-runtime",
  "bp-asset-hub-paseo",
@@ -1707,13 +1665,13 @@ dependencies = [
  "staging-xcm",
  "staging-xcm-builder",
  "staging-xcm-executor",
- "system-parachains-constants 2.0.0",
+ "system-parachains-constants 2.0.1",
  "xcm-runtime-apis",
 ]
 
 [[package]]
 name = "bridge-hub-paseo-runtime"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "bp-asset-hub-kusama",
  "bp-asset-hub-paseo",
@@ -1819,7 +1777,7 @@ dependencies = [
  "staging-xcm-builder",
  "staging-xcm-executor",
  "substrate-wasm-builder",
- "system-parachains-constants 2.0.0",
+ "system-parachains-constants 2.0.1",
  "tuplex",
  "xcm-runtime-apis",
 ]
@@ -2072,38 +2030,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "chain-spec-generator"
-version = "2.0.0"
-dependencies = [
- "asset-hub-paseo-runtime",
- "bridge-hub-paseo-runtime",
- "clap",
- "collectives-paseo-runtime",
- "coretime-paseo-runtime",
- "cumulus-primitives-core",
- "hex-literal",
- "pallet-staking 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "parachains-common",
- "paseo-runtime",
- "paseo-runtime-constants",
- "people-paseo-runtime",
- "polkadot-primitives",
- "polkadot-runtime-parachains",
- "sc-chain-spec",
- "sc-consensus-grandpa",
- "sc-network",
- "serde",
- "serde_json",
- "sp-authority-discovery 38.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-consensus-babe 0.44.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-consensus-beefy 26.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-core",
- "sp-runtime",
- "staging-xcm",
- "system-parachains-constants 2.0.0",
-]
-
-[[package]]
 name = "chrono"
 version = "0.4.42"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2169,7 +2095,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c2cfd7bf8a6017ddaa4e32ffe7403d547790db06bd171c1c53926faab501623"
 dependencies = [
  "clap_builder",
- "clap_derive",
 ]
 
 [[package]]
@@ -2178,22 +2103,9 @@ version = "4.5.50"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0a4c05b9e80c5ccd3a7ef080ad7b6ba7d6fc00a985b8b157197075677c82c7a0"
 dependencies = [
- "anstream",
  "anstyle",
  "clap_lex",
  "strsim",
-]
-
-[[package]]
-name = "clap_derive"
-version = "4.5.49"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a0b5487afeab2deb2ff4e03a807ad1a03ac532ff5a2cee5d86884440c7f7671"
-dependencies = [
- "heck 0.5.0",
- "proc-macro2",
- "quote",
- "syn 2.0.108",
 ]
 
 [[package]]
@@ -2227,7 +2139,7 @@ dependencies = [
 
 [[package]]
 name = "collectives-paseo-runtime"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "collectives-paseo-runtime-constants",
  "collectives-polkadot-runtime-constants",
@@ -2302,24 +2214,18 @@ dependencies = [
  "staging-xcm-builder",
  "staging-xcm-executor",
  "substrate-wasm-builder",
- "system-parachains-constants 2.0.0",
+ "system-parachains-constants 2.0.1",
  "xcm-runtime-apis",
 ]
 
 [[package]]
 name = "collectives-paseo-runtime-constants"
-version = "2.0.0"
+version = "2.0.1"
 
 [[package]]
 name = "collectives-polkadot-runtime-constants"
 version = "1.0.0"
 source = "git+https://github.com/polkadot-fellows/runtimes?tag=v1.7.1#18cbc8b3004f3cff44f6de053bb4220a9f85a7b1"
-
-[[package]]
-name = "colorchoice"
-version = "1.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b05b61dc5112cbb17e4b6cd61790d9845d13888356391624cbe7e41efeac1e75"
 
 [[package]]
 name = "combine"
@@ -2472,7 +2378,7 @@ dependencies = [
 
 [[package]]
 name = "coretime-paseo-emulated-chain"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "coretime-paseo-runtime",
  "cumulus-primitives-core",
@@ -2484,7 +2390,7 @@ dependencies = [
 
 [[package]]
 name = "coretime-paseo-integration-tests"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "asset-test-utils",
  "coretime-paseo-runtime",
@@ -2511,7 +2417,7 @@ dependencies = [
 
 [[package]]
 name = "coretime-paseo-runtime"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-parachain-system",
@@ -2575,7 +2481,7 @@ dependencies = [
  "staging-xcm-builder",
  "staging-xcm-executor",
  "substrate-wasm-builder",
- "system-parachains-constants 2.0.0",
+ "system-parachains-constants 2.0.1",
  "xcm-runtime-apis",
 ]
 
@@ -5374,7 +5280,7 @@ dependencies = [
 
 [[package]]
 name = "integration-tests-helpers"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "cumulus-pallet-xcmp-queue",
  "emulated-integration-tests-common",
@@ -5432,12 +5338,6 @@ dependencies = [
  "libc",
  "windows-sys 0.61.2",
 ]
-
-[[package]]
-name = "is_terminal_polyfill"
-version = "1.70.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a6cb138bb79a146c1bd460005623e142ef0181e3d0219cb493e02f7d08a35695"
 
 [[package]]
 name = "itertools"
@@ -7072,12 +6972,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "once_cell_polyfill"
-version = "1.70.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "384b8ab6d37215f3c5301a95a4accb5d64aa607f1fcb26a11b5303878451b4fe"
-
-[[package]]
 name = "opaque-debug"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7104,7 +6998,7 @@ checksum = "04744f49eae99ab78e0d5c0b603ab218f515ea8cfe5a456d7629ad883a3b6e7d"
 [[package]]
 name = "pallet-ah-migrator"
 version = "0.1.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?rev=39ba53b#39ba53bf55e3c7310a085f0df9f24ed9b8c6ad03"
+source = "git+https://github.com/polkadot-fellows/runtimes?rev=5188726#5188726b6b03813903856740dcb15d9c5a28559a"
 dependencies = [
  "assets-common",
  "cumulus-primitives-core",
@@ -7163,7 +7057,7 @@ dependencies = [
 [[package]]
 name = "pallet-ah-ops"
 version = "0.1.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?rev=39ba53b#39ba53bf55e3c7310a085f0df9f24ed9b8c6ad03"
+source = "git+https://github.com/polkadot-fellows/runtimes?rev=5188726#5188726b6b03813903856740dcb15d9c5a28559a"
 dependencies = [
  "cumulus-primitives-core",
  "frame-benchmarking",
@@ -7753,9 +7647,9 @@ dependencies = [
 
 [[package]]
 name = "pallet-election-provider-multi-block"
-version = "0.3.3"
+version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "60eb2a6bbc01b04150e273b3ded7d5fc1e4953fa44ec8f6c5b470e81d838758c"
+checksum = "335412c00ee053686cc36089bc10a27904f304ea9e147f006a13be47d075c9e8"
 dependencies = [
  "frame-benchmarking",
  "frame-election-provider-support 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -8237,7 +8131,7 @@ dependencies = [
 [[package]]
 name = "pallet-rc-migrator"
 version = "0.1.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?rev=39ba53b#39ba53bf55e3c7310a085f0df9f24ed9b8c6ad03"
+source = "git+https://github.com/polkadot-fellows/runtimes?rev=5188726#5188726b6b03813903856740dcb15d9c5a28559a"
 dependencies = [
  "frame-benchmarking",
  "frame-election-provider-support 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -8639,9 +8533,9 @@ dependencies = [
 
 [[package]]
 name = "pallet-staking-async"
-version = "0.4.2"
+version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f08e204511964e2fdf7224a3bab431ec071b3ee402b315fd5ca85011e0181a52"
+checksum = "ae5d872880114aa775ae374d217a1f22e25a72df323451ce9905c05d2ae4401d"
 dependencies = [
  "frame-benchmarking",
  "frame-election-provider-support 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -8663,9 +8557,9 @@ dependencies = [
 
 [[package]]
 name = "pallet-staking-async-ah-client"
-version = "0.3.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83a6bb5a297c0b60c8b1ceb966a3455c9ce3beb6f8feaa4e9ed95926f27b9066"
+checksum = "c82b0dda27f51e07b4d4fbae80f716ef73efb006a2764d5e9b8ee27ac37f64c0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -8685,9 +8579,9 @@ dependencies = [
 
 [[package]]
 name = "pallet-staking-async-rc-client"
-version = "0.3.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "34b9c00bbdfa226a820a5a25fa2b938926b0b9d5186cb634a7e8c5c0967e107b"
+checksum = "aaf81d91ffeeb7da45327ac8b852030e95a316555702ff3cc066f3e7db659ecd"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -9202,7 +9096,7 @@ checksum = "7924d1d0ad836f665c9065e26d016c673ece3993f30d340068b16f282afc1156"
 
 [[package]]
 name = "paseo-emulated-chain"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "emulated-integration-tests-common",
  "pallet-staking 42.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -9220,7 +9114,7 @@ dependencies = [
 
 [[package]]
 name = "paseo-runtime"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "approx",
  "binary-merkle-tree",
@@ -9330,7 +9224,7 @@ dependencies = [
 
 [[package]]
 name = "paseo-runtime-constants"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "frame-support",
  "pallet-remote-proxy",
@@ -9348,7 +9242,7 @@ dependencies = [
 
 [[package]]
 name = "paseo-system-emulated-network"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "asset-hub-paseo-emulated-chain",
  "bridge-hub-paseo-emulated-chain",
@@ -9409,7 +9303,7 @@ dependencies = [
 
 [[package]]
 name = "penpal-emulated-chain"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "cumulus-primitives-core",
  "emulated-integration-tests-common",
@@ -9495,7 +9389,7 @@ dependencies = [
 
 [[package]]
 name = "people-paseo-emulated-chain"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "cumulus-primitives-core",
  "emulated-integration-tests-common",
@@ -9509,7 +9403,7 @@ dependencies = [
 
 [[package]]
 name = "people-paseo-runtime"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-parachain-system",
@@ -9573,7 +9467,7 @@ dependencies = [
  "staging-xcm-builder",
  "staging-xcm-executor",
  "substrate-wasm-builder",
- "system-parachains-constants 2.0.0",
+ "system-parachains-constants 2.0.1",
  "xcm-runtime-apis",
 ]
 
@@ -10745,7 +10639,7 @@ checksum = "7a2d987857b319362043e95f5353c0535c1f58eec5336fdfcf626430af7def58"
 
 [[package]]
 name = "relay-common"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "pallet-staking-reward-fn 24.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
@@ -14093,7 +13987,7 @@ dependencies = [
 
 [[package]]
 name = "system-parachains-constants"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "frame-support",
  "parachains-common",
@@ -14748,12 +14642,6 @@ name = "utf8_iter"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be"
-
-[[package]]
-name = "utf8parse"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 
 [[package]]
 name = "uuid"
