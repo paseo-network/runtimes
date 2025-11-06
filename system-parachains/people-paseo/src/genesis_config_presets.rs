@@ -103,16 +103,16 @@ fn people_paseo_live_genesis(para_id: ParaId) -> serde_json::Value {
 		Vec::from([
 			(
 				// Stash
-				hex!("607a87a6979098f401b0e81561157357c233dd4e71812fe63f4a65f1e1174366").into(),
+				hex!("c4a649d9ddfa50130085a322b9adfe684888df6a6212dab0ef81193011d13119").into(),
 				// Aura key
-				hex!("607a87a6979098f401b0e81561157357c233dd4e71812fe63f4a65f1e1174366")
+				hex!("c4a649d9ddfa50130085a322b9adfe684888df6a6212dab0ef81193011d13119")
 					.unchecked_into(),
 			),
 			(
 				// Stash
-				hex!("cc8f22970cce5fe0cc329de6acedb31d160ce94ff5ca527f5864f35ae8993b23").into(),
+				hex!("9eb379b09a33013b839ed290a6d73cc31b138b1f6c178ba51406a45503801265").into(),
 				// Aura key
-				hex!("cc8f22970cce5fe0cc329de6acedb31d160ce94ff5ca527f5864f35ae8993b23")
+				hex!("9eb379b09a33013b839ed290a6d73cc31b138b1f6c178ba51406a45503801265")
 					.unchecked_into(),
 			),
 		]),
