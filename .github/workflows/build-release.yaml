@@ -185,6 +185,12 @@ jobs:
           runtime_dir: ${{ matrix.path }}
           profile: "production"
 
+      - name: Setup Node.js
+        if: steps.check_package.outputs.should_run == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: latest
+
       - name: Run runtime check
         if: steps.check_package.outputs.should_run == 'true'
         run: |
