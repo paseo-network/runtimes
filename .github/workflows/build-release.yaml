@@ -185,28 +185,6 @@ jobs:
           runtime_dir: ${{ matrix.path }}
           profile: "production"
 
-      - name: Setup Node.js
-        if: steps.check_package.outputs.should_run == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Run runtime check
-        if: steps.check_package.outputs.should_run == 'true'
-        run: |
-          WASM_FILE="${{ steps.srtool_build.outputs.wasm_compressed }}"
-
-          if [ -z "$WASM_FILE" ] || [ ! -f "$WASM_FILE" ]; then
-            echo "❌ No WASM file found for ${{ matrix.name }}"
-            exit 1
-          fi
-
-          echo "🧩 Checking runtime: ${{ matrix.name }}"
-
-          npx @polkadot-api/check-runtime problems ${{ matrix.rpc_uri }} --wasm "$WASM_FILE"
-
-          echo "✅ Runtime check completed for ${{ matrix.name }}"
-
       - name: Store srtool digest to disk
         if: steps.check_package.outputs.should_run == 'true'
         run: |
@@ -218,6 +196,28 @@ jobs:
         run: |
           # Copy only the compressed WASM file
           cp ${{ steps.srtool_build.outputs.wasm_compressed }} ./${{ matrix.name }}_runtime.compressed.wasm
+
+      - name: Setup Node.js
+        if: steps.check_package.outputs.should_run == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run runtime check
+        if: steps.check_package.outputs.should_run == 'true'
+        run: |
+          WASM_FILE="./${{ matrix.name }}_runtime.compressed.wasm"
+
+          if [ ! -f "$WASM_FILE" ]; then
+            echo "❌ No WASM file found for ${{ matrix.name }}"
+            exit 1
+          fi
+
+          echo "🧩 Checking runtime: ${{ matrix.name }}"
+
+          npx @polkadot-api/check-runtime problems ${{ matrix.rpc_uri }} --wasm "$WASM_FILE"
+
+          echo "✅ Runtime check completed for ${{ matrix.name }}"
 
       - name: Archive Runtime
         if: steps.check_package.outputs.should_run == 'true'
