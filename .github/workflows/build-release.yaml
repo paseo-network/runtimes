@@ -40,6 +40,10 @@ on:
         description: 'Build coretime-paseo runtime'
         type: boolean
         default: false
+      dry_run:
+        description: 'Run without creating tag or GitHub release (for testing)'
+        type: boolean
+        default: false
 
 jobs:
   create-tag:
@@ -51,6 +55,7 @@ jobs:
           fetch-depth: 0  # Fetch all history for all branches and tags
 
       - name: Setup Git
+        if: github.event.inputs.dry_run == 'false'
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
@@ -58,7 +63,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.PASEO_CI_PAT }}
 
-      - name: Create and push tag
+      - name: Validate and create tag
+        id: create_tag
         run: |
           git checkout ${{ github.ref }}
           if [ "${{ github.event.inputs.tag_suffix }}" == "none" ]; then
@@ -66,20 +72,30 @@ jobs:
           else
             TAG="${{ github.event.inputs.tag_version }}-${{ github.event.inputs.tag_suffix }}"
           fi
-          git tag $TAG
-          git push origin $TAG
 
-      - name: Set outputs
-        id: set_outputs
-        run: |
-          if [ "${{ github.event.inputs.tag_suffix }}" == "none" ]; then
-            echo "release_tag=${{ github.event.inputs.tag_version }}" >> $GITHUB_OUTPUT
-          else
-            echo "release_tag=${{ github.event.inputs.tag_version }}-${{ github.event.inputs.tag_suffix }}" >> $GITHUB_OUTPUT
+          # Check if tag already exists
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "❌ Error: Tag $TAG already exists!"
+            echo "Please use a different version or delete the existing tag first."
+            exit 1
           fi
 
+          if [ "${{ github.event.inputs.dry_run }}" == "true" ]; then
+            echo "🧪 DRY RUN: Would create tag $TAG at commit $(git rev-parse HEAD)"
+            echo "tag_created=false" >> $GITHUB_OUTPUT
+          else
+            echo "📌 Creating tag $TAG..."
+            git tag $TAG
+            git push origin $TAG
+            echo "✅ Tag $TAG created and pushed successfully"
+            echo "tag_created=true" >> $GITHUB_OUTPUT
+          fi
+
+          echo "release_tag=$TAG" >> $GITHUB_OUTPUT
+
     outputs:
-      release_tag: ${{ steps.set_outputs.outputs.release_tag }}
+      release_tag: ${{ steps.create_tag.outputs.release_tag }}
+      tag_created: ${{ steps.create_tag.outputs.tag_created }}
 
   build-runtimes:
     needs: create-tag
@@ -153,7 +169,8 @@ jobs:
         if: steps.check_package.outputs.should_run == 'true'
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.create-tag.outputs.release_tag }}
+          # In dry-run mode, checkout current ref; otherwise checkout the tag
+          ref: ${{ github.event.inputs.dry_run == 'true' && github.ref || needs.create-tag.outputs.release_tag }}
           fetch-depth: 0  # Fetch all history and tags
           fetch-tags: true  # Explicitly fetch all tags
 
@@ -232,7 +249,8 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.create-tag.outputs.release_tag }}
+          # In dry-run mode, checkout current ref; otherwise checkout the tag
+          ref: ${{ github.event.inputs.dry_run == 'true' && github.ref || needs.create-tag.outputs.release_tag }}
           fetch-depth: 0
           fetch-tags: true
 
@@ -258,9 +276,14 @@ jobs:
           shared-key: "paseo-global-cache"
           cache-on-failure: true
 
-      - name: Install pop
+      - name: Install Homebrew
         run: |
-          cargo install --git https://github.com/r0gue-io/pop-cli.git --branch main --locked
+          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+          echo "/home/linuxbrew/.linuxbrew/bin" >> $GITHUB_PATH
+
+      - name: Install Pop
+        run: |
+          brew install r0gue-io/pop-cli/pop
 
       - name: Generate chain specs
         run: |
@@ -369,7 +392,7 @@ jobs:
         if: steps.check_package.outputs.should_run == 'true'
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
 
       - name: Download all artifacts
         if: steps.check_package.outputs.should_run == 'true'
@@ -389,7 +412,7 @@ jobs:
 
           echo "🧩 Checking runtime: ${{ matrix.name }}"
 
-          npx @polkadot-api/check-runtime problems ${{ matrix.rpc_uri }} --wasm "$WASM_FILE"
+          npx @polkadot-api/check-runtime@latest problems ${{ matrix.rpc_uri }} --wasm "$WASM_FILE"
 
           echo "✅ Runtime check completed for ${{ matrix.name }}"
 
@@ -402,7 +425,8 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.create-tag.outputs.release_tag }}
+          # In dry-run mode, checkout current ref; otherwise checkout the tag
+          ref: ${{ github.event.inputs.dry_run == 'true' && github.ref || needs.create-tag.outputs.release_tag }}
           fetch-depth: 0  # Fetch all history and tags
           fetch-tags: true  # Explicitly fetch all tags
 
@@ -511,6 +535,7 @@ jobs:
           cat release_notes.md
 
       - name: Create GitHub Release
+        if: github.event.inputs.dry_run == 'false'
         env:
           GH_TOKEN: ${{ secrets.PASEO_CI_PAT }}
         run: |
@@ -535,3 +560,14 @@ jobs:
             --notes-file release_notes.md \
             --prerelease \
             $UPLOAD_FILES
+
+      - name: Dry run summary
+        if: github.event.inputs.dry_run == 'true'
+        run: |
+          echo "🧪 DRY RUN COMPLETE - No tag or release was created"
+          echo ""
+          echo "📋 Release notes that would have been published:"
+          cat release_notes.md
+          echo ""
+          echo "📦 Artifacts that would have been uploaded:"
+          find artifacts -type f \( -name "*.wasm" -o -name "*-srtool-digest.json" -o -name "*.json" \) -exec ls -lh {} \;
