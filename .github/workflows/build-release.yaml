@@ -188,9 +188,9 @@ jobs:
       - name: Run runtime check
         if: steps.check_package.outputs.should_run == 'true'
         run: |
-          WASM_FILE=$(find artifacts -type f -name "${{ matrix.name }}_runtime.compressed.wasm" | head -n 1)
+          WASM_FILE="${{ steps.srtool_build.outputs.wasm_compressed }}"
 
-          if [ -z "$WASM_FILE" ]; then
+          if [ -z "$WASM_FILE" ] || [ ! -f "$WASM_FILE" ]; then
             echo "❌ No WASM file found for ${{ matrix.name }}"
             exit 1
           fi
