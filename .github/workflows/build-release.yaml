@@ -4,40 +4,44 @@ on:
   workflow_dispatch:
     inputs:
       tag_version:
-        description: "Tag version for the release"
+        description: 'Tag version for the release'
         required: true
         type: string
       tag_suffix:
-        description: "Tag suffix to use (none for all packages)"
+        description: 'Tag suffix to use (none for all packages)'
         required: true
         type: choice
         options:
           - none
           - relay
           - parachains
-        default: "none"
+        default: 'none'
       build_paseo:
-        description: "Build paseo relay runtime"
+        description: 'Build paseo relay runtime'
         type: boolean
         default: false
       build_asset_hub_paseo:
-        description: "Build asset-hub-paseo runtime"
+        description: 'Build asset-hub-paseo runtime'
         type: boolean
         default: false
       build_bridge_hub_paseo:
-        description: "Build bridge-hub-paseo runtime"
+        description: 'Build bridge-hub-paseo runtime'
         type: boolean
         default: false
       build_collectives_paseo:
-        description: "Build collectives-paseo runtime"
+        description: 'Build collectives-paseo runtime'
         type: boolean
         default: false
       build_people_paseo:
-        description: "Build people-paseo runtime"
+        description: 'Build people-paseo runtime'
         type: boolean
         default: false
       build_coretime_paseo:
-        description: "Build coretime-paseo runtime"
+        description: 'Build coretime-paseo runtime'
+        type: boolean
+        default: false
+      dry_run:
+        description: 'Run without creating tag or GitHub release (for testing)'
         type: boolean
         default: false
 
@@ -48,9 +52,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Fetch all history for all branches and tags
+          fetch-depth: 0  # Fetch all history for all branches and tags
 
       - name: Setup Git
+        if: github.event.inputs.dry_run == 'false'
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
@@ -58,7 +63,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.PASEO_CI_PAT }}
 
-      - name: Create and push tag
+      - name: Validate and create tag
+        id: create_tag
         run: |
           git checkout ${{ github.ref }}
           if [ "${{ github.event.inputs.tag_suffix }}" == "none" ]; then
@@ -66,20 +72,30 @@ jobs:
           else
             TAG="${{ github.event.inputs.tag_version }}-${{ github.event.inputs.tag_suffix }}"
           fi
-          git tag $TAG
-          git push origin $TAG
 
-      - name: Set outputs
-        id: set_outputs
-        run: |
-          if [ "${{ github.event.inputs.tag_suffix }}" == "none" ]; then
-            echo "release_tag=${{ github.event.inputs.tag_version }}" >> $GITHUB_OUTPUT
-          else
-            echo "release_tag=${{ github.event.inputs.tag_version }}-${{ github.event.inputs.tag_suffix }}" >> $GITHUB_OUTPUT
+          # Check if tag already exists
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "❌ Error: Tag $TAG already exists!"
+            echo "Please use a different version or delete the existing tag first."
+            exit 1
           fi
 
+          if [ "${{ github.event.inputs.dry_run }}" == "true" ]; then
+            echo "🧪 DRY RUN: Would create tag $TAG at commit $(git rev-parse HEAD)"
+            echo "tag_created=false" >> $GITHUB_OUTPUT
+          else
+            echo "📌 Creating tag $TAG..."
+            git tag $TAG
+            git push origin $TAG
+            echo "✅ Tag $TAG created and pushed successfully"
+            echo "tag_created=true" >> $GITHUB_OUTPUT
+          fi
+
+          echo "release_tag=$TAG" >> $GITHUB_OUTPUT
+
     outputs:
-      release_tag: ${{ steps.set_outputs.outputs.release_tag }}
+      release_tag: ${{ steps.create_tag.outputs.release_tag }}
+      tag_created: ${{ steps.create_tag.outputs.tag_created }}
 
   build-runtimes:
     needs: create-tag
@@ -93,28 +109,22 @@ jobs:
           - name: "paseo"
             path: "relay/paseo"
             package_type: "relay"
-            rpc_uri: "wss://paseo.rpc.amforc.com"
           # Parachain runtimes
           - name: "asset-hub-paseo"
             path: "system-parachains/asset-hub-paseo"
-            rpc_uri: "wss://sys.ibp.network/asset-hub-paseo"
             package_type: "parachains"
           - name: "bridge-hub-paseo"
             path: "system-parachains/bridge-hub-paseo"
-            rpc_uri: "wss://bridge-hub-paseo.dotters.network"
             package_type: "parachains"
           - name: "collectives-paseo"
             path: "system-parachains/collectives-paseo"
             package_type: "parachains"
-            rpc_uri: "wss://collectives-paseo.ibp.network"
           - name: "people-paseo"
             path: "system-parachains/people-paseo"
-            rpc_uri: "wss://people-paseo.dotters.network"
             package_type: "parachains"
           - name: "coretime-paseo"
             path: "system-parachains/coretime-paseo"
             package_type: "parachains"
-            rpc_uri: "wss://coretime-paseo.dotters.network"
 
     steps:
       - name: Check package type
@@ -159,9 +169,10 @@ jobs:
         if: steps.check_package.outputs.should_run == 'true'
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.create-tag.outputs.release_tag }}
-          fetch-depth: 0 # Fetch all history and tags
-          fetch-tags: true # Explicitly fetch all tags
+          # In dry-run mode, checkout current ref; otherwise checkout the tag
+          ref: ${{ github.event.inputs.dry_run == 'true' && github.ref || needs.create-tag.outputs.release_tag }}
+          fetch-depth: 0  # Fetch all history and tags
+          fetch-tags: true  # Explicitly fetch all tags
 
       - name: Cache runtime target dir
         if: steps.check_package.outputs.should_run == 'true'
@@ -184,22 +195,6 @@ jobs:
           package: "${{ matrix.name }}-runtime"
           runtime_dir: ${{ matrix.path }}
           profile: "production"
-
-      - name: Run runtime check
-        if: steps.check_package.outputs.should_run == 'true'
-        run: |
-          WASM_FILE=$(find artifacts -type f -name "${{ matrix.name }}_runtime.compressed.wasm" | head -n 1)
-
-          if [ -z "$WASM_FILE" ]; then
-            echo "❌ No WASM file found for ${{ matrix.name }}"
-            exit 1
-          fi
-
-          echo "🧩 Checking runtime: ${{ matrix.name }}"
-
-          npx @polkadot-api/check-runtime problems ${{ matrix.rpc_uri }} --wasm "$WASM_FILE"
-
-          echo "✅ Runtime check completed for ${{ matrix.name }}"
 
       - name: Store srtool digest to disk
         if: steps.check_package.outputs.should_run == 'true'
@@ -254,7 +249,8 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.create-tag.outputs.release_tag }}
+          # In dry-run mode, checkout current ref; otherwise checkout the tag
+          ref: ${{ github.event.inputs.dry_run == 'true' && github.ref || needs.create-tag.outputs.release_tag }}
           fetch-depth: 0
           fetch-tags: true
 
@@ -285,7 +281,7 @@ jobs:
           /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
           echo "/home/linuxbrew/.linuxbrew/bin" >> $GITHUB_PATH
 
-      - name: Install pop
+      - name: Install Pop
         run: |
           brew install r0gue-io/pop-cli/pop
 
@@ -348,8 +344,80 @@ jobs:
           name: chain-specs
           path: chain-specs
 
+  check-runtime:
+    needs: build-runtimes
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: "paseo"
+            rpc_uri: "wss://paseo.rpc.amforc.com"
+          - name: "asset-hub-paseo"
+            rpc_uri: "wss://sys.ibp.network/asset-hub-paseo"
+          - name: "bridge-hub-paseo"
+            rpc_uri: "wss://bridge-hub-paseo.dotters.network"
+          - name: "collectives-paseo"
+            rpc_uri: "wss://collectives-paseo.ibp.network"
+          - name: "people-paseo"
+            rpc_uri: "wss://people-paseo.dotters.network"
+          - name: "coretime-paseo"
+            rpc_uri: "wss://coretime-paseo.dotters.network"
+
+    steps:
+      - name: Check if runtime should run
+        id: check_package
+        run: |
+          should_run=false
+          case "${{ matrix.name }}" in
+            "paseo")
+              if [[ "${{ github.event.inputs.build_paseo }}" == "true" ]]; then should_run=true; fi ;;
+            "asset-hub-paseo")
+              if [[ "${{ github.event.inputs.build_asset_hub_paseo }}" == "true" ]]; then should_run=true; fi ;;
+            "bridge-hub-paseo")
+              if [[ "${{ github.event.inputs.build_bridge_hub_paseo }}" == "true" ]]; then should_run=true; fi ;;
+            "collectives-paseo")
+              if [[ "${{ github.event.inputs.build_collectives_paseo }}" == "true" ]]; then should_run=true; fi ;;
+            "people-paseo")
+              if [[ "${{ github.event.inputs.build_people_paseo }}" == "true" ]]; then should_run=true; fi ;;
+            "coretime-paseo")
+              if [[ "${{ github.event.inputs.build_coretime_paseo }}" == "true" ]]; then should_run=true; fi ;;
+          esac
+          echo "should_run=$should_run" >> $GITHUB_OUTPUT
+
+      - name: Checkout sources
+        if: steps.check_package.outputs.should_run == 'true'
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        if: steps.check_package.outputs.should_run == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Download all artifacts
+        if: steps.check_package.outputs.should_run == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Run runtime check
+        if: steps.check_package.outputs.should_run == 'true'
+        run: |
+          WASM_FILE=$(find artifacts -type f -name "${{ matrix.name }}_runtime.compressed.wasm" | head -n 1)
+
+          if [ -z "$WASM_FILE" ]; then
+            echo "❌ No WASM file found for ${{ matrix.name }}"
+            exit 1
+          fi
+
+          echo "🧩 Checking runtime: ${{ matrix.name }}"
+
+          npx @polkadot-api/check-runtime@latest problems ${{ matrix.rpc_uri }} --wasm "$WASM_FILE"
+
+          echo "✅ Runtime check completed for ${{ matrix.name }}"
+
   create-release:
-    needs: [create-tag, generate-chain-specs, build-runtimes]
+    needs: [create-tag, generate-chain-specs, check-runtime]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -357,9 +425,10 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.create-tag.outputs.release_tag }}
-          fetch-depth: 0 # Fetch all history and tags
-          fetch-tags: true # Explicitly fetch all tags
+          # In dry-run mode, checkout current ref; otherwise checkout the tag
+          ref: ${{ github.event.inputs.dry_run == 'true' && github.ref || needs.create-tag.outputs.release_tag }}
+          fetch-depth: 0  # Fetch all history and tags
+          fetch-tags: true  # Explicitly fetch all tags
 
       - name: Ensure all tags are fetched
         run: |
@@ -399,7 +468,7 @@ jobs:
             echo "  - Coretime Paseo" >> release_notes.md
           fi
           echo "" >> release_notes.md
-
+          
           # Get the latest release tag of the same kind
           if [ "${{ github.event.inputs.tag_suffix }}" == "none" ]; then
             # For "none" tag suffix, look for tags without suffixes or with v prefix
@@ -409,7 +478,7 @@ jobs:
             git tag
             echo "2. Command output test:"
             git tag --sort=-v:refname | grep -v "${{ needs.create-tag.outputs.release_tag }}" | grep -E "^v?[0-9]+\.[0-9]+\.[0-9]+" | head -n 1
-
+          
             # Get previous tag excluding current tag, filtering by version-like pattern
             LATEST_RELEASE_TAG=$(git tag --sort=-v:refname | grep -v "${{ needs.create-tag.outputs.release_tag }}" | grep -E "^v?[0-9]+\.[0-9]+\.[0-9]+" | head -n 1)
           else
@@ -419,10 +488,10 @@ jobs:
             git tag
             echo "2. Command output test:"
             git tag --sort=-v:refname | grep -v "${{ needs.create-tag.outputs.release_tag }}" | grep -- "-${{ github.event.inputs.tag_suffix }}$" | head -n 1
-
+          
             LATEST_RELEASE_TAG=$(git tag --sort=-v:refname | grep -v "${{ needs.create-tag.outputs.release_tag }}" | grep -- "-${{ github.event.inputs.tag_suffix }}\$" | head -n 1)
           fi
-
+          
           echo "Debug: Latest release tag found: $LATEST_RELEASE_TAG"
           # Add list of changes since the last release
           if [ -n "$LATEST_RELEASE_TAG" ]; then
@@ -432,7 +501,7 @@ jobs:
             echo "" >> release_notes.md
             # First try to get commits that include issue numbers
             COMMITS_WITH_ISSUES=$(git log --pretty=format:"* %h %s (%an)" --grep="#[0-9]" $LATEST_RELEASE_TAG..${{ needs.create-tag.outputs.release_tag }})
-
+          
             # If we didn't find any, just get all non-merge commits
             if [ -z "$COMMITS_WITH_ISSUES" ]; then
               # Not commits with issues found, get all merge commits
@@ -449,10 +518,10 @@ jobs:
             echo "No previous release of the same kind was found to compare changes." >> release_notes.md
             echo "" >> release_notes.md
           fi
-
+          
           echo "## Runtime Details" >> release_notes.md
           echo "" >> release_notes.md
-
+          
           # Look for all release note files
           if ls artifacts/release-notes-*/runtime_notes_*.md 1> /dev/null 2>&1; then
             for notes_file in artifacts/release-notes-*/runtime_notes_*.md; do
@@ -462,10 +531,11 @@ jobs:
           else
             echo "No runtime notes were found. This could indicate that no runtimes were built for the selected tag suffix." >> release_notes.md
           fi
-
+          
           cat release_notes.md
 
       - name: Create GitHub Release
+        if: github.event.inputs.dry_run == 'false'
         env:
           GH_TOKEN: ${{ secrets.PASEO_CI_PAT }}
         run: |
@@ -490,3 +560,14 @@ jobs:
             --notes-file release_notes.md \
             --prerelease \
             $UPLOAD_FILES
+
+      - name: Dry run summary
+        if: github.event.inputs.dry_run == 'true'
+        run: |
+          echo "🧪 DRY RUN COMPLETE - No tag or release was created"
+          echo ""
+          echo "📋 Release notes that would have been published:"
+          cat release_notes.md
+          echo ""
+          echo "📦 Artifacts that would have been uploaded:"
+          find artifacts -type f \( -name "*.wasm" -o -name "*-srtool-digest.json" -o -name "*.json" \) -exec ls -lh {} \;
