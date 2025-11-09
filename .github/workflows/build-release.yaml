@@ -357,7 +357,7 @@ jobs:
           - name: "bridge-hub-paseo"
             rpc_uri: "wss://bridge-hub-paseo.dotters.network"
           - name: "collectives-paseo"
-            rpc_uri: "wss://collectives-paseo.ibp.network"
+            rpc_uri: "wss://collectives-paseo.rpc.amforc.com"
           - name: "people-paseo"
             rpc_uri: "wss://people-paseo.dotters.network"
           - name: "coretime-paseo"
