@@ -82,7 +82,7 @@ fn asset_hub_paseo_genesis(
 		},
 	"staking": {
 		"validatorCount": 100,
-		"devStakers": Some((2_000,25_000))
+		"devStakers": Some((5,50))
 	},
 		"foreignAssets": ForeignAssetsConfig {
 			assets: foreign_assets
