@@ -51,7 +51,7 @@ get_package_params() {
     ;;
     bridge-hub-paseo-local)
       NAME="Bridge Hub Paseo Local"
-      ID="bridge-hub-paseo-local"
+      ID="paseo-bridge-hub-local"
       PARA_ID=1002
       RUNTIME="system-parachains/bridge-hub-paseo"
       RELAY="paseo-local"
@@ -101,7 +101,7 @@ for pkg in "${PACKAGES[@]}"; do
   get_package_params "$pkg"
 
   ARGS=(
-    --profile debug
+    --profile release
     --skip-build
     --raw
     --name "$NAME"
