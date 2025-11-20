@@ -51,7 +51,7 @@ get_package_params() {
     ;;
     bridge-hub-paseo-local)
       NAME="Bridge Hub Paseo Local"
-      ID="bridge-hub-paseo-local"
+      ID="paseo-bridge-hub-local"
       PARA_ID=1002
       RUNTIME="system-parachains/bridge-hub-paseo"
       RELAY="paseo-local"
@@ -61,7 +61,7 @@ get_package_params() {
     ;;
     collectives-paseo-local)
       NAME="Collectives Paseo Local"
-      ID="collectives-paseo-local"
+      ID="paseo-collectives-local"
       PARA_ID=1001
       RUNTIME="system-parachains/collectives-paseo"
       RELAY="paseo-local"
@@ -71,7 +71,7 @@ get_package_params() {
     ;;
     people-paseo-local)
       NAME="People Paseo Local"
-      ID="people-paseo-local"
+      ID="paseo-people-local"
       PARA_ID=1004
       RUNTIME="system-parachains/people-paseo"
       RELAY="paseo-local"
@@ -81,7 +81,7 @@ get_package_params() {
     ;;
     coretime-paseo-local)
       NAME="Coretime Paseo Local"
-      ID="coretime-paseo-local"
+      ID="paseo-coretime-local"
       PARA_ID=1005
       RUNTIME="system-parachains/coretime-paseo"
       RELAY="paseo-local"
