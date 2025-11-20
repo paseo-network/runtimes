@@ -6,10 +6,10 @@ repository = "https://github.com/paseo-network/runtimes.git"
 license = "GPL-3.0-only"                                     # TODO <https://github.com/paseo-fellows/runtimes/issues/29>
 
 [workspace.dependencies]
-pallet-ah-migrator = { git = "https://github.com/polkadot-fellows/runtimes", rev = "5188726", default-features = false }
-pallet-ah-ops = { git = "https://github.com/polkadot-fellows/runtimes", rev = "5188726", default-features = false }
-pallet-rc-migrator = { git = "https://github.com/polkadot-fellows/runtimes", rev = "5188726", default-features = false }
-system-parachains-common = { git = "https://github.com/polkadot-fellows/runtimes", rev = "5188726", default-features = false }
+pallet-ah-migrator = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.0.2", default-features = false }
+pallet-ah-ops = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.0.2", default-features = false }
+pallet-rc-migrator = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.0.2", default-features = false }
+system-parachains-common = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.0.2", default-features = false }
 
 pallet-election-provider-multi-block = { version = "0.3.4", default-features = false }
 pallet-staking-async = { version = "0.6.2", default-features = false }
