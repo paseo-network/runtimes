@@ -1478,7 +1478,7 @@ impl_runtime_apis! {
 		}
 	}
 
-    impl snowbridge_system_v2_runtime_api::ControlV2Api<Block> for Runtime {
+	impl snowbridge_system_v2_runtime_api::ControlV2Api<Block> for Runtime {
 		fn agent_id(location: VersionedLocation) -> Option<AgentId> {
 			snowbridge_pallet_system_v2::api::agent_id::<Runtime>(location)
 		}

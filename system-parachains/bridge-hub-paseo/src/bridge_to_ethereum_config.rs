@@ -207,7 +207,7 @@ parameter_types! {
 			version: hex!("90000074"),
 			epoch: 222464,
 		},
-    		fulu: Fork {
+			fulu: Fork {
 			version: hex!("90000075"),
 			epoch: 272640, // https://notes.ethereum.org/@bbusa/fusaka-bpo-timeline
 		},

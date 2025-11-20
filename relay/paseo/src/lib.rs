@@ -1770,6 +1770,7 @@ impl pallet_rc_migrator::Config for Runtime {
 	type AhUmpQueuePriorityPattern = AhUmpQueuePriorityPattern;
 	type MultisigMembers = ();
 	type MultisigThreshold = ConstU32<{ u32::MAX }>;
+	type MultisigMaxVotesPerRound = ();
 }
 
 construct_runtime! {

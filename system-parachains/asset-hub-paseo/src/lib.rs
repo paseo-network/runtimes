@@ -2517,7 +2517,7 @@ pallet_revive::impl_runtime_apis_plus_revive! {
 		}
 	}
 
-    	impl system_parachains_common::apis::Inflation<Block> for Runtime {
+		impl system_parachains_common::apis::Inflation<Block> for Runtime {
 		fn experimental_issuance_prediction_info() -> system_parachains_common::apis::InflationInfo {
 			crate::staking::EraPayout::impl_experimental_inflation_info()
 		}

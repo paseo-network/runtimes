@@ -30,8 +30,8 @@ use pallet_staking_async_rc_client as rc_client;
 use scale_info::TypeInfo;
 use sp_arithmetic::FixedU128;
 use sp_runtime::{
-	traits::Convert, transaction_validity::TransactionPriority, FixedPointNumber,
-	SaturatedConversion, Perquintill
+	traits::Convert, transaction_validity::TransactionPriority, FixedPointNumber, Perquintill,
+	SaturatedConversion,
 };
 use sp_staking::SessionIndex;
 use system_parachains_common::apis::InflationInfo;
@@ -519,7 +519,6 @@ mod tests {
 	use sp_weights::constants::{WEIGHT_PROOF_SIZE_PER_KB, WEIGHT_REF_TIME_PER_MILLIS};
 	// TODO: in the future, make these tests use remote-ext and increase their longevity.
 
-
 	#[test]
 	fn inflation_sanity_check() {
 		use pallet_staking_async::EraPayout as _;
@@ -530,14 +529,14 @@ mod tests {
 		// Note: Amount don't exactly match due to timestamp being an estimate. Same ballpark is
 		// good.
 		sp_io::TestExternalities::new_empty().execute_with(|| {
-			let average_era_duration_millis = 6 * 60 * 60 * 1000; 
+			let average_era_duration_millis = 6 * 60 * 60 * 1000;
 			let (staking, treasury) = super::EraPayout::era_payout(
 				0, // not used
 				0, // not used
 				average_era_duration_millis,
 			);
 			assert_eq!(staking, 69869_4526049627);
- 			assert_eq!(treasury, 12329_9034008757);
+			assert_eq!(treasury, 12329_9034008757);
 
 			// a recent TI of Paseo AH(block 3651137)
 			pallet_balances::TotalIssuance::<Runtime>::put(7435616143598483358);
