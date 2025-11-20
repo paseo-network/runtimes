@@ -79,11 +79,18 @@ fn bridge_hub_paseo_genesis(
 }
 
 pub fn bridge_hub_paseo_local_testnet_genesis(para_id: ParaId) -> serde_json::Value {
-	bridge_hub_paseo_genesis(invulnerables(), testnet_accounts(), para_id, vec![])
+	bridge_hub_paseo_genesis(invulnerables(), testnet_accounts_with([
+        // Make sure `StakingPot` is funded for benchmarking purposes.
+        StakingPot::get()
+    ]), para_id, vec![])
 }
 
 fn bridge_hub_paseo_development_genesis(para_id: ParaId) -> serde_json::Value {
-	bridge_hub_paseo_local_testnet_genesis(para_id)
+	bridge_hub_paseo_genesis(invulnerables(),testnet_accounts(),para_id, 			vec![(
+				Location::new(1, [Parachain(1000)]),
+				Junctions::from([GlobalConsensus(Kusama), Parachain(1000)]),
+				Some(bp_messages::LegacyLaneId([0, 0, 0, 1])),
+			)])
 }
 
 /// Provides the names of the predefined genesis configs for this runtime.
@@ -97,25 +104,8 @@ pub fn preset_names() -> Vec<PresetId> {
 /// Provides the JSON representation of predefined genesis config for given `id`.
 pub fn get_preset(id: &PresetId) -> Option<Vec<u8>> {
 	let patch = match id.as_ref() {
-		sp_genesis_builder::DEV_RUNTIME_PRESET => bridge_hub_paseo_genesis(
-			invulnerables(),
-			testnet_accounts_with([
-				// Make sure `StakingPot` is funded for benchmarking purposes.
-				StakingPot::get(),
-			]),
-			1002.into(),
-			vec![],
-		),
-		sp_genesis_builder::LOCAL_TESTNET_RUNTIME_PRESET => bridge_hub_paseo_genesis(
-			invulnerables(),
-			testnet_accounts(),
-			1002.into(),
-			vec![(
-				Location::new(1, [Parachain(1000)]),
-				Junctions::from([GlobalConsensus(Kusama), Parachain(1000)]),
-				Some(bp_messages::LegacyLaneId([0, 0, 0, 1])),
-			)],
-		),
+		sp_genesis_builder::DEV_RUNTIME_PRESET => bridge_hub_paseo_development_genesis(1002.into()),
+		sp_genesis_builder::LOCAL_TESTNET_RUNTIME_PRESET => bridge_hub_paseo_local_testnet_genesis(1002.into()),
 		_ => return None,
 	};
 	Some(
