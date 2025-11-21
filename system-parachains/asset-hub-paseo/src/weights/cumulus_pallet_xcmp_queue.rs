@@ -128,11 +128,11 @@ impl<T: frame_system::Config> cumulus_pallet_xcmp_queue::WeightInfo for WeightIn
 		// Proof Size summary in bytes:
 		//  Measured:  `253`
 		//  Estimated: `5487`
-		// Minimum execution time: 20_188_000 picoseconds.
-		Weight::from_parts(179_561_651, 0)
+		// Minimum execution time: 16_700_000 picoseconds.
+		Weight::from_parts(2_621_698, 0)
 			.saturating_add(Weight::from_parts(0, 5487))
-			// Standard Error: 312_522
-			.saturating_add(Weight::from_parts(64_947_608, 0).saturating_mul(n.into()))
+			// Standard Error: 94_580
+			.saturating_add(Weight::from_parts(63_477_662, 0).saturating_mul(n.into()))
 			.saturating_add(T::DbWeight::get().reads(4))
 			.saturating_add(T::DbWeight::get().writes(2))
 			.saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(n.into())))
