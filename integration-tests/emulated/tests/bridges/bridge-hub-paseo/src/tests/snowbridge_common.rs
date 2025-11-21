@@ -71,19 +71,6 @@ pub fn bridge_hub() -> Location {
 	Location::new(1, Parachain(BridgeHubPaseo::para_id().into()))
 }
 
-pub(crate) fn asset_hub_paseo_location() -> Location {
-	Location::new(
-		2,
-		[GlobalConsensus(NetworkId::Polkadot), Parachain(AssetHubPaseo::para_id().into())],
-	)
-}
-pub(crate) fn bridge_hub_paseo_location() -> Location {
-	Location::new(
-		2,
-		[GlobalConsensus(NetworkId::Polkadot), Parachain(BridgeHubPaseo::para_id().into())],
-	)
-}
-
 pub fn fund_on_bh() {
 	let assethub_sovereign = BridgeHubPaseo::sovereign_account_id_of(asset_hub());
 	BridgeHubPaseo::fund_accounts(vec![(assethub_sovereign.clone(), INITIAL_FUND)]);
