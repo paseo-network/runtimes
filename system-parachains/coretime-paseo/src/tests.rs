@@ -93,13 +93,15 @@ fn bulk_revenue_is_burnt() {
 			let sale_start = SaleInfo::<Runtime>::get().unwrap().sale_start;
 			advance_to(sale_start + config.interlude_length);
 
+			let sale_current_price = Broker::current_price().unwrap();
+
 			// Check and set initial balances.
 			let broker_account = BrokerPalletId::get().into_account_truncating();
 			let coretime_burn_account = CoretimeBurnAccount::get();
 			let treasury_account = xcm_config::RelayTreasuryPalletAccount::get();
 			assert_ok!(Balances::mint_into(
 				&AccountId::from(ALICE),
-				FixedTargetPrice::get() + 1000 * UNITS
+				sale_current_price + 1000 * UNITS
 			));
 			let alice_balance_before = Balances::balance(&AccountId::from(ALICE));
 			let treasury_balance_before = Balances::balance(&treasury_account);
@@ -109,7 +111,7 @@ fn bulk_revenue_is_burnt() {
 			// Purchase coretime.
 			assert_ok!(Broker::purchase(
 				RuntimeOrigin::signed(AccountId::from(ALICE)),
-				FixedTargetPrice::get()
+				sale_current_price
 			));
 
 			// Alice decreases.
