@@ -32,7 +32,7 @@ use sp_runtime::{
 };
 use sp_statement_store::runtime_api::ValidStatement;
 use verifiable::ring_vrf_impl::BandersnatchVrfVerifiable;
-use xcm::latest::prelude::{BodyId, Location, Parachain};
+use xcm::latest::prelude::{BodyId, Location, Parachain, GeneralIndex};
 
 parameter_types! {
 	//   27 | Min encoded size of `Registration`
@@ -48,7 +48,7 @@ parameter_types! {
 	pub const GeneralAdminBodyId: BodyId = BodyId::Administration;
 	pub StableAssetLocation: Location = Location::new(
 		1,
-		[Parachain(1000), xcm::latest::Junction::PalletInstance(50), xcm::latest::Junction::GeneralIndex(3)],
+		[Parachain(2034), GeneralIndex(222)]
 	);
 }
 

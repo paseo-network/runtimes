@@ -45,17 +45,18 @@ use xcm_builder::{
 	AllowExplicitUnpaidExecutionFrom, AllowKnownQueryResponses, AllowSubscriptionsFrom,
 	AllowTopLevelPaidExecutionFrom, ConvertedConcreteId, DenyReserveTransferToRelayChain,
 	DenyThenTry, DescribeAllTerminal, DescribeFamily, DescribeTerminus, EnsureXcmOrigin,
-	FrameTransactionalProcessor, FungibleAdapter, FungiblesAdapter, HashedDescription, IsConcrete,
-	LocationAsSuperuser, NoChecking, ParentIsPreset, RelayChainAsNative, SendXcmFeeToAccount,
-	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
-	SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit, TrailingSetTopicAsId,
-	UsingComponents, WeightInfoBounds, WithComputedOrigin, WithUniqueTopic,
-	XcmFeeManagerFromComponents,
+	FixedRateOfFungible, FrameTransactionalProcessor, FungibleAdapter, FungiblesAdapter,
+	HashedDescription, IsConcrete, LocationAsSuperuser, NoChecking, ParentIsPreset,
+	RelayChainAsNative, SendXcmFeeToAccount, SiblingParachainAsNative,
+	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
+	SovereignSignedViaLocation, TakeWeightCredit, TrailingSetTopicAsId, UsingComponents,
+	WeightInfoBounds, WithComputedOrigin, WithUniqueTopic, XcmFeeManagerFromComponents,
 };
 use xcm_executor::{
-	traits::{ConvertLocation, JustTry},
+	traits::{ConvertLocation, JustTry, TransactAsset},
 	XcmExecutor,
 };
+use alloc::vec::Vec;
 
 pub use system_parachains_constants::paseo::locations::{
 	AssetHubLocation, AssetHubPlurality, RelayChainLocation,
@@ -82,6 +83,11 @@ parameter_types! {
 		LocationToAccountId::convert_location(&RelayTreasuryLocation::get())
 			.unwrap_or(TreasuryAccount::get());
 	pub StakingPot: AccountId = CollatorSelection::account_id();
+	pub HollarPerSecondPerMegabyte: (AssetId, u128, u128) = (
+		AssetId(StableAssetLocation::get()),
+		system_parachains_constants::paseo::currency::MILLICENTS,
+		system_parachains_constants::paseo::currency::MILLICENTS,
+	);
 }
 
 pub type PriceForParentDelivery = polkadot_runtime_common::xcm_sender::ExponentialPrice<
@@ -170,6 +176,18 @@ impl frame_support::weights::WeightToFee for WeightToStableFee {
 /// A fungible adapter for the stable asset
 pub type FungibleStableAsset = ItemOf<Assets, StableAssetLocation, AccountId>;
 
+/// Revenue handler that deposits Hollar fees to the staking pot
+pub struct HollarToStakingPot;
+impl xcm_builder::TakeRevenue for HollarToStakingPot {
+	fn take_revenue(revenue: Asset) {
+		let _ = AssetTransactors::deposit_asset(
+			&revenue,
+			&Junction::AccountId32 { network: None, id: StakingPot::get().into() }.into(),
+			None,
+		);
+	}
+}
+
 /// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
 /// ready for dispatching a transaction with XCM's `Transact`.
 ///
@@ -243,6 +261,27 @@ impl ContainsPair<Asset, Location> for Hollar {
 			asset.id.0.unpack(),
 			(1, [Parachain(HYDRATION_PARA_ID), GeneralIndex(GENERAL_INDEX_HOLLAR)])
 		)
+	}
+}
+
+/// Filter for allowing reserve transfers of Hollar to Hydration (the reserve location).
+pub struct HollarToHydration;
+impl Contains<(Location, Vec<Asset>)> for HollarToHydration {
+	fn contains((destination, assets): &(Location, Vec<Asset>)) -> bool {
+		const HYDRATION_PARA_ID: u32 = 2034;
+		const GENERAL_INDEX_HOLLAR: u128 = 222;
+
+		let hydration_destination = Location::new(1, Parachain(HYDRATION_PARA_ID));
+		if destination != &hydration_destination {
+			return false;
+		}
+
+		assets.iter().all(|asset| {
+			matches!(
+				asset.id.0.unpack(),
+				(1, [Parachain(HYDRATION_PARA_ID), GeneralIndex(GENERAL_INDEX_HOLLAR)])
+			)
+		})
 	}
 }
 
@@ -324,6 +363,10 @@ impl xcm_executor::Config for XcmConfig {
 			Balances,
 			ResolveTo<StakingPot, Balances>,
 		>,
+		// Allows for paying for XCM execution from funds in XCM register.
+		// Useful for accounts having no funds on this chain but transferring
+		// assets accepted as fees here.
+		FixedRateOfFungible<HollarPerSecondPerMegabyte, HollarToStakingPot>,
 		UsingComponents<
 			WeightToStableFee,
 			StableAssetLocation,
@@ -387,7 +430,8 @@ impl pallet_xcm::Config for Runtime {
 	type XcmExecuteFilter = Everything;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type XcmTeleportFilter = Everything;
-	type XcmReserveTransferFilter = Nothing; // This parachain is not meant as a reserve location.
+	type XcmReserveTransferFilter = HollarToHydration;
+
 	type Weigher = WeightInfoBounds<
 		crate::weights::xcm::PeoplePolkadotXcmWeight<RuntimeCall>,
 		RuntimeCall,
