@@ -15,7 +15,7 @@
 // limitations under the License.
 
 use crate::{
-	coretime::{BrokerPalletId, CoretimeBurnAccount, FixedTargetPrice},
+	coretime::{BrokerPalletId, CoretimeBurnAccount},
 	xcm_config::LocationToAccountId,
 	*,
 };
