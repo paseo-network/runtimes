@@ -96,7 +96,9 @@ fn can_send_hollar_back_to_hydration() {
 		let sender = PeoplePaseoSender::get();
 		let receiver = PeoplePaseoReceiver::get();
 		// We need to open a channel between People and Hydration.
-		<PeoplePaseo as Para>::ParachainSystem::open_outbound_hrmp_channel_for_benchmarks_or_tests(HYDRATION_PARA_ID.into());
+		<PeoplePaseo as Para>::ParachainSystem::open_outbound_hrmp_channel_for_benchmarks_or_tests(
+			HYDRATION_PARA_ID.into(),
+		);
 		// We need to mint some HOLLAR into our sender.
 		assert_ok!(<PeopleAssets as fungibles::Mutate<_>>::mint_into(
 			HollarLocation::get(),

@@ -32,7 +32,7 @@ use sp_runtime::{
 };
 use sp_statement_store::runtime_api::ValidStatement;
 use verifiable::ring_vrf_impl::BandersnatchVrfVerifiable;
-use xcm::latest::prelude::{BodyId, Location, Parachain, GeneralIndex};
+use xcm::latest::prelude::{BodyId, GeneralIndex, Location, Parachain};
 
 parameter_types! {
 	//   27 | Min encoded size of `Registration`

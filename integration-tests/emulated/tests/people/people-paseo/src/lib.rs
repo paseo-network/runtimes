@@ -19,8 +19,10 @@ pub use frame_support::{assert_ok, traits::fungibles};
 pub use sp_runtime;
 
 // Cumulus
-pub use emulated_integration_tests_common::macros::AssetTransferFilter;
-pub use emulated_integration_tests_common::xcm_emulator::{Chain, Parachain as Para, TestExt};
+pub use emulated_integration_tests_common::{
+	macros::AssetTransferFilter,
+	xcm_emulator::{Chain, Parachain as Para, TestExt},
+};
 
 // Paseo
 pub use xcm::prelude::*;
