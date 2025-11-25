@@ -93,7 +93,6 @@ use polkadot_runtime_common::{
 };
 use sp_runtime::traits::Convert;
 
-use relay_common::apis::InflationInfo;
 use runtime_parachains::{
 	assigner_coretime as parachains_assigner_coretime, configuration as parachains_configuration,
 	configuration::ActiveConfigHrmpChannelSizeAndCapacityRatio,
@@ -175,7 +174,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: alloc::borrow::Cow::Borrowed("paseo"),
 	impl_name: alloc::borrow::Cow::Borrowed("paseo-testnet"),
 	authoring_version: 0,
-	spec_version: 2_000_001,
+	spec_version: 2_000_002,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 26,
@@ -1771,6 +1770,7 @@ impl pallet_rc_migrator::Config for Runtime {
 	type AhUmpQueuePriorityPattern = AhUmpQueuePriorityPattern;
 	type MultisigMembers = ();
 	type MultisigThreshold = ConstU32<{ u32::MAX }>;
+	type MultisigMaxVotesPerRound = ();
 }
 
 construct_runtime! {
@@ -2222,39 +2222,7 @@ mod benches {
 #[cfg(feature = "runtime-benchmarks")]
 use benches::*;
 
-impl Runtime {
-	fn impl_experimental_inflation_info() -> InflationInfo {
-		use pallet_staking::{ActiveEra, EraPayout, ErasTotalStake};
-		let (staked, _start) = ActiveEra::<Runtime>::get()
-			.map(|ae| (ErasTotalStake::<Runtime>::get(ae.index), ae.start.unwrap_or(0)))
-			.unwrap_or((0, 0));
-		let stake_able_issuance = Balances::total_issuance();
-
-		// We assume un-delayed 24h eras.
-		let era_duration = 24 * (HOURS as Moment) * MILLISECS_PER_BLOCK;
-		let next_mint = <Self as pallet_staking::Config>::EraPayout::era_payout(
-			staked,
-			stake_able_issuance,
-			era_duration,
-		);
-		// reverse-engineer the current inflation by looking at the total minted against the total
-		// issuance.
-		let inflation = Perquintill::from_rational(
-			(next_mint.0 + next_mint.1) * 36525 / 100,
-			stake_able_issuance,
-		);
-
-		InflationInfo { inflation, next_mint }
-	}
-}
-
 sp_api::impl_runtime_apis! {
-	impl relay_common::apis::Inflation<Block> for Runtime {
-		fn experimental_inflation_prediction_info() -> InflationInfo {
-			Runtime::impl_experimental_inflation_info()
-		}
-	}
-
 	impl sp_api::Core<Block> for Runtime {
 		fn version() -> RuntimeVersion {
 			VERSION
@@ -3574,7 +3542,6 @@ mod remote_tests {
 			log::info!(target: LOG_TARGET, "era-duration = {average_era_duration_millis:?}");
 			log::info!(target: LOG_TARGET, "maxStakingRewards = {:?}", pallet_staking::MaxStakedRewards::<Runtime>::get());
 			log::info!(target: LOG_TARGET, "💰 Inflation ==> staking = {:?} / leftover = {:?}", token.amount(staking), token.amount(leftover));
-			log::info!(target: LOG_TARGET, "inflation_rate runtime API: {:?}", Runtime::impl_experimental_inflation_info());
 		});
 	}
 }

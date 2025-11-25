@@ -43,6 +43,8 @@ fn asset_hub_paseo_genesis(
 	foreign_assets: Vec<(Location, AccountId, Balance)>,
 	foreign_assets_endowed_accounts: Vec<(Location, AccountId, Balance)>,
 ) -> serde_json::Value {
+	let dev_stakers =
+		if cfg!(feature = "runtime-benchmarks") { Some((2_000, 25_000)) } else { None };
 	serde_json::json!({
 		"balances": BalancesConfig {
 			balances: endowed_accounts
@@ -82,7 +84,7 @@ fn asset_hub_paseo_genesis(
 		},
 	"staking": {
 		"validatorCount": 100,
-		"devStakers": Some((5,50))
+		"devStakers": dev_stakers
 	},
 		"foreignAssets": ForeignAssetsConfig {
 			assets: foreign_assets

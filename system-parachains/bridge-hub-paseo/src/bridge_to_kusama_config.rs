@@ -327,7 +327,6 @@ mod tests {
 	#[test]
 	#[ignore]
 	fn ensure_bridge_hub_polkadot_message_lane_weights_are_correct() {
-		use bp_messages::ChainWithMessages;
 		check_message_lane_weights::<
 			bp_bridge_hub_polkadot::BridgeHubPolkadot,
 			Runtime,

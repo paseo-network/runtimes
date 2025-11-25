@@ -12,10 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-use crate::{
-	tests::{dot_at_ah_paseo, snowbridge_common::*},
-	*,
-};
+use crate::{tests::snowbridge_common::*, *};
 use asset_hub_paseo_runtime::xcm_config::bridging::to_ethereum::{
 	BridgeHubEthereumBaseFee, EthereumNetwork,
 };
