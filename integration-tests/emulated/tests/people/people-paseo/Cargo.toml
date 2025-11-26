@@ -1,0 +1,47 @@
+[package]
+name = "people-paseo-integration-tests"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license = "Apache-2.0"
+description = "People Paseo runtime integration tests with xcm-emulator"
+publish = false
+
+[dependencies]
+codec = { workspace = true, default-features = true }
+
+# Substrate
+frame-support = { workspace = true, default-features = true }
+sp-runtime = { workspace = true, default-features = true }
+sp-io = { workspace = true, default-features = true }
+
+# Polkadot
+xcm = { workspace = true, default-features = true }
+xcm-executor = { workspace = true, default-features = true }
+xcm-runtime-apis = { workspace = true, default-features = true }
+xcm-builder = { workspace = true }
+
+# Cumulus
+emulated-integration-tests-common = { workspace = true }
+parachains-common = { workspace = true, default-features = true }
+cumulus-pallet-parachain-system = { workspace = true, default-features = true }
+
+# Local
+paseo-system-emulated-network = { workspace = true }
+people-paseo-runtime = { workspace = true }
+paseo-runtime-constants = { workspace = true }
+
+[features]
+runtime-benchmarks = [
+	"cumulus-pallet-parachain-system/runtime-benchmarks",
+	"paseo-runtime-constants/runtime-benchmarks",
+	"frame-support/runtime-benchmarks",
+	"paseo-system-emulated-network/runtime-benchmarks",
+	"parachains-common/runtime-benchmarks",
+	"people-paseo-runtime/runtime-benchmarks",
+	"sp-runtime/runtime-benchmarks",
+	"xcm-builder/runtime-benchmarks",
+	"xcm-executor/runtime-benchmarks",
+	"xcm-runtime-apis/runtime-benchmarks",
+	"xcm/runtime-benchmarks",
+]

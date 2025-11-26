@@ -19,12 +19,13 @@ use super::{
 	RuntimeOrigin, WeightToFee, XcmpQueue,
 };
 use crate::{people::StableAssetLocation, AssetRate, TransactionByteFee, CENTS};
+use alloc::vec::Vec;
 use frame_support::{
 	parameter_types,
 	traits::{
 		fungible::{HoldConsideration, ItemOf},
 		tokens::{imbalance::ResolveTo, ConversionToAssetBalance},
-		ConstU32, Contains, ContainsPair, Equals, Everything, LinearStoragePrice, Nothing,
+		ConstU32, Contains, Equals, Everything, LinearStoragePrice, Nothing,
 	},
 };
 use frame_system::EnsureRoot;
@@ -45,18 +46,17 @@ use xcm_builder::{
 	AllowExplicitUnpaidExecutionFrom, AllowKnownQueryResponses, AllowSubscriptionsFrom,
 	AllowTopLevelPaidExecutionFrom, ConvertedConcreteId, DenyReserveTransferToRelayChain,
 	DenyThenTry, DescribeAllTerminal, DescribeFamily, DescribeTerminus, EnsureXcmOrigin,
-	FixedRateOfFungible, FrameTransactionalProcessor, FungibleAdapter, FungiblesAdapter,
-	HashedDescription, IsConcrete, LocationAsSuperuser, NoChecking, ParentIsPreset,
-	RelayChainAsNative, SendXcmFeeToAccount, SiblingParachainAsNative,
-	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
-	SovereignSignedViaLocation, TakeWeightCredit, TrailingSetTopicAsId, UsingComponents,
-	WeightInfoBounds, WithComputedOrigin, WithUniqueTopic, XcmFeeManagerFromComponents,
+	FrameTransactionalProcessor, FungibleAdapter, FungiblesAdapter, HashedDescription, IsConcrete,
+	LocationAsSuperuser, NoChecking, ParentIsPreset, RelayChainAsNative, SendXcmFeeToAccount,
+	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
+	SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit, TrailingSetTopicAsId,
+	UsingComponents, WeightInfoBounds, WithComputedOrigin, WithUniqueTopic,
+	XcmFeeManagerFromComponents,
 };
 use xcm_executor::{
 	traits::{ConvertLocation, JustTry, TransactAsset},
 	XcmExecutor,
 };
-use alloc::vec::Vec;
 
 pub use system_parachains_constants::paseo::locations::{
 	AssetHubLocation, AssetHubPlurality, RelayChainLocation,
@@ -244,23 +244,40 @@ impl Contains<Location> for FellowsPlurality {
 	}
 }
 
-/// Custom reserve filter for Hollar asset coming from hydration perspective.
-pub struct Hollar;
-impl ContainsPair<Asset, Location> for Hollar {
-	fn contains(asset: &Asset, origin: &Location) -> bool {
-		const HYDRATION_PARA_ID: u32 = 2034;
-		const GENERAL_INDEX_HOLLAR: u128 = 222;
+pub mod hollar {
+	use super::*;
+	use frame_support::traits::ContainsPair;
 
-		// Check if origin is Hydration.
-		let hydration_origin = Location::new(1, Parachain(HYDRATION_PARA_ID));
-		if origin != &hydration_origin {
-			return false;
+	/// The parachain id of the Hydration DEX.
+	pub const HYDRATION_PARA_ID: u32 = 2034;
+
+	/// The asset id of HOLLAR.
+	pub const HOLLAR_ASSET_ID: u128 = 222;
+
+	/// A unit of HOLLAR consists of 10^18 plancks.
+	pub const HOLLAR_UNITS: u128 = 1_000_000_000_000_000_000u128;
+
+	parameter_types! {
+		pub HydrationLocation: Location = Location::new(1, [Parachain(HYDRATION_PARA_ID)]);
+		pub HollarLocation: Location = Location::new(1, [Parachain(HYDRATION_PARA_ID), GeneralIndex(HOLLAR_ASSET_ID)]);
+		pub HollarId: AssetId = AssetId(HollarLocation::get());
+		pub Hollar: Asset = (HollarId::get(), 10 * HOLLAR_UNITS).into();
+	}
+
+	/// A type that matches the pair `(Hollar, Hydration)`,
+	/// used in the XCM configuration's `IsReserve`.
+	pub struct HollarFromHydration;
+	impl ContainsPair<Asset, Location> for HollarFromHydration {
+		fn contains(asset: &Asset, origin: &Location) -> bool {
+			let is_hydration = matches!(origin.unpack(), (1, [Parachain(para_id)]) if *para_id == HYDRATION_PARA_ID);
+			let is_hollar = matches!(
+				asset.id.0.unpack(),
+				(1, [Parachain(para_id), GeneralIndex(asset_id)])
+				if *para_id == HYDRATION_PARA_ID && *asset_id == HOLLAR_ASSET_ID
+			);
+
+			is_hydration && is_hollar
 		}
-
-		matches!(
-			asset.id.0.unpack(),
-			(1, [Parachain(HYDRATION_PARA_ID), GeneralIndex(GENERAL_INDEX_HOLLAR)])
-		)
 	}
 }
 
@@ -268,10 +285,7 @@ impl ContainsPair<Asset, Location> for Hollar {
 pub struct HollarToHydration;
 impl Contains<(Location, Vec<Asset>)> for HollarToHydration {
 	fn contains((destination, assets): &(Location, Vec<Asset>)) -> bool {
-		const HYDRATION_PARA_ID: u32 = 2034;
-		const GENERAL_INDEX_HOLLAR: u128 = 222;
-
-		let hydration_destination = Location::new(1, Parachain(HYDRATION_PARA_ID));
+		let hydration_destination = Location::new(1, Parachain(hollar::HYDRATION_PARA_ID));
 		if destination != &hydration_destination {
 			return false;
 		}
@@ -279,7 +293,7 @@ impl Contains<(Location, Vec<Asset>)> for HollarToHydration {
 		assets.iter().all(|asset| {
 			matches!(
 				asset.id.0.unpack(),
-				(1, [Parachain(HYDRATION_PARA_ID), GeneralIndex(GENERAL_INDEX_HOLLAR)])
+				(1, [Parachain(hollar::HYDRATION_PARA_ID), GeneralIndex(hollar::HOLLAR_ASSET_ID)])
 			)
 		})
 	}
@@ -345,7 +359,7 @@ impl xcm_executor::Config for XcmConfig {
 	type XcmSender = XcmRouter;
 	type AssetTransactor = AssetTransactors;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
-	type IsReserve = Hollar;
+	type IsReserve = hollar::HollarFromHydration;
 	/// Only allow teleportation of DOT.
 	type IsTeleporter = ConcreteAssetFromSystem<RelayLocation>;
 	type UniversalLocation = UniversalLocation;
@@ -363,10 +377,6 @@ impl xcm_executor::Config for XcmConfig {
 			Balances,
 			ResolveTo<StakingPot, Balances>,
 		>,
-		// Allows for paying for XCM execution from funds in XCM register.
-		// Useful for accounts having no funds on this chain but transferring
-		// assets accepted as fees here.
-		FixedRateOfFungible<HollarPerSecondPerMegabyte, HollarToStakingPot>,
 		UsingComponents<
 			WeightToStableFee,
 			StableAssetLocation,
