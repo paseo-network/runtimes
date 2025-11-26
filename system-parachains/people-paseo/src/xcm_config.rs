@@ -18,7 +18,7 @@ use super::{
 	ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeHoldReason,
 	RuntimeOrigin, WeightToFee, XcmpQueue,
 };
-use crate::{people::StableAssetLocation, AssetRate, TransactionByteFee, CENTS};
+use crate::{people::{StableAssetLocation, UsdtAssetLocation}, AssetRate, TransactionByteFee, CENTS};
 use frame_support::{
 	parameter_types,
 	traits::{
@@ -85,6 +85,11 @@ parameter_types! {
 	pub StakingPot: AccountId = CollatorSelection::account_id();
 	pub HollarPerSecondPerMegabyte: (AssetId, u128, u128) = (
 		AssetId(StableAssetLocation::get()),
+		system_parachains_constants::paseo::currency::MILLICENTS,
+		system_parachains_constants::paseo::currency::MILLICENTS,
+	);
+	pub UsdtPerSecondPerMegabyte: (AssetId, u128, u128) = (
+		AssetId(UsdtAssetLocation::get()),
 		system_parachains_constants::paseo::currency::MILLICENTS,
 		system_parachains_constants::paseo::currency::MILLICENTS,
 	);
@@ -176,9 +181,36 @@ impl frame_support::weights::WeightToFee for WeightToStableFee {
 /// A fungible adapter for the stable asset
 pub type FungibleStableAsset = ItemOf<Assets, StableAssetLocation, AccountId>;
 
+/// A fungible adapter for USDT
+pub type FungibleUsdtAsset = ItemOf<Assets, UsdtAssetLocation, AccountId>;
+
+pub struct WeightToUsdtFee;
+impl frame_support::weights::WeightToFee for WeightToUsdtFee {
+	type Balance = Balance;
+
+	fn weight_to_fee(weight: &Weight) -> Self::Balance {
+		let native_fee = WeightToNativeFee::weight_to_fee(weight);
+
+		AssetRate::to_asset_balance(native_fee, UsdtAssetLocation::get())
+			.unwrap_or(Balance::MAX)
+	}
+}
+
 /// Revenue handler that deposits Hollar fees to the staking pot
 pub struct HollarToStakingPot;
 impl xcm_builder::TakeRevenue for HollarToStakingPot {
+	fn take_revenue(revenue: Asset) {
+		let _ = AssetTransactors::deposit_asset(
+			&revenue,
+			&Junction::AccountId32 { network: None, id: StakingPot::get().into() }.into(),
+			None,
+		);
+	}
+}
+
+/// Revenue handler that deposits USDT fees to the staking pot
+pub struct UsdtToStakingPot;
+impl xcm_builder::TakeRevenue for UsdtToStakingPot {
 	fn take_revenue(revenue: Asset) {
 		let _ = AssetTransactors::deposit_asset(
 			&revenue,
@@ -285,6 +317,54 @@ impl Contains<(Location, Vec<Asset>)> for HollarToHydration {
 	}
 }
 
+/// Custom reserve filter for USDT asset from AssetHub or Hydration.
+pub struct Usdt;
+impl ContainsPair<Asset, Location> for Usdt {
+	fn contains(asset: &Asset, origin: &Location) -> bool {
+		const ASSET_HUB_PARA_ID: u32 = 1000;
+		const HYDRATION_PARA_ID: u32 = 2034;
+		const PALLET_INSTANCE_USDT: u8 = 50;
+		const GENERAL_INDEX_USDT: u128 = 1984;
+
+		// Check if origin is AssetHub or Hydration.
+		let asset_hub_origin = Location::new(1, Parachain(ASSET_HUB_PARA_ID));
+		let hydration_origin = Location::new(1, Parachain(HYDRATION_PARA_ID));
+		if origin != &asset_hub_origin && origin != &hydration_origin {
+			return false;
+		}
+
+		matches!(
+			asset.id.0.unpack(),
+			(1, [Parachain(ASSET_HUB_PARA_ID), PalletInstance(PALLET_INSTANCE_USDT), GeneralIndex(GENERAL_INDEX_USDT)])
+		)
+	}
+}
+
+/// Filter for allowing reserve transfers of USDT to AssetHub or Hydration.
+pub struct UsdtToDestinations;
+impl Contains<(Location, Vec<Asset>)> for UsdtToDestinations {
+	fn contains((destination, assets): &(Location, Vec<Asset>)) -> bool {
+		const ASSET_HUB_PARA_ID: u32 = 1000;
+		const HYDRATION_PARA_ID: u32 = 2034;
+		const PALLET_INSTANCE_USDT: u8 = 50;
+		const GENERAL_INDEX_USDT: u128 = 1984;
+
+		// Check if destination is AssetHub or Hydration.
+		let asset_hub_destination = Location::new(1, Parachain(ASSET_HUB_PARA_ID));
+		let hydration_destination = Location::new(1, Parachain(HYDRATION_PARA_ID));
+		if destination != &asset_hub_destination && destination != &hydration_destination {
+			return false;
+		}
+
+		assets.iter().all(|asset| {
+			matches!(
+				asset.id.0.unpack(),
+				(1, [Parachain(ASSET_HUB_PARA_ID), PalletInstance(PALLET_INSTANCE_USDT), GeneralIndex(GENERAL_INDEX_USDT)])
+			)
+		})
+	}
+}
+
 pub type Barrier = TrailingSetTopicAsId<
 	DenyThenTry<
 		DenyReserveTransferToRelayChain,
@@ -345,7 +425,7 @@ impl xcm_executor::Config for XcmConfig {
 	type XcmSender = XcmRouter;
 	type AssetTransactor = AssetTransactors;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
-	type IsReserve = Hollar;
+	type IsReserve = (Hollar, Usdt);
 	/// Only allow teleportation of DOT.
 	type IsTeleporter = ConcreteAssetFromSystem<RelayLocation>;
 	type UniversalLocation = UniversalLocation;
@@ -373,6 +453,14 @@ impl xcm_executor::Config for XcmConfig {
 			AccountId,
 			FungibleStableAsset,
 			ResolveTo<StakingPot, FungibleStableAsset>,
+		>,
+		FixedRateOfFungible<UsdtPerSecondPerMegabyte, UsdtToStakingPot>,
+		UsingComponents<
+			WeightToUsdtFee,
+			UsdtAssetLocation,
+			AccountId,
+			FungibleUsdtAsset,
+			ResolveTo<StakingPot, FungibleUsdtAsset>,
 		>,
 	);
 	type ResponseHandler = PolkadotXcm;
@@ -430,7 +518,7 @@ impl pallet_xcm::Config for Runtime {
 	type XcmExecuteFilter = Everything;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type XcmTeleportFilter = Everything;
-	type XcmReserveTransferFilter = HollarToHydration;
+	type XcmReserveTransferFilter = (HollarToHydration, UsdtToDestinations);
 
 	type Weigher = WeightInfoBounds<
 		crate::weights::xcm::PeoplePolkadotXcmWeight<RuntimeCall>,
