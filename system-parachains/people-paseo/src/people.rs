@@ -283,9 +283,8 @@ impl indiv_pallet_origin_restriction::RestrictedEntity<OriginCaller, Balance> fo
 		use indiv_pallet_people_lite::Origin::*;
 		use OriginCaller::*;
 		match origin_caller {
-			PeopleLite(LitePerson(account_id)) => {
-				Some(RestrictedEntity::LitePerson(account_id.clone()))
-			},
+			PeopleLite(LitePerson(account_id)) =>
+				Some(RestrictedEntity::LitePerson(account_id.clone())),
 			_ => None,
 		}
 	}
