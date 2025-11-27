@@ -185,7 +185,6 @@ impl frame_support::weights::WeightToFee for WeightToUsdtFee {
 	}
 }
 
-
 /// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
 /// ready for dispatching a transaction with XCM's `Transact`.
 ///
