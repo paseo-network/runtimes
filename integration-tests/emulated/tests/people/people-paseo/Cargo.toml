@@ -34,10 +34,10 @@ paseo-runtime-constants = { workspace = true }
 [features]
 runtime-benchmarks = [
 	"cumulus-pallet-parachain-system/runtime-benchmarks",
-	"paseo-runtime-constants/runtime-benchmarks",
 	"frame-support/runtime-benchmarks",
-	"paseo-system-emulated-network/runtime-benchmarks",
 	"parachains-common/runtime-benchmarks",
+	"paseo-runtime-constants/runtime-benchmarks",
+	"paseo-system-emulated-network/runtime-benchmarks",
 	"people-paseo-runtime/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
