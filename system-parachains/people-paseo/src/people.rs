@@ -32,7 +32,7 @@ use sp_runtime::{
 };
 use sp_statement_store::runtime_api::ValidStatement;
 use verifiable::ring_vrf_impl::BandersnatchVrfVerifiable;
-use xcm::latest::prelude::{BodyId, Location, Parachain, PalletInstance, GeneralIndex};
+use xcm::latest::prelude::BodyId;
 
 parameter_types! {
 	//   27 | Min encoded size of `Registration`
@@ -46,14 +46,6 @@ parameter_types! {
 	pub RelayTreasuryAccount: AccountId =
 		parachains_common::TREASURY_PALLET_ID.into_account_truncating();
 	pub const GeneralAdminBodyId: BodyId = BodyId::Administration;
-	pub StableAssetLocation: Location = Location::new(
-		1,
-		[Parachain(2034), GeneralIndex(222)]
-	);
-	pub UsdtAssetLocation: Location = Location::new(
-		1,
-		[Parachain(1000), PalletInstance(50), GeneralIndex(1984)]
-	);
 }
 
 pub type IdentityAdminOrigin = EitherOfDiverse<
@@ -291,8 +283,9 @@ impl indiv_pallet_origin_restriction::RestrictedEntity<OriginCaller, Balance> fo
 		use indiv_pallet_people_lite::Origin::*;
 		use OriginCaller::*;
 		match origin_caller {
-			PeopleLite(LitePerson(account_id)) =>
-				Some(RestrictedEntity::LitePerson(account_id.clone())),
+			PeopleLite(LitePerson(account_id)) => {
+				Some(RestrictedEntity::LitePerson(account_id.clone()))
+			},
 			_ => None,
 		}
 	}
