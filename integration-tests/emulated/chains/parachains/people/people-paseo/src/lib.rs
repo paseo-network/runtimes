@@ -43,6 +43,8 @@ decl_test_parachains! {
 			PolkadotXcm: people_paseo_runtime::PolkadotXcm,
 			Balances: people_paseo_runtime::Balances,
 			Identity: people_paseo_runtime::Identity,
+			AssetRate: people_paseo_runtime::AssetRate,
+			Assets: people_paseo_runtime::Assets,
 		}
 	},
 }

@@ -9118,6 +9118,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "people-paseo-integration-tests"
+version = "1.9.3"
+dependencies = [
+ "cumulus-pallet-parachain-system",
+ "emulated-integration-tests-common",
+ "frame-support",
+ "parachains-common",
+ "parity-scale-codec",
+ "paseo-runtime-constants",
+ "paseo-system-emulated-network",
+ "people-paseo-runtime",
+ "sp-io",
+ "sp-runtime",
+ "staging-xcm",
+ "staging-xcm-builder",
+ "staging-xcm-executor",
+ "xcm-runtime-apis",
+]
+
+[[package]]
 name = "people-paseo-runtime"
 version = "1.9.3"
 dependencies = [
