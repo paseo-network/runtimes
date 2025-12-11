@@ -11770,9 +11770,9 @@ dependencies = [
 
 [[package]]
 name = "snowbridge-beacon-primitives"
-version = "0.15.1"
+version = "0.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "231a9b405234386166c0b17f15af05b1b95dbdb3a4fe4eceeb84b2fd88a05833"
+checksum = "6ba169350aded611ed017dcaafb650373ba7390a0a79c8b61db2a54974f79280"
 dependencies = [
  "byte-slice-cast",
  "frame-support",
@@ -11947,9 +11947,9 @@ dependencies = [
 
 [[package]]
 name = "snowbridge-pallet-ethereum-client"
-version = "0.15.1"
+version = "0.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f7e9d794d0b10a5b0611c52c2468e28f919e0180ccf78073e831404c1d9dad2"
+checksum = "ab9228b9dbccf6753ff36ba9c610d0df910e0313a4629f93dde03cc28a4c6d9d"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -11987,9 +11987,9 @@ dependencies = [
 
 [[package]]
 name = "snowbridge-pallet-inbound-queue"
-version = "0.15.1"
+version = "0.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72652526ebc4ab4be9feb008bddf43731f59b458b43e24b773eb4e7c8f3afb4a"
+checksum = "df6ca80ccbd3f7171ee6eb0aca384e9e3fa0f5ff0a63355e180dc6a17003f368"
 dependencies = [
  "alloy-core",
  "frame-benchmarking",
