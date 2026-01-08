@@ -193,16 +193,21 @@ impl multi_block::verifier::Config for Runtime {
 	type WeightInfo = weights::pallet_election_provider_multi_block_verifier::WeightInfo<Runtime>;
 }
 
+parameter_types! {
+	/// Initial base deposit for signed NPoS solution submissions
+	pub InitialBaseDeposit: Balance = 100 * UNITS;
+}
+
 /// ## Example
 /// ```
-/// use asset_hub_paseo_runtime::staking::GeometricDeposit;
+/// use asset_hub_paseo_runtime::staking::{GeometricDeposit, InitialBaseDeposit};
 /// use pallet_election_provider_multi_block::signed::CalculateBaseDeposit;
 /// use paseo_runtime_constants::currency::UNITS;
 ///
 /// // Base deposit
-/// assert_eq!(GeometricDeposit::calculate_base_deposit(0), 4 * UNITS);
-/// assert_eq!(GeometricDeposit::calculate_base_deposit(1), 8 * UNITS );
-/// assert_eq!(GeometricDeposit::calculate_base_deposit(2), 16 * UNITS);
+/// assert_eq!(GeometricDeposit::calculate_base_deposit(0), InitialBaseDeposit::get());
+/// assert_eq!(GeometricDeposit::calculate_base_deposit(1), 2 * InitialBaseDeposit::get());
+/// assert_eq!(GeometricDeposit::calculate_base_deposit(2),  4 * InitialBaseDeposit::get());
 /// // and so on
 ///
 /// // Full 16 page deposit, to be paid on top of the above base
@@ -214,7 +219,7 @@ impl multi_block::verifier::Config for Runtime {
 pub struct GeometricDeposit;
 impl multi_block::signed::CalculateBaseDeposit<Balance> for GeometricDeposit {
 	fn calculate_base_deposit(existing_submitters: usize) -> Balance {
-		let start: Balance = UNITS * 4;
+		let start: Balance = InitialBaseDeposit::get();
 		let common: Balance = 2;
 		start.saturating_mul(common.saturating_pow(existing_submitters as u32))
 	}
@@ -370,8 +375,8 @@ impl pallet_staking_async::Config for Runtime {
 	type MaxControllersInDeprecationBatch = MaxControllersInDeprecationBatch;
 	type EventListeners = (NominationPools, DelegatedStaking);
 	type MaxInvulnerables = frame_support::traits::ConstU32<20>;
-	type PlanningEraOffset =
-		pallet_staking_async::PlanningEraOffsetOf<Self, RelaySessionDuration, ConstU32<10>>;
+	// This will start election for the next era as soon as an era starts. 1 era = 6 epochs
+	type PlanningEraOffset = ConstU32<6>;
 	type RcClientInterface = StakingRcClient;
 	type MaxEraDuration = MaxEraDuration;
 	type MaxPruningItems = MaxPruningItems;
@@ -383,6 +388,8 @@ impl pallet_staking_async_rc_client::Config for Runtime {
 	type AHStakingInterface = Staking;
 	type SendToRelayChain = StakingXcmToRelayChain;
 	type MaxValidatorSetRetries = ConstU32<64>;
+	// Export elected validator set at the end of the 4th session of the era.
+	type ValidatorSetExportSession = ConstU32<4>;
 }
 
 #[derive(Encode, Decode)]

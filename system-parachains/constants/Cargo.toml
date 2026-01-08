@@ -10,6 +10,7 @@ license.workspace = true
 [dependencies]
 smallvec = { workspace = true }
 
+array-bytes = { workspace = true }
 frame-support = { workspace = true }
 parachains-common = { workspace = true }
 polkadot-core-primitives = { workspace = true }
