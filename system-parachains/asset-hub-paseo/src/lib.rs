@@ -84,7 +84,9 @@ use frame_support::traits::EnsureOrigin;
 use governance::{pallet_custom_origins, GeneralAdmin, StakingAdmin, Treasurer, TreasurySpender};
 use pallet_assets_precompiles::{InlineIdConfig, ERC20};
 use pallet_nomination_pools::PoolId;
-use paseo_runtime_constants::time::{DAYS as RC_DAYS, HOURS as RC_HOURS, MINUTES as RC_MINUTES};
+use paseo_runtime_constants::time::{
+	DAYS as RC_DAYS, HOURS as RC_HOURS, MINUTES as RC_MINUTES, YEARS as RC_YEARS,
+};
 use polkadot_core_primitives::AccountIndex;
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, ConstU128, Get, OpaqueMetadata};
@@ -148,7 +150,7 @@ use system_parachains_constants::{
 			RELAY_CHAIN_SLOT_DURATION_MILLIS,
 		},
 		currency::*,
-		fee::WeightToFee,
+		fee::WeightToFee as PaseoWeightToFee,
 	},
 };
 
@@ -346,13 +348,7 @@ impl pallet_transaction_payment::Config for Runtime {
 	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 	type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
 	type OperationalFeeMultiplier = ConstU8<5>;
-	// The two generic parameters of `BlockRatioFee` define a rational number that defines the
-	// ref_time to fee mapping. The numbers chosen here are exactly the same as the one from the
-	// `WeightToFeePolynomial` that was used before:
-	// - The numerator is `currency::CENTS` = 100_000_000
-	// - The denominator is `200 * Balance::from(ExtrinsicBaseWeight::get().ref_time())`
-	//   - which is 200 * 1_000 * 108_157 = 21_631_400_000
-	type WeightToFee = pallet_revive::evm::fees::BlockRatioFee<100_000_000, 21_631_400_000, Self>;
+	type WeightToFee = PaseoWeightToFee<Self>;
 	type WeightInfo = weights::pallet_transaction_payment::WeightInfo<Self>;
 }
 
@@ -1367,9 +1363,51 @@ impl pallet_claims::Config for Runtime {
 	type WeightInfo = weights::polkadot_runtime_common_claims::WeightInfo<Runtime>;
 }
 
+parameter_types! {
+	pub PalletAssetsIndex: usize = <crate::Assets as frame_support::pallet_prelude::PalletInfoAccess>::index();
+	// Assets of the Stellaswap account that will be migrated.
+	pub RelevantAssets: Vec<Location> = vec![
+		// USDT
+		Location::new(
+			0,
+			[
+				Junction::PalletInstance(PalletAssetsIndex::get() as u8),
+				Junction::GeneralIndex(1984),
+			],
+		),
+		// USDC
+		Location::new(
+			0,
+			[
+				Junction::PalletInstance(PalletAssetsIndex::get() as u8),
+				Junction::GeneralIndex(1337),
+			],
+		),
+		// DED
+		Location::new(
+			0,
+			[
+				Junction::PalletInstance(PalletAssetsIndex::get() as u8),
+				Junction::GeneralIndex(30),
+			],
+		),
+		// TSN
+		Location::new(
+			0,
+			[
+				Junction::PalletInstance(PalletAssetsIndex::get() as u8),
+				Junction::GeneralIndex(1107),
+			],
+		),
+	];
+}
+
 impl pallet_ah_ops::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
+	type AssetId = Location;
+	type RelevantAssets = RelevantAssets;
+	type MigrateOrigin = EnsureRoot<AccountId>;
 	type Fungibles = NativeAndAssets;
 	type RcBlockNumberProvider = RelaychainDataProvider<Runtime>;
 	type WeightInfo = weights::pallet_ah_ops::WeightInfo<Runtime>;
@@ -2624,8 +2662,9 @@ ord_parameter_types! {
 mod tests {
 	use super::*;
 	use sp_runtime::traits::Zero;
-	use sp_weights::WeightToFee;
-	use system_parachains_constants::paseo::fee;
+	use sp_weights::WeightToFee as WeightToFeeT;
+
+	type WeightToFee = PaseoWeightToFee<Runtime>;
 
 	/// We can fit at least 1000 transfers in a block.
 	#[test]
@@ -2648,18 +2687,18 @@ mod tests {
 		let transfer =
 			base + weights::pallet_balances::WeightInfo::<Runtime>::transfer_allow_death();
 
-		let fee: Balance = fee::WeightToFee::weight_to_fee(&transfer);
+		let fee: Balance = WeightToFee::weight_to_fee(&transfer);
 		assert!(fee <= CENTS, "{} MILLICENTS should be at most 1000", fee / MILLICENTS);
 	}
 
 	/// Weight is being charged for both dimensions.
 	#[test]
 	fn weight_charged_for_both_components() {
-		let fee: Balance = fee::WeightToFee::weight_to_fee(&Weight::from_parts(20_000, 0));
+		let fee: Balance = WeightToFee::weight_to_fee(&Weight::from_parts(20_000, 0));
 		assert!(!fee.is_zero(), "Charges for ref time");
 
-		let fee: Balance = fee::WeightToFee::weight_to_fee(&Weight::from_parts(0, 20_000));
-		assert_eq!(fee, CENTS, "20kb maps to CENT");
+		let fee: Balance = WeightToFee::weight_to_fee(&Weight::from_parts(0, 20_000));
+		assert!(!fee.is_zero(), "Charges for proof size");
 	}
 
 	/// Filling up a block by proof size is at most 30 times more expensive than ref time.
@@ -2669,9 +2708,9 @@ mod tests {
 	fn full_block_fee_ratio() {
 		let block = RuntimeBlockWeights::get().max_block;
 		let time_fee: Balance =
-			fee::WeightToFee::weight_to_fee(&Weight::from_parts(block.ref_time(), 0));
+			WeightToFee::weight_to_fee(&Weight::from_parts(block.ref_time(), 0));
 		let proof_fee: Balance =
-			fee::WeightToFee::weight_to_fee(&Weight::from_parts(0, block.proof_size()));
+			WeightToFee::weight_to_fee(&Weight::from_parts(0, block.proof_size()));
 
 		let proof_o_time = proof_fee.checked_div(time_fee).unwrap_or_default();
 		assert!(proof_o_time <= 30, "{proof_o_time} should be at most 30");
