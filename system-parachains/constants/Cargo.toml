@@ -25,7 +25,7 @@ pallet-revive = { workspace = true }
 default = ["std"]
 std = [
 	"frame-support/std",
-    "pallet-revive/std",
+	"pallet-revive/std",
 	"parachains-common/std",
 	"paseo-runtime-constants/std",
 	"polkadot-core-primitives/std",
@@ -36,7 +36,7 @@ std = [
 ]
 runtime-benchmarks = [
 	"frame-support/runtime-benchmarks",
-    "pallet-revive/runtime-benchmarks",
+	"pallet-revive/runtime-benchmarks",
 	"parachains-common/runtime-benchmarks",
 	"paseo-runtime-constants/runtime-benchmarks",
 	"polkadot-primitives/runtime-benchmarks",

@@ -94,8 +94,8 @@ std = [
 	"cumulus-pallet-aura-ext/std",
 	"cumulus-pallet-parachain-system/std",
 	"cumulus-pallet-session-benchmarking/std",
-	"cumulus-pallet-xcm/std",
 	"cumulus-pallet-weight-reclaim/std",
+	"cumulus-pallet-xcm/std",
 	"cumulus-pallet-xcmp-queue/std",
 	"cumulus-primitives-aura/std",
 	"cumulus-primitives-core/std",
@@ -193,8 +193,8 @@ runtime-benchmarks = [
 try-runtime = [
 	"cumulus-pallet-aura-ext/try-runtime",
 	"cumulus-pallet-parachain-system/try-runtime",
-	"cumulus-pallet-xcm/try-runtime",
 	"cumulus-pallet-weight-reclaim/try-runtime",
+	"cumulus-pallet-xcm/try-runtime",
 	"cumulus-pallet-xcmp-queue/try-runtime",
 	"frame-executive/try-runtime",
 	"frame-support/try-runtime",
@@ -216,9 +216,9 @@ try-runtime = [
 	"pallet-xcm/try-runtime",
 	"parachain-info/try-runtime",
 	"parachains-common/try-runtime",
+	"parachains-common/try-runtime",
 	"polkadot-runtime-common/try-runtime",
 	"sp-runtime/try-runtime",
-	"parachains-common/try-runtime"
 ]
 
 fast-runtime = ["paseo-runtime-constants/fast-runtime"]
