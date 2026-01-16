@@ -45,7 +45,8 @@ use sp_consensus_aura::SlotDuration;
 use sp_core::crypto::Ss58Codec;
 use sp_runtime::{traits::MaybeEquivalence, Either, TryRuntimeError};
 use system_parachains_constants::paseo::{
-	consensus::RELAY_CHAIN_SLOT_DURATION_MILLIS, currency::UNITS, fee::WeightToFee,
+	consensus::RELAY_CHAIN_SLOT_DURATION_MILLIS, currency::UNITS,
+	fee::WeightToFee as PaseoWeightToFee,
 };
 use xcm::latest::{
 	prelude::{Assets as XcmAssets, *},
@@ -67,6 +68,7 @@ type AssetIdForTrustBackedAssetsConvertLatest =
 	assets_common::AssetIdForTrustBackedAssetsConvert<TrustBackedAssetsPalletLocation>;
 
 type RuntimeHelper = asset_test_utils::RuntimeHelper<Runtime, AllPalletsWithoutSystem>;
+type WeightToFee = PaseoWeightToFee<Runtime>;
 
 fn collator_session_key(account: [u8; 32]) -> CollatorSessionKey<Runtime> {
 	CollatorSessionKey::new(

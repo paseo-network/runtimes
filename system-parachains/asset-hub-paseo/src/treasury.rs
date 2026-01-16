@@ -19,10 +19,10 @@ use parachains_common::pay::VersionedLocatableAccount;
 use polkadot_runtime_common::impls::{ContainsParts, VersionedLocatableAsset};
 
 parameter_types! {
-	pub const SpendPeriod: BlockNumber = 24 * RC_DAYS;
+	pub const SpendPeriod: BlockNumber = 3 * RC_DAYS;
 	pub const DisableSpends: BlockNumber = BlockNumber::MAX;
 	pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
-	pub const PayoutSpendPeriod: BlockNumber = 90 * RC_DAYS;
+	pub const PayoutSpendPeriod: BlockNumber = 4 * RC_DAYS;
 	pub const MaxApprovals: u32 = 100;
 	// Account address: `13UVJyLnbVp9RBZYFwFGyDvVd1y27Tt8tkntv6Q7JVPhFsTB`
 	pub TreasuryAccount: AccountId = Treasury::account_id();
