@@ -40,8 +40,8 @@ impl<T: frame_system::Config> cumulus_pallet_weight_reclaim::WeightInfo for Weig
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
-		// Minimum execution time: 27_031_000 picoseconds.
-		Weight::from_parts(30_327_000, 0)
+		// Minimum execution time: 18_585_000 picoseconds.
+		Weight::from_parts(22_192_000, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 	}
 }
