@@ -3741,9 +3741,7 @@ mod proxy_tests {
 			assert!(
 				!alice_proxies.0.iter().any(|p| p.delegate == carol &&
 					p.proxy_type ==
-						TransparentProxyType(
-							paseo_runtime_constants::proxy::ProxyType::Any
-						)),
+						TransparentProxyType(paseo_runtime_constants::proxy::ProxyType::Any)),
 				"Carol should NOT be Alice's Any proxy - Staking proxy cannot add Any"
 			);
 
