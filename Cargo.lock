@@ -947,7 +947,7 @@ checksum = "9b34d609dfbaf33d6889b2b7106d3ca345eacad44200913df5ba02bfd31d2ba9"
 
 [[package]]
 name = "asset-hub-paseo-emulated-chain"
-version = "2.0.4"
+version = "2.0.5"
 dependencies = [
  "asset-hub-paseo-runtime",
  "cumulus-primitives-core",
@@ -966,8 +966,9 @@ dependencies = [
 
 [[package]]
 name = "asset-hub-paseo-runtime"
-version = "2.0.4"
+version = "2.0.5"
 dependencies = [
+ "approx",
  "asset-test-utils",
  "assets-common",
  "bp-asset-hub-paseo",
@@ -978,6 +979,7 @@ dependencies = [
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-session-benchmarking",
+ "cumulus-pallet-weight-reclaim",
  "cumulus-pallet-xcm",
  "cumulus-pallet-xcmp-queue",
  "cumulus-primitives-aura",
@@ -1085,7 +1087,7 @@ dependencies = [
  "staging-xcm-executor",
  "substrate-wasm-builder",
  "system-parachains-common",
- "system-parachains-constants 2.0.4",
+ "system-parachains-constants 2.0.5",
  "xcm-runtime-apis",
 ]
 
@@ -1570,7 +1572,7 @@ dependencies = [
 [[package]]
 name = "bp-asset-hub-kusama"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.0.4#58d95e617ba6169e5c2bb748ee3d7c5c124abdb4"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.0.5#ff458d43013d4004419f8f72fd5e59fb9a0533e3"
 dependencies = [
  "bp-xcm-bridge-hub-router",
  "frame-support",
@@ -1583,7 +1585,7 @@ dependencies = [
 
 [[package]]
 name = "bp-asset-hub-paseo"
-version = "2.0.4"
+version = "2.0.5"
 dependencies = [
  "bp-xcm-bridge-hub-router",
  "frame-support",
@@ -1591,7 +1593,7 @@ dependencies = [
  "scale-info",
  "sp-core",
  "staging-xcm",
- "system-parachains-constants 2.0.4",
+ "system-parachains-constants 2.0.5",
 ]
 
 [[package]]
@@ -1614,7 +1616,7 @@ dependencies = [
 [[package]]
 name = "bp-bridge-hub-kusama"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.0.4#58d95e617ba6169e5c2bb748ee3d7c5c124abdb4"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.0.5#ff458d43013d4004419f8f72fd5e59fb9a0533e3"
 dependencies = [
  "bp-bridge-hub-cumulus",
  "bp-header-chain",
@@ -1632,7 +1634,7 @@ dependencies = [
 
 [[package]]
 name = "bp-bridge-hub-paseo"
-version = "2.0.4"
+version = "2.0.5"
 dependencies = [
  "bp-bridge-hub-cumulus",
  "bp-header-chain",
@@ -1647,13 +1649,13 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "staging-xcm",
- "system-parachains-constants 2.0.4",
+ "system-parachains-constants 2.0.5",
 ]
 
 [[package]]
 name = "bp-bridge-hub-polkadot"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.0.4#58d95e617ba6169e5c2bb748ee3d7c5c124abdb4"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.0.5#ff458d43013d4004419f8f72fd5e59fb9a0533e3"
 dependencies = [
  "bp-bridge-hub-cumulus",
  "bp-header-chain",
@@ -1859,7 +1861,7 @@ dependencies = [
 
 [[package]]
 name = "bridge-hub-paseo-emulated-chain"
-version = "2.0.4"
+version = "2.0.5"
 dependencies = [
  "bp-messages",
  "bridge-hub-common",
@@ -1874,7 +1876,7 @@ dependencies = [
 
 [[package]]
 name = "bridge-hub-paseo-integration-tests"
-version = "2.0.4"
+version = "2.0.5"
 dependencies = [
  "asset-hub-paseo-runtime",
  "bp-asset-hub-paseo",
@@ -1917,13 +1919,13 @@ dependencies = [
  "staging-xcm",
  "staging-xcm-builder",
  "staging-xcm-executor",
- "system-parachains-constants 2.0.4",
+ "system-parachains-constants 2.0.5",
  "xcm-runtime-apis",
 ]
 
 [[package]]
 name = "bridge-hub-paseo-runtime"
-version = "2.0.4"
+version = "2.0.5"
 dependencies = [
  "bp-asset-hub-kusama",
  "bp-asset-hub-paseo",
@@ -1944,6 +1946,7 @@ dependencies = [
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-session-benchmarking",
+ "cumulus-pallet-weight-reclaim",
  "cumulus-pallet-xcm",
  "cumulus-pallet-xcmp-queue",
  "cumulus-primitives-aura",
@@ -2029,7 +2032,7 @@ dependencies = [
  "staging-xcm-builder",
  "staging-xcm-executor",
  "substrate-wasm-builder",
- "system-parachains-constants 2.0.4",
+ "system-parachains-constants 2.0.5",
  "tuplex",
  "xcm-runtime-apis",
 ]
@@ -2408,13 +2411,14 @@ dependencies = [
 
 [[package]]
 name = "collectives-paseo-runtime"
-version = "2.0.4"
+version = "2.0.5"
 dependencies = [
  "collectives-paseo-runtime-constants",
  "collectives-polkadot-runtime-constants",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-session-benchmarking",
+ "cumulus-pallet-weight-reclaim",
  "cumulus-pallet-xcm",
  "cumulus-pallet-xcmp-queue",
  "cumulus-primitives-aura",
@@ -2483,18 +2487,18 @@ dependencies = [
  "staging-xcm-builder",
  "staging-xcm-executor",
  "substrate-wasm-builder",
- "system-parachains-constants 2.0.4",
+ "system-parachains-constants 2.0.5",
  "xcm-runtime-apis",
 ]
 
 [[package]]
 name = "collectives-paseo-runtime-constants"
-version = "2.0.4"
+version = "2.0.5"
 
 [[package]]
 name = "collectives-polkadot-runtime-constants"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.0.4#58d95e617ba6169e5c2bb748ee3d7c5c124abdb4"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.0.5#ff458d43013d4004419f8f72fd5e59fb9a0533e3"
 
 [[package]]
 name = "combine"
@@ -2666,7 +2670,7 @@ dependencies = [
 
 [[package]]
 name = "coretime-paseo-emulated-chain"
-version = "2.0.4"
+version = "2.0.5"
 dependencies = [
  "coretime-paseo-runtime",
  "cumulus-primitives-core",
@@ -2678,7 +2682,7 @@ dependencies = [
 
 [[package]]
 name = "coretime-paseo-integration-tests"
-version = "2.0.4"
+version = "2.0.5"
 dependencies = [
  "asset-test-utils",
  "coretime-paseo-runtime",
@@ -2705,11 +2709,12 @@ dependencies = [
 
 [[package]]
 name = "coretime-paseo-runtime"
-version = "2.0.4"
+version = "2.0.5"
 dependencies = [
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-session-benchmarking",
+ "cumulus-pallet-weight-reclaim",
  "cumulus-pallet-xcm",
  "cumulus-pallet-xcmp-queue",
  "cumulus-primitives-aura",
@@ -2769,7 +2774,7 @@ dependencies = [
  "staging-xcm-builder",
  "staging-xcm-executor",
  "substrate-wasm-builder",
- "system-parachains-constants 2.0.4",
+ "system-parachains-constants 2.0.5",
  "xcm-runtime-apis",
 ]
 
@@ -3109,6 +3114,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "cumulus-pallet-weight-reclaim"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6c3bc97a8192354d85bf847904eaa9eb5577bf6fee955476d839806a75d5d2f0"
+dependencies = [
+ "cumulus-primitives-storage-weight-reclaim",
+ "derive-where",
+ "docify",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-io",
+ "sp-runtime",
+ "sp-trie",
+]
+
+[[package]]
 name = "cumulus-pallet-xcm"
 version = "0.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3203,6 +3228,24 @@ dependencies = [
  "sp-externalities",
  "sp-runtime-interface",
  "sp-trie",
+]
+
+[[package]]
+name = "cumulus-primitives-storage-weight-reclaim"
+version = "15.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d40a87084fe60ee80f84128f257db1b5afc546302a32210f5cddde318000d02c"
+dependencies = [
+ "cumulus-primitives-core",
+ "cumulus-primitives-proof-size-hostfunction",
+ "docify",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-runtime",
 ]
 
 [[package]]
@@ -5526,7 +5569,7 @@ dependencies = [
 
 [[package]]
 name = "integration-tests-helpers"
-version = "2.0.4"
+version = "2.0.5"
 dependencies = [
  "cumulus-pallet-xcmp-queue",
  "emulated-integration-tests-common",
@@ -5890,7 +5933,7 @@ checksum = "c33070833c9ee02266356de0c43f723152bd38bd96ddf52c82b3af10c9138b28"
 [[package]]
 name = "kusama-runtime-constants"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.0.4#58d95e617ba6169e5c2bb748ee3d7c5c124abdb4"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.0.5#ff458d43013d4004419f8f72fd5e59fb9a0533e3"
 dependencies = [
  "frame-support",
  "pallet-remote-proxy",
@@ -7322,7 +7365,7 @@ dependencies = [
 [[package]]
 name = "pallet-ah-migrator"
 version = "0.1.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.0.4#58d95e617ba6169e5c2bb748ee3d7c5c124abdb4"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.0.5#ff458d43013d4004419f8f72fd5e59fb9a0533e3"
 dependencies = [
  "assets-common",
  "cumulus-primitives-core",
@@ -7381,7 +7424,7 @@ dependencies = [
 [[package]]
 name = "pallet-ah-ops"
 version = "0.1.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.0.4#58d95e617ba6169e5c2bb748ee3d7c5c124abdb4"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.0.5#ff458d43013d4004419f8f72fd5e59fb9a0533e3"
 dependencies = [
  "cumulus-primitives-core",
  "frame-benchmarking",
@@ -7390,6 +7433,7 @@ dependencies = [
  "log",
  "pallet-assets",
  "pallet-balances",
+ "pallet-staking-async",
  "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",
@@ -8310,7 +8354,7 @@ dependencies = [
 [[package]]
 name = "pallet-rc-migrator"
 version = "0.1.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.0.4#58d95e617ba6169e5c2bb748ee3d7c5c124abdb4"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.0.5#ff458d43013d4004419f8f72fd5e59fb9a0533e3"
 dependencies = [
  "frame-benchmarking",
  "frame-election-provider-support",
@@ -8394,7 +8438,7 @@ dependencies = [
 [[package]]
 name = "pallet-remote-proxy"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.0.4#58d95e617ba6169e5c2bb748ee3d7c5c124abdb4"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.0.5#ff458d43013d4004419f8f72fd5e59fb9a0533e3"
 dependencies = [
  "cumulus-pallet-parachain-system",
  "cumulus-primitives-core",
@@ -8411,9 +8455,9 @@ dependencies = [
 
 [[package]]
 name = "pallet-revive"
-version = "0.11.2"
+version = "0.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c9a7d488c4408a01f7eda04fb7b67c156e4529b01bcadcdc11e42afa64cfd0e4"
+checksum = "995f1338e2254b7fe1b8b90ca2e14d40d069619e72a72cee3e8cd6faf67d821a"
 dependencies = [
  "alloy-consensus",
  "alloy-core",
@@ -9157,7 +9201,7 @@ checksum = "7924d1d0ad836f665c9065e26d016c673ece3993f30d340068b16f282afc1156"
 
 [[package]]
 name = "paseo-emulated-chain"
-version = "2.0.4"
+version = "2.0.5"
 dependencies = [
  "emulated-integration-tests-common",
  "pallet-staking",
@@ -9175,7 +9219,7 @@ dependencies = [
 
 [[package]]
 name = "paseo-runtime"
-version = "2.0.4"
+version = "2.0.5"
 dependencies = [
  "approx",
  "binary-merkle-tree",
@@ -9285,7 +9329,7 @@ dependencies = [
 
 [[package]]
 name = "paseo-runtime-constants"
-version = "2.0.4"
+version = "2.0.5"
 dependencies = [
  "frame-support",
  "pallet-remote-proxy",
@@ -9303,7 +9347,7 @@ dependencies = [
 
 [[package]]
 name = "paseo-system-emulated-network"
-version = "2.0.4"
+version = "2.0.5"
 dependencies = [
  "asset-hub-paseo-emulated-chain",
  "bridge-hub-paseo-emulated-chain",
@@ -9364,7 +9408,7 @@ dependencies = [
 
 [[package]]
 name = "penpal-emulated-chain"
-version = "2.0.4"
+version = "2.0.5"
 dependencies = [
  "cumulus-primitives-core",
  "emulated-integration-tests-common",
@@ -9379,9 +9423,9 @@ dependencies = [
 
 [[package]]
 name = "penpal-runtime"
-version = "0.34.0"
+version = "0.34.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68051e376ae22c88f556bc6497d3674f5d8779fe1973df1f7057fed651cfaf1e"
+checksum = "496e0c016eb01e64f6ffc5390b2248c38cecdb79d49a75acca8cebf51b8dede5"
 dependencies = [
  "assets-common",
  "cumulus-pallet-aura-ext",
@@ -9450,7 +9494,7 @@ dependencies = [
 
 [[package]]
 name = "people-paseo-emulated-chain"
-version = "2.0.4"
+version = "2.0.5"
 dependencies = [
  "cumulus-primitives-core",
  "emulated-integration-tests-common",
@@ -9464,11 +9508,12 @@ dependencies = [
 
 [[package]]
 name = "people-paseo-runtime"
-version = "2.0.4"
+version = "2.0.5"
 dependencies = [
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-session-benchmarking",
+ "cumulus-pallet-weight-reclaim",
  "cumulus-pallet-xcm",
  "cumulus-pallet-xcmp-queue",
  "cumulus-primitives-aura",
@@ -9528,7 +9573,7 @@ dependencies = [
  "staging-xcm-builder",
  "staging-xcm-executor",
  "substrate-wasm-builder",
- "system-parachains-constants 2.0.4",
+ "system-parachains-constants 2.0.5",
  "xcm-runtime-apis",
 ]
 
@@ -9777,7 +9822,7 @@ dependencies = [
 [[package]]
 name = "polkadot-runtime-constants"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.0.4#58d95e617ba6169e5c2bb748ee3d7c5c124abdb4"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.0.5#ff458d43013d4004419f8f72fd5e59fb9a0533e3"
 dependencies = [
  "frame-support",
  "pallet-remote-proxy",
@@ -10737,7 +10782,7 @@ checksum = "7a2d987857b319362043e95f5353c0535c1f58eec5336fdfcf626430af7def58"
 
 [[package]]
 name = "relay-common"
-version = "2.0.4"
+version = "2.0.5"
 dependencies = [
  "pallet-staking-reward-fn",
  "parity-scale-codec",
@@ -14231,7 +14276,7 @@ dependencies = [
 [[package]]
 name = "system-parachains-common"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.0.4#58d95e617ba6169e5c2bb748ee3d7c5c124abdb4"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.0.5#ff458d43013d4004419f8f72fd5e59fb9a0533e3"
 dependencies = [
  "cumulus-pallet-parachain-system",
  "cumulus-primitives-core",
@@ -14254,11 +14299,12 @@ dependencies = [
 [[package]]
 name = "system-parachains-constants"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.0.4#58d95e617ba6169e5c2bb748ee3d7c5c124abdb4"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.0.5#ff458d43013d4004419f8f72fd5e59fb9a0533e3"
 dependencies = [
  "array-bytes 9.3.0",
  "frame-support",
  "kusama-runtime-constants",
+ "pallet-revive",
  "parachains-common",
  "polkadot-core-primitives",
  "polkadot-primitives",
@@ -14271,10 +14317,11 @@ dependencies = [
 
 [[package]]
 name = "system-parachains-constants"
-version = "2.0.4"
+version = "2.0.5"
 dependencies = [
  "array-bytes 9.3.0",
  "frame-support",
+ "pallet-revive",
  "parachains-common",
  "paseo-runtime-constants",
  "polkadot-core-primitives",
