@@ -40,8 +40,8 @@ decl_test_parachains! {
 			MessageOrigin: cumulus_primitives_core::AggregateMessageOrigin,
 		},
 		pallets = {
-            Assets: people_paseo_runtime::Assets,
-            AssetRate: people_paseo_runtime::AssetRate,
+			Assets: people_paseo_runtime::Assets,
+			AssetRate: people_paseo_runtime::AssetRate,
 			PolkadotXcm: people_paseo_runtime::PolkadotXcm,
 			Balances: people_paseo_runtime::Balances,
 			Identity: people_paseo_runtime::Identity,

@@ -7551,6 +7551,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-assets-holder"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f65d207ea811cfd6dd63db52c258ab1575914863d8002c1fb1fddfb4527ceb19"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "pallet-assets",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-runtime",
+]
+
+[[package]]
 name = "pallet-assets-precompiles"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9507,9 +9523,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "people-paseo-integration-tests"
+version = "2.0.5"
+dependencies = [
+ "asset-hub-paseo-runtime",
+ "asset-test-utils",
+ "cumulus-pallet-parachain-system",
+ "emulated-integration-tests-common",
+ "frame-support",
+ "integration-tests-helpers",
+ "pallet-assets",
+ "pallet-balances",
+ "pallet-identity",
+ "pallet-message-queue",
+ "pallet-xcm",
+ "parachains-common",
+ "parity-scale-codec",
+ "paseo-runtime",
+ "paseo-runtime-constants",
+ "paseo-system-emulated-network",
+ "people-paseo-runtime",
+ "polkadot-runtime-common",
+ "sp-io",
+ "sp-runtime",
+ "staging-xcm",
+ "staging-xcm-executor",
+ "xcm-runtime-apis",
+]
+
+[[package]]
 name = "people-paseo-runtime"
 version = "2.0.5"
 dependencies = [
+ "assets-common",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-session-benchmarking",
@@ -9530,6 +9576,10 @@ dependencies = [
  "frame-try-runtime",
  "hex-literal",
  "log",
+ "pallet-asset-rate",
+ "pallet-asset-tx-payment",
+ "pallet-assets",
+ "pallet-assets-holder",
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",

@@ -116,7 +116,8 @@ fn construct_extrinsic(
 		BridgeRejectObsoleteHeadersAndMessages,
 		(OnBridgeHubPaseoRefundBridgeHubKusamaMessages::default()),
 		frame_metadata_hash_extension::CheckMetadataHash::<Runtime>::new(false),
-	);
+	)
+		.into();
 	let payload = SignedPayload::new(call.clone(), extra.clone()).unwrap();
 	let signature = payload.using_encoded(|e| sender.sign(e));
 	UncheckedExtrinsic::new_signed(call, account_id.into(), Signature::Sr25519(signature), extra)
@@ -447,8 +448,8 @@ pub fn can_calculate_fee_for_standalone_message_delivery_transaction() {
 #[test]
 pub fn can_calculate_fee_for_standalone_message_confirmation_transaction() {
 	bridge_hub_test_utils::check_sane_fees_values(
-		"bp_bridge_hub_polkadot::BridgeHubPolkadotBaseConfirmationFeeInDots",
-		bp_bridge_hub_polkadot::BridgeHubPolkadotBaseConfirmationFeeInDots::get(),
+		"bp_bridge_hub_paseo::BridgeHubPaseoBaseConfirmationFeeInDots",
+		bp_bridge_hub_paseo::BridgeHubPaseoBaseConfirmationFeeInDots::get(),
 		|| {
 			from_parachain::can_calculate_fee_for_standalone_message_confirmation_transaction::<
 				RuntimeTestsAdapter,

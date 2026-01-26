@@ -16,17 +16,17 @@
 use crate::*;
 use emulated_integration_tests_common::macros::{AssetTransferFilter, XcmPaymentApiV1};
 use frame_support::traits::fungibles;
-use people_aseo_runtime::xcm_config::XcmConfig;
 use paseo_runtime_constants::currency::CENTS as PAS_CENTS;
+use people_paseo_runtime::xcm_config::XcmConfig;
 
 #[test]
 fn can_receive_hollar_from_hydration() {
 	let hydration_location = HydrationLocation::get();
 	let hydration_sovereign_account =
-		PeoplePolkadot::sovereign_account_id_of(hydration_location.clone());
+		PeoplePaseo::sovereign_account_id_of(hydration_location.clone());
 	let hollar_id = HollarLocation::get();
 
-	PeoplePolkadot::fund_accounts(vec![(
+	PeoplePaseo::fund_accounts(vec![(
 		hydration_sovereign_account.clone(),
 		ASSET_HUB_POLKADOT_ED * 10,
 	)]);
@@ -34,12 +34,12 @@ fn can_receive_hollar_from_hydration() {
 	// We need to first register HOLLAR.
 	register_hollar();
 
-	PeoplePolkadot::execute_with(|| {
-		type Runtime = <PeoplePolkadot as Chain>::Runtime;
-		type PeopleAssets = <PeoplePolkadot as PeoplePolkadotPallet>::Assets;
+	PeoplePaseo::execute_with(|| {
+		type Runtime = <PeoplePaseo as Chain>::Runtime;
+		type PeopleAssets = <PeoplePaseo as PeoplePaseoPallet>::Assets;
 
 		// The receiver starts with no HOLLAR.
-		let receiver = PeoplePolkadotReceiver::get();
+		let receiver = PeoplePaseoReceiver::get();
 		let balance_before =
 			<PeopleAssets as fungibles::Inspect<_>>::balance(hollar_id.clone(), &receiver);
 		assert_eq!(balance_before, 0);
@@ -51,6 +51,10 @@ fn can_receive_hollar_from_hydration() {
 			.buy_execution((hollar_id.clone(), transfer_amount), Unlimited)
 			.deposit_asset(AllCounted(1), receiver.clone())
 			.build();
+
+		// Debug: check weight and fee calculations before execution
+		let xcm_weight = Runtime::query_xcm_weight(VersionedXcm::from(transfer_xcm.clone().into()));
+
 		let mut hash = transfer_xcm.using_encoded(sp_io::hashing::blake2_256);
 		assert_ok!(xcm_executor::XcmExecutor::<XcmConfig>::prepare_and_execute(
 			hydration_location,
@@ -79,10 +83,10 @@ fn can_receive_hollar_from_hydration() {
 fn can_send_hollar_back_to_hydration() {
 	let hydration_location = HydrationLocation::get();
 	let hydration_sovereign_account =
-		PeoplePolkadot::sovereign_account_id_of(hydration_location.clone());
+		PeoplePaseo::sovereign_account_id_of(hydration_location.clone());
 	let hollar_id = HollarLocation::get();
 
-	PeoplePolkadot::fund_accounts(vec![(
+	PeoplePaseo::fund_accounts(vec![(
 		hydration_sovereign_account.clone(),
 		ASSET_HUB_POLKADOT_ED * 10,
 	)]);
@@ -90,14 +94,16 @@ fn can_send_hollar_back_to_hydration() {
 	// First we register HOLLAR.
 	register_hollar();
 
-	PeoplePolkadot::execute_with(|| {
-		type RuntimeOrigin = <PeoplePolkadot as Chain>::RuntimeOrigin;
-		type PeopleAssets = <PeoplePolkadot as PeoplePolkadotPallet>::Assets;
-		type PolkadotXcm = <PeoplePolkadot as PeoplePolkadotPallet>::PolkadotXcm;
-		let sender = PeoplePolkadotSender::get();
-		let receiver = PeoplePolkadotReceiver::get();
+	PeoplePaseo::execute_with(|| {
+		type RuntimeOrigin = <PeoplePaseo as Chain>::RuntimeOrigin;
+		type PeopleAssets = <PeoplePaseo as PeoplePaseoPallet>::Assets;
+		type PolkadotXcm = <PeoplePaseo as PeoplePaseoPallet>::PolkadotXcm;
+		let sender = PeoplePaseoSender::get();
+		let receiver = PeoplePaseoReceiver::get();
 		// We need to open a channel between People and Hydration.
-		<PeoplePolkadot as Para>::ParachainSystem::open_outbound_hrmp_channel_for_benchmarks_or_tests(HYDRATION_PARA_ID.into());
+		<PeoplePaseo as Para>::ParachainSystem::open_outbound_hrmp_channel_for_benchmarks_or_tests(
+			HYDRATION_PARA_ID.into(),
+		);
 		// We need to mint some HOLLAR into our sender.
 		assert_ok!(<PeopleAssets as fungibles::Mutate<_>>::mint_into(
 			HollarLocation::get(),
@@ -141,13 +147,13 @@ fn can_send_hollar_back_to_hydration() {
 fn register_hollar() {
 	let hydration_location = HydrationLocation::get();
 	let hydration_sovereign_account =
-		PeoplePolkadot::sovereign_account_id_of(hydration_location.clone());
+		PeoplePaseo::sovereign_account_id_of(hydration_location.clone());
 	let hollar_id = HollarLocation::get();
 
-	PeoplePolkadot::execute_with(|| {
-		type RuntimeOrigin = <PeoplePolkadot as Chain>::RuntimeOrigin;
-		type PeopleAssets = <PeoplePolkadot as PeoplePolkadotPallet>::Assets;
-		type AssetRate = <PeoplePolkadot as PeoplePolkadotPallet>::AssetRate;
+	PeoplePaseo::execute_with(|| {
+		type RuntimeOrigin = <PeoplePaseo as Chain>::RuntimeOrigin;
+		type PeopleAssets = <PeoplePaseo as PeoplePaseoPallet>::Assets;
+		type AssetRate = <PeoplePaseo as PeoplePaseoPallet>::AssetRate;
 
 		// HOLLAR is not registered at first.
 		assert!(!<PeopleAssets as fungibles::Inspect<_>>::asset_exists(hollar_id.clone()));

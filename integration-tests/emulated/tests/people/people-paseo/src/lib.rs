@@ -40,39 +40,37 @@ pub use emulated_integration_tests_common::{
 	PROOF_SIZE_THRESHOLD, REF_TIME_THRESHOLD, XCM_V3,
 };
 pub use parachains_common::{AccountId, Balance};
+pub use paseo_system_emulated_network::{
+	asset_hub_paseo_emulated_chain::{
+		genesis::ED as ASSET_HUB_POLKADOT_ED, AssetHubPaseoParaPallet as AssetHubPaseoPallet,
+	},
+	bridge_hub_paseo_emulated_chain::BridgeHubPaseoParaPallet as BridgeHubPaseoPallet,
+	collectives_paseo_emulated_chain::CollectivesPaseoParaPallet as CollectivesPaseoPallet,
+	coretime_paseo_emulated_chain::CoretimePaseoParaPallet as CoretimePaseoPallet,
+	paseo_emulated_chain::{genesis::ED as POLKADOT_ED, PaseoRelayPallet as PaseoPallet},
+	penpal_emulated_chain::{PenpalAParaPallet as PenpalAPallet, PenpalAssetOwner},
+	people_paseo_emulated_chain::{
+		genesis::ED as PEOPLE_POLKADOT_ED, PeoplePaseoParaPallet as PeoplePaseoPallet,
+	},
+	AssetHubPaseoPara as AssetHubPaseo, AssetHubPaseoParaReceiver as AssetHubPaseoReceiver,
+	AssetHubPaseoParaSender as AssetHubPaseoSender, BridgeHubPaseoPara as BridgeHubPaseo,
+	CollectivesPaseoPara as CollectivesPaseo, CoretimePaseoPara as CoretimePaseo,
+	PaseoRelay as Paseo, PaseoRelayReceiver as PaseoReceiver, PaseoRelaySender as PaseoSender,
+	PenpalAPara as PenpalA, PeoplePaseoPara as PeoplePaseo,
+	PeoplePaseoParaReceiver as PeoplePaseoReceiver, PeoplePaseoParaSender as PeoplePaseoSender,
+};
 pub use people_paseo_runtime::{
 	assets::hollar::{
 		HollarId, HollarLocation, HydrationLocation, HOLLAR_UNITS, HYDRATION_PARA_ID,
 	},
 	ExistentialDeposit as PeoplePolkadotExistentialDeposit,
 };
-pub use paseo_system_emulated_network::{
-	asset_hub_paseo_emulated_chain::{
-		genesis::ED as ASSET_HUB_POLKADOT_ED, AssetHubPolkadotParaPallet as AssetHubPolkadotPallet,
-	},
-	bridge_hub_paseo_emulated_chain::BridgeHubPolkadotParaPallet as BridgeHubPolkadotPallet,
-	collectives_paseo_emulated_chain::CollectivesPolkadotParaPallet as CollectivesPolkadotPallet,
-	coretime_paseo_emulated_chain::CoretimePolkadotParaPallet as CoretimePolkadotPallet,
-	penpal_emulated_chain::{PenpalAParaPallet as PenpalAPallet, PenpalAssetOwner},
-	people_paseo_emulated_chain::{
-		genesis::ED as PEOPLE_POLKADOT_ED, PeoplePolkadotParaPallet as PeoplePolkadotPallet,
-	},
-	polkadot_emulated_chain::{genesis::ED as POLKADOT_ED, PolkadotRelayPallet as PolkadotPallet},
-	AssetHubPolkadotPara as AssetHubPolkadot,
-	AssetHubPolkadotParaReceiver as AssetHubPolkadotReceiver,
-	AssetHubPolkadotParaSender as AssetHubPolkadotSender,
-	BridgeHubPolkadotPara as BridgeHubPolkadot, CollectivesPolkadotPara as CollectivesPolkadot,
-	CoretimePolkadotPara as CoretimePolkadot, PenpalAPara as PenpalA,
-	PeoplePolkadotPara as PeoplePolkadot, PeoplePolkadotParaReceiver as PeoplePolkadotReceiver,
-	PeoplePolkadotParaSender as PeoplePolkadotSender, PolkadotRelay as Polkadot,
-	PolkadotRelayReceiver as PolkadotReceiver, PolkadotRelaySender as PolkadotSender,
-};
 
-pub type RelayToSystemParaTest = Test<Polkadot, PeoplePolkadot>;
-pub type RelayToParaTest = Test<Polkadot, PenpalA>;
-pub type SystemParaToRelayTest = Test<PeoplePolkadot, Polkadot>;
-pub type SystemParaToParaTest = Test<PeoplePolkadot, PenpalA>;
-pub type ParaToSystemParaTest = Test<PenpalA, PeoplePolkadot>;
+pub type RelayToSystemParaTest = Test<Paseo, PeoplePaseo>;
+pub type RelayToParaTest = Test<Paseo, PenpalA>;
+pub type SystemParaToRelayTest = Test<PeoplePaseo, Paseo>;
+pub type SystemParaToParaTest = Test<PeoplePaseo, PenpalA>;
+pub type ParaToSystemParaTest = Test<PenpalA, PeoplePaseo>;
 
 #[cfg(test)]
 mod tests;
