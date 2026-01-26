@@ -803,7 +803,7 @@ mod benches {
 			Asset { fun: Fungible(UNITS), id: AssetId(RelayLocation::get()) },
 		));
 		pub const CheckedAccount: Option<(AccountId, xcm_builder::MintLocation)> = None;
-		pub const TrustedReserve: Option<(Location, Asset)> = Some((
+		pub TrustedReserve: Option<(Location, Asset)> = Some((
 			HydrationLocation::get(),
 			Hollar::get()
 		));
