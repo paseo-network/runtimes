@@ -272,6 +272,7 @@ members = [
 	"integration-tests/emulated/networks/paseo-system",
 	"integration-tests/emulated/tests/bridges/bridge-hub-paseo",
 	"integration-tests/emulated/tests/coretime/coretime-paseo",
+	"integration-tests/emulated/tests/people/people-paseo",
 	"relay/common",
 	"relay/paseo",
 	"relay/paseo/constants",
