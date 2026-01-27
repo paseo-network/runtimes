@@ -104,7 +104,7 @@ frame_support::parameter_types! {
 
 	/// Transaction fee that is paid at the Paseo BridgeHub for delivering single outbound message confirmation.
 	/// (initially was calculated by test `BridgeHubPaseo::can_calculate_fee_for_standalone_message_confirmation_transaction` + `33%`)
-	pub const BridgeHubPaseoBaseConfirmationFeeInDots: Balance = 86_188_932;
+	pub const BridgeHubPaseoBaseConfirmationFeeInDots: Balance = 27_396_920;
 }
 
 /// Compute the total estimated fee that needs to be paid in PASs by the sender when sending

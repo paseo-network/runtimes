@@ -448,8 +448,8 @@ pub fn can_calculate_fee_for_standalone_message_delivery_transaction() {
 #[test]
 pub fn can_calculate_fee_for_standalone_message_confirmation_transaction() {
 	bridge_hub_test_utils::check_sane_fees_values(
-		"bp_bridge_hub_polkadot::BridgeHubPolkadotBaseConfirmationFeeInDots",
-		bp_bridge_hub_polkadot::BridgeHubPolkadotBaseConfirmationFeeInDots::get(),
+		"bp_bridge_hub_paseo::BridgeHubPaseoBaseConfirmationFeeInDots",
+		bp_bridge_hub_paseo::BridgeHubPaseoBaseConfirmationFeeInDots::get(),
 		|| {
 			from_parachain::can_calculate_fee_for_standalone_message_confirmation_transaction::<
 				RuntimeTestsAdapter,
