@@ -74,6 +74,14 @@ pub mod consensus {
 		pub const UNINCLUDED_SEGMENT_CAPACITY: u32 =
 			(3 + RELAY_PARENT_OFFSET) * BLOCK_PROCESSING_VELOCITY;
 	}
+
+	pub mod elastic_scaling_500ms {
+		/// The upper limit of how many parachain blocks are processed by the relay chain per
+		/// parent. Limits the number of blocks authored per slot. This determines the minimum
+		/// block time of the parachain:
+		/// `RELAY_CHAIN_SLOT_DURATION_MILLIS/BLOCK_PROCESSING_VELOCITY`
+		pub const BLOCK_PROCESSING_VELOCITY: u32 = 12;
+	}
 }
 
 /// Constants relating to DOT.

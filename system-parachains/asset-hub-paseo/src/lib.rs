@@ -144,9 +144,8 @@ use system_parachains_constants::{
 	},
 	paseo::{
 		consensus::{
-			elastic_scaling::{
-				BLOCK_PROCESSING_VELOCITY, RELAY_PARENT_OFFSET, UNINCLUDED_SEGMENT_CAPACITY,
-			},
+			elastic_scaling::{RELAY_PARENT_OFFSET, UNINCLUDED_SEGMENT_CAPACITY},
+			elastic_scaling_500ms::BLOCK_PROCESSING_VELOCITY,
 			RELAY_CHAIN_SLOT_DURATION_MILLIS,
 		},
 		currency::*,
