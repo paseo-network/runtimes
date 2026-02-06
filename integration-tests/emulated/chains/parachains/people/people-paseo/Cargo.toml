@@ -34,3 +34,4 @@ runtime-benchmarks = [
 	"paseo-runtime-constants/runtime-benchmarks",
 	"people-paseo-runtime/runtime-benchmarks",
 ]
+try-runtime = []

@@ -45,3 +45,4 @@ runtime-benchmarks = [
 	"snowbridge-inbound-queue-primitives/runtime-benchmarks",
 	"xcm/runtime-benchmarks",
 ]
+try-runtime = []

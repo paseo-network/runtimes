@@ -38,3 +38,4 @@ runtime-benchmarks = [
 	"polkadot-primitives/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 ]
+try-runtime = []

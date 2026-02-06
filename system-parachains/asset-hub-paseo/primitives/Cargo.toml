@@ -40,3 +40,4 @@ runtime-benchmarks = [
 	"system-parachains-constants/runtime-benchmarks",
 	"xcm/runtime-benchmarks",
 ]
+try-runtime = []
