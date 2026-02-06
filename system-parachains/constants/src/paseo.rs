@@ -61,7 +61,11 @@ pub mod consensus {
 	/// Parameters enabling elastic scaling functionality.
 	pub mod elastic_scaling {
 		/// Build with an offset behind the relay chain.
+        #[cfg(not(feature = "try-runtime"))]
 		pub const RELAY_PARENT_OFFSET: u32 = 1;
+        #[cfg(feature = "try-runtime")]
+        pub const RELAY_PARENT_OFFSET: u32 = 0;
+
 
 		/// The upper limit of how many parachain blocks are processed by the relay chain per
 		/// parent. Limits the number of blocks authored per slot. This determines the minimum
