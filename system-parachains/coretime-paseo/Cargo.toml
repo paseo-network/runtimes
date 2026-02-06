@@ -220,6 +220,7 @@ try-runtime = [
 	"parachains-common/try-runtime",
 	"polkadot-runtime-common/try-runtime",
 	"sp-runtime/try-runtime",
+	"system-parachains-constants/try-runtime"
 ]
 
 fast-runtime = ["paseo-runtime-constants/fast-runtime"]
