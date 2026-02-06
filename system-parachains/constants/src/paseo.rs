@@ -61,29 +61,13 @@ pub mod consensus {
 	/// Parameters enabling elastic scaling functionality.
 	pub mod elastic_scaling {
 		/// Build with an offset behind the relay chain.
-		pub const RELAY_PARENT_OFFSET: u32 = 2;
+		pub const RELAY_PARENT_OFFSET: u32 = 1;
 
 		/// The upper limit of how many parachain blocks are processed by the relay chain per
 		/// parent. Limits the number of blocks authored per slot. This determines the minimum
 		/// block time of the parachain:
 		/// `RELAY_CHAIN_SLOT_DURATION_MILLIS/BLOCK_PROCESSING_VELOCITY`
 		pub const BLOCK_PROCESSING_VELOCITY: u32 = 3;
-
-		/// Maximum number of blocks simultaneously accepted by the Runtime, not yet included
-		/// into the relay chain.
-		pub const UNINCLUDED_SEGMENT_CAPACITY: u32 =
-			(3 + RELAY_PARENT_OFFSET) * BLOCK_PROCESSING_VELOCITY;
-	}
-
-	pub mod elastic_scaling_500ms {
-		/// Build with an offset behind the relay chain.
-		pub const RELAY_PARENT_OFFSET: u32 = 2;
-
-		/// The upper limit of how many parachain blocks are processed by the relay chain per
-		/// parent. Limits the number of blocks authored per slot. This determines the minimum
-		/// block time of the parachain:
-		/// `RELAY_CHAIN_SLOT_DURATION_MILLIS/BLOCK_PROCESSING_VELOCITY`
-		pub const BLOCK_PROCESSING_VELOCITY: u32 = 12;
 
 		/// Maximum number of blocks simultaneously accepted by the Runtime, not yet included
 		/// into the relay chain.
