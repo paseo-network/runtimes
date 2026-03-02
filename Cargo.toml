@@ -1,60 +1,37 @@
 [workspace.package]
-version = "2.0.6"
+version = "1.0.0"
 authors = ["Paseo Core Team"]
 edition = "2021"
 repository = "https://github.com/paseo-network/runtimes.git"
-license = "GPL-3.0-only"                                     # TODO <https://github.com/paseo-fellows/runtimes/issues/29>
+license = "GPL-3.0-only"                                        # TODO <https://github.com/paseo-fellows/runtimes/issues/29>
 
 [workspace.dependencies]
-pallet-ah-migrator = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.0.6", default-features = false }
-pallet-ah-ops = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.0.6", default-features = false }
-pallet-rc-migrator = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.0.6", default-features = false }
-system-parachains-common = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.0.6", default-features = false }
-
+pallet-ah-migrator = { path = "pallets/ah-migrator", default-features = false }
+pallet-rc-migrator = { path = "pallets/rc-migrator", default-features = false }
+pallet-ah-ops = { path = "pallets/ah-ops", default-features = false }
 pallet-election-provider-multi-block = { version = "0.7.0", default-features = false }
 pallet-staking-async = { version = "0.7.1", default-features = false }
 hex = { version = "0.4.3", default-features = false }
 rand = { version = "0.9.2" }
 impl-trait-for-tuples = { version = "0.2.3", default-features = false }
-
-kusama-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.0.6", package = "kusama-runtime-constants", default-features = false }
-bp-bridge-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.0.6", package = "bp-bridge-hub-kusama", default-features = false }
-bp-bridge-hub-polkadot = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.0.6", package = "bp-bridge-hub-polkadot", default-features = false }
-bp-asset-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.0.6", package = "bp-asset-hub-kusama", default-features = false }
-collectives-polkadot-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.0.6", package = "collectives-polkadot-runtime-constants", default-features = false }
-pallet-remote-proxy = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.0.6", package = "pallet-remote-proxy", default-features = false }
-
-# Local dependencies
-
-paseo-runtime-constants = { package = "paseo-runtime-constants", path = "relay/paseo/constants", default-features = false }
-asset-hub-paseo-runtime = { path = "system-parachains/asset-hub-paseo", default-features = false }
-bridge-hub-paseo-runtime = { path = "system-parachains/bridge-hub-paseo", default-features = false }
-people-paseo-runtime = { path = "system-parachains/people-paseo", default-features = false }
-coretime-paseo-runtime = { path = "system-parachains/coretime-paseo", default-features = false }
-collectives-paseo-runtime = { path = "system-parachains/collectives-paseo" }
-collectives-paseo-runtime-constants = { path = "system-parachains/collectives-paseo/constants" }
-
-# Polkadot SDK
-bp-bridge-hub-paseo = { path = "system-parachains/bridge-hub-paseo/primitives", default-features = false }
-bp-asset-hub-paseo = { path = "system-parachains/asset-hub-paseo/primitives", default-features = false }
-paseo-runtime = { path = "relay/paseo", default-features = false }
-integration-tests-helpers = { path = "integration-tests/emulated/helpers" }
-paseo-system-emulated-network = { path = "integration-tests/emulated/networks/paseo-system" }
-asset-hub-paseo-emulated-chain = { path = "integration-tests/emulated/chains/parachains/assets/asset-hub-paseo" }
-bridge-hub-paseo-emulated-chain = { path = "integration-tests/emulated/chains/parachains/bridges/bridge-hub-paseo" }
-penpal-emulated-chain = { path = "integration-tests/emulated/chains/parachains/testing/penpal" }
-people-paseo-emulated-chain = { path = "integration-tests/emulated/chains/parachains/people/people-paseo" }
-paseo-emulated-chain = { path = "integration-tests/emulated/chains/relays/paseo" }
 assert_matches = { version = "1.5.0" }
 approx = { version = "0.5.1" }
 array-bytes = { version = "9.3.0" }
+asset-hub-kusama-emulated-chain = { path = "integration-tests/emulated/chains/parachains/assets/asset-hub-kusama" }
+asset-hub-kusama-runtime = { path = "system-parachains/asset-hubs/asset-hub-kusama" }
+asset-hub-paseo-emulated-chain = { path = "integration-tests/emulated/chains/parachains/assets/asset-hub-paseo" }
+asset-hub-paseo-runtime = { path = "system-parachains/asset-hubs/asset-hub-paseo" }
 asset-test-utils = { version = "28.0.0" }
 assets-common = { version = "0.26.0", default-features = false }
 authority-discovery-primitives = { version = "38.0.0", default-features = false, package = "sp-authority-discovery" }
 babe-primitives = { version = "0.44.0", default-features = false, package = "sp-consensus-babe" }
 beefy-primitives = { version = "26.0.0", default-features = false, package = "sp-consensus-beefy" }
 binary-merkle-tree = { version = "16.0.0", default-features = false }
+bp-asset-hub-kusama = { path = "system-parachains/asset-hubs/asset-hub-kusama/primitives", default-features = false }
+bp-asset-hub-paseo = { path = "system-parachains/asset-hubs/asset-hub-paseo/primitives", default-features = false }
 bp-bridge-hub-cumulus = { version = "0.26.0", default-features = false }
+bp-bridge-hub-kusama = { path = "system-parachains/bridge-hubs/bridge-hub-kusama/primitives", default-features = false }
+bp-bridge-hub-paseo = { path = "system-parachains/bridge-hubs/bridge-hub-paseo/primitives", default-features = false }
 bp-header-chain = { version = "0.24.0", default-features = false }
 bp-messages = { version = "0.24.0", default-features = false }
 bp-parachains = { version = "0.24.0", default-features = false }
@@ -64,12 +41,21 @@ bp-runtime = { version = "0.24.0", default-features = false }
 bp-xcm-bridge-hub = { version = "0.10.0", default-features = false }
 bp-xcm-bridge-hub-router = { version = "0.21.0", default-features = false }
 bridge-hub-common = { version = "0.17.0", default-features = false }
+bridge-hub-kusama-emulated-chain = { path = "integration-tests/emulated/chains/parachains/bridges/bridge-hub-kusama" }
+bridge-hub-kusama-runtime = { path = "system-parachains/bridge-hubs/bridge-hub-kusama" }
+bridge-hub-paseo-emulated-chain = { path = "integration-tests/emulated/chains/parachains/bridges/bridge-hub-paseo" }
+bridge-hub-paseo-runtime = { path = "system-parachains/bridge-hubs/bridge-hub-paseo" }
 bridge-hub-test-utils = { version = "0.27.0" }
 bridge-runtime-common = { version = "0.25.0", default-features = false }
 clap = { version = "4.5.0" }
 codec = { package = "parity-scale-codec", version = "3.7.5", default-features = false }
 collectives-paseo-emulated-chain = { path = "integration-tests/emulated/chains/parachains/collectives/collectives-paseo" }
+collectives-paseo-runtime = { path = "system-parachains/collectives/collectives-paseo" }
+collectives-paseo-runtime-constants = { path = "system-parachains/collectives/collectives-paseo/constants" }
+coretime-kusama-emulated-chain = { path = "integration-tests/emulated/chains/parachains/coretime/coretime-kusama" }
+coretime-kusama-runtime = { path = "system-parachains/coretime/coretime-kusama" }
 coretime-paseo-emulated-chain = { path = "integration-tests/emulated/chains/parachains/coretime/coretime-paseo" }
+coretime-paseo-runtime = { path = "system-parachains/coretime/coretime-paseo" }
 cumulus-pallet-aura-ext = { version = "0.24.0", default-features = false }
 cumulus-pallet-parachain-system = { version = "0.24.1", default-features = false }
 cumulus-pallet-session-benchmarking = { version = "25.0.0", default-features = false }
@@ -80,6 +66,11 @@ cumulus-primitives-aura = { version = "0.19.0", default-features = false }
 cumulus-primitives-core = { version = "0.22.0", default-features = false }
 cumulus-primitives-utility = { version = "0.24.0", default-features = false }
 emulated-integration-tests-common = { version = "26.0.0" }
+encointer-balances-tx-payment = { version = "~20.1.2", default-features = false }
+encointer-balances-tx-payment-rpc-runtime-api = { version = "~20.1.2", default-features = false }
+encointer-kusama-runtime = { path = "system-parachains/encointer" }
+encointer-kusama-emulated-chain = { path = "integration-tests/emulated/chains/parachains/encointer/encointer-kusama" }
+encointer-primitives = { version = "~20.5.3", default-features = false }
 enumflags2 = { version = "0.7.7" }
 frame-benchmarking = { version = "44.0.1", default-features = false }
 frame-election-provider-support = { version = "44.0.0", default-features = false }
@@ -89,8 +80,15 @@ frame-system = { version = "44.0.0", default-features = false }
 frame-system-benchmarking = { version = "44.0.0", default-features = false }
 frame-system-rpc-runtime-api = { version = "38.0.0", default-features = false }
 frame-try-runtime = { version = "0.50.0", default-features = false }
+glutton-kusama-runtime = { path = "system-parachains/gluttons/glutton-kusama" }
 grandpa = { version = "0.39.0", package = "sc-consensus-grandpa" }
 hex-literal = { version = "0.4.1" }
+integration-tests-helpers = { path = "integration-tests/emulated/helpers" }
+kusama-emulated-chain = { path = "integration-tests/emulated/chains/relays/kusama" }
+kusama-paseo-system-emulated-network = { path = "integration-tests/emulated/networks/kusama-paseo-system" }
+kusama-runtime = { path = "relay/kusama", package = "staging-kusama-runtime" }
+kusama-runtime-constants = { path = "relay/kusama/constants", default-features = false }
+kusama-system-emulated-network = { path = "integration-tests/emulated/networks/kusama-system" }
 log = { version = "0.4.22", default-features = false }
 pallet-alliance = { version = "43.0.0", default-features = false }
 pallet-asset-conversion = { version = "26.0.0", default-features = false }
@@ -98,7 +96,6 @@ pallet-asset-conversion-tx-payment = { version = "26.0.0", default-features = fa
 pallet-asset-rate = { version = "23.0.0", default-features = false }
 pallet-asset-tx-payment = { version = "44.0.0", default-features = false }
 pallet-assets = { version = "47.0.0", default-features = false }
-pallet-assets-holder = { version = "0.7.0", default-features = false }
 pallet-assets-precompiles = { version = "0.3.0", default-features = false }
 pallet-aura = { version = "43.0.0", default-features = false }
 pallet-authority-discovery = { version = "44.0.0", default-features = false }
@@ -121,6 +118,19 @@ pallet-conviction-voting = { version = "44.0.0", default-features = false }
 pallet-core-fellowship = { version = "28.0.0", default-features = false }
 pallet-election-provider-multi-phase = { version = "43.0.0", default-features = false }
 pallet-election-provider-support-benchmarking = { version = "43.0.0", default-features = false }
+pallet-encointer-balances = { version = "~20.2.2", default-features = false }
+pallet-encointer-bazaar = { version = "~20.1.2", default-features = false }
+pallet-encointer-bazaar-rpc-runtime-api = { version = "~20.1.2", default-features = false }
+pallet-encointer-ceremonies = { version = "~20.1.2", default-features = false }
+pallet-encointer-ceremonies-rpc-runtime-api = { version = "~20.1.2", default-features = false }
+pallet-encointer-communities = { version = "~20.1.2", default-features = false }
+pallet-encointer-communities-rpc-runtime-api = { version = "~20.1.2", default-features = false }
+pallet-encointer-democracy = { version = "~20.6.3", default-features = false }
+pallet-encointer-faucet = { version = "~20.2.2", default-features = false }
+pallet-encointer-reputation-commitments = { version = "~20.1.2", default-features = false }
+pallet-encointer-scheduler = { version = "~20.1.2", default-features = false }
+pallet-encointer-treasuries = { version = "~20.7.3", default-features = false }
+pallet-encointer-treasuries-rpc-runtime-api = { version = "~20.3.2", default-features = false }
 pallet-fast-unstake = { version = "43.0.0", default-features = false }
 pallet-glutton = { version = "30.0.0", default-features = false }
 pallet-grandpa = { version = "44.0.1", default-features = false }
@@ -147,6 +157,7 @@ pallet-proxy = { version = "44.0.0", default-features = false }
 pallet-ranked-collective = { version = "44.0.0", default-features = false }
 pallet-recovery = { version = "44.0.0", default-features = false }
 pallet-referenda = { version = "44.0.0", default-features = false }
+pallet-remote-proxy = { path = "pallets/remote-proxy", default-features = false }
 pallet-revive = { version = "0.11.3", default-features = false }
 pallet-salary = { version = "29.0.0", default-features = false }
 pallet-scheduler = { version = "45.0.0", default-features = false }
@@ -179,13 +190,20 @@ parachain-info = { version = "0.24.0", default-features = false, package = "stag
 parachains-common = { version = "26.0.0", default-features = false }
 parachains-runtimes-test-utils = { version = "27.0.1" }
 paste = { version = "1.0.14" }
+penpal-emulated-chain = { path = "integration-tests/emulated/chains/parachains/testing/penpal" }
 penpal-runtime = { version = "0.34.2" }
 people-kusama-emulated-chain = { path = "integration-tests/emulated/chains/parachains/people/people-kusama" }
 people-kusama-runtime = { path = "system-parachains/people/people-kusama" }
+people-paseo-emulated-chain = { path = "integration-tests/emulated/chains/parachains/people/people-paseo" }
+people-paseo-runtime = { path = "system-parachains/people/people-paseo" }
 polkadot-core-primitives = { version = "19.0.0", default-features = false }
+paseo-emulated-chain = { path = "integration-tests/emulated/chains/relays/paseo" }
 polkadot-parachain-primitives = { version = "18.0.0", default-features = false }
 polkadot-primitives = { version = "20.0.0", default-features = false }
+paseo-runtime = { path = "relay/paseo" }
 polkadot-runtime-common = { version = "23.0.1", default-features = false }
+paseo-runtime-constants = { path = "relay/paseo/constants", default-features = false }
+paseo-system-emulated-network = { path = "integration-tests/emulated/networks/paseo-system" }
 primitive-types = { version = "0.13.1", default-features = false }
 frame-metadata-hash-extension = { version = "0.12.0", default-features = false }
 remote-externalities = { version = "0.55.0", package = "frame-remote-externalities" }
@@ -244,16 +262,17 @@ sp-version = { version = "41.0.0", default-features = false }
 sp-weights = { version = "33.0.0", default-features = false }
 substrate-wasm-builder = { version = "30.0.0" }
 system-parachains-constants = { path = "system-parachains/constants", default-features = false }
+system-parachains-common = { path = "system-parachains/common", default-features = false }
 tokio = { version = "1.45.0" }
 xcm = { version = "20.0.0", default-features = false, package = "staging-xcm" }
 xcm-builder = { version = "24.0.0", default-features = false, package = "staging-xcm-builder" }
 xcm-emulator = { version = "0.24.1" }
-xcm-executor = { version = "23.0.0", default-features = false, package = "staging-xcm-executor" }
+xcm-executor = { version = "23.0.1", default-features = false, package = "staging-xcm-executor" }
 xcm-runtime-apis = { version = "0.11.0", default-features = false }
 anyhow = { version = "1.0.82" }
 subxt = { version = "0.43.0" }
 tracing-subscriber = { version = "0.3.18" }
-zombienet-sdk = { version = "0.3.12" }
+zombienet-sdk = { version = "0.4.2" }
 tuplex = { version = "0.1.0", default-features = false }
 relay-common = { path = "relay/common", default-features = false }
 ss58-registry = { version = "1.47.0" }
@@ -262,30 +281,64 @@ ss58-registry = { version = "1.47.0" }
 resolver = "2"
 
 members = [
+	"chain-spec-generator",
+	"integration-tests/emulated/chains/parachains/assets/asset-hub-kusama",
 	"integration-tests/emulated/chains/parachains/assets/asset-hub-paseo",
+	"integration-tests/emulated/chains/parachains/bridges/bridge-hub-kusama",
 	"integration-tests/emulated/chains/parachains/bridges/bridge-hub-paseo",
 	"integration-tests/emulated/chains/parachains/collectives/collectives-paseo",
+	"integration-tests/emulated/chains/parachains/coretime/coretime-kusama",
 	"integration-tests/emulated/chains/parachains/coretime/coretime-paseo",
+	"integration-tests/emulated/chains/parachains/encointer/encointer-kusama",
+	"integration-tests/emulated/chains/parachains/people/people-kusama",
 	"integration-tests/emulated/chains/parachains/people/people-paseo",
 	"integration-tests/emulated/chains/parachains/testing/penpal",
+	"integration-tests/emulated/chains/relays/kusama",
 	"integration-tests/emulated/chains/relays/paseo",
 	"integration-tests/emulated/helpers",
+	"integration-tests/emulated/networks/kusama-paseo-system",
+	"integration-tests/emulated/networks/kusama-system",
 	"integration-tests/emulated/networks/paseo-system",
+	"integration-tests/emulated/tests/assets/asset-hub-kusama",
+	"integration-tests/emulated/tests/assets/asset-hub-paseo",
+	"integration-tests/emulated/tests/bridges/bridge-hub-kusama",
 	"integration-tests/emulated/tests/bridges/bridge-hub-paseo",
+	"integration-tests/emulated/tests/collectives/collectives-paseo",
+	"integration-tests/emulated/tests/coretime/coretime-kusama",
 	"integration-tests/emulated/tests/coretime/coretime-paseo",
+	"integration-tests/emulated/tests/encointer/encointer-kusama",
+	"integration-tests/emulated/tests/governance/kusama",
+	"integration-tests/emulated/tests/governance/paseo",
+	"integration-tests/emulated/tests/people/people-kusama",
 	"integration-tests/emulated/tests/people/people-paseo",
+	"integration-tests/zombienet",
+	"pallets/ah-migrator",
+	"pallets/ah-ops",
+	"pallets/rc-migrator",
+	"pallets/remote-proxy",
 	"relay/common",
+	"relay/kusama",
+	"relay/kusama/constants",
 	"relay/paseo",
 	"relay/paseo/constants",
-	"system-parachains/asset-hub-paseo",
-	"system-parachains/asset-hub-paseo/primitives",
-	"system-parachains/bridge-hub-paseo",
-	"system-parachains/bridge-hub-paseo/primitives",
-	"system-parachains/collectives-paseo",
-	"system-parachains/collectives-paseo/constants",
+	"system-parachains/asset-hubs/asset-hub-kusama",
+	"system-parachains/asset-hubs/asset-hub-kusama/primitives",
+	"system-parachains/asset-hubs/asset-hub-paseo",
+	"system-parachains/asset-hubs/asset-hub-paseo/primitives",
+	"system-parachains/bridge-hubs/bridge-hub-kusama",
+	"system-parachains/bridge-hubs/bridge-hub-kusama/primitives",
+	"system-parachains/bridge-hubs/bridge-hub-paseo",
+	"system-parachains/bridge-hubs/bridge-hub-paseo/primitives",
+	"system-parachains/collectives/collectives-paseo",
+	"system-parachains/collectives/collectives-paseo/constants",
+	"system-parachains/common",
 	"system-parachains/constants",
-	"system-parachains/coretime-paseo",
-	"system-parachains/people-paseo",
+	"system-parachains/coretime/coretime-kusama",
+	"system-parachains/coretime/coretime-paseo",
+	"system-parachains/encointer",
+	"system-parachains/gluttons/glutton-kusama",
+	"system-parachains/people/people-kusama",
+	"system-parachains/people/people-paseo",
 ]
 
 [profile.release]

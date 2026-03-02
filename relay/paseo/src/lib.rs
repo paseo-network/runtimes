@@ -45,6 +45,7 @@ use frame_support::{
 	parameter_types,
 	traits::{
 		fungible::HoldConsideration,
+		schedule::DispatchTime,
 		tokens::{imbalance::ResolveTo, UnityOrOuterConversion},
 		ConstU32, ConstU8, ConstUint, EitherOf, EitherOfDiverse, Equals, FromContains, Get,
 		InstanceFilter, KeyOwnerProofSystem, LinearStoragePrice, PrivilegeCmp, ProcessMessage,
@@ -63,8 +64,6 @@ pub use pallet_election_provider_multi_phase::{Call as EPMCall, GeometricDeposit
 use pallet_grandpa::{fg_primitives, AuthorityId as GrandpaId};
 use pallet_session::historical as session_historical;
 use pallet_staking::UseValidatorsMap;
-use pallet_staking_async_ah_client as ah_client;
-use pallet_staking_async_rc_client as rc_client;
 pub use pallet_timestamp::Call as TimestampCall;
 use pallet_transaction_payment::{FeeDetails, FungibleAdapter, RuntimeDispatchInfo};
 use pallet_treasury::TreasuryAccountId;
@@ -87,12 +86,14 @@ use polkadot_runtime_common::{
 		ContainsParts as ContainsLocationParts, DealWithFees, LocatableAssetConverter,
 		VersionedLocatableAsset, VersionedLocationConverter,
 	},
-	paras_registrar, paras_sudo_wrapper, prod_or_fast, slots,
+	paras_registrar, prod_or_fast, slots,
 	traits::OnSwap,
 	BlockHashCount, BlockLength, CurrencyToVote, SlowAdjustingFeeUpdate,
 };
 use sp_runtime::traits::Convert;
 
+use pallet_staking_async_ah_client as ah_client;
+use pallet_staking_async_rc_client as rc_client;
 use runtime_parachains::{
 	assigner_coretime as parachains_assigner_coretime, configuration as parachains_configuration,
 	configuration::ActiveConfigHrmpChannelSizeAndCapacityRatio,
@@ -128,7 +129,9 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use xcm::prelude::*;
 use xcm_builder::PayOverXcm;
-use xcm_config::{AssetHubLocation, GeneralAdminBodyId, StakingAdminBodyId};
+use xcm_config::{
+	AssetHubLocation, CollectivesLocation, FellowsBodyId, GeneralAdminBodyId, StakingAdminBodyId,
+};
 use xcm_runtime_apis::{
 	dry_run::{CallDryRunEffects, Error as XcmDryRunApiError, XcmDryRunEffects},
 	fees::Error as XcmPaymentApiError,
@@ -149,8 +152,8 @@ pub mod genesis_config_presets;
 pub mod ah_migration;
 pub mod governance;
 use governance::{
-	pallet_custom_origins, AuctionAdmin, GeneralAdmin, LeaseAdmin, StakingAdmin, Treasurer,
-	TreasurySpender,
+	pallet_custom_origins, AuctionAdmin, FellowshipAdmin, GeneralAdmin, LeaseAdmin, StakingAdmin,
+	Treasurer, TreasurySpender,
 };
 pub mod impls;
 pub mod xcm_config;
@@ -172,9 +175,9 @@ compile_error!("Asset Hub migration requires the `paseo-ahm` feature");
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: alloc::borrow::Cow::Borrowed("paseo"),
-	impl_name: alloc::borrow::Cow::Borrowed("paseo-testnet"),
+	impl_name: alloc::borrow::Cow::Borrowed("parity-paseo"),
 	authoring_version: 0,
-	spec_version: 2_000_006,
+	spec_version: 2_000_007,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 26,
@@ -225,7 +228,7 @@ impl frame_system::Config for Runtime {
 	type SS58Prefix = SS58Prefix;
 	type OnSetCode = ();
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
-	type SingleBlockMigrations = ();
+	type SingleBlockMigrations = migrations::SingleBlockMigrations;
 	type MultiBlockMigrator = ();
 	type PreInherents = ();
 	type PostInherents = ();
@@ -297,7 +300,11 @@ impl pallet_preimage::Config for Runtime {
 }
 
 parameter_types! {
-	pub EpochDuration: u64 = EPOCH_DURATION_IN_SLOTS as u64;
+	pub EpochDuration: u64 = prod_or_fast!(
+		EPOCH_DURATION_IN_SLOTS as u64,
+		2 * MINUTES as u64,
+		"PAS_EPOCH_DURATION"
+	);
 	pub const ExpectedBlockTime: Moment = MILLISECS_PER_BLOCK;
 	pub ReportLongevity: u64 =
 		BondingDuration::get() as u64 * SessionsPerEra::get() as u64 * EpochDuration::get();
@@ -417,7 +424,7 @@ parameter_types! {
 /// Parathreads whitelisted to be added to the beefy mmr leaf parachains header root
 const BEEFY_WHITELISTED_PARATHREADS: &[ParaId] = &[
 	// Hyperbridge
-	ParaId::new(4009),
+	ParaId::new(3367),
 ];
 
 /// A BEEFY data provider that merkelizes all the parachain heads at the current block
@@ -686,7 +693,7 @@ impl pallet_staking::EraPayout<Balance> for EraPayout {
 			FixedU128::from_rational(era_duration_millis.into(), MILLISECONDS_PER_YEAR.into());
 
 		// TI at the time of execution of [Referendum 1139](https://polkadot.subsquare.io/referenda/1139), block hash: `0x39422610299a75ef69860417f4d0e1d94e77699f45005645ffc5e8e619950f9f`.
-		let fixed_total_issuance: i128 = 1_487_502_468_008_283_162;
+		let fixed_total_issuance: i128 = 15_011_657_390_566_252_333;
 		let fixed_inflation_rate = FixedU128::from_rational(8, 100);
 		let yearly_emission = fixed_inflation_rate.saturating_mul_int(fixed_total_issuance);
 
@@ -784,7 +791,7 @@ parameter_types! {
 	pub const DisableSpends: BlockNumber = BlockNumber::MAX;
 	pub const Burn: Permill = Permill::from_percent(1);
 	pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
-	pub const PayoutSpendPeriod: BlockNumber = 30 * DAYS;
+	pub const PayoutSpendPeriod: BlockNumber = 90 * DAYS;
 	// The asset's interior location for the paying account. This is the Treasury
 	// pallet instance (which sits at index 19).
 	pub TreasuryInteriorLocation: InteriorLocation = PalletInstance(TREASURY_PALLET_ID).into();
@@ -839,7 +846,8 @@ impl pallet_treasury::Config for Runtime {
 parameter_types! {
 	pub const BountyDepositBase: Balance = DOLLARS;
 	pub const BountyDepositPayoutDelay: BlockNumber = 0;
-	pub const BountyUpdatePeriod: BlockNumber = 90 * DAYS;
+	// Bounties expire after 10 years.
+	pub const BountyUpdatePeriod: BlockNumber = 10 * 12 * 30 * DAYS;
 	pub const MaximumReasonLength: u32 = 16384;
 	pub const CuratorDepositMultiplier: Permill = Permill::from_percent(50);
 	pub const CuratorDepositMin: Balance = 10 * DOLLARS;
@@ -1152,14 +1160,7 @@ impl InstanceFilter<RuntimeCall> for TransparentProxyType<ProxyType> {
 						RuntimeCall::Utility(..) |
 						RuntimeCall::FastUnstake(..) |
 						RuntimeCall::VoterList(..) |
-						RuntimeCall::NominationPools(..) |
-						RuntimeCall::Proxy(pallet_proxy::Call::add_proxy {
-							proxy_type: TransparentProxyType(ProxyType::StakingOperator),
-							..
-						}) | RuntimeCall::Proxy(pallet_proxy::Call::remove_proxy {
-						proxy_type: TransparentProxyType(ProxyType::StakingOperator),
-						..
-					})
+						RuntimeCall::NominationPools(..)
 				)
 			},
 			ProxyType::NominationPools => {
@@ -1189,14 +1190,6 @@ impl InstanceFilter<RuntimeCall> for TransparentProxyType<ProxyType> {
 					RuntimeCall::Utility(pallet_utility::Call::force_batch { .. }) |
 					RuntimeCall::Proxy(pallet_proxy::Call::remove_proxy { .. })
 			),
-			ProxyType::StakingOperator => {
-				matches!(
-					c,
-					RuntimeCall::Session(pallet_session::Call::set_keys { .. }) |
-						RuntimeCall::Session(pallet_session::Call::purge_keys { .. }) |
-						RuntimeCall::Utility { .. }
-				)
-			},
 		}
 	}
 
@@ -1206,7 +1199,6 @@ impl InstanceFilter<RuntimeCall> for TransparentProxyType<ProxyType> {
 			(ProxyType::Any, _) => true,
 			(_, ProxyType::Any) => false,
 			(ProxyType::NonTransfer, _) => true,
-			(ProxyType::Staking, ProxyType::StakingOperator) => true,
 			_ => false,
 		}
 	}
@@ -1454,8 +1446,14 @@ impl paras_registrar::Config for Runtime {
 }
 
 parameter_types! {
-	// 1 weeks = per lease period -> 8 lease periods ~ 2 months
-	pub LeasePeriod: BlockNumber = prod_or_fast!(1 * WEEKS, 1 * DAYS, "PAS_LEASE_PERIOD");
+	// 12 weeks = 3 months per lease period -> 8 lease periods ~ 2 years
+	pub LeasePeriod: BlockNumber = prod_or_fast!(12 * WEEKS, 12 * WEEKS, "PAS_LEASE_PERIOD");
+	// Paseo Genesis was on May 26, 2020.
+	// Target Parachain Onboarding Date: Dec 15, 2021.
+	// Difference is 568 days.
+	// We want a lease period to start on the target onboarding date.
+	// 568 % (12 * 7) = 64 day offset
+	pub LeaseOffset: BlockNumber = prod_or_fast!(64 * DAYS, 0, "PAS_LEASE_OFFSET");
 }
 
 impl slots::Config for Runtime {
@@ -1554,21 +1552,22 @@ impl pallet_delegated_staking::Config for Runtime {
 	type CoreStaking = Staking;
 }
 
-impl pallet_staking_async_ah_client::Config for Runtime {
+impl ah_client::Config for Runtime {
 	type CurrencyBalance = Balance;
 	type AssetHubOrigin =
 		frame_support::traits::EitherOfDiverse<EnsureRoot<AccountId>, EnsureAssetHub>;
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type SessionInterface = Self;
 	type SendToAssetHub = StakingXcmToAssetHub;
-	// Paseo RC currently has 150 validators. 100 minimum for now.
-	type MinimumValidatorSetSize = ConstU32<100>;
+	// Paseo RC currently has 600 validators. Note: this has to be updated with AH validator
+	// count increasing.
+	type MinimumValidatorSetSize = ConstU32<600>;
 	type UnixTime = Timestamp;
 	type PointsPerBlock = ConstU32<20>;
 	type MaxOffenceBatchSize = ConstU32<32>;
 	type Fallback = Staking;
 	type MaximumValidatorsWithPoints = ConstU32<{ MaxActiveValidators::get() * 2 }>;
-	// Session length is 1h, we retry for about 6m.
+	// Session length is 4h, we retry for about 6m.
 	type MaxSessionReportRetries = ConstU32<64>;
 }
 
@@ -1594,7 +1593,7 @@ impl frame_support::traits::EnsureOrigin<RuntimeOrigin> for EnsureAssetHub {
 
 #[derive(Encode, Decode)]
 enum AssetHubRuntimePallets<AccountId> {
-	// Audit: `StakingRcClient` in asset-hub-westend
+	// Audit: `StakingRcClient` in asset-hub-paseo
 	#[codec(index = 84)]
 	RcClient(RcClientCalls<AccountId>),
 }
@@ -1608,9 +1607,7 @@ enum RcClientCalls<AccountId> {
 }
 
 pub struct SessionReportToXcm;
-impl Convert<pallet_staking_async_rc_client::SessionReport<AccountId>, Xcm<()>>
-	for SessionReportToXcm
-{
+impl Convert<rc_client::SessionReport<AccountId>, Xcm<()>> for SessionReportToXcm {
 	fn convert(a: rc_client::SessionReport<AccountId>) -> Xcm<()> {
 		Xcm(vec![
 			Instruction::UnpaidExecution {
@@ -1731,14 +1728,6 @@ impl OnSwap for SwapLeases {
 	}
 }
 
-impl pallet_sudo::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type RuntimeCall = RuntimeCall;
-	type WeightInfo = weights::pallet_sudo::WeightInfo<Runtime>;
-}
-
-impl paras_sudo_wrapper::Config for Runtime {}
-
 // Derived from `paseo_asset_hub_runtime::RuntimeBlockWeights`.
 const AH_MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
 	frame_support::weights::constants::WEIGHT_REF_TIME_PER_SECOND.saturating_mul(2),
@@ -1769,8 +1758,13 @@ impl pallet_rc_migrator::Config for Runtime {
 	type RuntimeHoldReason = RuntimeHoldReason;
 	type RuntimeFreezeReason = RuntimeFreezeReason;
 	type RuntimeEvent = RuntimeEvent;
-	type AdminOrigin =
-		EitherOfDiverse<EnsureRoot<AccountId>, EnsureXcm<Equals<AssetHubLocation>, Location>>;
+	type AdminOrigin = EitherOfDiverse<
+		EnsureRoot<AccountId>,
+		EitherOfDiverse<
+			EnsureXcm<IsVoiceOfBody<CollectivesLocation, FellowsBodyId>>,
+			EnsureXcm<Equals<AssetHubLocation>, Location>,
+		>,
+	>;
 	type Currency = Balances;
 	type CheckingAccount = xcm_config::CheckAccount;
 	type TreasuryBlockNumberProvider = System;
@@ -1791,9 +1785,9 @@ impl pallet_rc_migrator::Config for Runtime {
 	type XcmResponseTimeout = XcmResponseTimeout;
 	type MessageQueue = MessageQueue;
 	type AhUmpQueuePriorityPattern = AhUmpQueuePriorityPattern;
-	type MultisigMembers = ();
-	type MultisigThreshold = ConstU32<{ u32::MAX }>;
-	type MultisigMaxVotesPerRound = ();
+	type MultisigMembers = (); // disabled post AHM
+	type MultisigThreshold = ConstU32<{ u32::MAX }>; // disabled
+	type MultisigMaxVotesPerRound = (); // disabled
 }
 
 construct_runtime! {
@@ -1902,15 +1896,11 @@ construct_runtime! {
 		Mmr: pallet_mmr = 201,
 		BeefyMmrLeaf: pallet_beefy_mmr = 202,
 
-		// Sudo.
-		ParaSudoWrapper: paras_sudo_wrapper = 249,
-		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 251,
-
 		// Relay Chain Migrator
 		// The pallet must be located below `MessageQueue` to get the XCM message acknowledgements
 		// from Asset Hub before we get the `RcMigrator` `on_initialize` executed.
-		RcMigrator: pallet_rc_migrator = 255
-  }
+		RcMigrator: pallet_rc_migrator = 255,
+	}
 }
 
 impl<LocalCall> frame_system::offchain::CreateBare<LocalCall> for Runtime
@@ -1946,22 +1936,55 @@ pub type TxExtension = (
 	frame_metadata_hash_extension::CheckMetadataHash<Runtime>,
 );
 
-/// All migrations that will run on the next runtime upgrade.
-///
-/// This contains the combined migrations of the last 10 releases. It allows to skip runtime
-/// upgrades in case governance decides to do so. THE ORDER IS IMPORTANT.
-pub type Migrations = (migrations::Unreleased, migrations::Permanent);
-
 /// The runtime migrations per release.
 #[allow(deprecated, missing_docs)]
 pub mod migrations {
 	use super::*;
+	use frame_support::traits::OnRuntimeUpgrade;
+	use pallet_rc_migrator::{MigrationStage, MigrationStartBlock, RcMigrationStage};
 
 	/// Unreleased migrations. Add new ones here:
-	pub type Unreleased = ();
+	pub type Unreleased = (KickOffAhm<Runtime>,);
 
 	/// Migrations/checks that do not need to be versioned and can run on every update.
 	pub type Permanent = pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>;
+
+	/// All migrations that will run on the next runtime upgrade.
+	pub type SingleBlockMigrations = (Unreleased, Permanent);
+
+	/// Kick off the Asset Hub Migration.
+	pub struct KickOffAhm<T>(pub core::marker::PhantomData<T>);
+	impl<T: pallet_rc_migrator::Config> OnRuntimeUpgrade for KickOffAhm<T> {
+		fn on_runtime_upgrade() -> Weight {
+			if MigrationStartBlock::<T>::exists() ||
+				RcMigrationStage::<T>::get() != MigrationStage::Pending
+			{
+				// Already started or scheduled
+				log::info!("KickOffAhm: Asset Hub Migration already started or scheduled");
+				return T::DbWeight::get().reads(2)
+			}
+
+			let result = pallet_rc_migrator::Pallet::<T>::do_schedule_migration(
+				// Migration start block, Tuesday 4th Nov 8 AM UTC
+				// https://paseo.subscan.io/block/28490502
+				DispatchTime::At(28490502u32.into()),
+				// Warm up to wait for Messaging queues to empty
+				DispatchTime::After((60 * MINUTES).into()),
+				// Cool off to verify the success of the migration
+				DispatchTime::After((60 * MINUTES).into()),
+				// Respect the session scheduling check:
+				Default::default(),
+			);
+
+			if let Err(e) = result {
+				log::error!("KickOffAhm: Failed to schedule Asset Hub Migration: {e:?}");
+			} else {
+				log::info!("KickOffAhm: Scheduled Asset Hub Migration");
+			}
+
+			T::DbWeight::get().reads_writes(5, 5) // Includes the scheduling function
+		}
+	}
 }
 
 /// Unchecked extrinsic type as expected by this runtime.
@@ -1974,7 +1997,6 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	Migrations,
 >;
 
 /// The payload being signed in transactions.
@@ -2037,8 +2059,6 @@ mod benches {
 		[pallet_xcm, PalletXcmExtrinsicsBenchmark::<Runtime>]
 		[pallet_xcm_benchmarks::fungible, pallet_xcm_benchmarks::fungible::Pallet::<Runtime>]
 		[pallet_xcm_benchmarks::generic, pallet_xcm_benchmarks::generic::Pallet::<Runtime>]
-		// Sudo
-		[pallet_sudo, Sudo]
 	);
 
 	pub use frame_benchmarking::{BenchmarkBatch, BenchmarkError, BenchmarkList};
@@ -2235,8 +2255,10 @@ mod benches {
 
 		fn alias_origin() -> Result<(Location, Location), BenchmarkError> {
 			let origin = Location::new(0, [Parachain(1000)]);
-			let target =
-				Location::new(0, [Parachain(1000), AccountId32 { id: [128u8; 32], network: None }]);
+			let target = Location::new(
+				0,
+				[Parachain(1000), Junction::AccountId32 { id: [128u8; 32], network: None }],
+			);
 			Ok((origin, target))
 		}
 	}
@@ -3140,84 +3162,6 @@ mod test {
 		// Ensure that the name doesn't include `staging` (from the pallet name)
 		assert_eq!(vec!["xcm", "VersionedXcm"], path.segments);
 	}
-
-	#[test]
-	fn staking_operator_proxy_filter_works() {
-		use frame_support::traits::InstanceFilter;
-
-		let proxy = TransparentProxyType(ProxyType::StakingOperator);
-
-		// StakingOperator ALLOWS these calls on relay chain:
-		// - Session::set_keys
-		let keys = SessionKeys {
-			grandpa: GrandpaId::from(sp_core::ed25519::Public::from_raw([0u8; 32])),
-			babe: pallet_babe::AuthorityId::from(sp_core::sr25519::Public::from_raw([0u8; 32])),
-			para_validator: ValidatorId::from(sp_core::sr25519::Public::from_raw([0u8; 32])),
-			para_assignment: polkadot_primitives::AssignmentId::from(
-				sp_core::sr25519::Public::from_raw([0u8; 32]),
-			),
-			authority_discovery: AuthorityDiscoveryId::from(sp_core::sr25519::Public::from_raw(
-				[0u8; 32],
-			)),
-			beefy: BeefyId::from(sp_core::ecdsa::Public::from_raw([0u8; 33])),
-		};
-		assert!(proxy
-			.filter(&RuntimeCall::Session(pallet_session::Call::set_keys { keys, proof: vec![] })));
-
-		// - Session::purge_keys
-		assert!(proxy.filter(&RuntimeCall::Session(pallet_session::Call::purge_keys {})));
-
-		// - Utility calls (for batching)
-		assert!(proxy.filter(&RuntimeCall::Utility(pallet_utility::Call::batch { calls: vec![] })));
-
-		// StakingOperator DISALLOWS staking operations (those are on Asset Hub after AHM):
-		// - Staking calls
-		assert!(!proxy.filter(&RuntimeCall::Staking(pallet_staking::Call::bond {
-			value: 1000,
-			payee: pallet_staking::RewardDestination::Stash
-		})));
-		assert!(!proxy
-			.filter(&RuntimeCall::Staking(pallet_staking::Call::nominate { targets: vec![] })));
-		assert!(!proxy.filter(&RuntimeCall::Staking(pallet_staking::Call::validate {
-			prefs: pallet_staking::ValidatorPrefs::default()
-		})));
-		assert!(!proxy.filter(&RuntimeCall::Staking(pallet_staking::Call::chill {})));
-
-		// - NominationPools calls
-		assert!(!proxy.filter(&RuntimeCall::NominationPools(
-			pallet_nomination_pools::Call::join { amount: 1000, pool_id: 1 }
-		)));
-
-		// - VoterList calls
-		assert!(!proxy.filter(&RuntimeCall::VoterList(pallet_bags_list::Call::rebag {
-			dislocated: sp_runtime::MultiAddress::Id(AccountId::from([0u8; 32])),
-		})));
-
-		// Verify is_superset relationship
-		let staking_proxy = TransparentProxyType(ProxyType::Staking);
-		assert!(staking_proxy.is_superset(&proxy));
-		assert!(TransparentProxyType(ProxyType::NonTransfer).is_superset(&proxy));
-
-		// Staking proxy can add/remove StakingOperator proxies
-		let delegate = sp_runtime::MultiAddress::Id(AccountId::from([1u8; 32]));
-		assert!(staking_proxy.filter(&RuntimeCall::Proxy(pallet_proxy::Call::add_proxy {
-			delegate: delegate.clone(),
-			proxy_type: TransparentProxyType(ProxyType::StakingOperator),
-			delay: 0,
-		})));
-		assert!(staking_proxy.filter(&RuntimeCall::Proxy(pallet_proxy::Call::remove_proxy {
-			delegate: delegate.clone(),
-			proxy_type: TransparentProxyType(ProxyType::StakingOperator),
-			delay: 0,
-		})));
-
-		// But Staking proxy cannot add/remove other proxy types
-		assert!(!staking_proxy.filter(&RuntimeCall::Proxy(pallet_proxy::Call::add_proxy {
-			delegate,
-			proxy_type: TransparentProxyType(ProxyType::Any),
-			delay: 0,
-		})));
-	}
 }
 
 #[cfg(test)]
@@ -3271,12 +3215,12 @@ mod multiplier_tests {
 		);
 
 		// Values are within 0.1%
-		assert_relative_eq!(to_stakers as f64, (27_693 * UNITS) as f64, max_relative = 0.001);
-		assert_relative_eq!(to_treasury as f64, (4_887 * UNITS) as f64, max_relative = 0.001);
-		// Total per day is ~32,580 PAS
+		assert_relative_eq!(to_stakers as f64, (279_477 * UNITS) as f64, max_relative = 0.001);
+		assert_relative_eq!(to_treasury as f64, (49_320 * UNITS) as f64, max_relative = 0.001);
+		// Total per day is ~328,797 PAS
 		assert_relative_eq!(
 			(to_stakers as f64 + to_treasury as f64),
-			(32_580 * UNITS) as f64,
+			(328_797 * UNITS) as f64,
 			max_relative = 0.001
 		);
 	}
@@ -3290,8 +3234,16 @@ mod multiplier_tests {
 			2 * MILLISECONDS_PER_DAY,
 		);
 
-		assert_relative_eq!(to_stakers as f64, (27_693 * UNITS) as f64 * 2.0, max_relative = 0.001);
-		assert_relative_eq!(to_treasury as f64, (4_887 * UNITS) as f64 * 2.0, max_relative = 0.001);
+		assert_relative_eq!(
+			to_stakers as f64,
+			(279_477 * UNITS) as f64 * 2.0,
+			max_relative = 0.001
+		);
+		assert_relative_eq!(
+			to_treasury as f64,
+			(49_320 * UNITS) as f64 * 2.0,
+			max_relative = 0.001
+		);
 	}
 
 	#[test]
@@ -3302,8 +3254,8 @@ mod multiplier_tests {
 			(36525 * MILLISECONDS_PER_DAY) / 100, // 1 year
 		);
 
-		// Our yearly emissions is about 12M PAS:
-		let yearly_emission = 11_909_325 * UNITS;
+		// Our yearly emissions is about 120M PAS:
+		let yearly_emission = 120_093_259 * UNITS;
 		assert_relative_eq!(
 			to_stakers as f64 + to_treasury as f64,
 			yearly_emission as f64,
@@ -3326,13 +3278,13 @@ mod multiplier_tests {
 			456,                                 // ignored
 			(36525 * MILLISECONDS_PER_DAY) / 10, // 10 years
 		);
-		let initial_ti: i128 = 1_487_502_468_008_283_162;
+		let initial_ti: i128 = 15_011_657_390_566_252_333;
 		let projected_total_issuance = (to_stakers as i128 + to_treasury as i128) + initial_ti;
 
-		// In 2034, there will be about 267 million PAS in existence.
+		// In 2034, there will be about 2.7 billion PAS in existence.
 		assert_relative_eq!(
 			projected_total_issuance as f64,
-			(267_750_000 * UNITS) as f64,
+			(2_700_000_000 * UNITS) as f64,
 			max_relative = 0.001
 		);
 	}
@@ -3346,7 +3298,7 @@ mod multiplier_tests {
 			(36525 * MILLISECONDS_PER_DAY) / 100, // 1 year
 		);
 		let yearly_emission = to_stakers + to_treasury;
-		let mut ti: i128 = 1_487_502_468_008_283_162;
+		let mut ti: i128 = 15_011_657_390_566_252_333;
 
 		for y in 0..10 {
 			let new_ti = ti + yearly_emission as i128;
@@ -3608,9 +3560,6 @@ mod remote_tests {
 					// timestamp now
 					hex!("f0c365c3cf59d671eb72da0e7a4113c49f1f0515f462cdcf84e0f1d6045dfcbb")
 						.to_vec(),
-					// para-ids
-					hex!("cd710b30bd2eab0352ddcc26417aa1940b76934f4cc08dee01012d059e1b83ee")
-						.to_vec(),
 				],
 				..Default::default()
 			}))
@@ -3643,140 +3592,6 @@ mod remote_tests {
 			log::info!(target: LOG_TARGET, "era-duration = {average_era_duration_millis:?}");
 			log::info!(target: LOG_TARGET, "maxStakingRewards = {:?}", pallet_staking::MaxStakedRewards::<Runtime>::get());
 			log::info!(target: LOG_TARGET, "💰 Inflation ==> staking = {:?} / leftover = {:?}", token.amount(staking), token.amount(leftover));
-		});
-	}
-}
-
-#[cfg(test)]
-mod proxy_tests {
-	use super::*;
-	use frame_support::assert_ok;
-	use sp_runtime::traits::StaticLookup;
-
-	/// A Staking proxy can add/remove a StakingOperator proxy for the account it is proxying.
-	#[test]
-	fn staking_proxy_can_manage_staking_operator() {
-		// Given: Build storage with balances for test accounts
-		let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
-
-		let alice: AccountId = [1u8; 32].into();
-		let bob: AccountId = [2u8; 32].into();
-		let carol: AccountId = [3u8; 32].into();
-
-		pallet_balances::GenesisConfig::<Runtime> {
-			balances: vec![
-				(alice.clone(), 100 * UNITS),
-				(bob.clone(), 100 * UNITS),
-				(carol.clone(), 100 * UNITS),
-			],
-			dev_accounts: None,
-		}
-		.assimilate_storage(&mut t)
-		.unwrap();
-
-		let mut ext = sp_io::TestExternalities::new(t);
-		ext.execute_with(|| {
-			System::set_block_number(1);
-
-			// Given: Alice has Bob as her Staking proxy
-			assert_ok!(Proxy::add_proxy(
-				RuntimeOrigin::signed(alice.clone()),
-				<Runtime as frame_system::Config>::Lookup::unlookup(bob.clone()),
-				TransparentProxyType(paseo_runtime_constants::proxy::ProxyType::Staking),
-				0
-			));
-
-			// When: Bob (via proxy) adds Carol as StakingOperator for Alice
-			let add_call = RuntimeCall::Proxy(pallet_proxy::Call::add_proxy {
-				delegate: <Runtime as frame_system::Config>::Lookup::unlookup(carol.clone()),
-				proxy_type: TransparentProxyType(
-					paseo_runtime_constants::proxy::ProxyType::StakingOperator,
-				),
-				delay: 0,
-			});
-			assert_ok!(Proxy::proxy(
-				RuntimeOrigin::signed(bob.clone()),
-				<Runtime as frame_system::Config>::Lookup::unlookup(alice.clone()),
-				None,
-				Box::new(add_call)
-			));
-
-			// Then: Carol is Alice's StakingOperator proxy
-			let alice_proxies = pallet_proxy::Proxies::<Runtime>::get(&alice);
-			assert!(
-				alice_proxies.0.iter().any(|p| p.delegate == carol &&
-					p.proxy_type ==
-						TransparentProxyType(
-							paseo_runtime_constants::proxy::ProxyType::StakingOperator
-						)),
-				"Carol should be Alice's StakingOperator proxy"
-			);
-
-			// When: Bob tries to add an Any proxy for Alice
-			let add_any_call = RuntimeCall::Proxy(pallet_proxy::Call::add_proxy {
-				delegate: <Runtime as frame_system::Config>::Lookup::unlookup(carol.clone()),
-				proxy_type: TransparentProxyType(paseo_runtime_constants::proxy::ProxyType::Any),
-				delay: 0,
-			});
-			// proxy() returns Ok(()) but inner call result is in ProxyExecuted event
-			assert_ok!(Proxy::proxy(
-				RuntimeOrigin::signed(bob.clone()),
-				<Runtime as frame_system::Config>::Lookup::unlookup(alice.clone()),
-				None,
-				Box::new(add_any_call),
-			));
-
-			// Then: The ProxyExecuted event should contain CallFiltered error
-			let events = System::events();
-			let proxy_executed = events.iter().rev().find_map(|record| {
-				if let RuntimeEvent::Proxy(pallet_proxy::Event::ProxyExecuted { result }) =
-					&record.event
-				{
-					Some(*result)
-				} else {
-					None
-				}
-			});
-			assert_eq!(
-				proxy_executed,
-				Some(Err(frame_system::Error::<Runtime>::CallFiltered.into())),
-				"Inner call should fail with CallFiltered"
-			);
-
-			// And: Carol was NOT added as Any proxy
-			let alice_proxies = pallet_proxy::Proxies::<Runtime>::get(&alice);
-			assert!(
-				!alice_proxies.0.iter().any(|p| p.delegate == carol &&
-					p.proxy_type ==
-						TransparentProxyType(paseo_runtime_constants::proxy::ProxyType::Any)),
-				"Carol should NOT be Alice's Any proxy - Staking proxy cannot add Any"
-			);
-
-			// When: Bob (via proxy) removes Carol as StakingOperator for Alice
-			let remove_call = RuntimeCall::Proxy(pallet_proxy::Call::remove_proxy {
-				delegate: <Runtime as frame_system::Config>::Lookup::unlookup(carol.clone()),
-				proxy_type: TransparentProxyType(
-					paseo_runtime_constants::proxy::ProxyType::StakingOperator,
-				),
-				delay: 0,
-			});
-			assert_ok!(Proxy::proxy(
-				RuntimeOrigin::signed(bob.clone()),
-				<Runtime as frame_system::Config>::Lookup::unlookup(alice.clone()),
-				None,
-				Box::new(remove_call)
-			));
-
-			// Then: Carol is no longer Alice's StakingOperator proxy
-			let alice_proxies = pallet_proxy::Proxies::<Runtime>::get(&alice);
-			assert!(
-				!alice_proxies.0.iter().any(|p| p.delegate == carol &&
-					p.proxy_type ==
-						TransparentProxyType(
-							paseo_runtime_constants::proxy::ProxyType::StakingOperator
-						)),
-				"Carol should no longer be Alice's StakingOperator proxy"
-			);
 		});
 	}
 }

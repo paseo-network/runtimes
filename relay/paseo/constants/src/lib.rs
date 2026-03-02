@@ -46,7 +46,7 @@ pub mod time {
 	use polkadot_runtime_common::prod_or_fast;
 	pub const MILLISECS_PER_BLOCK: Moment = 6000;
 	pub const SLOT_DURATION: Moment = MILLISECS_PER_BLOCK;
-	pub const EPOCH_DURATION_IN_SLOTS: BlockNumber = prod_or_fast!(1 * HOURS, 1 * MINUTES);
+	pub const EPOCH_DURATION_IN_SLOTS: BlockNumber = prod_or_fast!(4 * HOURS, MINUTES);
 
 	// These time units are defined in number of blocks.
 	pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
@@ -142,8 +142,6 @@ pub mod system_parachain {
 	pub const PEOPLE_ID: u32 = 1004;
 	/// Coretime Chain ID.
 	pub const BROKER_ID: u32 = 1005;
-	/// PAssetHub (Interim AH + contracts) Chain ID.
-	pub const PASSET_HUB_ID: u32 = 1111;
 
 	// System parachains from Polkadot point of view.
 	pub type SystemParachains = IsChildSystemParachain<ParaId>;
@@ -196,9 +194,6 @@ pub mod proxy {
 		Auction = 7,
 		NominationPools = 8,
 		ParaRegistration = 9,
-		/// Operator proxy for validators. Can only manage session keys. Cannot do staking
-		/// operations since they moved to Asset Hub.
-		StakingOperator = 10,
 	}
 
 	/// Remote proxy interface that uses the relay chain as remote location.

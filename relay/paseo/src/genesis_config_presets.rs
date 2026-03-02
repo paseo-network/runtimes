@@ -23,13 +23,10 @@ use crate::*;
 use alloc::format;
 use babe_primitives::AuthorityId as BabeId;
 use pallet_staking::{Forcing, StakerStatus};
-use paseo_runtime_constants::currency::UNITS as PAS;
 use polkadot_primitives::{
-	node_features::FeatureIndex,
-	AccountPublic, AssignmentId, AsyncBackingParams,
-	ExecutorParam::{MaxMemoryPages, PvfExecTimeout},
-	PvfExecKind,
+	node_features::FeatureIndex, AccountPublic, AssignmentId, AsyncBackingParams,
 };
+use paseo_runtime_constants::currency::UNITS as PAS;
 use runtime_parachains::configuration::HostConfiguration;
 use sp_core::{sr25519, Pair, Public};
 use sp_genesis_builder::PresetId;
@@ -95,14 +92,6 @@ fn testnet_accounts() -> Vec<AccountId> {
 fn default_parachains_host_configuration() -> HostConfiguration<polkadot_primitives::BlockNumber> {
 	use polkadot_primitives::{MAX_CODE_SIZE, MAX_POV_SIZE};
 
-	let executor_parameteres = ExecutorParams::from(
-		&[
-			MaxMemoryPages(8192),
-			PvfExecTimeout(PvfExecKind::Backing, 2500),
-			PvfExecTimeout(PvfExecKind::Approval, 15000),
-		][..],
-	);
-
 	runtime_parachains::configuration::HostConfiguration {
 		validation_upgrade_cooldown: 2u32,
 		validation_upgrade_delay: 2,
@@ -110,19 +99,19 @@ fn default_parachains_host_configuration() -> HostConfiguration<polkadot_primiti
 		max_code_size: MAX_CODE_SIZE,
 		max_pov_size: MAX_POV_SIZE,
 		max_head_data_size: 32 * 1024,
-		max_upward_queue_count: 174172,
+		max_upward_queue_count: 8,
 		max_upward_queue_size: 1024 * 1024,
 		max_downward_message_size: 1024 * 1024,
 		max_upward_message_size: 50 * 1024,
-		max_upward_message_num_per_candidate: 16,
+		max_upward_message_num_per_candidate: 5,
 		hrmp_sender_deposit: 0,
 		hrmp_recipient_deposit: 0,
-		hrmp_channel_max_capacity: 1000,
-		hrmp_channel_max_total_size: 100 * 1024,
-		hrmp_max_parachain_inbound_channels: 10,
+		hrmp_channel_max_capacity: 8,
+		hrmp_channel_max_total_size: 8 * 1024,
+		hrmp_max_parachain_inbound_channels: 4,
 		hrmp_channel_max_message_size: 1024 * 1024,
-		hrmp_max_parachain_outbound_channels: 10,
-		hrmp_max_message_num_per_candidate: 10,
+		hrmp_max_parachain_outbound_channels: 4,
+		hrmp_max_message_num_per_candidate: 5,
 		dispute_period: 6,
 		no_show_slots: 2,
 		n_delay_tranches: 25,
@@ -133,20 +122,20 @@ fn default_parachains_host_configuration() -> HostConfiguration<polkadot_primiti
 		scheduler_params: polkadot_primitives::SchedulerParams {
 			group_rotation_frequency: 20,
 			paras_availability_period: 4,
-			lookahead: 3,
 			..Default::default()
 		},
 		dispute_post_conclusion_acceptance_period: 100u32,
 		minimum_backing_votes: 1,
 		node_features: NodeFeatures::from_element(
-			1u8 << (FeatureIndex::ElasticScalingMVP as usize) |
-				1u8 << (FeatureIndex::EnableAssignmentsV2 as usize),
+			(1u8 << (FeatureIndex::ElasticScalingMVP as usize)) |
+				(1u8 << (FeatureIndex::EnableAssignmentsV2 as usize)) |
+				(1u8 << (FeatureIndex::CandidateReceiptV2 as usize)),
 		),
 		async_backing_params: AsyncBackingParams {
-			max_candidate_depth: 3,
+			max_candidate_depth: 2,
 			allowed_ancestry_len: 2,
 		},
-		executor_params: executor_parameteres,
+		executor_params: Default::default(),
 		max_validators: None,
 		pvf_voting_ttl: 2,
 		approval_voting_params: ApprovalVotingParams { max_approval_coalesce_count: 1 },
@@ -165,7 +154,7 @@ fn paseo_testnet_genesis(
 		AuthorityDiscoveryId,
 		BeefyId,
 	)>,
-	root_key: AccountId,
+	_root_key: AccountId,
 	endowed_accounts: Option<Vec<AccountId>>,
 ) -> serde_json::Value {
 	let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(testnet_accounts);
@@ -206,9 +195,6 @@ fn paseo_testnet_genesis(
 			"invulnerables": initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
 			"forceEra": Forcing::NotForcing,
 			"slashRewardFraction": Perbill::from_percent(10),
-		},
-		"sudo": {
-			"key": Some(root_key),
 		},
 		"babe": {
 			"epochConfig": Some(BABE_GENESIS_EPOCH_CONFIG),

@@ -17,9 +17,9 @@
 //! XCM configuration for Paseo.
 
 use super::{
-	parachains_origin, AccountId, AllPalletsWithSystem, Balances, Dmp, GeneralAdmin, ParaId,
-	Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, StakingAdmin, TransactionByteFee, Treasurer,
-	Treasury, WeightToFee, XcmPallet,
+	parachains_origin, AccountId, AllPalletsWithSystem, Balances, Dmp, FellowshipAdmin,
+	GeneralAdmin, ParaId, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, StakingAdmin,
+	TransactionByteFee, Treasurer, Treasury, WeightToFee, XcmPallet,
 };
 use frame_support::{
 	parameter_types,
@@ -27,10 +27,12 @@ use frame_support::{
 };
 use frame_system::EnsureRoot;
 use pallet_xcm::XcmPassthrough;
-use paseo_runtime_constants::{currency::CENTS, system_parachain::*};
 use polkadot_runtime_common::{
 	xcm_sender::{ChildParachainRouter, ExponentialPrice},
 	ToAuthor,
+};
+use paseo_runtime_constants::{
+	currency::CENTS, system_parachain::*, xcm::body::FELLOWSHIP_ADMIN_INDEX,
 };
 use sp_core::ConstU32;
 use xcm::latest::{prelude::*, BodyId};
@@ -60,6 +62,8 @@ parameter_types! {
 	pub TeleportTracking: Option<(AccountId, MintLocation)> = crate::RcMigrator::teleport_tracking();
 	/// Account of the treasury pallet.
 	pub TreasuryAccount: AccountId = Treasury::account_id();
+	// Fellows pluralistic body.
+	pub const FellowsBodyId: BodyId = BodyId::Technical;
 }
 
 /// The canonical means of converting a `Location` into an `AccountId`, used when we want to
@@ -156,7 +160,6 @@ parameter_types! {
 	pub DotForBridgeHub: (AssetFilter, Location) = (Dot::get(), BridgeHubLocation::get());
 	pub People: Location = Parachain(PEOPLE_ID).into_location();
 	pub DotForPeople: (AssetFilter, Location) = (Dot::get(), People::get());
-	pub PassetHubLocation: (AssetFilter, Location) = (Dot::get(), Parachain(PASSET_HUB_ID).into_location());
 }
 
 /// Paseo Relay recognizes/respects System Parachains as teleporters.
@@ -166,7 +169,6 @@ pub type TrustedTeleporters = (
 	Case<DotForBridgeHub>,
 	Case<DotForCoretime>,
 	Case<DotForPeople>,
-	Case<PassetHubLocation>,
 );
 
 pub struct Fellows;
@@ -283,6 +285,8 @@ parameter_types! {
 	pub const GeneralAdminBodyId: BodyId = BodyId::Administration;
 	// StakingAdmin pluralistic body.
 	pub const StakingAdminBodyId: BodyId = BodyId::Defense;
+	// FellowshipAdmin pluralistic body.
+	pub const FellowshipAdminBodyId: BodyId = BodyId::Index(FELLOWSHIP_ADMIN_INDEX);
 	// `Treasurer` pluralistic body.
 	pub const TreasurerBodyId: BodyId = BodyId::Treasury;
 }
@@ -303,6 +307,10 @@ pub type LocalOriginToLocation = (
 pub type StakingAdminToPlurality =
 	OriginToPluralityVoice<RuntimeOrigin, StakingAdmin, StakingAdminBodyId>;
 
+/// Type to convert the `FellowshipAdmin` origin to a Plurality `Location` value.
+pub type FellowshipAdminToPlurality =
+	OriginToPluralityVoice<RuntimeOrigin, FellowshipAdmin, FellowshipAdminBodyId>;
+
 /// Type to convert the `Treasurer` origin to a Plurality `Location` value.
 pub type TreasurerToPlurality = OriginToPluralityVoice<RuntimeOrigin, Treasurer, TreasurerBodyId>;
 
@@ -313,6 +321,8 @@ pub type LocalPalletOrSignedOriginToLocation = (
 	GeneralAdminToPlurality,
 	// StakingAdmin origin to be used in XCM as a corresponding Plurality `Location` value.
 	StakingAdminToPlurality,
+	// FellowshipAdmin origin to be used in XCM as a corresponding Plurality `Location` value.
+	FellowshipAdminToPlurality,
 	// `Treasurer` origin to be used in XCM as a corresponding Plurality `Location` value.
 	TreasurerToPlurality,
 	// And a usual Signed origin to be used in XCM as a corresponding `AccountId32`.
@@ -353,23 +363,4 @@ impl pallet_xcm::Config for Runtime {
 	type AdminOrigin = EnsureRoot<AccountId>;
 	// Custom aliasing is disabled: xcm_executor::Config::Aliasers allows only `AliasChildLocation`.
 	type AuthorizedAliasConsideration = Disabled;
-}
-
-#[cfg(test)]
-mod tests {
-	use super::*;
-	use std::any::TypeId;
-
-	#[test]
-	fn ensure_trusted_teleporters() {
-		assert_eq!(
-			TypeId::of::<<XcmConfig as xcm_executor::Config>::IsTeleporter>(),
-			TypeId::of::<
-				pallet_rc_migrator::xcm_config::FalseIfMigrating<
-					crate::RcMigrator,
-					TrustedTeleporters,
-				>,
-			>(),
-		);
-	}
 }

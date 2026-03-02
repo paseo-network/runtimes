@@ -25,8 +25,8 @@ const fn percent(x: i32) -> sp_arithmetic::FixedI64 {
 	sp_arithmetic::FixedI64::from_rational(x as u128, 100)
 }
 use pallet_referenda::Curve;
-const APP_ROOT: Curve = Curve::make_linear(28, 28, percent(100), percent(100));
-const SUP_ROOT: Curve = Curve::make_linear(28, 28, percent(100), percent(100));
+const APP_ROOT: Curve = Curve::make_reciprocal(4, 28, percent(80), percent(50), percent(100));
+const SUP_ROOT: Curve = Curve::make_linear(28, 28, percent(0), percent(50));
 const APP_STAKING_ADMIN: Curve = Curve::make_linear(17, 28, percent(50), percent(100));
 const SUP_STAKING_ADMIN: Curve =
 	Curve::make_reciprocal(12, 28, percent(1), percent(0), percent(50));
@@ -74,7 +74,7 @@ const TRACKS_DATA: [pallet_referenda::Track<u16, Balance, BlockNumber>; 16] = [
 		info: pallet_referenda::TrackInfo {
 			name: s("root"),
 			max_deciding: 1,
-			decision_deposit: 1000 * GRAND,
+			decision_deposit: 100 * GRAND,
 			prepare_period: 2 * HOURS,
 			decision_period: 28 * DAYS,
 			confirm_period: 24 * HOURS,
@@ -318,6 +318,7 @@ impl pallet_referenda::TracksInfo<Balance, BlockNumber> for TracksInfo {
 				origins::Origin::StakingAdmin => Ok(10),
 				origins::Origin::Treasurer => Ok(11),
 				origins::Origin::LeaseAdmin => Ok(12),
+				origins::Origin::FellowshipAdmin => Ok(13),
 				origins::Origin::GeneralAdmin => Ok(14),
 				origins::Origin::AuctionAdmin => Ok(15),
 				// Referendum admins
@@ -333,36 +334,5 @@ impl pallet_referenda::TracksInfo<Balance, BlockNumber> for TracksInfo {
 		} else {
 			Err(())
 		}
-	}
-}
-
-#[cfg(test)]
-mod tests {
-	use super::*;
-
-	parameter_types! {
-		const Linear100Percent: Curve = Curve::make_linear(28, 28, percent(100), percent(100));
-	}
-
-	#[test]
-	fn ensure_root_track_configuration() {
-		let root_track = TRACKS_DATA.get(0).unwrap();
-		assert_eq!(root_track.id, 0);
-		// Ensure Root track decision deposit is 1M.
-		assert_eq!(root_track.info.decision_deposit, 1000 * GRAND);
-		// Ensure Root track is configured with a linear curve set at 100%
-		// for both support and approval.
-		assert_eq!(root_track.info.min_approval, Linear100Percent::get());
-		assert_eq!(root_track.info.min_support, Linear100Percent::get());
-	}
-
-	#[test]
-	fn ensure_approval_curve_root() {
-		assert_eq!(APP_ROOT, Linear100Percent::get());
-	}
-
-	#[test]
-	fn ensure_support_curve_root() {
-		assert_eq!(APP_ROOT, Linear100Percent::get());
 	}
 }
