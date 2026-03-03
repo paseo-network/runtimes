@@ -3,7 +3,7 @@ version = "2.1.0"
 authors = ["Paseo Core Team"]
 edition = "2021"
 repository = "https://github.com/paseo-network/runtimes.git"
-license = "GPL-3.0-only"                                        # TODO <https://github.com/paseo-fellows/runtimes/issues/29>
+license = "GPL-3.0-only"                                     # TODO <https://github.com/paseo-fellows/runtimes/issues/29>
 
 [workspace.dependencies]
 pallet-ah-migrator = { git = "https://github.com/polkadot-fellows/runtimes", branch = "oty-release-210", package = "pallet-ah-migrator", default-features = false }
@@ -285,7 +285,7 @@ ss58-registry = { version = "1.47.0" }
 resolver = "2"
 
 members = [
-	"chain-spec-generator",
+
 	"integration-tests/emulated/chains/parachains/assets/asset-hub-paseo",
 	"integration-tests/emulated/chains/parachains/bridges/bridge-hub-paseo",
 	"integration-tests/emulated/chains/parachains/collectives/collectives-paseo",
