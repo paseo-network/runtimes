@@ -1141,12 +1141,12 @@ impl InstanceFilter<RuntimeCall> for TransparentProxyType<ProxyType> {
 			),
 			ProxyType::Staking => {
 				matches!(
-				c,
-				RuntimeCall::Staking(..) |
-					RuntimeCall::Session(..) |
-					RuntimeCall::Utility(..) |
-					RuntimeCall::FastUnstake(..) |
-					RuntimeCall::VoterList(..) |
+					c,
+					RuntimeCall::Staking(..) |
+						RuntimeCall::Session(..) |
+						RuntimeCall::Utility(..) |
+						RuntimeCall::FastUnstake(..) |
+						RuntimeCall::VoterList(..) |
 						RuntimeCall::NominationPools(..) |
 						RuntimeCall::Proxy(pallet_proxy::Call::add_proxy {
 							proxy_type: TransparentProxyType(ProxyType::StakingOperator),
