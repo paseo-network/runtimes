@@ -16,23 +16,34 @@
 
 //! Genesis configs presets for the AssetHubPaseo runtime
 
-use crate::{xcm_config::UniversalLocation, *};
+use crate::{staking::DapPalletId, xcm_config::UniversalLocation, *};
 use alloc::vec::Vec;
+use frame_support::sp_runtime::traits::AccountIdConversion;
+use parachains_common::AuraId;
 use sp_core::sr25519;
 use sp_genesis_builder::PresetId;
 use system_parachains_constants::genesis_presets::*;
 use xcm::latest::prelude::*;
 use xcm_builder::GlobalConsensusConvertsFor;
 use xcm_executor::traits::ConvertLocation;
-use AuraId;
 
 const ASSET_HUB_POLKADOT_ED: Balance = ExistentialDeposit::get();
+
+fn dap_buffer_account() -> AccountId {
+	DapPalletId::get().into_account_truncating()
+}
 
 /// Invulnerable Collators for the particular case of AssetHubPaseo
 pub fn invulnerables_asset_hub_paseo() -> Vec<(AccountId, AuraId)> {
 	vec![
-		(get_account_id_from_seed::<sr25519::Public>("Alice"), get_from_seed::<AuraId>("Alice")),
-		(get_account_id_from_seed::<sr25519::Public>("Bob"), get_from_seed::<AuraId>("Bob")),
+		(
+			get_account_id_from_seed::<sr25519::Public>("Alice"),
+			get_from_seed::<AuraId>("Alice"),
+		),
+		(
+			get_account_id_from_seed::<sr25519::Public>("Bob"),
+			get_from_seed::<AuraId>("Bob"),
+		),
 	]
 }
 
@@ -43,15 +54,16 @@ fn asset_hub_paseo_genesis(
 	foreign_assets: Vec<(Location, AccountId, Balance)>,
 	foreign_assets_endowed_accounts: Vec<(Location, AccountId, Balance)>,
 ) -> serde_json::Value {
-	let dev_stakers =
-		if cfg!(feature = "runtime-benchmarks") { Some((2_000, 25_000)) } else { None };
+	let mut balances: Vec<(AccountId, Balance)> = endowed_accounts
+		.iter()
+		.cloned()
+		.map(|k| (k, ASSET_HUB_POLKADOT_ED * 4096 * 4096))
+		.collect();
+	balances.push((dap_buffer_account(), ASSET_HUB_POLKADOT_ED));
+
 	serde_json::json!({
 		"balances": BalancesConfig {
-			balances: endowed_accounts
-				.iter()
-				.cloned()
-				.map(|k| (k, ASSET_HUB_POLKADOT_ED * 4096 * 4096))
-				.collect(),
+			balances,
 			dev_accounts: None,
 		},
 		"parachainInfo": ParachainInfoConfig {
@@ -82,10 +94,10 @@ fn asset_hub_paseo_genesis(
 		"polkadotXcm": {
 			"safeXcmVersion": Some(SAFE_XCM_VERSION),
 		},
-	"staking": {
-		"validatorCount": 100,
-		"devStakers": dev_stakers
-	},
+		"staking": {
+			"validatorCount": 600,
+			"devStakers": Some((2_000, 25_000)),
+		},
 		"foreignAssets": ForeignAssetsConfig {
 			assets: foreign_assets
 				.into_iter()
@@ -158,7 +170,8 @@ pub fn preset_names() -> Vec<PresetId> {
 /// Provides the JSON representation of predefined genesis config for given `id`.
 pub fn get_preset(id: &PresetId) -> Option<Vec<u8>> {
 	let patch = match id.as_ref() {
-		sp_genesis_builder::DEV_RUNTIME_PRESET => asset_hub_paseo_development_genesis(1000.into()),
+		sp_genesis_builder::DEV_RUNTIME_PRESET =>
+			asset_hub_paseo_development_genesis(1000.into()),
 		sp_genesis_builder::LOCAL_TESTNET_RUNTIME_PRESET =>
 			asset_hub_paseo_local_testnet_genesis(1000.into()),
 		_ => return None,

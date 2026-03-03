@@ -23,6 +23,7 @@ pub mod nom_pools;
 pub mod stepped_curve;
 
 use crate::{governance::StakingAdmin, *};
+use codec::Encode;
 use cumulus_pallet_parachain_system::RelaychainDataProvider;
 use frame_election_provider_support::{ElectionDataProvider, SequentialPhragmen};
 use frame_support::{
@@ -107,11 +108,10 @@ pub struct RebagIffMigrationDone;
 impl sp_runtime::traits::Get<u32> for RebagIffMigrationDone {
 	fn get() -> u32 {
 		if cfg!(feature = "runtime-benchmarks") ||
-			matches!(
-				pallet_ah_migrator::AhMigrationStage::<Runtime>::get(),
-				pallet_ah_migrator::MigrationStage::MigrationDone
-			) {
-			5
+			pallet_ah_migrator::MigrationEndBlock::<Runtime>::get()
+				.is_some_and(|n| frame_system::Pallet::<Runtime>::block_number() > n + 1)
+		{
+			10
 		} else {
 			0
 		}
@@ -131,17 +131,22 @@ impl pallet_bags_list::Config<VoterBagsListInstance> for Runtime {
 parameter_types! {
 	pub const DelegatedStakingPalletId: PalletId = PalletId(*b"py/dlstk");
 	pub const SlashRewardFraction: Perbill = Perbill::from_percent(1);
+	pub const DapPalletId: PalletId = PalletId(*b"dap/buff");
 }
 
 impl pallet_delegated_staking::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type PalletId = DelegatedStakingPalletId;
 	type Currency = Balances;
-	// slashes are sent to the treasury.
-	type OnSlash = ResolveTo<xcm_config::TreasuryAccount, Balances>;
+	type OnSlash = Dap;
 	type SlashRewardFraction = SlashRewardFraction;
 	type RuntimeHoldReason = RuntimeHoldReason;
 	type CoreStaking = Staking;
+}
+
+impl pallet_dap::Config for Runtime {
+	type Currency = Balances;
+	type PalletId = DapPalletId;
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -214,7 +219,7 @@ parameter_types! {
 /// // Base deposit
 /// assert_eq!(GeometricDeposit::calculate_base_deposit(0), InitialBaseDeposit::get());
 /// assert_eq!(GeometricDeposit::calculate_base_deposit(1), 2 * InitialBaseDeposit::get());
-/// assert_eq!(GeometricDeposit::calculate_base_deposit(2),  4 * InitialBaseDeposit::get());
+/// assert_eq!(GeometricDeposit::calculate_base_deposit(2), 4 * InitialBaseDeposit::get());
 /// // and so on
 ///
 /// // Full 16 page deposit, to be paid on top of the above base
@@ -267,7 +272,7 @@ parameter_types! {
 impl multi_block::unsigned::Config for Runtime {
 	type MinerPages = MinerPages;
 	type OffchainStorage = ConstBool<true>;
-	type OffchainSolver = SequentialPhragmen<AccountId, SolutionAccuracyOf<Runtime>>;
+	type OffchainSolver = SequentialPhragmen<AccountId, SolutionAccuracyOf<Runtime>, ()>;
 	type MinerTxPriority = MinerTxPriority;
 	type OffchainRepeat = OffchainRepeat;
 	type WeightInfo = weights::pallet_election_provider_multi_block_unsigned::WeightInfo<Runtime>;
@@ -291,6 +296,9 @@ impl multi_block::unsigned::miner::MinerConfig for Runtime {
 	type MaxVotesPerVoter =
 		<<Self as multi_block::Config>::DataProvider as ElectionDataProvider>::MaxVotesPerVoter;
 	type MaxLength = MinerMaxLength;
+	#[cfg(feature = "runtime-benchmarks")]
+	type Solver = frame_election_provider_support::QuickDirtySolver<AccountId, Perbill>;
+	#[cfg(not(feature = "runtime-benchmarks"))]
 	type Solver = <Runtime as multi_block::unsigned::Config>::OffchainSolver;
 	type Pages = Pages;
 	type Solution = NposCompactSolution16;
@@ -308,12 +316,12 @@ impl EraPayout {
 	pub const FIXED_PRE_HARD_CAP_TI: Balance = 15_011_657_390_566_252_333;
 
 	// The amount emitted daily pre hard cap.
-	// Taken from [AH Block 4369630](https://assethub-paseo.subscan.io/event/4369630-5)
-	const PRE_HARD_CAP_DAILY_EMISSION: Balance = 95_899u128 * UNITS;
+	// Taken from [AH Block 10469901](https://assethub-paseo.subscan.io/event/10469901-6).
+	const PRE_HARD_CAP_DAILY_EMISSION: Balance = 328797u128 * UNITS;
 
-	// Referendum doesn't affect Paseo, so block chosen to match the timestamp of the Polkadot one.
-	// https://paseo.subscan.io/block/10778693
-	const HARD_CAP_START: BlockNumber = 10_778_693;
+	// Should be around 14th March 2026 noon UTC assuming 0.5-1% clock time drift.
+	// https://paseo.subscan.io/block/30354008
+	const HARD_CAP_START: BlockNumber = 30_354_008;
 
 	// The hard issuance cap ratified in Referendum 1710.
 	const HARD_CAP_TARGET: Balance = 2_100_000_000u128 * UNITS;
@@ -436,6 +444,10 @@ parameter_types! {
 	pub const SessionsPerEra: SessionIndex = prod_or_fast!(6, 1);
 	pub const RelaySessionDuration: BlockNumber = prod_or_fast!(4 * RC_HOURS, RC_MINUTES);
 	pub const BondingDuration: sp_staking::EraIndex = 28;
+	/// Nominators are expected to be slashable and support fast unbonding
+	/// depending on AreNominatorSlashable storage value, as set by governance.
+	/// NominatorFastUnbondDuration value below is ignored if nominators are slashable.
+	pub const NominatorFastUnbondDuration: sp_staking::EraIndex = 2;
 	pub const SlashDeferDuration: sp_staking::EraIndex = 27;
 	pub const MaxControllersInDeprecationBatch: u32 = 512;
 	// alias for 16, which is the max nominations per nominator in the runtime.
@@ -443,6 +455,8 @@ parameter_types! {
 
 	/// Maximum numbers that we prune from pervious eras in each `prune_era` tx.
 	pub MaxPruningItems: u32 = 100;
+	/// Session index at which to export the validator set to the relay chain.
+	pub const ValidatorSetExportSession: SessionIndex = 4;
 }
 
 impl pallet_staking_async::Config for Runtime {
@@ -453,10 +467,11 @@ impl pallet_staking_async::Config for Runtime {
 	type RuntimeHoldReason = RuntimeHoldReason;
 	type CurrencyToVote = sp_staking::currency_to_vote::SaturatingCurrencyToVote;
 	type RewardRemainder = ResolveTo<xcm_config::TreasuryAccount, Balances>;
-	type Slash = ResolveTo<xcm_config::TreasuryAccount, Balances>;
+	type Slash = Dap;
 	type Reward = ();
 	type SessionsPerEra = SessionsPerEra;
 	type BondingDuration = BondingDuration;
+	type NominatorFastUnbondDuration = NominatorFastUnbondDuration;
 	type SlashDeferDuration = SlashDeferDuration;
 	type AdminOrigin = EitherOf<EnsureRoot<AccountId>, StakingAdmin>;
 	type EraPayout = EraPayout;
@@ -471,7 +486,7 @@ impl pallet_staking_async::Config for Runtime {
 	type MaxControllersInDeprecationBatch = MaxControllersInDeprecationBatch;
 	type EventListeners = (NominationPools, DelegatedStaking);
 	type MaxInvulnerables = frame_support::traits::ConstU32<20>;
-	// This will start election for the next era as soon as an era starts. 1 era = 6 epochs
+	// This will start election for the next era as soon as an era starts.
 	type PlanningEraOffset = ConstU32<6>;
 	type RcClientInterface = StakingRcClient;
 	type MaxEraDuration = MaxEraDuration;
@@ -479,13 +494,38 @@ impl pallet_staking_async::Config for Runtime {
 	type WeightInfo = weights::pallet_staking_async::WeightInfo<Runtime>;
 }
 
+// Must match Paseo relay chain's `SessionKeys` structure for encoding/decoding compatibility.
+sp_runtime::impl_opaque_keys! {
+	pub struct RelayChainSessionKeys {
+		pub grandpa: grandpa_primitives::AuthorityId,
+		pub babe: babe_primitives::AuthorityId,
+		pub para_validator: paseo_primitives::ValidatorId,
+		pub para_assignment: paseo_primitives::AssignmentId,
+		pub authority_discovery: authority_discovery_primitives::AuthorityId,
+		pub beefy: beefy_primitives::ecdsa_crypto::AuthorityId,
+	}
+}
+
 impl pallet_staking_async_rc_client::Config for Runtime {
 	type RelayChainOrigin = EnsureRoot<AccountId>;
 	type AHStakingInterface = Staking;
 	type SendToRelayChain = StakingXcmToRelayChain;
 	type MaxValidatorSetRetries = ConstU32<64>;
-	// Export elected validator set at the end of the 4th session of the era.
-	type ValidatorSetExportSession = ConstU32<4>;
+	type ValidatorSetExportSession = ValidatorSetExportSession;
+	type RelayChainSessionKeys = RelayChainSessionKeys;
+	type MinSetKeysBond = ConstU128<{ 10_000 * UNITS }>;
+	type Balance = Balance;
+	// | Key                 | Crypto  | Public Key | Signature |
+	// |---------------------|---------|------------|-----------|
+	// | grandpa             | Ed25519 | 32 bytes   | 64 bytes  |
+	// | babe                | Sr25519 | 32 bytes   | 64 bytes  |
+	// | para_validator      | Sr25519 | 32 bytes   | 64 bytes  |
+	// | para_assignment     | Sr25519 | 32 bytes   | 64 bytes  |
+	// | authority_discovery | Sr25519 | 32 bytes   | 64 bytes  |
+	// | beefy               | ECDSA   | 33 bytes   | 65 bytes  |
+	// Buffer for SCALE encoding overhead and future expansions.
+	type MaxSessionKeysLength = ConstU32<256>;
+	type WeightInfo = weights::pallet_staking_async_rc_client::WeightInfo<Runtime>;
 }
 
 #[derive(Encode, Decode)]
@@ -498,38 +538,52 @@ pub enum RelayChainRuntimePallets {
 
 #[derive(Encode, Decode)]
 pub enum AhClientCalls {
-	// index of `fn validator_set` in `staking-async-ah-client`. It has only one call.
+	// index of `fn validator_set` in `staking-async-ah-client`.
 	#[codec(index = 0)]
 	ValidatorSet(rc_client::ValidatorSetReport<AccountId>),
+	// index of `fn set_keys_from_ah` in `staking-async-ah-client`.
+	#[codec(index = 3)]
+	SetKeys { stash: AccountId, keys: Vec<u8> },
+	// index of `fn purge_keys_from_ah` in `staking-async-ah-client`.
+	#[codec(index = 4)]
+	PurgeKeys { stash: AccountId },
 }
 
 pub struct ValidatorSetToXcm;
 impl Convert<rc_client::ValidatorSetReport<AccountId>, Xcm<()>> for ValidatorSetToXcm {
 	fn convert(report: rc_client::ValidatorSetReport<AccountId>) -> Xcm<()> {
-		Xcm(vec![
-			Instruction::UnpaidExecution {
-				weight_limit: WeightLimit::Unlimited,
-				check_origin: None,
-			},
-			Instruction::Transact {
-				origin_kind: OriginKind::Native,
-				fallback_max_weight: None,
-				call: RelayChainRuntimePallets::AhClient(AhClientCalls::ValidatorSet(report))
-					.encode()
-					.into(),
-			},
-		])
+		rc_client::build_transact_xcm(
+			RelayChainRuntimePallets::AhClient(AhClientCalls::ValidatorSet(report)).encode(),
+		)
+	}
+}
+
+pub struct KeysMessageToXcm;
+impl Convert<rc_client::KeysMessage<AccountId>, Xcm<()>> for KeysMessageToXcm {
+	fn convert(msg: rc_client::KeysMessage<AccountId>) -> Xcm<()> {
+		let encoded_call = match msg {
+			rc_client::KeysMessage::SetKeys { stash, keys } =>
+				RelayChainRuntimePallets::AhClient(AhClientCalls::SetKeys { stash, keys }).encode(),
+			rc_client::KeysMessage::PurgeKeys { stash } =>
+				RelayChainRuntimePallets::AhClient(AhClientCalls::PurgeKeys { stash }).encode(),
+		};
+		rc_client::build_transact_xcm(encoded_call)
 	}
 }
 
 parameter_types! {
 	pub RelayLocation: Location = Location::parent();
+	/// Conservative RC execution cost for set/purge keys operations.
+	/// ~3x of Paseo relay benchmarked session set/purge_keys (~58-60M ref_time, ~16538 proof).
+	pub RemoteKeysExecutionWeight: Weight = Weight::from_parts(180_000_000, 50_000);
 }
 
 pub struct StakingXcmToRelayChain;
 
 impl rc_client::SendToRelayChain for StakingXcmToRelayChain {
 	type AccountId = AccountId;
+	type Balance = Balance;
+
 	fn validator_set(report: rc_client::ValidatorSetReport<Self::AccountId>) -> Result<(), ()> {
 		rc_client::XCMSender::<
 			xcm_config::XcmRouter,
@@ -537,6 +591,63 @@ impl rc_client::SendToRelayChain for StakingXcmToRelayChain {
 			rc_client::ValidatorSetReport<Self::AccountId>,
 			ValidatorSetToXcm,
 		>::send(report)
+	}
+
+	fn set_keys(
+		stash: Self::AccountId,
+		keys: Vec<u8>,
+		max_delivery_and_remote_execution_fee: Option<Self::Balance>,
+	) -> Result<Self::Balance, rc_client::SendKeysError<Self::Balance>> {
+		let execution_cost =
+			<PaseoWeightToFee<Runtime> as frame_support::weights::WeightToFee>::weight_to_fee(
+				&RemoteKeysExecutionWeight::get(),
+			);
+
+		rc_client::XCMSender::<
+			xcm_config::XcmRouter,
+			RelayLocation,
+			rc_client::KeysMessage<Self::AccountId>,
+			KeysMessageToXcm,
+		>::send_with_fees::<
+			xcm_executor::XcmExecutor<xcm_config::XcmConfig>,
+			RuntimeCall,
+			AccountId,
+			rc_client::AccountId32ToLocation,
+			Self::Balance,
+		>(
+			rc_client::KeysMessage::set_keys(stash.clone(), keys),
+			stash,
+			max_delivery_and_remote_execution_fee,
+			execution_cost,
+		)
+	}
+
+	fn purge_keys(
+		stash: Self::AccountId,
+		max_delivery_and_remote_execution_fee: Option<Self::Balance>,
+	) -> Result<Self::Balance, rc_client::SendKeysError<Self::Balance>> {
+		let execution_cost =
+			<PaseoWeightToFee<Runtime> as frame_support::weights::WeightToFee>::weight_to_fee(
+				&RemoteKeysExecutionWeight::get(),
+			);
+
+		rc_client::XCMSender::<
+			xcm_config::XcmRouter,
+			RelayLocation,
+			rc_client::KeysMessage<Self::AccountId>,
+			KeysMessageToXcm,
+		>::send_with_fees::<
+			xcm_executor::XcmExecutor<xcm_config::XcmConfig>,
+			RuntimeCall,
+			AccountId,
+			rc_client::AccountId32ToLocation,
+			Self::Balance,
+		>(
+			rc_client::KeysMessage::purge_keys(stash.clone()),
+			stash,
+			max_delivery_and_remote_execution_fee,
+			execution_cost,
+		)
 	}
 }
 
@@ -581,7 +692,7 @@ impl InitiateStakingAsync {
 impl frame_support::traits::OnRuntimeUpgrade for InitiateStakingAsync {
 	fn on_runtime_upgrade() -> Weight {
 		if !Self::needs_init() {
-			return <Runtime as frame_system::Config>::DbWeight::get().writes(1)
+			return <Runtime as frame_system::Config>::DbWeight::get().writes(1);
 		}
 		use pallet_election_provider_multi_block::verifier::Verifier;
 		// set parity staking miner as the invulnerable submitter in `multi-block`.
@@ -594,20 +705,29 @@ impl frame_support::traits::OnRuntimeUpgrade for InitiateStakingAsync {
 
 		// Set the minimum score for the election, as per the Polkadot RC state.
 		//
-		// This value is set from block 27,730,872 of Polkadot RC.
+		// These values are created using script:
+		//
+		// https://github.com/paritytech/paseo-scripts/blob/master/src/services/election_score_stats.ts
+		//
+		// At https://paseo.subscan.io/block/28207264.
+		//
+		// Note: the script looks at the last 30 elections, gets their average, and calculates 70%
+		// threshold thereof.
+		//
 		// Recent election scores in Polkadot can be found on:
 		// https://polkadot.subscan.io/event?page=1&time_dimension=date&module=electionprovidermultiphase&event_id=electionfinalized
 		//
-		// The last example, at block [27721215](https://polkadot.subscan.io/event/27721215-0) being:
+		// The last example, at block [27721215](https://paseo.subscan.io/event/27721215-0)
+		// being:
 		//
-		// * minimal_stake: 10907549130714057 (1.28x the minimum)
-		// * sum_stake: 8028519336725652293 (2.44x the minimum)
-		// * sum_stake_squared: 108358993218278434700023844467997545 (0.4 the minimum, the lower the
-		//   better)
+		// * minimal_stake: 10907549130714057 (1.38x the minimum)
+		// * sum_stake: 8028519336725652293 (1.49x the minimum)
+		// * sum_stake_squared: 108358993218278434700023844467997545 (0.57 the minimum, the lower
+		//   the better)
 		let minimum_score = sp_npos_elections::ElectionScore {
-			minimal_stake: 8474057820699941,
-			sum_stake: 3276970719352749444,
-			sum_stake_squared: 244059208045236715654727835467163294,
+			minimal_stake: 7895552765679931,
+			sum_stake: 5655838551978860651,
+			sum_stake_squared: 187148285683372481445131595645808873,
 		};
 		<Runtime as multi_block::Config>::Verifier::set_minimum_score(minimum_score);
 
@@ -629,44 +749,45 @@ mod tests {
 	use paseo_runtime_constants::time::YEARS as RC_YEARS;
 	use sp_runtime::{Perbill, Percent};
 	use sp_weights::constants::{WEIGHT_PROOF_SIZE_PER_KB, WEIGHT_REF_TIME_PER_MILLIS};
-	// TODO: in the future, make these tests use remote-ext and increase their longevity.
 
 	const MILLISECONDS_PER_DAY: u64 = 24 * 60 * 60 * 1000;
 	const APPROX_PRE_CAP_STAKING: Balance = 279_477 * UNITS;
 	const APPROX_PRE_CAP_TREASURY: Balance = 49_320 * UNITS;
 	const APPROX_PRE_CAP_TOTAL: Balance = APPROX_PRE_CAP_STAKING + APPROX_PRE_CAP_TREASURY;
 
+	// TODO: in the future, make these tests use remote-ext and increase their longevity.
+
 	#[test]
 	fn inflation_sanity_check() {
 		use pallet_staking_async::EraPayout as _;
 		// values taken from the last Paseo staking payout while it was in RC.
-		//https://paseo.subscan.io/block/7926659
-		// Payout: 692k PAS to validators / 1221 PAS to treasury
-		// active era: 2217
+		// https://paseo.subscan.io/block/28481296
+		// Payout: 279k PAS to validators / 49k PAS to treasury
+		// active era: 1980
 		// Note: Amount don't exactly match due to timestamp being an estimate. Same ballpark is
 		// good.
 		sp_io::TestExternalities::new_empty().execute_with(|| {
-			let average_era_duration_millis = 6 * 60 * 60 * 1000;
+			let average_era_duration_millis = 24 * 60 * 60 * 1000; // 24h
 			let (staking, treasury) = super::EraPayout::era_payout(
 				0, // not used
 				0, // not used
 				average_era_duration_millis,
 			);
-			assert_eq!(staking, 69869_4526049627);
-			assert_eq!(treasury, 12329_9034008757);
+			assert_eq!(staking, 279477_8104198508);
+			assert_eq!(treasury, 49319_6136035030);
 
-			// a recent TI of Paseo AH(block 3651137)
-			pallet_balances::TotalIssuance::<Runtime>::put(7435616143598483358);
-			let expected_issuance_parts = 161510837575876488;
+			// a recent TI of Paseo
+			pallet_balances::TotalIssuance::<Runtime>::put(16_336_817_797_558_128_793);
+			let expected_issuance_parts = 73510802784664934;
 			assert_eq!(
 				super::EraPayout::impl_experimental_inflation_info(),
 				InflationInfo {
 					issuance: Perquintill::from_parts(expected_issuance_parts),
-					next_mint: (279477_8104198508, 49319_6136035030)
+					next_mint: (2794778104198508, 493196136035030)
 				}
 			);
-			// around 4% for now.
-			assert_eq!(expected_issuance_parts * 100 / 10u64.pow(18), 16);
+			// around 7% for now.
+			assert_eq!(expected_issuance_parts * 100 / 10u64.pow(18), 7);
 		});
 	}
 
@@ -758,7 +879,7 @@ mod tests {
 		}));
 	}
 
-	const MARCH_14_2026: RC_BlockNumber = 10_778_693;
+	const MARCH_14_2026: RC_BlockNumber = 30_354_008;
 	// The March 14, 2026 TI used for calculations in [Ref 1710](https://polkadot.subsquare.io/referenda/1710).
 	const MARCH_TI: u128 = 1_676_733_867 * UNITS;
 	const TARGET_TI: u128 = 2_100_000_000 * UNITS;
@@ -1242,7 +1363,7 @@ mod tests {
 				"export terminal",
 				<Runtime as multi_block::Config>::WeightInfo::export_terminal(),
 				<Runtime as frame_system::Config>::BlockWeights::get().max_block,
-				Some(Percent::from_percent(95)), // TODO: reduce to 75 once re-benchmarked.
+				Some(Percent::from_percent(75)),
 			);
 		}
 
