@@ -58,7 +58,6 @@ sp-transaction-pool = { workspace = true }
 sp-version = { workspace = true }
 
 # Polkadot
-assets-common = { workspace = true }
 pallet-xcm = { workspace = true }
 pallet-xcm-benchmarks = { optional = true, workspace = true }
 polkadot-parachain-primitives = { workspace = true }
@@ -70,12 +69,13 @@ xcm-executor = { workspace = true }
 xcm-runtime-apis = { workspace = true }
 
 # Cumulus
+assets-common = { workspace = true }
 cumulus-primitives-aura = { workspace = true }
 cumulus-pallet-aura-ext = { workspace = true }
 cumulus-pallet-parachain-system = { workspace = true }
 cumulus-pallet-session-benchmarking = { workspace = true }
-cumulus-pallet-xcm = { workspace = true }
 cumulus-pallet-weight-reclaim = { workspace = true }
+cumulus-pallet-xcm = { workspace = true }
 cumulus-pallet-xcmp-queue = { workspace = true }
 cumulus-primitives-core = { workspace = true }
 cumulus-primitives-utility = { workspace = true }
@@ -137,9 +137,9 @@ std = [
 	"pallet-xcm/std",
 	"parachain-info/std",
 	"parachains-common/std",
-	"paseo-runtime-constants/std",
 	"polkadot-parachain-primitives/std",
 	"polkadot-runtime-common/std",
+	"paseo-runtime-constants/std",
 	"scale-info/std",
 	"serde",
 	"serde_json/std",
@@ -194,9 +194,9 @@ runtime-benchmarks = [
 	"pallet-xcm-benchmarks/runtime-benchmarks",
 	"pallet-xcm/runtime-benchmarks",
 	"parachains-common/runtime-benchmarks",
-	"paseo-runtime-constants/runtime-benchmarks",
 	"polkadot-parachain-primitives/runtime-benchmarks",
 	"polkadot-runtime-common/runtime-benchmarks",
+	"paseo-runtime-constants/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"system-parachains-constants/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
