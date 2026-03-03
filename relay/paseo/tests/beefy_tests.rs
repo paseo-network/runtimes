@@ -17,8 +17,8 @@
 //! Tests for the BEEFY ParaHeadsRootProvider and whitelisted parathreads.
 
 use beefy_primitives::mmr::BeefyDataProvider;
-use polkadot_primitives::{HeadData, Id as ParaId};
 use paseo_runtime::{BuildStorage, ParaHeadsRootProvider, Runtime};
+use polkadot_primitives::{HeadData, Id as ParaId};
 use runtime_parachains::paras as parachains_paras;
 
 #[test]
