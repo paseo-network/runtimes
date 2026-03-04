@@ -79,8 +79,8 @@ pub fn genesis() -> sp_core::storage::Storage {
 				.into_iter()
 				.map(|(acc, aura)| {
 					(
-						acc.clone(),                                      // account id
-						acc,                                              // validator id
+						acc.clone(),                                   // account id
+						acc,                                           // validator id
 						asset_hub_paseo_runtime::SessionKeys { aura }, // session keys
 					)
 				})
@@ -137,7 +137,6 @@ pub fn genesis() -> sp_core::storage::Storage {
 
 	build_genesis_storage(
 		&genesis_config,
-		asset_hub_paseo_runtime::WASM_BINARY
-			.expect("WASM binary was not built, please build it!"),
+		asset_hub_paseo_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
 	)
 }
