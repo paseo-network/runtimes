@@ -1493,7 +1493,7 @@ impl pallet_revive::Config for Runtime {
 	type MaxEthExtrinsicWeight = MaxEthExtrinsicWeight;
 	// Must be set to `false` in a live chain
 	type DebugEnabled = ConstBool<false>;
-	type GasScale = ConstU32<80_000>;
+	type GasScale = ConstU32<100_000>;
 }
 
 impl cumulus_pallet_weight_reclaim::Config for Runtime {
@@ -1513,8 +1513,8 @@ construct_runtime!(
 		Preimage: pallet_preimage = 5,
 		Scheduler: pallet_scheduler = 6,
 		Parameters: pallet_parameters = 7,
-		WeightReclaim: cumulus_pallet_weight_reclaim = 8,
-		MultiBlockMigrations: pallet_migrations = 9,
+		MultiBlockMigrations: pallet_migrations = 8,
+		WeightReclaim: cumulus_pallet_weight_reclaim = 9,
 
 		// Monetary stuff.
 		Balances: pallet_balances = 10,
@@ -1579,7 +1579,7 @@ construct_runtime!(
 		Staking: pallet_staking_async = 89,
 
 		// Contracts
-		Revive: pallet_revive = 90,
+		Revive: pallet_revive = 100,
 
 		// Sudo.
 		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 251,
