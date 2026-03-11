@@ -89,9 +89,7 @@ use core::cmp::Ordering;
 use cumulus_pallet_parachain_system::{RelayNumberMonotonicallyIncreases, RelaychainDataProvider};
 use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
 use frame_support::traits::EnsureOrigin;
-use governance::{
-	pallet_custom_origins, GeneralAdmin, StakingAdmin, Treasurer, TreasurySpender,
-};
+use governance::{pallet_custom_origins, GeneralAdmin, StakingAdmin, Treasurer, TreasurySpender};
 use paseo_runtime_constants::time::{
 	DAYS as RC_DAYS, HOURS as RC_HOURS, MINUTES as RC_MINUTES, YEARS as RC_YEARS,
 };
