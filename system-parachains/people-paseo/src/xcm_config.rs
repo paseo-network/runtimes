@@ -117,7 +117,7 @@ pub type LocationToAccountId = (
 
 /// Means for transacting the native currency on this chain.
 pub type FungibleTransactor = FungibleAdapter<
-	// Use this implementation of `fungible::*`
+	// Use this implementation of `fungible::*`.
 	Balances,
 	// Use this currency when it is a fungible asset matching the given location or name:
 	IsConcrete<RelayLocation>,
@@ -275,9 +275,7 @@ impl frame_support::weights::WeightToFee for WeightToStableFee {
 	fn weight_to_fee(weight: &Weight) -> Self::Balance {
 		let native_fee = WeightToNativeFee::weight_to_fee(weight);
 
-		let result = AssetRate::to_asset_balance(native_fee, HollarLocation::get());
-
-		result
+		AssetRate::to_asset_balance(native_fee, HollarLocation::get())
 			// Using max value will make the payment fail and go to the next trader component.
 			.unwrap_or(Balance::MAX)
 	}
@@ -310,7 +308,7 @@ impl xcm_executor::Config for XcmConfig {
 	type XcmSender = XcmRouter;
 	type AssetTransactor = AssetTransactors;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
-	// We only accept HOLLAR from Hydration
+	/// We only accept HOLLAR from Hydration.
 	type IsReserve = HollarFromHydration;
 	/// Only allow teleportation of DOT.
 	type IsTeleporter = ConcreteAssetFromSystem<RelayLocation>;
@@ -329,6 +327,7 @@ impl xcm_executor::Config for XcmConfig {
 	type PalletInstancesInfo = AllPalletsWithSystem;
 	type MaxAssetsIntoHolding = MaxAssetsIntoHolding;
 	type AssetLocker = ();
+	// TODO: Will need for delivery fees.
 	type AssetExchanger = ();
 	type FeeManager = XcmFeeManagerFromComponents<
 		WaivedLocations,
@@ -414,10 +413,11 @@ impl cumulus_pallet_xcm::Config for Runtime {
 /// Simple conversion of `u32` into an `AssetId` for use in benchmarking.
 pub struct XcmBenchmarkHelper;
 #[cfg(feature = "runtime-benchmarks")]
-impl pallet_assets::BenchmarkHelper<Location> for XcmBenchmarkHelper {
+impl pallet_assets::BenchmarkHelper<Location, ()> for XcmBenchmarkHelper {
 	fn create_asset_id_parameter(id: u32) -> Location {
 		Location::new(1, Parachain(id))
 	}
+	fn create_reserve_id_parameter(_id: u32) {}
 }
 
 #[test]
