@@ -316,12 +316,12 @@ impl EraPayout {
 	pub const FIXED_PRE_HARD_CAP_TI: Balance = 15_011_657_390_566_252_333;
 
 	// The amount emitted daily pre hard cap.
-	// Taken from [AH Block 10469901](https://assethub-paseo.subscan.io/event/10469901-6).
-	const PRE_HARD_CAP_DAILY_EMISSION: Balance = 328797u128 * UNITS;
+	// Taken from [AH Block 4369630](https://assethub-paseo.subscan.io/event/4369630-5)
+	const PRE_HARD_CAP_DAILY_EMISSION: Balance = 95_899u128 * UNITS;
 
-	// Should be around 14th March 2026 noon UTC assuming 0.5-1% clock time drift.
-	// https://paseo.subscan.io/block/30354008
-	const HARD_CAP_START: BlockNumber = 30_354_008;
+	// Referendum doesn't affect Paseo, so block chosen to match the timestamp of the Polkadot one.
+	// https://paseo.subscan.io/block/10778693
+	const HARD_CAP_START: BlockNumber = 10_778_693;
 
 	// The hard issuance cap ratified in Referendum 1710.
 	const HARD_CAP_TARGET: Balance = 2_100_000_000u128 * UNITS;
@@ -725,9 +725,9 @@ impl frame_support::traits::OnRuntimeUpgrade for InitiateStakingAsync {
 		// * sum_stake_squared: 108358993218278434700023844467997545 (0.57 the minimum, the lower
 		//   the better)
 		let minimum_score = sp_npos_elections::ElectionScore {
-			minimal_stake: 7895552765679931,
-			sum_stake: 5655838551978860651,
-			sum_stake_squared: 187148285683372481445131595645808873,
+			minimal_stake: 8474057820699941,
+			sum_stake: 3276970719352749444,
+			sum_stake_squared: 244059208045236715654727835467163294,
 		};
 		<Runtime as multi_block::Config>::Verifier::set_minimum_score(minimum_score);
 
@@ -761,33 +761,33 @@ mod tests {
 	fn inflation_sanity_check() {
 		use pallet_staking_async::EraPayout as _;
 		// values taken from the last Paseo staking payout while it was in RC.
-		// https://paseo.subscan.io/block/28481296
-		// Payout: 279k PAS to validators / 49k PAS to treasury
-		// active era: 1980
+		//https://paseo.subscan.io/block/7926659
+		// Payout: 692k PAS to validators / 1221 PAS to treasury
+		// active era: 2217
 		// Note: Amount don't exactly match due to timestamp being an estimate. Same ballpark is
 		// good.
 		sp_io::TestExternalities::new_empty().execute_with(|| {
-			let average_era_duration_millis = 24 * 60 * 60 * 1000; // 24h
+			let average_era_duration_millis = 6 * 60 * 60 * 1000;
 			let (staking, treasury) = super::EraPayout::era_payout(
 				0, // not used
 				0, // not used
 				average_era_duration_millis,
 			);
-			assert_eq!(staking, 279477_8104198508);
-			assert_eq!(treasury, 49319_6136035030);
+			assert_eq!(staking, 69869_4526049627);
+			assert_eq!(treasury, 12329_9034008757);
 
-			// a recent TI of Paseo
-			pallet_balances::TotalIssuance::<Runtime>::put(16_336_817_797_558_128_793);
-			let expected_issuance_parts = 73510802784664934;
+			// a recent TI of Paseo AH(block 3651137)
+			pallet_balances::TotalIssuance::<Runtime>::put(7435616143598483358);
+			let expected_issuance_parts = 161510837575876488;
 			assert_eq!(
 				super::EraPayout::impl_experimental_inflation_info(),
 				InflationInfo {
 					issuance: Perquintill::from_parts(expected_issuance_parts),
-					next_mint: (2794778104198508, 493196136035030)
+					next_mint: (279477_8104198508, 49319_6136035030)
 				}
 			);
-			// around 7% for now.
-			assert_eq!(expected_issuance_parts * 100 / 10u64.pow(18), 7);
+			// around 4% for now.
+			assert_eq!(expected_issuance_parts * 100 / 10u64.pow(18), 16);
 		});
 	}
 
@@ -879,7 +879,7 @@ mod tests {
 		}));
 	}
 
-	const MARCH_14_2026: RC_BlockNumber = 30_354_008;
+	const MARCH_14_2026: RC_BlockNumber = 10_778_693;
 	// The March 14, 2026 TI used for calculations in [Ref 1710](https://polkadot.subsquare.io/referenda/1710).
 	const MARCH_TI: u128 = 1_676_733_867 * UNITS;
 	const TARGET_TI: u128 = 2_100_000_000 * UNITS;

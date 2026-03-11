@@ -18,8 +18,8 @@ pub use TreasuryAccount as RelayTreasuryPalletAccount;
 
 use super::{
 	treasury, AccountId, AllPalletsWithSystem, AssetConversion, Assets, Balance, Balances,
-	CollatorSelection, FellowshipAdmin, ForeignAssets, GeneralAdmin, NativeAndAssets,
-	ParachainInfo, ParachainSystem, PaseoWeightToFee as WeightToFee, PolkadotXcm, PoolAssets,
+	CollatorSelection, ForeignAssets, GeneralAdmin, NativeAndAssets, ParachainInfo,
+	ParachainSystem, PaseoWeightToFee as WeightToFee, PolkadotXcm, PoolAssets,
 	PriceForParentDelivery, Runtime, RuntimeCall, RuntimeEvent, RuntimeHoldReason, RuntimeOrigin,
 	StakingAdmin, ToKusamaXcmRouter, Treasurer, XcmpQueue,
 };
@@ -49,7 +49,7 @@ use parachains_common::xcm_config::{
 	AllSiblingSystemParachains, ConcreteAssetFromSystem, ParentRelayOrSiblingParachains,
 	RelayOrOtherSystemParachains,
 };
-use paseo_runtime_constants::{system_parachain, xcm::body::FELLOWSHIP_ADMIN_INDEX};
+use paseo_runtime_constants::system_parachain;
 use polkadot_parachain_primitives::primitives::Sibling;
 use snowbridge_outbound_queue_primitives::v2::exporter::PausableExporter;
 use sp_runtime::traits::TryConvertInto;
@@ -492,8 +492,6 @@ parameter_types! {
 	pub const GeneralAdminBodyId: BodyId = BodyId::Administration;
 	// StakingAdmin pluralistic body.
 	pub const StakingAdminBodyId: BodyId = BodyId::Defense;
-	// FellowshipAdmin pluralistic body.
-	pub const FellowshipAdminBodyId: BodyId = BodyId::Index(FELLOWSHIP_ADMIN_INDEX);
 	// `Treasurer` pluralistic body.
 	pub const TreasurerBodyId: BodyId = BodyId::Treasury;
 }
@@ -505,10 +503,6 @@ pub type GeneralAdminToPlurality =
 /// Type to convert the `StakingAdmin` origin to a Plurality `Location` value.
 pub type StakingAdminToPlurality =
 	OriginToPluralityVoice<RuntimeOrigin, StakingAdmin, StakingAdminBodyId>;
-
-/// Type to convert the `FellowshipAdmin` origin to a Plurality `Location` value.
-pub type FellowshipAdminToPlurality =
-	OriginToPluralityVoice<RuntimeOrigin, FellowshipAdmin, FellowshipAdminBodyId>;
 
 /// Type to convert the `Treasurer` origin to a Plurality `Location` value.
 pub type TreasurerToPlurality = OriginToPluralityVoice<RuntimeOrigin, Treasurer, TreasurerBodyId>;
@@ -524,8 +518,6 @@ pub type LocalPalletOrSignedOriginToLocation = (
 	GeneralAdminToPlurality,
 	// StakingAdmin origin to be used in XCM as a corresponding Plurality `Location` value.
 	StakingAdminToPlurality,
-	// FellowshipAdmin origin to be used in XCM as a corresponding Plurality `Location` value.
-	FellowshipAdminToPlurality,
 	// `Treasurer` origin to be used in XCM as a corresponding Plurality `Location` value.
 	TreasurerToPlurality,
 	// And a usual Signed origin to be used in XCM as a corresponding `AccountId32`.
@@ -881,7 +873,7 @@ fn foreign_pallet_has_correct_local_account() {
 	let fellowship_salary =
 		(Parent, Parachain(COLLECTIVES_PARAID), PalletInstance(FELLOWSHIP_SALARY_PALLET_ID));
 	let account = LocationToAccountId::convert_location(&fellowship_salary.into()).unwrap();
-	let paseo = Ss58AddressFormat::try_from("paseo").unwrap();
+	let paseo = Ss58AddressFormat::try_from("polkadot").unwrap();
 	let address = Ss58Codec::to_ss58check_with_version(&account, paseo);
 	assert_eq!(address, "13w7NdvSR1Af8xsQTArDtZmVvjE8XhWNdL4yed3iFHrUNCnS");
 }
