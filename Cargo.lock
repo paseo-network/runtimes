@@ -1900,6 +1900,7 @@ dependencies = [
 name = "bridge-hub-paseo-runtime"
 version = "2.1.0"
 dependencies = [
+ "assets-common",
  "bp-asset-hub-kusama",
  "bp-asset-hub-paseo",
  "bp-bridge-hub-kusama",
@@ -1976,7 +1977,9 @@ dependencies = [
  "snowbridge-pallet-ethereum-client",
  "snowbridge-pallet-ethereum-client-fixtures",
  "snowbridge-pallet-inbound-queue",
+ "snowbridge-pallet-inbound-queue-fixtures",
  "snowbridge-pallet-inbound-queue-v2",
+ "snowbridge-pallet-inbound-queue-v2-fixtures",
  "snowbridge-pallet-outbound-queue",
  "snowbridge-pallet-outbound-queue-v2",
  "snowbridge-pallet-system",
