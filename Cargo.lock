@@ -960,6 +960,7 @@ name = "asset-hub-paseo-emulated-chain"
 version = "2.1.0"
 dependencies = [
  "asset-hub-paseo-runtime",
+ "assets-common",
  "cumulus-primitives-core",
  "emulated-integration-tests-common",
  "frame-support",
@@ -972,6 +973,7 @@ dependencies = [
  "sp-core",
  "sp-keyring",
  "staging-xcm",
+ "staging-xcm-builder",
 ]
 
 [[package]]
@@ -5622,6 +5624,7 @@ dependencies = [
  "paste",
  "staging-xcm",
  "xcm-emulator",
+ "xcm-runtime-apis",
 ]
 
 [[package]]

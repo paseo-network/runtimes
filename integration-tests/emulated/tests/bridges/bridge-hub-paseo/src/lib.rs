@@ -53,7 +53,7 @@ pub use paseo_system_emulated_network::{
 		genesis::{
 			AssetHubPaseoAssetOwner, PenpalATeleportableAssetLocation, ED as ASSET_HUB_POLKADOT_ED,
 		},
-		AssetHubPaseoParaPallet as AssetHubPaseoPallet,
+		AssetHubPaseoParaPallet as AssetHubPaseoPallet, ForeignAssetReserveData,
 	},
 	bridge_hub_paseo_emulated_chain::{
 		genesis::ED as BRIDGE_HUB_POLKADOT_ED, BridgeHubPaseoParaPallet as BridgeHubPaseoPallet,
