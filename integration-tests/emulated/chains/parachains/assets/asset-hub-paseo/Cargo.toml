@@ -15,14 +15,16 @@ sp-keyring = { workspace = true }
 frame-support = { workspace = true, default-features = true }
 
 # Cumulus
+assets-common = { workspace = true, default-features = true }
 parachains-common = { workspace = true, default-features = true }
 cumulus-primitives-core = { workspace = true, default-features = true }
 emulated-integration-tests-common = { workspace = true }
 xcm = { workspace = true, default-features = true }
+xcm-builder = { workspace = true, default-features = true }
 polkadot-parachain-primitives = { workspace = true }
 
 # Runtimes
-asset-hub-paseo-runtime = { workspace = true, default-features = true }
+asset-hub-paseo-runtime = { workspace = true }
 paseo-emulated-chain = { workspace = true }
 penpal-emulated-chain = { workspace = true }
 
@@ -35,6 +37,7 @@ integration-tests-helpers = { workspace = true }
 [features]
 runtime-benchmarks = [
 	"asset-hub-paseo-runtime/runtime-benchmarks",
+	"assets-common/runtime-benchmarks",
 	"cumulus-primitives-core/runtime-benchmarks",
 	"frame-support/runtime-benchmarks",
 	"integration-tests-helpers/runtime-benchmarks",
@@ -43,6 +46,6 @@ runtime-benchmarks = [
 	"penpal-emulated-chain/runtime-benchmarks",
 	"polkadot-parachain-primitives/runtime-benchmarks",
 	"snowbridge-inbound-queue-primitives/runtime-benchmarks",
+	"xcm-builder/runtime-benchmarks",
 	"xcm/runtime-benchmarks",
 ]
-try-runtime = []

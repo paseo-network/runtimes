@@ -27,6 +27,8 @@ use emulated_integration_tests_common::{
 };
 use paseo_emulated_chain::Paseo;
 
+pub use assets_common::local_and_foreign_assets::ForeignAssetReserveData;
+
 // AssetHubPaseo Parachain declaration
 decl_test_parachains! {
 	pub struct AssetHubPaseo {
@@ -59,5 +61,9 @@ impl_accounts_helpers_for_parachain!(AssetHubPaseo);
 impl_assert_events_helpers_for_parachain!(AssetHubPaseo);
 impl_assets_helpers_for_system_parachain!(AssetHubPaseo, Paseo);
 impl_assets_helpers_for_parachain!(AssetHubPaseo);
-impl_foreign_assets_helpers_for_parachain!(AssetHubPaseo, xcm::latest::Location);
+impl_foreign_assets_helpers_for_parachain!(
+	AssetHubPaseo,
+	xcm::latest::Location,
+	ForeignAssetReserveData
+);
 impl_xcm_helpers_for_parachain!(AssetHubPaseo);
