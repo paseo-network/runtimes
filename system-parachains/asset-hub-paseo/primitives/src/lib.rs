@@ -77,5 +77,5 @@ pub fn build_congestion_message<RuntimeCall>(
 	]
 }
 
-/// Identifier of AssetHubPolkadot in the Polkadot relay chain.
+/// Identifier of AssetHubPaseo in the Paseo relay chain.
 pub const ASSET_HUB_PASEO_PARACHAIN_ID: u32 = 1000;
