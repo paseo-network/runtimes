@@ -1559,7 +1559,7 @@ dependencies = [
 [[package]]
 name = "bp-asset-hub-kusama"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?branch=oty-release-210#7a2829e0ad43108496435e46283c7c3f1a648f18"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.1.0#1beac28ff1dd1b723781eec4759ebb816925e4e2"
 dependencies = [
  "bp-xcm-bridge-hub-router",
  "frame-support",
@@ -1603,7 +1603,7 @@ dependencies = [
 [[package]]
 name = "bp-bridge-hub-kusama"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?branch=oty-release-210#7a2829e0ad43108496435e46283c7c3f1a648f18"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.1.0#1beac28ff1dd1b723781eec4759ebb816925e4e2"
 dependencies = [
  "bp-bridge-hub-cumulus",
  "bp-header-chain",
@@ -1642,7 +1642,7 @@ dependencies = [
 [[package]]
 name = "bp-bridge-hub-polkadot"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?branch=oty-release-210#7a2829e0ad43108496435e46283c7c3f1a648f18"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.1.0#1beac28ff1dd1b723781eec4759ebb816925e4e2"
 dependencies = [
  "bp-bridge-hub-cumulus",
  "bp-header-chain",
@@ -2487,7 +2487,7 @@ version = "2.1.0"
 [[package]]
 name = "collectives-polkadot-runtime-constants"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?branch=oty-release-210#7a2829e0ad43108496435e46283c7c3f1a648f18"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.1.0#1beac28ff1dd1b723781eec4759ebb816925e4e2"
 
 [[package]]
 name = "combine"
@@ -5988,7 +5988,7 @@ checksum = "c33070833c9ee02266356de0c43f723152bd38bd96ddf52c82b3af10c9138b28"
 [[package]]
 name = "kusama-runtime-constants"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?branch=oty-release-210#7a2829e0ad43108496435e46283c7c3f1a648f18"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.1.0#1beac28ff1dd1b723781eec4759ebb816925e4e2"
 dependencies = [
  "frame-support",
  "pallet-remote-proxy",
@@ -7380,7 +7380,7 @@ dependencies = [
 [[package]]
 name = "pallet-ah-migrator"
 version = "0.1.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?branch=oty-release-210#7a2829e0ad43108496435e46283c7c3f1a648f18"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.1.0#1beac28ff1dd1b723781eec4759ebb816925e4e2"
 dependencies = [
  "assets-common",
  "cumulus-primitives-core",
@@ -7439,7 +7439,7 @@ dependencies = [
 [[package]]
 name = "pallet-ah-ops"
 version = "0.1.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?branch=oty-release-210#7a2829e0ad43108496435e46283c7c3f1a648f18"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.1.0#1beac28ff1dd1b723781eec4759ebb816925e4e2"
 dependencies = [
  "cumulus-primitives-core",
  "frame-benchmarking",
@@ -8417,7 +8417,7 @@ dependencies = [
 [[package]]
 name = "pallet-rc-migrator"
 version = "0.1.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?branch=oty-release-210#7a2829e0ad43108496435e46283c7c3f1a648f18"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.1.0#1beac28ff1dd1b723781eec4759ebb816925e4e2"
 dependencies = [
  "frame-benchmarking",
  "frame-election-provider-support",
@@ -8501,7 +8501,7 @@ dependencies = [
 [[package]]
 name = "pallet-remote-proxy"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?branch=oty-release-210#7a2829e0ad43108496435e46283c7c3f1a648f18"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.1.0#1beac28ff1dd1b723781eec4759ebb816925e4e2"
 dependencies = [
  "cumulus-pallet-parachain-system",
  "cumulus-primitives-core",
@@ -8687,9 +8687,9 @@ dependencies = [
 
 [[package]]
 name = "pallet-society"
-version = "45.0.0"
+version = "45.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f93ed4285c839ffc078cf355d50079d5eea771b8815f0a417dd65095499313fb"
+checksum = "1bb738526ccaf243513c4d93879bfdcfacae3c8c482c0c7107bc84567fb6a539"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -8728,9 +8728,9 @@ dependencies = [
 
 [[package]]
 name = "pallet-staking-async"
-version = "0.10.2"
+version = "0.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "910d5804a210f615bf04957dfe2d7222837da35bc108c4591030834e01e22295"
+checksum = "1983c4fdcdf5437c5f00fcf17cc1b00b47f09c57ef4abd79dd7cec79dc93e098"
 dependencies = [
  "frame-benchmarking",
  "frame-election-provider-support",
@@ -8775,9 +8775,9 @@ dependencies = [
 
 [[package]]
 name = "pallet-staking-async-rc-client"
-version = "0.7.2"
+version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "92dfaba74c6934040d0996f8d2da514db7083d43612437aff5ef6d6975d3f790"
+checksum = "95a0e0dc41bb39c821ff4ef358686c85d76c1123e1647d6b204bbbff7aa84091"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -9930,7 +9930,7 @@ dependencies = [
 [[package]]
 name = "polkadot-runtime-constants"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?branch=oty-release-210#7a2829e0ad43108496435e46283c7c3f1a648f18"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.1.0#1beac28ff1dd1b723781eec4759ebb816925e4e2"
 dependencies = [
  "frame-support",
  "pallet-remote-proxy",
@@ -9943,6 +9943,7 @@ dependencies = [
  "sp-runtime",
  "sp-trie",
  "sp-weights",
+ "staging-xcm",
  "staging-xcm-builder",
 ]
 
@@ -13841,9 +13842,9 @@ dependencies = [
 
 [[package]]
 name = "sp-staking"
-version = "42.1.0"
+version = "42.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56facdf4a950590afa2aa45d2f4d8acac77dfa486f9124e4977c55f6b8ecac90"
+checksum = "11c6b50d5b2b607d6d9d87c71ba2828143f8497be28922545a06d470fe4a4939"
 dependencies = [
  "impl-trait-for-tuples",
  "parity-scale-codec",
@@ -14483,7 +14484,7 @@ dependencies = [
 [[package]]
 name = "system-parachains-common"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?branch=oty-release-210#7a2829e0ad43108496435e46283c7c3f1a648f18"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.1.0#1beac28ff1dd1b723781eec4759ebb816925e4e2"
 dependencies = [
  "cumulus-pallet-parachain-system",
  "cumulus-primitives-core",
@@ -14501,7 +14502,7 @@ dependencies = [
 [[package]]
 name = "system-parachains-constants"
 version = "1.0.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?branch=oty-release-210#7a2829e0ad43108496435e46283c7c3f1a648f18"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.1.0#1beac28ff1dd1b723781eec4759ebb816925e4e2"
 dependencies = [
  "array-bytes 9.3.0",
  "frame-support",
