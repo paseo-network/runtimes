@@ -518,7 +518,6 @@ parameter_types! {
 		);
 }
 
-
 impl pallet_staking_async_rc_client::Config for Runtime {
 	type RelayChainOrigin = EnsureRoot<AccountId>;
 	type AHStakingInterface = Staking;
