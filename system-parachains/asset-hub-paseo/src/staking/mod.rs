@@ -508,13 +508,13 @@ sp_runtime::impl_opaque_keys! {
 
 parameter_types! {
 	// Deposit for one NextKeys entry and multiple KeyOwner entries and ExternallySetKeys.
-	pub KeyDeposit: Balance = polkadot_runtime_constants::currency::deposit(1, SessionKeys::max_encoded_len() as u32)
+	pub KeyDeposit: Balance = paseo_runtime_constants::currency::deposit(1, SessionKeys::max_encoded_len() as u32)
 		.saturating_add(
-			polkadot_runtime_constants::currency::deposit(<Runtime as pallet_session::Config>::Keys::key_ids().len() as u32,
+			paseo_runtime_constants::currency::deposit(<Runtime as pallet_session::Config>::Keys::key_ids().len() as u32,
 								<Runtime as pallet_session::Config>::ValidatorId::max_encoded_len() as u32
 			)
 		).saturating_add(
-			polkadot_runtime_constants::currency::deposit(1, AccountId::max_encoded_len() as u32)
+			paseo_runtime_constants::currency::deposit(1, AccountId::max_encoded_len() as u32)
 		);
 }
 
@@ -525,6 +525,7 @@ impl pallet_staking_async_rc_client::Config for Runtime {
 	type MaxValidatorSetRetries = ConstU32<64>;
 	type ValidatorSetExportSession = ValidatorSetExportSession;
 	type RelayChainSessionKeys = RelayChainSessionKeys;
+	type Currency = Balances;
 	// Need a smaller value since the benchmarks do not properly fund the account.
 	#[cfg(not(feature = "runtime-benchmarks"))]
 	type KeyDeposit = KeyDeposit;
