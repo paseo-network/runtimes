@@ -302,6 +302,23 @@ impl<T: frame_system::Config> pallet_assets::WeightInfo for WeightInfo<T> {
 	}
 	/// Storage: `Assets::Asset` (r:1 w:0)
 	/// Proof: `Assets::Asset` (`max_values`: None, `max_size`: Some(808), added: 3283, mode: `MaxEncodedLen`)
+	/// Storage: `Assets::Reserves` (r:0 w:1)
+	/// Proof: `Assets::Reserves` (`max_values`: None, `max_size`: Some(619), added: 3094, mode: `MaxEncodedLen`)
+	/// The range of component `n` is `[0, 5]`.
+	fn set_reserves(n: u32, ) -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `243`
+		//  Estimated: `4273`
+		// Minimum execution time: 14_211_000 picoseconds.
+		Weight::from_parts(14_893_107, 0)
+			.saturating_add(Weight::from_parts(0, 4273))
+			// Standard Error: 4_736
+			.saturating_add(Weight::from_parts(33_277, 0).saturating_mul(n.into()))
+			.saturating_add(T::DbWeight::get().reads(1))
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+	/// Storage: `Assets::Asset` (r:1 w:0)
+	/// Proof: `Assets::Asset` (`max_values`: None, `max_size`: Some(808), added: 3283, mode: `MaxEncodedLen`)
 	/// Storage: `Assets::Metadata` (r:1 w:1)
 	/// Proof: `Assets::Metadata` (`max_values`: None, `max_size`: Some(738), added: 3213, mode: `MaxEncodedLen`)
 	/// The range of component `n` is `[0, 50]`.
