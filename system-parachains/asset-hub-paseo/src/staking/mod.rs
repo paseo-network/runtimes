@@ -149,22 +149,29 @@ impl pallet_dap::Config for Runtime {
 	type PalletId = DapPalletId;
 }
 
+/// Election bounds for the on-chain fallback solver.
+///
+/// In benchmarks these are unbounded; in production they are capped to a single snapshot page
+/// so that the on-chain solver stays within block weight limits.
 #[cfg(feature = "runtime-benchmarks")]
 parameter_types! {
-	pub BenchElectionBounds: frame_election_provider_support::bounds::ElectionBounds =
+	pub ElectionBoundsOnChain: frame_election_provider_support::bounds::ElectionBounds =
 		frame_election_provider_support::bounds::ElectionBoundsBuilder::default().build();
 }
+#[cfg(not(feature = "runtime-benchmarks"))]
+parameter_types! {
+	pub ElectionBoundsOnChain: frame_election_provider_support::bounds::ElectionBounds =
+		frame_election_provider_support::bounds::ElectionBoundsBuilder::default()
+			.voters_count(VoterSnapshotPerBlock::get().into())
+			.targets_count(MaxValidatorSet::get().into())
+			.build();
+}
 
-#[cfg(feature = "runtime-benchmarks")]
 pub struct OnChainConfig;
 
-#[cfg(feature = "runtime-benchmarks")]
 impl frame_election_provider_support::onchain::Config for OnChainConfig {
-	// unbounded
-	type Bounds = BenchElectionBounds;
-	// We should not need sorting, as our bounds are large enough for the number of
-	// nominators/validators in this test setup.
-	type Sort = ConstBool<false>;
+	type Bounds = ElectionBoundsOnChain;
+	type Sort = ConstBool<true>;
 	type DataProvider = Staking;
 	type MaxBackersPerWinner = MaxBackersPerWinner;
 	type MaxWinnersPerPage = MaxWinnersPerPage;
@@ -185,13 +192,13 @@ impl multi_block::Config for Runtime {
 	type DataProvider = Staking;
 	type MinerConfig = Self;
 	type Verifier = MultiBlockElectionVerifier;
-	// we chill and do nothing in the fallback.
-	#[cfg(not(feature = "runtime-benchmarks"))]
-	type Fallback = multi_block::Continue<Self>;
-	#[cfg(feature = "runtime-benchmarks")]
+	// Fall back to on-chain SequentialPhragmen if no signed/unsigned solution is submitted.
+	// This ensures era transitions always happen, even without external election miners.
 	type Fallback = frame_election_provider_support::onchain::OnChainExecution<OnChainConfig>;
-	// Revert back to signed phase if nothing is submitted and queued, so we prolong the election.
-	type AreWeDone = multi_block::RevertToSignedIfNotQueuedOf<Self>;
+	// Proceed to Done after one full election cycle regardless of whether a solution was queued.
+	// Combined with the on-chain Fallback above, this guarantees the election resolves and
+	// produces a (possibly suboptimal) validator set rather than looping indefinitely.
+	type AreWeDone = multi_block::ProceedRegardlessOf<Self>;
 	type OnRoundRotation = multi_block::CleanRound<Self>;
 	type WeightInfo = weights::pallet_election_provider_multi_block::WeightInfo<Runtime>;
 }
