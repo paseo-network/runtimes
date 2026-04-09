@@ -60,7 +60,7 @@ fn network_export_table_works() {
 				None,
 			),
 			// From Ethereum with the Mainnet chain ID instead of Sepolia, not matched.
-			(Ethereum { chain_id: 1}, Here, None),
+			(Ethereum { chain_id: 1 }, Here, None),
 		];
 
 		for (network, remote_location, expected_result) in test_data {

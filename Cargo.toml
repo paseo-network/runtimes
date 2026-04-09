@@ -257,11 +257,36 @@ zombienet-sdk = { version = "0.4.2" }
 tuplex = { version = "0.1.0", default-features = false }
 relay-common = { path = "relay/common", default-features = false }
 ss58-registry = { version = "1.47.0" }
+bp-paseo-core = { version = "0.25.0", default-features = false }
+grandpa-primitives = { version = "27.0.0", default-features = false, package = "sp-consensus-grandpa" }
+pallet-dap = { version = "0.2.0", default-features = false }
+pallet-encointer-balances = { version = "~21.2.0", default-features = false }
+pallet-encointer-bazaar = { version = "~21.1.0", default-features = false }
+pallet-encointer-bazaar-rpc-runtime-api = { version = "~21.1.0", default-features = false }
+pallet-encointer-ceremonies = { version = "~21.1.0", default-features = false }
+pallet-encointer-ceremonies-rpc-runtime-api = { version = "~21.1.0", default-features = false }
+pallet-encointer-communities = { version = "~21.1.0", default-features = false }
+pallet-encointer-communities-rpc-runtime-api = { version = "~21.1.0", default-features = false }
+pallet-encointer-democracy = { version = "~21.7.0", default-features = false }
+pallet-encointer-faucet = { version = "~21.2.0", default-features = false }
+pallet-encointer-offline-payment = { version = "~21.0.0", default-features = false }
+pallet-encointer-reputation-commitments = { version = "~21.1.1", default-features = false }
+pallet-encointer-reputation-rings = { version = "~21.0.0", default-features = false }
+pallet-encointer-scheduler = { version = "~21.1.0", default-features = false }
+pallet-encointer-treasuries = { version = "~21.7.0", default-features = false }
+pallet-encointer-treasuries-rpc-runtime-api = { version = "~21.3.0", default-features = false }
+pallet-multi-asset-bounties = { version = "0.2.1", default-features = false }
+paseo-core-primitives = { version = "21.0.0", default-features = false }
+paseo-parachain-primitives = { version = "20.0.0", default-features = false }
+paseo-primitives = { package = "polkadot-primitives", version = "22.0.0", default-features = false }
+paseo-runtime-common = { version = "24.0.0", default-features = false }
+snowbridge-pallet-inbound-queue-v2-fixtures = { version = "0.7.1", default-features = false }
 
 [workspace]
 resolver = "2"
 
 members = [
+
 	"integration-tests/emulated/chains/parachains/assets/asset-hub-paseo",
 	"integration-tests/emulated/chains/parachains/bridges/bridge-hub-paseo",
 	"integration-tests/emulated/chains/parachains/collectives/collectives-paseo",

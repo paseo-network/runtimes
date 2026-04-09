@@ -770,7 +770,7 @@ impl<T: frame_system::Config> pallet_staking_async::WeightInfo for WeightInfo<T>
 	/// Proof: `Balances::Holds` (`max_values`: None, `max_size`: Some(229), added: 2704, mode: `MaxEncodedLen`)
 	/// Storage: `AhMigrator::AhMigrationStage` (r:1 w:0)
 	/// Proof: `AhMigrator::AhMigrationStage` (`max_values`: Some(1), `max_size`: Some(5), added: 500, mode: `MaxEncodedLen`)
-	fn apply_slash() -> Weight {
+	fn apply_slash(_s: u32) -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `994414`
 		//  Estimated: `1656954`
@@ -984,13 +984,17 @@ impl<T: frame_system::Config> pallet_staking_async::WeightInfo for WeightInfo<T>
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(2))
 	}
-	/// Storage: `Staking::ActiveEra` (r:1 w:0)
-	/// Proof: `Staking::ActiveEra` (`max_values`: Some(1), `max_size`: Some(13), added: 508, mode: `Measured`)
-	/// Storage: `Staking::EraPruningState` (r:1 w:1)
-	/// Proof: `Staking::EraPruningState` (`max_values`: None, `max_size`: Some(13), added: 2488, mode: `Measured`)
-	/// Storage: `Staking::ErasTotalStake` (r:0 w:1)
-	/// Proof: `Staking::ErasTotalStake` (`max_values`: None, `max_size`: Some(28), added: 2503, mode: `Measured`)
-	fn prune_era_total_stake() -> Weight {
+	fn prune_era_single_entry_cleanups() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `743`
+		//  Estimated: `4208`
+		// Minimum execution time: 53_049_000 picoseconds.
+		Weight::from_parts(65_833_000, 0)
+			.saturating_add(Weight::from_parts(0, 4208))
+			.saturating_add(T::DbWeight::get().reads(2))
+			.saturating_add(T::DbWeight::get().writes(2))
+	}
+	fn prune_era_validator_slash_in_era(_s: u32) -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `743`
 		//  Estimated: `4208`

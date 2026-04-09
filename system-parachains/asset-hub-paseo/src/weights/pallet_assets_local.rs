@@ -566,4 +566,12 @@ impl<T: frame_system::Config> pallet_assets::WeightInfo for WeightInfo<T> {
 			.saturating_add(Weight::from_parts(0, 3613))
 			.saturating_add(T::DbWeight::get().reads(1))
 	}
+	fn set_reserves(_n: u32) -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 0_000 picoseconds.
+		Weight::from_parts(0, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+	}
 }
