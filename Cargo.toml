@@ -244,7 +244,6 @@ sp-version = { version = "43.0.0", default-features = false }
 sp-weights = { version = "33.2.0", default-features = false }
 substrate-wasm-builder = { version = "31.1.0" }
 system-parachains-constants = { path = "system-parachains/constants", default-features = false }
-system-parachains-common = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.1.0", package = "system-parachains-common", default-features = false }
 tokio = { version = "1.45.0" }
 xcm = { version = "21.0.0", default-features = false, package = "staging-xcm" }
 xcm-builder = { version = "25.0.0", default-features = false, package = "staging-xcm-builder" }
