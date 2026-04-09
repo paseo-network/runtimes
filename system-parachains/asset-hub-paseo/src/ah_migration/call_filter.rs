@@ -96,6 +96,7 @@ pub fn call_allowed_status(
 		Balances(..) => ON, // no reason to disable it, just convenience
 		Bounties(..) => OFF,
 		ChildBounties(..) => OFF,
+		MultiAssetBounties(..) => OFF,
 		Claims(..) => OFF,
 		CollatorSelection(..) => ON, // Why?
 		ConvictionVoting(..) => OFF,
@@ -106,8 +107,8 @@ pub fn call_allowed_status(
 		MultiBlockElectionSigned(..) => OFF,
 		MultiBlockElectionUnsigned(..) => OFF,
 		MultiBlockElectionVerifier(..) => OFF,
-		MultiBlockMigrations(..) => OFF, //Has not calls
-		MessageQueue(..) => ON,          // contains non-permissioned service calls
+		MultiBlockMigrations(..) => OFF,
+		MessageQueue(..) => ON, // contains non-permissioned service calls
 		Multisig(..) => OFF,
 		Nfts(..) => ON, // no reason to disable it, just convenience
 		NominationPools(..) => OFF,
@@ -128,10 +129,9 @@ pub fn call_allowed_status(
 		Staking(..) => OFF,
 		StakingRcClient(..) => ON,     // Keep on for incoming RC calls over XCM
 		StateTrieMigration(..) => OFF, // Deprecated
-		Sudo(..) => ON,
-		System(..) => ON,            // remark plus root calls
-		Timestamp(..) => ON,         // only `set` inherit
-		ToKusamaXcmRouter(..) => ON, // Allow to report bridge congestion
+		System(..) => ON,              // remark plus root calls
+		Timestamp(..) => ON,           // only `set` inherit
+		ToKusamaXcmRouter(..) => ON,   // Allow to report bridge congestion
 		Treasury(..) => OFF,
 		Uniques(..) => OFF,
 		Utility(..) => ON, // batching etc, just convenience
@@ -141,6 +141,7 @@ pub fn call_allowed_status(
 		XcmpQueue(..) => ON, // Allow updating XCM settings. Only by Fellowship and root.
 		Parameters(..) => ON, // allow governance to still update any params if needed
 		Revive(..) => OFF,
+		Sudo(..) => ON, // Paseo-specific: allow sudo during all phases
 	};
 	// Exhaustive match. Compiler ensures that we did not miss any.
 
@@ -167,13 +168,13 @@ pub fn call_allowed_before_migration(
 		MultiBlockElectionVerifier(..) => OFF,
 		NominationPools(..) => OFF,
 		VoterList(..) => OFF,
-		MultiBlockMigrations(..) => OFF, // Has not calls
 		// To avoid insert issues.
 		Indices(..) => OFF,
 		Vesting(..) => OFF,
 		// Governance disabled before migration starts.
 		Bounties(..) => OFF,
 		ChildBounties(..) => OFF,
+		MultiAssetBounties(..) => OFF,
 		ConvictionVoting(..) => OFF,
 		Referenda(..) => OFF,
 		Treasury(..) => OFF,
@@ -190,6 +191,7 @@ pub fn call_allowed_before_migration(
 		CumulusXcm(..) |
 		ForeignAssets(..) |
 		MessageQueue(..) |
+		MultiBlockMigrations(..) |
 		Multisig(..) |
 		Nfts(..) |
 		ParachainInfo(..) |
@@ -203,7 +205,6 @@ pub fn call_allowed_before_migration(
 		SnowbridgeSystemFrontend(..) |
 		StakingRcClient(..) |
 		StateTrieMigration(..) |
-		Sudo(..) |
 		System(..) |
 		Timestamp(..) |
 		ToKusamaXcmRouter(..) |
@@ -212,6 +213,7 @@ pub fn call_allowed_before_migration(
 		Whitelist(..) |
 		XcmpQueue(..) |
 		Revive(..) |
+		Sudo(..) |
 		Parameters(..) => ON,
 	}
 }
