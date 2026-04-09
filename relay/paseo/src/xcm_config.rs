@@ -60,6 +60,8 @@ parameter_types! {
 	pub TeleportTracking: Option<(AccountId, MintLocation)> = crate::RcMigrator::teleport_tracking();
 	/// Account of the treasury pallet.
 	pub TreasuryAccount: AccountId = Treasury::account_id();
+	// Fellows pluralistic body.
+	pub const FellowsBodyId: BodyId = BodyId::Technical;
 }
 
 /// The canonical means of converting a `Location` into an `AccountId`, used when we want to

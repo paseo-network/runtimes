@@ -22,14 +22,12 @@ use alloc::borrow::Cow;
 use sp_arithmetic::FixedI64;
 use sp_runtime::str_array as s;
 
-const fn percent(x: i32) -> sp_arithmetic::FixedI64 {
+const fn percent(x: i32) -> FixedI64 {
 	FixedI64::from_rational(x as u128, 100)
 }
-
 const fn per_mille(x: i32) -> FixedI64 {
 	FixedI64::from_rational(x as u128, 1000)
 }
-
 use pallet_referenda::Curve;
 const APP_ROOT: Curve = Curve::make_reciprocal(4, 28, percent(80), percent(50), percent(100));
 const SUP_ROOT: Curve = Curve::make_linear(28, 28, percent(0), percent(50));
@@ -263,7 +261,7 @@ const TRACKS_DATA: [pallet_referenda::Track<u16, Balance, BlockNumber>; 16] = [
 		info: pallet_referenda::TrackInfo {
 			name: s("small_spender"),
 			max_deciding: 5,
-			decision_deposit: GRAND,
+			decision_deposit: 500 * DOLLARS,
 			prepare_period: 4 * RC_HOURS,
 			decision_period: 28 * RC_DAYS,
 			confirm_period: 2 * RC_DAYS,
@@ -276,8 +274,8 @@ const TRACKS_DATA: [pallet_referenda::Track<u16, Balance, BlockNumber>; 16] = [
 		id: 33,
 		info: pallet_referenda::TrackInfo {
 			name: s("medium_spender"),
-			max_deciding: 50,
-			decision_deposit: 200 * DOLLARS,
+			max_deciding: 5,
+			decision_deposit: GRAND,
 			prepare_period: 4 * RC_HOURS,
 			decision_period: 28 * RC_DAYS,
 			confirm_period: 4 * RC_DAYS,
