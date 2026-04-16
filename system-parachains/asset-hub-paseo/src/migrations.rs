@@ -46,17 +46,12 @@ mod multiblock_migrations {
 	use xcm_builder::StartsWith;
 
 	/// MBM migrations to apply on runtime upgrade.
-	pub type MbmMigrations = (
+	pub type MbmMigrations =
 		assets_common::migrations::foreign_assets_reserves::ForeignAssetsReservesMigration<
 			Runtime,
 			ForeignAssetsInstance,
 			AssetHubPaseoForeignAssetsReservesProvider,
-		>,
-		pallet_assets_precompiles::MigrateForeignAssetPrecompileMappings<
-			Runtime,
-			ForeignAssetsInstance,
-		>,
-	);
+		>;
 
 	/// This type provides reserves information for `asset_id`. Meant to be used in a migration
 	/// running on the Asset Hub Paseo upgrade which changes the Foreign Assets
