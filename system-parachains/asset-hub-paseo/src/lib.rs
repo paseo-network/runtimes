@@ -134,7 +134,7 @@ use frame_system::{
 	limits::{BlockLength, BlockWeights},
 	EnsureRoot, EnsureSigned, EnsureSignedBy,
 };
-use pallet_assets_precompiles::{ForeignAssetId, ForeignIdConfig, InlineIdConfig, ERC20};
+use pallet_assets_precompiles::{InlineIdConfig, ERC20};
 use pallet_nfts::PalletFeatures;
 use pallet_nomination_pools::PoolId;
 use pallet_xcm_precompiles::XcmPrecompile;
@@ -412,13 +412,6 @@ parameter_types! {
 	pub const ForeignAssetsMetadataDepositPerByte: Balance = MetadataDepositPerByte::get();
 }
 
-impl pallet_assets_precompiles::ForeignAssetsConfig for Runtime {
-	// must match the AssetId type used by the `ForeignAssets` instance
-	type ForeignAssetId = <Runtime as pallet_assets::Config<ForeignAssetsInstance>>::AssetId;
-	#[cfg(feature = "runtime-benchmarks")]
-	type AssetsInstance = ForeignAssetsInstance;
-}
-
 /// Assets managed by some foreign location.
 ///
 /// Note: we do not declare a `ForeignAssetsCall` type, as this type is used in proxy definitions.
@@ -456,7 +449,7 @@ impl pallet_assets::Config<ForeignAssetsInstance> for Runtime {
 	type Holder = ();
 	type Extra = ();
 	type WeightInfo = weights::pallet_assets_foreign::WeightInfo<Runtime>;
-	type CallbackHandle = (ForeignAssetId<Runtime, ForeignAssetsInstance>,);
+	type CallbackHandle = ();
 	type AssetAccountDeposit = ForeignAssetsAssetAccountDeposit;
 	type RemoveItemsLimit = frame_support::traits::ConstU32<1000>;
 	type ReserveData = ForeignAssetReserveData;
@@ -1480,7 +1473,6 @@ impl pallet_revive::Config for Runtime {
 	type WeightInfo = pallet_revive::weights::SubstrateWeight<Self>;
 	type Precompiles = (
 		ERC20<Self, InlineIdConfig<0x120>, TrustBackedAssetsInstance>,
-		ERC20<Self, ForeignIdConfig<0x220, Self, ForeignAssetsInstance>, ForeignAssetsInstance>,
 		ERC20<Self, InlineIdConfig<0x320>, PoolAssetsInstance>,
 		XcmPrecompile<Self>,
 	);
@@ -1587,7 +1579,6 @@ construct_runtime!(
 
 		// Contracts
 		Revive: pallet_revive = 100,
-		AssetsPrecompiles: pallet_assets_precompiles::pallet = 101,
 
 		// Sudo.
 		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 251,

@@ -352,7 +352,6 @@ pub type Barrier = TrailingSetTopicAsId<
 							Equals<RelayTreasuryLocation>,
 							Equals<bridging::SiblingBridgeHub>,
 							AmbassadorEntities,
-							SecretaryEntities,
 							IsSiblingSystemParachain<ParaId, parachain_info::Pallet<Runtime>>,
 						),
 						TrustedAliasers,
