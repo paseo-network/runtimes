@@ -45,19 +45,15 @@ impl<T: frame_system::Config> runtime_parachains::on_demand::WeightInfo for Weig
 	/// Proof: `OnDemand::ParaIdAffinity` (`max_values`: None, `max_size`: None, mode: `Measured`)
 	/// Storage: `OnDemand::FreeEntries` (r:1 w:1)
 	/// Proof: `OnDemand::FreeEntries` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
-	/// The range of component `s` is `[1, 9999]`.
-	fn place_order_keep_alive(s: u32, ) -> Weight {
+	fn place_order_keep_alive() -> Weight {
 		// Proof Size summary in bytes:
-		//  Measured:  `132 + s * (8 ±0)`
-		//  Estimated: `3595 + s * (8 ±0)`
-		// Minimum execution time: 62_097_000 picoseconds.
-		Weight::from_parts(73_392_519, 0)
-			.saturating_add(Weight::from_parts(0, 3595))
-			// Standard Error: 289
-			.saturating_add(Weight::from_parts(26_773, 0).saturating_mul(s.into()))
-			.saturating_add(T::DbWeight::get().reads(5))
-			.saturating_add(T::DbWeight::get().writes(4))
-			.saturating_add(Weight::from_parts(0, 8).saturating_mul(s.into()))
+		//  Measured:  `80095`
+		//  Estimated: `81580`
+		// Minimum execution time: 131_699_000 picoseconds.
+		Weight::from_parts(142_160_000, 0)
+			.saturating_add(Weight::from_parts(0, 81580))
+			.saturating_add(T::DbWeight::get().reads(3))
+			.saturating_add(T::DbWeight::get().writes(3))
 	}
 	/// Storage: `OnDemand::QueueStatus` (r:1 w:1)
 	/// Proof: `OnDemand::QueueStatus` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
@@ -69,19 +65,15 @@ impl<T: frame_system::Config> runtime_parachains::on_demand::WeightInfo for Weig
 	/// Proof: `OnDemand::ParaIdAffinity` (`max_values`: None, `max_size`: None, mode: `Measured`)
 	/// Storage: `OnDemand::FreeEntries` (r:1 w:1)
 	/// Proof: `OnDemand::FreeEntries` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
-	/// The range of component `s` is `[1, 9999]`.
-	fn place_order_allow_death(s: u32, ) -> Weight {
+	fn place_order_allow_death() -> Weight {
 		// Proof Size summary in bytes:
-		//  Measured:  `132 + s * (8 ±0)`
-		//  Estimated: `3595 + s * (8 ±0)`
-		// Minimum execution time: 60_333_000 picoseconds.
-		Weight::from_parts(79_242_352, 0)
-			.saturating_add(Weight::from_parts(0, 3595))
-			// Standard Error: 277
-			.saturating_add(Weight::from_parts(24_800, 0).saturating_mul(s.into()))
-			.saturating_add(T::DbWeight::get().reads(5))
-			.saturating_add(T::DbWeight::get().writes(4))
-			.saturating_add(Weight::from_parts(0, 8).saturating_mul(s.into()))
+		//  Measured:  `80095`
+		//  Estimated: `81580`
+		// Minimum execution time: 130_830_000 picoseconds.
+		Weight::from_parts(141_219_000, 0)
+			.saturating_add(Weight::from_parts(0, 81580))
+			.saturating_add(T::DbWeight::get().reads(3))
+			.saturating_add(T::DbWeight::get().writes(3))
 	}
 	/// Storage: `OnDemand::QueueStatus` (r:1 w:1)
 	/// Proof: `OnDemand::QueueStatus` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
@@ -93,18 +85,14 @@ impl<T: frame_system::Config> runtime_parachains::on_demand::WeightInfo for Weig
 	/// Proof: `OnDemand::ParaIdAffinity` (`max_values`: None, `max_size`: None, mode: `Measured`)
 	/// Storage: `OnDemand::FreeEntries` (r:1 w:1)
 	/// Proof: `OnDemand::FreeEntries` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
-	/// The range of component `s` is `[1, 9999]`.
-	fn place_order_with_credits(s: u32, ) -> Weight {
+	fn place_order_with_credits() -> Weight {
 		// Proof Size summary in bytes:
-		//  Measured:  `166 + s * (8 ±0)`
-		//  Estimated: `3629 + s * (8 ±0)`
-		// Minimum execution time: 34_074_000 picoseconds.
-		Weight::from_parts(42_330_931, 0)
-			.saturating_add(Weight::from_parts(0, 3629))
-			// Standard Error: 247
-			.saturating_add(Weight::from_parts(25_191, 0).saturating_mul(s.into()))
-			.saturating_add(T::DbWeight::get().reads(5))
-			.saturating_add(T::DbWeight::get().writes(4))
-			.saturating_add(Weight::from_parts(0, 8).saturating_mul(s.into()))
+		//  Measured:  `80129`
+		//  Estimated: `83594`
+		// Minimum execution time: 114_320_000 picoseconds.
+		Weight::from_parts(123_950_000, 0)
+			.saturating_add(Weight::from_parts(0, 83594))
+			.saturating_add(T::DbWeight::get().reads(3))
+			.saturating_add(T::DbWeight::get().writes(3))
 	}
 }
