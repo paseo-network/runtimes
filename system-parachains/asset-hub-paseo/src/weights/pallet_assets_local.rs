@@ -574,4 +574,23 @@ impl<T: frame_system::Config> pallet_assets::WeightInfo for WeightInfo<T> {
 		Weight::from_parts(0, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 	}
+	fn migration_v2_foreign_asset_set_reserve_weight() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `119`
+		//  Estimated: `3675`
+		// Minimum execution time: 6_063_000 picoseconds.
+		Weight::from_parts(6_432_000, 0)
+			.saturating_add(Weight::from_parts(0, 3675))
+			.saturating_add(T::DbWeight::get().reads(1))
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
+	fn get_metadata() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `244`
+		//  Estimated: `3605`
+		// Minimum execution time: 5_733_000 picoseconds.
+		Weight::from_parts(6_145_000, 0)
+			.saturating_add(Weight::from_parts(0, 3605))
+			.saturating_add(T::DbWeight::get().reads(1))
+	}
 }
