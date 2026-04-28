@@ -42,7 +42,7 @@ impl<T: frame_system::Config> pallet_election_provider_multi_block::WeightInfo f
 	/// Proof: `MultiBlockElectionVerifier::StatusStorage` (`max_values`: Some(1), `max_size`: Some(5), added: 500, mode: `Measured`)
 	/// Storage: `Parameters::Parameters` (r:1 w:0)
 	/// Proof: `Parameters::Parameters` (`max_values`: None, `max_size`: Some(37), added: 2512, mode: `Measured`)
-	fn on_initialize_nothing() -> Weight {
+	fn per_block_nothing() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `121`
 		//  Estimated: `3586`
@@ -72,7 +72,7 @@ impl<T: frame_system::Config> pallet_election_provider_multi_block::WeightInfo f
 	/// Proof: `MultiBlockElection::PagedTargetSnapshotHash` (`max_values`: None, `max_size`: Some(56), added: 2531, mode: `Measured`)
 	/// Storage: `MultiBlockElection::PagedTargetSnapshot` (r:0 w:1)
 	/// Proof: `MultiBlockElection::PagedTargetSnapshot` (`max_values`: None, `max_size`: Some(64026), added: 66501, mode: `Measured`)
-	fn on_initialize_into_snapshot_msp() -> Weight {
+	fn per_block_snapshot_msp() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `95152`
 		//  Estimated: `5048617`
@@ -114,7 +114,7 @@ impl<T: frame_system::Config> pallet_election_provider_multi_block::WeightInfo f
 	/// Proof: `MultiBlockElection::PagedVoterSnapshot` (`max_values`: None, `max_size`: Some(389338), added: 391813, mode: `Measured`)
 	/// Storage: `MultiBlockElection::PagedVoterSnapshotHash` (r:0 w:1)
 	/// Proof: `MultiBlockElection::PagedVoterSnapshotHash` (`max_values`: None, `max_size`: Some(56), added: 2531, mode: `Measured`)
-	fn on_initialize_into_snapshot_rest() -> Weight {
+	fn per_block_snapshot_rest() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `1466808`
 		//  Estimated: `3215148`
@@ -156,23 +156,7 @@ impl<T: frame_system::Config> pallet_election_provider_multi_block::WeightInfo f
 	/// Proof: `MultiBlockElection::PagedVoterSnapshot` (`max_values`: None, `max_size`: Some(389338), added: 391813, mode: `Measured`)
 	/// Storage: `MultiBlockElection::PagedVoterSnapshotHash` (r:0 w:1)
 	/// Proof: `MultiBlockElection::PagedVoterSnapshotHash` (`max_values`: None, `max_size`: Some(56), added: 2531, mode: `Measured`)
-	fn on_initialize_into_signed() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `1536753`
-		//  Estimated: `3285093`
-		// Minimum execution time: 50_680_447_000 picoseconds.
-		Weight::from_parts(54_647_388_000, 0)
-			.saturating_add(Weight::from_parts(0, 3285093))
-			.saturating_add(T::DbWeight::get().reads(2865))
-			.saturating_add(T::DbWeight::get().writes(6))
-	}
-	/// Storage: `MultiBlockElection::CurrentPhase` (r:1 w:1)
-	/// Proof: `MultiBlockElection::CurrentPhase` (`max_values`: Some(1), `max_size`: Some(5), added: 500, mode: `Measured`)
-	/// Storage: `Parameters::Parameters` (r:1 w:0)
-	/// Proof: `Parameters::Parameters` (`max_values`: None, `max_size`: Some(37), added: 2512, mode: `Measured`)
-	/// Storage: `MultiBlockElectionVerifier::StatusStorage` (r:1 w:0)
-	/// Proof: `MultiBlockElectionVerifier::StatusStorage` (`max_values`: Some(1), `max_size`: Some(5), added: 500, mode: `Measured`)
-	fn on_initialize_into_signed_validation() -> Weight {
+	fn per_block_start_signed_validation() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `315`
 		//  Estimated: `3780`
@@ -180,22 +164,6 @@ impl<T: frame_system::Config> pallet_election_provider_multi_block::WeightInfo f
 		Weight::from_parts(4_389_523_000, 0)
 			.saturating_add(Weight::from_parts(0, 3780))
 			.saturating_add(T::DbWeight::get().reads(3))
-			.saturating_add(T::DbWeight::get().writes(1))
-	}
-	/// Storage: `MultiBlockElection::CurrentPhase` (r:1 w:1)
-	/// Proof: `MultiBlockElection::CurrentPhase` (`max_values`: Some(1), `max_size`: Some(5), added: 500, mode: `Measured`)
-	/// Storage: `MultiBlockElectionVerifier::StatusStorage` (r:1 w:0)
-	/// Proof: `MultiBlockElectionVerifier::StatusStorage` (`max_values`: Some(1), `max_size`: Some(5), added: 500, mode: `Measured`)
-	/// Storage: `Parameters::Parameters` (r:2 w:0)
-	/// Proof: `Parameters::Parameters` (`max_values`: None, `max_size`: Some(37), added: 2512, mode: `Measured`)
-	fn on_initialize_into_unsigned() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `315`
-		//  Estimated: `6255`
-		// Minimum execution time: 4_019_149_000 picoseconds.
-		Weight::from_parts(4_618_533_000, 0)
-			.saturating_add(Weight::from_parts(0, 6255))
-			.saturating_add(T::DbWeight::get().reads(4))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
 	/// Storage: `MultiBlockElection::CurrentPhase` (r:1 w:1)

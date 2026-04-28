@@ -61,4 +61,28 @@ impl<T: frame_system::Config> cumulus_pallet_parachain_system::WeightInfo for We
 			.saturating_add(T::DbWeight::get().writes(5))
 			.saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(n.into())))
 	}
+	fn block_weight_tx_extension_max_weight() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 6_740_000 picoseconds.
+		Weight::from_parts(7_440_000, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+	}
+	fn block_weight_tx_extension_stays_fraction_of_core() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 6_730_000 picoseconds.
+		Weight::from_parts(7_280_000, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+	}
+	fn block_weight_tx_extension_full_core() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 3_151_000 picoseconds.
+		Weight::from_parts(3_531_000, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+	}
 }

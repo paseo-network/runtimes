@@ -17,6 +17,7 @@ use crate::{governance::Treasurer, *};
 use frame_support::traits::{
 	fungible::HoldConsideration, tokens::UnityOrOuterConversion, FromContains,
 };
+use pallet_bounties::TransferAllFungibles;
 use parachains_common::pay::{AccountIdToLocalLocation, LocalPay, VersionedLocatableAccount};
 use polkadot_runtime_common::impls::{ContainsParts, VersionedLocatableAsset};
 
@@ -41,7 +42,7 @@ impl pallet_treasury::Config for Runtime {
 	type Currency = Balances;
 	type RejectOrigin = EitherOfDiverse<EnsureRoot<AccountId>, Treasurer>;
 	type RuntimeEvent = RuntimeEvent;
-	type SpendPeriod = pallet_ah_migrator::LeftOrRight<AhMigrator, DisableSpends, SpendPeriod>;
+	type SpendPeriod = SpendPeriod;
 	type Burn = ();
 	type BurnDestination = ();
 	type SpendFunds = Bounties;
@@ -74,6 +75,10 @@ parameter_types! {
 	pub const CuratorDepositMin: Balance = 10 * DOLLARS;
 	pub const CuratorDepositMax: Balance = 200 * DOLLARS;
 	pub const BountyValueMinimum: Balance = 10 * DOLLARS;
+	// Assets that legacy bounties can hold. Paseo testnet only uses native PAS.
+	pub BountyRelevantAssets: Vec<xcm::latest::Location> = vec![
+		xcm_config::DotLocation::get(),
+	];
 }
 
 impl pallet_bounties::Config for Runtime {
@@ -90,6 +95,7 @@ impl pallet_bounties::Config for Runtime {
 	type MaximumReasonLength = MaximumReasonLength;
 	type OnSlash = Treasury;
 	type WeightInfo = weights::pallet_bounties::WeightInfo<Runtime>;
+	type TransferAllAssets = TransferAllFungibles<AccountId, NativeAndAssets, BountyRelevantAssets>;
 }
 
 parameter_types! {

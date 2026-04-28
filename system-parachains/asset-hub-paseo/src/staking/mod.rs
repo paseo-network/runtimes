@@ -102,29 +102,13 @@ parameter_types! {
 	pub const BagThresholds: &'static [u64] = &bags_thresholds::THRESHOLDS;
 }
 
-/// We don't want to do any auto-rebags in pallet-bags while the migration is not started or
-/// ongoing.
-pub struct RebagIffMigrationDone;
-impl sp_runtime::traits::Get<u32> for RebagIffMigrationDone {
-	fn get() -> u32 {
-		if cfg!(feature = "runtime-benchmarks") ||
-			pallet_ah_migrator::MigrationEndBlock::<Runtime>::get()
-				.is_some_and(|n| frame_system::Pallet::<Runtime>::block_number() > n + 1)
-		{
-			10
-		} else {
-			0
-		}
-	}
-}
-
 type VoterBagsListInstance = pallet_bags_list::Instance1;
 impl pallet_bags_list::Config<VoterBagsListInstance> for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type ScoreProvider = Staking;
 	type BagThresholds = BagThresholds;
 	type Score = sp_npos_elections::VoteWeight;
-	type MaxAutoRebagPerBlock = RebagIffMigrationDone;
+	type MaxAutoRebagPerBlock = ConstU32<10>;
 	type WeightInfo = weights::pallet_bags_list::WeightInfo<Runtime>;
 }
 
@@ -201,6 +185,7 @@ impl multi_block::Config for Runtime {
 	type AreWeDone = multi_block::ProceedRegardlessOf<Self>;
 	type OnRoundRotation = multi_block::CleanRound<Self>;
 	type WeightInfo = weights::pallet_election_provider_multi_block::WeightInfo<Runtime>;
+	type Signed = MultiBlockElectionSigned;
 }
 
 impl multi_block::verifier::Config for Runtime {
@@ -208,7 +193,6 @@ impl multi_block::verifier::Config for Runtime {
 	type MaxBackersPerWinner = MaxBackersPerWinner;
 	type MaxBackersPerWinnerFinal = MaxBackersPerWinnerFinal;
 	type SolutionDataProvider = MultiBlockElectionSigned;
-	type SolutionImprovementThreshold = ();
 	type WeightInfo = weights::pallet_election_provider_multi_block_verifier::WeightInfo<Runtime>;
 }
 
@@ -492,7 +476,6 @@ impl pallet_staking_async::Config for Runtime {
 	type HistoryDepth = frame_support::traits::ConstU32<84>;
 	type MaxControllersInDeprecationBatch = MaxControllersInDeprecationBatch;
 	type EventListeners = (NominationPools, DelegatedStaking);
-	type MaxInvulnerables = frame_support::traits::ConstU32<20>;
 	// This will start election for the next era as soon as an era starts.
 	type PlanningEraOffset = ConstU32<6>;
 	type RcClientInterface = StakingRcClient;
