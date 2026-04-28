@@ -6,7 +6,6 @@ repository = "https://github.com/paseo-network/runtimes.git"
 license = "GPL-3.0-only"                                     # TODO <https://github.com/paseo-fellows/runtimes/issues/29>
 
 [workspace.dependencies]
-pallet-ah-migrator = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.1.1", default-features = false }
 pallet-rc-migrator = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.2.2", default-features = false }
 pallet-ah-ops = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.2.2", default-features = false }
 pallet-election-provider-multi-block = { version = "0.8.0", default-features = false }
@@ -207,7 +206,7 @@ people-kusama-emulated-chain = { path = "integration-tests/emulated/chains/parac
 people-kusama-runtime = { path = "system-parachains/people/people-kusama" }
 paseo-core-primitives = { version = "21.0.0", default-features = false }
 paseo-parachain-primitives = { version = "20.0.0", default-features = false }
-paseo-primitives = { package = "polkadot-primitives", version = "22.0.0", default-features = false }
+paseo-primitives = { package = "polkadot-primitives", version = "23.0.0", default-features = false }
 polkadot-core-primitives = { version = "22.0.0", default-features = false }
 polkadot-parachain-primitives = { version = "21.0.0", default-features = false }
 polkadot-primitives = { version = "23.0.0", default-features = false }

@@ -65,7 +65,6 @@ compile_error!("Asset Hub migration requires the `paseo-ahm` feature");
 extern crate alloc;
 
 // Genesis preset configurations.
-pub mod ah_migration;
 pub mod bridge_to_ethereum_config;
 pub mod genesis_config_presets;
 pub mod governance;
@@ -123,18 +122,19 @@ use frame_support::{
 		fungible::{self, HoldConsideration},
 		fungibles,
 		tokens::imbalance::{ResolveAssetTo, ResolveTo},
-		AsEnsureOriginWithArg, ConstBool, ConstU32, ConstU64, ConstU8, Contains, EitherOf,
-		EitherOfDiverse, Equals, InstanceFilter, LinearStoragePrice, NeverEnsureOrigin,
-		PrivilegeCmp, TransformOrigin, WithdrawReasons,
+		AsEnsureOriginWithArg, ConstBool, ConstU32, ConstU64, ConstU8, EitherOf, EitherOfDiverse,
+		Equals, InstanceFilter, LinearStoragePrice, NeverEnsureOrigin, PrivilegeCmp,
+		TransformOrigin, WithdrawReasons,
 	},
 	weights::{ConstantMultiplier, Weight},
 	PalletId,
 };
 use frame_system::{
 	limits::{BlockLength, BlockWeights},
+	pallet_prelude::BlockNumberFor,
 	EnsureRoot, EnsureSigned, EnsureSignedBy,
 };
-use pallet_assets_precompiles::{InlineIdConfig, ERC20};
+use pallet_assets_precompiles::{ForeignAssetId, ForeignIdConfig, InlineIdConfig, ERC20};
 use pallet_nfts::PalletFeatures;
 use pallet_nomination_pools::PoolId;
 use pallet_xcm_precompiles::XcmPrecompile;
@@ -142,7 +142,7 @@ use parachains_common::{
 	message_queue::*, AccountId, AssetIdForTrustBackedAssets, AuraId, Balance, BlockNumber, Hash,
 	Header, Nonce, Signature,
 };
-use sp_runtime::RuntimeDebug;
+use sp_runtime::Debug;
 use system_parachains_common::ForceUnstuckOnFailedMigration;
 pub use system_parachains_constants::async_backing::SLOT_DURATION;
 use system_parachains_constants::{
@@ -194,7 +194,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	impl_name: Cow::Borrowed("asset-hub-paseo"),
 	spec_name: Cow::Borrowed("asset-hub-paseo"),
 	authoring_version: 1,
-	spec_version: 2_001_001,
+	spec_version: 2_002_002,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 15,
@@ -210,7 +210,12 @@ pub fn native_version() -> NativeVersion {
 parameter_types! {
 	pub const Version: RuntimeVersion = VERSION;
 	pub RuntimeBlockLength: BlockLength =
-		BlockLength::max_with_normal_ratio(5 * 1024 * 1024, NORMAL_DISPATCH_RATIO);
+		BlockLength::builder()
+			.max_length(5 * 1024 * 1024)
+			.modify_max_length_for_class(DispatchClass::Normal, |m| {
+				*m = NORMAL_DISPATCH_RATIO * *m
+			})
+			.build();
 	pub RuntimeBlockWeights: BlockWeights = BlockWeights::builder()
 		.base_block(BlockExecutionWeight::get())
 		.for_class(DispatchClass::all(), |weights| {
@@ -234,7 +239,7 @@ parameter_types! {
 
 // Configure FRAME pallets to include in runtime.
 impl frame_system::Config for Runtime {
-	type BaseCallFilter = AhMigrator;
+	type BaseCallFilter = frame_support::traits::Everything;
 	type BlockWeights = RuntimeBlockWeights;
 	type BlockLength = RuntimeBlockLength;
 	type AccountId = AccountId;
@@ -359,6 +364,9 @@ impl pallet_transaction_payment::Config for Runtime {
 	type WeightInfo = weights::pallet_transaction_payment::WeightInfo<Self>;
 }
 
+#[cfg(feature = "runtime-benchmarks")]
+impl pallet_transaction_payment::BenchmarkConfig for Runtime {}
+
 parameter_types! {
 	pub const AssetDeposit: Balance = system_para_deposit(1, 190);
 	pub const AssetAccountDeposit: Balance = system_para_deposit(1, 16);
@@ -449,7 +457,7 @@ impl pallet_assets::Config<ForeignAssetsInstance> for Runtime {
 	type Holder = ();
 	type Extra = ();
 	type WeightInfo = weights::pallet_assets_foreign::WeightInfo<Runtime>;
-	type CallbackHandle = ();
+	type CallbackHandle = (ForeignAssetId<Runtime, ForeignAssetsInstance>,);
 	type AssetAccountDeposit = ForeignAssetsAssetAccountDeposit;
 	type RemoveItemsLimit = frame_support::traits::ConstU32<1000>;
 	type ReserveData = ForeignAssetReserveData;
@@ -516,18 +524,20 @@ parameter_types! {
 	Copy,
 	Clone,
 	Eq,
+	Default,
 	PartialEq,
 	Ord,
 	PartialOrd,
 	Encode,
 	Decode,
 	DecodeWithMemTracking,
-	RuntimeDebug,
+	Debug,
 	MaxEncodedLen,
 	scale_info::TypeInfo,
 )]
 pub enum ProxyType {
 	/// Fully permissioned proxy. Can execute any call on behalf of _proxied_.
+	#[default]
 	Any,
 	/// Can execute any call that does not transfer funds or assets.
 	NonTransfer,
@@ -573,12 +583,6 @@ pub enum ProxyType {
 	/// and `Utility` batching calls (batch, batch_all, force_batch).
 	StakingOperator,
 }
-impl Default for ProxyType {
-	fn default() -> Self {
-		Self::Any
-	}
-}
-
 impl InstanceFilter<RuntimeCall> for ProxyType {
 	fn filter(&self, c: &RuntimeCall) -> bool {
 		match self {
@@ -1168,16 +1172,11 @@ parameter_types! {
 		RuntimeHoldReason::Preimage(pallet_preimage::HoldReason::Preimage);
 }
 
-ord_parameter_types! {
-	pub const ManagerMultisig: AccountId = pallet_rc_migrator::Pallet::<Runtime>::manager_multisig_id();
-}
-
 impl pallet_preimage::Config for Runtime {
 	type WeightInfo = weights::pallet_preimage::WeightInfo<Runtime>;
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
-	type ManagerOrigin =
-		EitherOfDiverse<EnsureRoot<AccountId>, EnsureSignedBy<ManagerMultisig, AccountId>>;
+	type ManagerOrigin = EnsureRoot<AccountId>;
 	type Consideration = HoldConsideration<
 		AccountId,
 		Balances,
@@ -1214,11 +1213,7 @@ impl pallet_scheduler::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type PalletsOrigin = OriginCaller;
 	type RuntimeCall = RuntimeCall;
-	type MaximumWeight = pallet_ah_migrator::LeftOrRight<
-		AhMigrator,
-		ZeroWeight,
-		dynamic_params::scheduler::MaximumWeight,
-	>;
+	type MaximumWeight = dynamic_params::scheduler::MaximumWeight;
 	// Also allow Treasurer to schedule recurring payments.
 	type ScheduleOrigin = EitherOf<EnsureRoot<AccountId>, Treasurer>;
 	type MaxScheduledPerBlock = dynamic_params::scheduler::MaxScheduledPerBlock;
@@ -1411,49 +1406,22 @@ impl pallet_ah_ops::Config for Runtime {
 	type RcBlockNumberProvider = RelaychainDataProvider<Runtime>;
 	type MigrateOrigin = EnsureRoot<AccountId>;
 	type WeightInfo = weights::pallet_ah_ops::WeightInfo<Runtime>;
-	type MigrationCompletion = pallet_rc_migrator::types::MigrationCompletion<AhMigrator>;
+	type MigrationCompletion = ConstBool<true>;
 	type TreasuryPreMigrationAccount = xcm_config::PreMigrationRelayTreasuryPalletAccount;
 	type TreasuryPostMigrationAccount = xcm_config::PostMigrationTreasuryAccount;
+	type MigrationStartBlock = MigrationStartBlock;
+	type MigrationEndBlock = MigrationEndBlock;
 }
 
 parameter_types! {
-	pub const DmpQueuePriorityPattern: (BlockNumber, BlockNumber) = (18, 2);
-}
-
-impl pallet_ah_migrator::Config for Runtime {
-	type RuntimeHoldReason = RuntimeHoldReason;
-	type RuntimeFreezeReason = RuntimeFreezeReason;
-	type PortableHoldReason = pallet_rc_migrator::types::PortableHoldReason;
-	type PortableFreezeReason = pallet_rc_migrator::types::PortableFreezeReason;
-	type RuntimeEvent = RuntimeEvent;
-	type AdminOrigin = EnsureRoot<AccountId>;
-	type Currency = Balances;
-	type TreasuryBlockNumberProvider = RelaychainDataProvider<Runtime>;
-	type TreasuryPaymaster = treasury::TreasuryPaymaster;
-	type Assets = NativeAndAssets;
-	type CheckingAccount = xcm_config::CheckingAccount;
-	type StakingPotAccount = xcm_config::StakingPot;
-	type RcProxyType = ah_migration::RcProxyType;
-	type RcToProxyType = ah_migration::RcToProxyType;
-	type RcBlockNumberProvider = RelaychainDataProvider<Runtime>;
-	type RcToAhCall = ah_migration::RcToAhCall;
-	type RcPalletsOrigin = ah_migration::RcPalletsOrigin;
-	type RcToAhPalletsOrigin = ah_migration::RcToAhPalletsOrigin;
-	type Preimage = Preimage;
-	type SendXcm = xcm_builder::WithUniqueTopic<xcm_config::LocalXcmRouterWithoutException>;
-	type AhWeightInfo = weights::pallet_ah_migrator::WeightInfo<Runtime>;
-	type TreasuryAccounts = ah_migration::TreasuryAccounts;
-	type RcToAhTreasurySpend = ah_migration::RcToAhTreasurySpend;
-	type AhPreMigrationCalls = ah_migration::call_filter::CallsEnabledBeforeMigration;
-	type AhIntraMigrationCalls = ah_migration::call_filter::CallsEnabledDuringMigration;
-	type AhPostMigrationCalls = ah_migration::call_filter::CallsEnabledAfterMigration;
-	type MessageQueue = MessageQueue;
-	type DmpQueuePriorityPattern = DmpQueuePriorityPattern;
+	/// Paseo testnet AHM has not yet executed; sentinel 0 until actual block numbers are known.
+	pub MigrationStartBlock: BlockNumberFor<Runtime> = 0u32;
+	pub MigrationEndBlock: BlockNumberFor<Runtime> = 0u32;
 }
 
 parameter_types! {
 	pub const DepositPerItem: Balance = system_para_deposit(1, 0);
-	pub const DepositPerChildTrieItem: Balance = system_para_deposit(1, 0) / 10;
+	pub const DepositPerChildTrieItem: Balance = system_para_deposit(1, 0) / 100;
 	pub const DepositPerByte: Balance = system_para_deposit(0, 1);
 	pub CodeHashLockupDepositPercent: Perbill = Perbill::from_percent(30);
 	pub const MaxEthExtrinsicWeight: FixedU128 = FixedU128::from_rational(5, 10);
@@ -1474,12 +1442,12 @@ impl pallet_revive::Config for Runtime {
 	type Precompiles = (
 		ERC20<Self, InlineIdConfig<0x120>, TrustBackedAssetsInstance>,
 		ERC20<Self, InlineIdConfig<0x320>, PoolAssetsInstance>,
+		ERC20<Self, ForeignIdConfig<0x220, Self, ForeignAssetsInstance>, ForeignAssetsInstance>,
 		XcmPrecompile<Self>,
 	);
 	type AddressMapper = pallet_revive::AccountId32Mapper<Self>;
 	type RuntimeMemory = ConstU32<{ 128 * 1024 * 1024 }>;
 	type PVFMemory = ConstU32<{ 512 * 1024 * 1024 }>;
-	type UnsafeUnstableInterface = ConstBool<false>;
 	type UploadOrigin = EnsureSigned<Self::AccountId>;
 	type InstantiateOrigin = EnsureSigned<Self::AccountId>;
 	type RuntimeHoldReason = RuntimeHoldReason;
@@ -1493,6 +1461,19 @@ impl pallet_revive::Config for Runtime {
 	// Must be set to `false` in a live chain
 	type DebugEnabled = ConstBool<false>;
 	type GasScale = ConstU32<100_000>;
+	type OnBurn = Dap;
+}
+
+impl pallet_assets_precompiles::ForeignAssetsConfig for Runtime {
+	// must match the AssetId type used by the `ForeignAssets` instance
+	type ForeignAssetId = <Runtime as pallet_assets::Config<ForeignAssetsInstance>>::AssetId;
+	#[cfg(feature = "runtime-benchmarks")]
+	type AssetsInstance = ForeignAssetsInstance;
+}
+
+impl pallet_assets_precompiles::PermitConfig for Runtime {
+	type ChainId = <Runtime as pallet_revive::Config>::ChainId;
+	type WeightInfo = pallet_assets_precompiles::weights::SubstrateWeight<Runtime>;
 }
 
 impl cumulus_pallet_weight_reclaim::Config for Runtime {
@@ -1585,7 +1566,6 @@ construct_runtime!(
 
 		// Asset Hub Migration in the 250s
 		AhOps: pallet_ah_ops = 254,
-		AhMigrator: pallet_ah_migrator = 255,
 	}
 );
 
@@ -1739,6 +1719,7 @@ mod benches {
 		[pallet_assets, Local]
 		[pallet_assets, Foreign]
 		[pallet_assets, Pool]
+		[pallet_assets_precompiles, AssetsPrecompiles]
 		[pallet_asset_conversion, AssetConversion]
 		[pallet_asset_conversion_tx_payment, AssetTxPayment]
 		[pallet_balances, Balances]
@@ -1769,7 +1750,6 @@ mod benches {
 		[pallet_child_bounties, ChildBounties]
 		[pallet_asset_rate, AssetRate]
 		[pallet_multi_asset_bounties, MultiAssetBounties]
-		[pallet_ah_migrator, AhMigrator]
 		[pallet_indices, Indices]
 		[polkadot_runtime_common::claims, Claims]
 		[pallet_ah_ops, AhOps]
@@ -1800,7 +1780,7 @@ mod benches {
 
 	use xcm::latest::prelude::{
 		AccountId32, Asset, Assets as XcmAssets, Fungible, Here, InteriorLocation, Junction,
-		Location, NetworkId, NonFungible, Parent, ParentThen, Response, XCM_VERSION,
+		Location, NetworkId, Parent, ParentThen, Response, XCM_VERSION,
 	};
 
 	impl frame_system_benchmarking::Config for Runtime {
@@ -1816,7 +1796,12 @@ mod benches {
 		}
 	}
 
-	impl cumulus_pallet_session_benchmarking::Config for Runtime {}
+	impl cumulus_pallet_session_benchmarking::Config for Runtime {
+		fn generate_session_keys_and_proof(owner: Self::AccountId) -> (Self::Keys, Vec<u8>) {
+			let keys = SessionKeys::generate(&owner.encode(), None);
+			(keys.keys, keys.proof.encode())
+		}
+	}
 
 	use pallet_xcm_benchmarks::asset_instance_from;
 	use xcm_config::{DotLocation, MaxAssetsIntoHolding};
@@ -1840,9 +1825,10 @@ mod benches {
 			[AccountId32 { network: None, id: account.into() }].into()
 		}
 
-		fn generate_session_keys() -> Vec<u8> {
+		fn generate_session_keys_and_proof(owner: Self::AccountId) -> (Vec<u8>, Vec<u8>) {
 			use staking::RelayChainSessionKeys;
-			RelayChainSessionKeys::generate(None)
+			let keys = RelayChainSessionKeys::generate(&owner.encode(), None);
+			(keys.keys.encode(), keys.proof.encode())
 		}
 
 		fn setup_validator() -> Self::AccountId {
@@ -2008,32 +1994,40 @@ mod benches {
 		fn valid_destination() -> Result<Location, BenchmarkError> {
 			Ok(PeopleLocation::get())
 		}
-		fn worst_case_holding(depositable_count: u32) -> XcmAssets {
+		fn worst_case_holding(depositable_count: u32) -> xcm_executor::AssetsInHolding {
+			use pallet_xcm_benchmarks::MockCredit;
 			// A mix of fungible, non-fungible, and concrete assets.
 			let holding_non_fungibles = MaxAssetsIntoHolding::get() / 2 - depositable_count;
-			let holding_fungibles = holding_non_fungibles.saturating_sub(2); // -2 for two `iter::once` bellow
+			let holding_fungibles = holding_non_fungibles - 2; // -2 for two `iter::once` below
 			let fungibles_amount: u128 = 100;
-			(0..holding_fungibles)
-				.map(|i| {
-					Asset {
-						id: AssetId(GeneralIndex(i as u128).into()),
-						fun: Fungible(fungibles_amount * (i + 1) as u128), // non-zero amount
-					}
-				})
-				.chain(core::iter::once(Asset {
-					id: AssetId(Here.into()),
-					fun: Fungible(u128::MAX),
-				}))
-				.chain(core::iter::once(Asset {
-					id: AssetId(DotLocation::get()),
-					fun: Fungible(1_000_000 * UNITS),
-				}))
-				.chain((0..holding_non_fungibles).map(|i| Asset {
-					id: AssetId(GeneralIndex(i as u128).into()),
-					fun: NonFungible(asset_instance_from(i)),
-				}))
-				.collect::<Vec<_>>()
-				.into()
+
+			let mut holding = xcm_executor::AssetsInHolding::new();
+
+			// Add fungible assets with MockCredit
+			for i in 0..holding_fungibles {
+				holding.fungible.insert(
+					AssetId(GeneralIndex(i as u128).into()),
+					alloc::boxed::Box::new(MockCredit(fungibles_amount * (i + 1) as u128)),
+				);
+			}
+
+			// Add two more fungible assets
+			holding
+				.fungible
+				.insert(AssetId(Here.into()), alloc::boxed::Box::new(MockCredit(u128::MAX)));
+			holding.fungible.insert(
+				AssetId(DotLocation::get()),
+				alloc::boxed::Box::new(MockCredit(1_000_000 * UNITS)),
+			);
+
+			// Add non-fungible assets
+			for i in 0..holding_non_fungibles {
+				holding
+					.non_fungible
+					.insert((AssetId(GeneralIndex(i as u128).into()), asset_instance_from(i)));
+			}
+
+			holding
 		}
 	}
 
@@ -2362,8 +2356,8 @@ pallet_revive::impl_runtime_apis_plus_revive_traits!(
 	}
 
 	impl sp_session::SessionKeys<Block> for Runtime {
-		fn generate_session_keys(seed: Option<Vec<u8>>) -> Vec<u8> {
-			SessionKeys::generate(seed)
+		fn generate_session_keys(owner: Vec<u8>, seed: Option<Vec<u8>>) -> sp_session::OpaqueGeneratedSessionKeys {
+			SessionKeys::generate(&owner, seed).into()
 		}
 
 		fn decode_session_keys(

@@ -57,7 +57,7 @@ impl<T: frame_system::Config> pallet_election_provider_multi_block::verifier::We
 	/// Proof: `MultiBlockElectionVerifier::QueuedSolutionX` (`max_values`: None, `max_size`: Some(33842026), added: 33844501, mode: `Measured`)
 	/// Storage: `MultiBlockElectionVerifier::QueuedSolutionBackings` (r:0 w:1)
 	/// Proof: `MultiBlockElectionVerifier::QueuedSolutionBackings` (`max_values`: None, `max_size`: Some(52026), added: 54501, mode: `Measured`)
-	fn on_initialize_valid_non_terminal() -> Weight {
+	fn verification_valid_non_terminal() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `353444`
 		//  Estimated: `361859`
@@ -97,7 +97,7 @@ impl<T: frame_system::Config> pallet_election_provider_multi_block::verifier::We
 	/// Proof: `Balances::Holds` (`max_values`: None, `max_size`: Some(229), added: 2704, mode: `Measured`)
 	/// Storage: `MultiBlockElectionVerifier::QueuedSolutionX` (r:0 w:1)
 	/// Proof: `MultiBlockElectionVerifier::QueuedSolutionX` (`max_values`: None, `max_size`: Some(33842026), added: 33844501, mode: `Measured`)
-	fn on_initialize_valid_terminal() -> Weight {
+	fn verification_valid_terminal() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `605106`
 		//  Estimated: `687771`
@@ -135,7 +135,7 @@ impl<T: frame_system::Config> pallet_election_provider_multi_block::verifier::We
 	/// Proof: `Balances::Holds` (`max_values`: None, `max_size`: Some(229), added: 2704, mode: `Measured`)
 	/// Storage: `MultiBlockElectionVerifier::QueuedSolutionX` (r:31 w:32)
 	/// Proof: `MultiBlockElectionVerifier::QueuedSolutionX` (`max_values`: None, `max_size`: Some(33842026), added: 33844501, mode: `Measured`)
-	fn on_initialize_invalid_terminal() -> Weight {
+	fn verification_invalid_terminal() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `606127`
 		//  Estimated: `688792`
@@ -174,7 +174,7 @@ impl<T: frame_system::Config> pallet_election_provider_multi_block::verifier::We
 	/// Storage: `Balances::Holds` (r:1 w:1)
 	/// Proof: `Balances::Holds` (`max_values`: None, `max_size`: Some(229), added: 2704, mode: `Measured`)
 	/// The range of component `v` is `[0, 31]`.
-	fn on_initialize_invalid_non_terminal(v: u32, ) -> Weight {
+	fn verification_invalid_non_terminal(v: u32, ) -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `441036 + v * (82 ±0)`
 		//  Estimated: `510533 + v * (2232 ±144)`
