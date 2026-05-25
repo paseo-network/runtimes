@@ -1560,6 +1560,8 @@ construct_runtime!(
 
 		// Contracts
 		Revive: pallet_revive = 100,
+		AssetsPrecompiles: pallet_assets_precompiles::pallet = 101,
+		AssetsPrecompilesPermit: pallet_assets_precompiles::permit::pallet = 102,
 
 		// Sudo.
 		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 251,
