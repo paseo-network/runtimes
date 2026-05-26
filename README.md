@@ -1,6 +1,8 @@
-# Runtimes
+# Paseo Runtimes
 
-Runtimes for Polkadot's community testnet.
+Runtime definitions for the Paseo testnet. This repository contains the relay
+runtime, system parachain runtimes, chain specs, and helper scripts used to keep
+Paseo aligned with Polkadot SDK changes.
 
 ## Structure
 
@@ -15,11 +17,12 @@ Runtimes for Polkadot's community testnet.
     ├── people-paseo
     ├── coretime-paseo
 ```
----
 
 ## Testnet vs Production
 
-The following section presents the differences between testnet and production runtimes. By showing users the variations in available features and operational costs, users can better adjust their expectations when transitioning from testnet to production environments.
+Paseo tracks the production networks closely, but it is still a testnet. Treat
+the tables below as a quick check before carrying assumptions from Paseo to
+Kusama or Polkadot.
 
 ### Features
 
@@ -44,3 +47,9 @@ The following section presents the differences between testnet and production ru
 | Asset Creation | ~0.0017 + 0.4 Deposit | ~0.00012 + 0.013 Deposit | ~0.0018 + 0.4 Deposit |
 | Identity Creation | ~0.002 + 0.2 Deposit | ~0.00009 + 0.006 Deposit | ~0.002 + 0.2 Deposit |
 | Contract Instantiation (12K polkavm blob) | ~0.12 + 0.6 Deposit | ~0.004 + 0.02 Deposit | - |
+
+## Monitoring
+
+The relay block production monitoring design is documented in
+`paseo-relay-block-production-slo-design.md`. Keep monitoring docs tied to the
+exporter, Prometheus rules, and runtime constants they describe.

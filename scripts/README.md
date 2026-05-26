@@ -1,14 +1,15 @@
 # Runtime Patch Scripts
 
-This directory contains scripts for managing runtime patches:
+These scripts move Paseo runtime changes between Polkadot SDK versions.
 
-1. `create_runtime_patch.sh`: Creates patch files with the new code from the Polkadot repo.
-2. `apply_runtime_patch.sh`: Applies patches.
-3. `revert_unwanted_changes.py`: Reverts specific changes in files.
+- `create_runtime_patch.sh`: Create patches from Polkadot runtime changes.
+- `apply_runtime_patch.sh`: Apply one patch file.
+- `revert_unwanted_changes.py`: Revert configured changes that should not land in Paseo.
 
-## Creating the runtime patch files
+## Create Runtime Patches
 
-Creates patch files for Paseo-specific modifications based on the differences between Polkadot runtime versions.
+Create patch files for Paseo-specific changes between two Polkadot runtime
+versions.
 
 Usage:
 
@@ -20,8 +21,8 @@ Parameters:
 
 - `current_version`: The current Paseo runtime version
 - `new_version`: The new Polkadot runtime version to update to
-- `--paseo-ref-branch`: Optional. Specify the branch to clone for Paseo runtime. Defaults to 'main'.
-- `--parachains`: Optional. Process parachains if specified.
+- `--paseo-ref-branch`: Branch to clone for the Paseo runtime. Defaults to `main`.
+- `--parachains`: Also process system parachains.
 
 Example:
 
@@ -33,13 +34,13 @@ Example:
 ./scripts/create_runtime_patch.sh 1.2.3 1.2.4 --parachains
 ```
 
-This script will create the following patch files in the `patches` directory:
+The script writes these files under `patches`:
 
-- `0001-Update-to-polkadot-relay-${NEXT_TAG}.patch`: Contains changes for the relay chain and Cargo.toml
-- `system-parachains/${parachain_name}/0001-update-to-${parachain_name}-${NEXT_TAG}.patch`: Created for each specified parachain if `--parachains` is set
-- `system-parachains/0001-update-to-parachains-${NEXT_TAG}.patch`: Contains changes for the `system-parachains/constants` directory and `system-parachains/Cargo.toml` file
+- `0001-Update-to-polkadot-relay-${NEXT_TAG}.patch`: Relay runtime and `Cargo.toml` changes.
+- `system-parachains/${parachain_name}/0001-update-to-${parachain_name}-${NEXT_TAG}.patch`: Per-parachain patch when `--parachains` is set.
+- `system-parachains/0001-update-to-parachains-${NEXT_TAG}.patch`: Shared system parachain constants and `Cargo.toml` changes.
 
-## Apply the patch
+## Apply a Patch
 
 Usage:
 
@@ -48,8 +49,9 @@ Usage:
 ```
 
 Parameters:
-- `--check`: Optional. Performs a dry run of the patch application process.
-- `<patch_file>`: Path to the patch file to be applied.
+
+- `--check`: Dry run. Validate the patch without changing files.
+- `<patch_file>`: Patch file to apply.
 
 Examples:
 
@@ -61,11 +63,12 @@ Examples:
 ./scripts/apply_runtime_patch.sh --check ../patches/relay_polkadot.patch
 ```
 
-This script will attempt to apply the specified patch file using Git's patch application functionality. If successful, it will unstage all changes, allowing you to review and commit them manually.
+After a successful apply, the script unstages the changes so they can be
+reviewed before commit.
 
-## Revert unwanted changes
+## Revert Unwanted Changes
 
-Reverts specific changes in files based on predefined rules.
+Revert configured changes that should not be carried into Paseo.
 
 Usage:
 
@@ -79,4 +82,5 @@ Example:
 python revert_unwanted_changes.py replacement_config.json
 ```
 
-The `revert_unwanted_changes.py` script logs its actions to `revert_unwanted_changes.log` in the current directory.
+The script writes its log to `revert_unwanted_changes.log` in the current
+directory.
