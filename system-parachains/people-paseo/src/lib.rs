@@ -134,7 +134,10 @@ pub mod migrations {
 	use super::*;
 
 	/// Unreleased migrations. Add new ones here:
-	pub type Unreleased = (cumulus_pallet_xcmp_queue::migration::v6::MigrateV5ToV6<Runtime>,);
+	pub type Unreleased = (
+		cumulus_pallet_xcmp_queue::migration::v6::MigrateV5ToV6<Runtime>,
+		cumulus_pallet_parachain_system::migration::Migration<Runtime>,
+	);
 
 	/// Migrations/checks that do not need to be versioned and can run on every update.
 	pub type Permanent = pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>;
@@ -166,7 +169,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: Cow::Borrowed("people-paseo"),
 	impl_name: Cow::Borrowed("people-paseo"),
 	authoring_version: 1,
-	spec_version: 2_002_002,
+	spec_version: 2_003_000,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 0,
@@ -261,13 +264,13 @@ impl pallet_balances::Config for Runtime {
 	type RuntimeFreezeReason = RuntimeFreezeReason;
 	type RuntimeHoldReason = RuntimeHoldReason;
 	type FreezeIdentifier = ();
-	type MaxFreezes = ConstU32<0>;
+	type MaxFreezes = frame_support::traits::VariantCountOf<RuntimeFreezeReason>;
 	type DoneSlashHandler = ();
 }
 
 parameter_types! {
 	/// Relay Chain `TransactionByteFee` / 10.
-	pub const TransactionByteFee: Balance = MILLICENTS;
+	pub const TransactionByteFee: Balance = system_parachains_constants::paseo::fee::TRANSACTION_BYTE_FEE;
 }
 
 impl pallet_transaction_payment::Config for Runtime {
