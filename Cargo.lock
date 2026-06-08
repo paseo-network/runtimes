@@ -2442,6 +2442,7 @@ dependencies = [
  "pallet-core-fellowship",
  "pallet-message-queue",
  "pallet-multisig",
+ "pallet-parameters",
  "pallet-preimage",
  "pallet-proxy",
  "pallet-ranked-collective",
