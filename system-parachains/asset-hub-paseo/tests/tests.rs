@@ -18,9 +18,10 @@
 //! Tests for the Paseo Asset Hub (previously known as Statemint) chain.
 
 use asset_hub_paseo_runtime::{
+	staking::DapStagingAccount,
 	xcm_config::{
 		bridging, CheckingAccount, DotLocation, LocationToAccountId, RelayChainLocation,
-		StakingPot, TrustBackedAssetsPalletLocation, XcmConfig,
+		TrustBackedAssetsPalletLocation, XcmConfig,
 	},
 	AllPalletsWithoutSystem, AssetDeposit, Assets, Balances, Block, Dap, ExistentialDeposit,
 	ForeignAssets, ForeignAssetsInstance, MetadataDepositBase, MetadataDepositPerByte,
@@ -400,7 +401,7 @@ fn limited_reserve_transfer_assets_for_native_asset_to_asset_hub_kusama_works() 
 fn receive_reserve_asset_deposited_ksm_from_asset_hub_kusama_fees_paid_by_pool_swap_works() {
 	const BLOCK_AUTHOR_ACCOUNT: [u8; 32] = [13; 32];
 	let block_author_account = AccountId::from(BLOCK_AUTHOR_ACCOUNT);
-	let staking_pot = StakingPot::get();
+	let staking_pot = DapStagingAccount::get();
 
 	let foreign_asset_id_location_v5 = Location::new(2, [GlobalConsensus(NetworkId::Kusama)]);
 	let reserve_location = Location::new(2, [GlobalConsensus(NetworkId::Kusama), Parachain(1000)]);
@@ -443,7 +444,7 @@ fn receive_reserve_asset_deposited_ksm_from_asset_hub_kusama_fees_paid_by_pool_s
 			// staking pot account for collecting local native fees from `BuyExecution`
 			let _ = Balances::force_set_balance(
 				RuntimeOrigin::root(),
-				StakingPot::get().into(),
+				DapStagingAccount::get().into(),
 				ExistentialDeposit::get(),
 			);
 			// prepare bridge configuration
@@ -451,7 +452,7 @@ fn receive_reserve_asset_deposited_ksm_from_asset_hub_kusama_fees_paid_by_pool_s
 		},
 		(
 			[PalletInstance(
-				bp_bridge_hub_paseo::WITH_BRIDGE_POLKAPAS_TO_KUSAMA_MESSAGES_PALLET_INDEX,
+				bp_bridge_hub_paseo::WITH_BRIDGE_POLKADOT_TO_KUSAMA_MESSAGES_PALLET_INDEX,
 			)]
 			.into(),
 			GlobalConsensus(Kusama),
@@ -1105,6 +1106,7 @@ fn staking_operator_filter_allows_validator_ops_and_session_keys() {
 	// StakingOperator can manage session keys
 	assert!(operator.filter(&RuntimeCall::StakingRcClient(RcClientCall::set_keys {
 		keys: Default::default(),
+		proof: Default::default(),
 		max_delivery_and_remote_execution_fee: None,
 	})));
 	assert!(operator.filter(&RuntimeCall::StakingRcClient(RcClientCall::purge_keys {

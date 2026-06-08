@@ -97,6 +97,7 @@ hex-literal = { version = "0.4.1" }
 log = { version = "0.4.22", default-features = false }
 pallet-alliance = { version = "47.0.0", default-features = false }
 pallet-asset-conversion = { version = "30.0.0", default-features = false }
+pallet-asset-conversion-precompiles = { version = "0.4.0", default-features = false }
 pallet-asset-conversion-tx-payment = { version = "30.0.0", default-features = false }
 pallet-asset-rate = { version = "27.0.0", default-features = false }
 pallet-asset-tx-payment = { version = "48.0.0", default-features = false }
@@ -191,6 +192,7 @@ pallet-treasury = { version = "47.0.0", default-features = false }
 pallet-uniques = { version = "48.0.0", default-features = false }
 pallet-utility = { version = "48.0.0", default-features = false }
 pallet-vesting = { version = "48.0.0", default-features = false }
+pallet-vesting-precompiles = { version = "0.4.0", default-features = false }
 pallet-whitelist = { version = "47.0.0", default-features = false }
 pallet-xcm = { version = "28.0.0", default-features = false }
 pallet-xcm-benchmarks = { version = "28.0.0", default-features = false }
@@ -206,7 +208,7 @@ people-kusama-emulated-chain = { path = "integration-tests/emulated/chains/parac
 people-kusama-runtime = { path = "system-parachains/people/people-kusama" }
 paseo-core-primitives = { version = "21.0.0", default-features = false }
 paseo-parachain-primitives = { version = "20.0.0", default-features = false }
-paseo-primitives = { package = "polkadot-primitives", version = "23.0.0", default-features = false }
+paseo-primitives = { package = "polkadot-primitives", version = "24.0.0", default-features = false }
 polkadot-core-primitives = { version = "23.0.0", default-features = false }
 polkadot-parachain-primitives = { version = "22.0.0", default-features = false }
 polkadot-primitives = { version = "24.0.0", default-features = false }
@@ -251,6 +253,7 @@ sp-arithmetic = { version = "28.0.1", default-features = false }
 sp-block-builder = { version = "42.0.0", default-features = false }
 sp-consensus-aura = { version = "0.48.0", default-features = false }
 sp-core = { version = "41.0.0", default-features = false }
+sp-dap = { version = "0.2.0", default-features = false }
 sp-debug-derive = { version = "15.0.0", default-features = false }
 sp-genesis-builder = { version = "0.23.0", default-features = false }
 sp-inherents = { version = "42.0.0", default-features = false }
