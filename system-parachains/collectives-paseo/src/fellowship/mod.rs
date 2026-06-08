@@ -49,9 +49,7 @@ use polkadot_runtime_common::impls::{
 };
 use sp_arithmetic::Permill;
 use sp_core::{ConstU128, ConstU32};
-use sp_runtime::traits::{
-	ConstU16, IdentityLookup, Replace, ReplaceWithDefault, TakeFirst,
-};
+use sp_runtime::traits::{ConstU16, IdentityLookup, Replace, ReplaceWithDefault, TakeFirst};
 use xcm_builder::{AliasesIntoAccountId32, PayOverXcm};
 
 #[cfg(feature = "runtime-benchmarks")]
