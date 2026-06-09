@@ -26,7 +26,7 @@ use paseo_system_emulated_network::penpal_emulated_chain::PARA_ID_B;
 use snowbridge_core::{reward::MessageId, TokenIdOf};
 use snowbridge_inbound_queue_primitives::v2::{
 	EthereumAsset::{ForeignTokenERC20, NativeTokenERC20},
-	Message, Network, XcmPayload,
+	Message, Network, Payload,
 };
 use sp_core::{H160, H256};
 use sp_io::hashing::blake2_256;
@@ -58,7 +58,7 @@ fn register_token_v2() {
 			nonce: 1,
 			origin,
 			assets: vec![],
-			xcm: XcmPayload::CreateAsset { token, network: Network::Polkadot },
+			payload: Payload::CreateAsset { token, network: Network::Polkadot },
 			claimer: Some(claimer_bytes),
 			// Used to pay the asset creation deposit.
 			value: TOKEN_AMOUNT,
@@ -166,7 +166,7 @@ fn send_token_v2() {
 			nonce: 1,
 			origin,
 			assets,
-			xcm: XcmPayload::Raw(versioned_message_xcm.encode()),
+			payload: Payload::Raw(versioned_message_xcm.encode()),
 			claimer: Some(claimer_bytes),
 			value: TOKEN_AMOUNT,
 			execution_fee: EXECUTION_IN_ETHER,
@@ -267,7 +267,7 @@ fn send_weth_v2() {
 			nonce: 1,
 			origin,
 			assets,
-			xcm: XcmPayload::Raw(versioned_message_xcm.encode()),
+			payload: Payload::Raw(versioned_message_xcm.encode()),
 			claimer: Some(claimer_bytes),
 			value: TOKEN_AMOUNT,
 			execution_fee: EXECUTION_IN_ETHER,
@@ -404,7 +404,7 @@ fn register_and_send_multiple_tokens_v2() {
 			nonce: 1,
 			origin,
 			assets,
-			xcm: XcmPayload::Raw(versioned_message_xcm.encode()),
+			payload: Payload::Raw(versioned_message_xcm.encode()),
 			claimer: Some(claimer_bytes),
 			value: eth_asset_value,
 			execution_fee: EXECUTION_IN_ETHER * 10, // Since this is a more expensive operation
@@ -562,7 +562,7 @@ fn send_token_to_penpal_v2() {
 			nonce: 1,
 			origin,
 			assets,
-			xcm: XcmPayload::Raw(versioned_message_xcm.encode()),
+			payload: Payload::Raw(versioned_message_xcm.encode()),
 			claimer: Some(claimer_bytes),
 			value: TOKEN_AMOUNT * 2,
 			execution_fee: EXECUTION_IN_ETHER,
@@ -628,12 +628,12 @@ fn send_token_to_penpal_v2() {
 					pallet_message_queue::Event::Processed { success: true, .. }
 				) => {},
 				// Token was issued to beneficiary
-				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { asset_id, owner, .. }) => {
+				RuntimeEvent::Assets(pallet_assets::Event::Issued { asset_id, owner, .. }) => {
 					asset_id: *asset_id == token_location,
 					owner: *owner == beneficiary_acc_bytes.into(),
 				},
 				// Leftover fees was deposited to beneficiary
-				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { asset_id, owner, .. }) => {
+				RuntimeEvent::Assets(pallet_assets::Event::Issued { asset_id, owner, .. }) => {
 					asset_id: *asset_id == eth_location(),
 					owner: *owner == beneficiary_acc_bytes.into(),
 				},
@@ -719,7 +719,7 @@ fn send_foreign_erc20_token_back_to_paseo() {
 			nonce: 1,
 			origin,
 			assets,
-			xcm: XcmPayload::Raw(versioned_message_xcm.encode()),
+			payload: Payload::Raw(versioned_message_xcm.encode()),
 			claimer: Some(claimer_bytes),
 			value: 1_500_000_000_000u128,
 			execution_fee: EXECUTION_IN_ETHER,
@@ -800,7 +800,7 @@ fn invalid_xcm_traps_funds_on_ah() {
 			nonce: 1,
 			origin,
 			assets,
-			xcm: XcmPayload::Raw(instructions.to_vec()),
+			payload: Payload::Raw(instructions.to_vec()),
 			claimer: Some(claimer_bytes),
 			value: EXECUTION_IN_ETHER,
 			execution_fee: EXECUTION_IN_ETHER,
@@ -864,7 +864,7 @@ fn invalid_claimer_does_not_fail_the_message() {
 			nonce: 1,
 			origin,
 			assets,
-			xcm: XcmPayload::Raw(versioned_message_xcm.encode()),
+			payload: Payload::Raw(versioned_message_xcm.encode()),
 			// Set an invalid claimer
 			claimer: Some(hex!("2b7ce7bc7e87e4d6619da21487c7a53f").to_vec()),
 			value: TOKEN_AMOUNT,

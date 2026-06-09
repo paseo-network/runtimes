@@ -14,7 +14,7 @@
 // limitations under the License.
 
 use crate::*;
-use emulated_integration_tests_common::macros::{AssetTransferFilter, XcmPaymentApiV1};
+use emulated_integration_tests_common::macros::{AssetTransferFilter, XcmPaymentApiV2};
 use frame_support::traits::fungibles;
 use paseo_runtime_constants::currency::CENTS as PAS_CENTS;
 use people_paseo_runtime::xcm_config::XcmConfig;

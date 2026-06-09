@@ -378,6 +378,7 @@ pub(crate) fn set_up_foreign_asset_and_pas_pool_on_paseo_asset_hub(asset: Locati
 	});
 	create_foreign_pool_with_native_on!(
 		AssetHubPaseo,
+		ForeignAssets,
 		asset,
 		ethereum_sovereign.clone(),
 		PAS_POOL_AMOUNT,
