@@ -40,7 +40,7 @@ use codec::{Decode, Encode};
 use frame_support::{
 	assert_err, assert_ok,
 	traits::{fungibles::InspectEnumerable, ContainsPair},
-    weights::Weight
+	weights::Weight,
 };
 use parachains_common::{AccountId, AssetIdForTrustBackedAssets, AuraId, Balance};
 use sp_consensus_aura::SlotDuration;
@@ -459,7 +459,7 @@ fn receive_reserve_asset_deposited_ksm_from_asset_hub_kusama_fees_paid_by_pool_s
 			[Parachain(1000)].into(),
 		),
 		|| {
-            // check DAP staging account for ED
+			// check DAP staging account for ED
 			assert_eq!(Balances::free_balance(&dap_staging_account), ExistentialDeposit::get());
 			// check now foreign asset for DAP staging account
 			assert_eq!(
@@ -468,7 +468,7 @@ fn receive_reserve_asset_deposited_ksm_from_asset_hub_kusama_fees_paid_by_pool_s
 			);
 		},
 		|| {
-            // `SwapFirstAssetTrader` - DAP staging account receives xcm fees in KSMs (swapped
+			// `SwapFirstAssetTrader` - DAP staging account receives xcm fees in KSMs (swapped
 			// to DOT)
 			assert!(Balances::free_balance(&dap_staging_account) > ExistentialDeposit::get());
 			// DAP staging account receives no foreign assets
@@ -1264,7 +1264,7 @@ fn slash_goes_to_dap_buffer_account() {
 	};
 	use sp_runtime::BuildStorage;
 
-let dap_buffer = pallet_dap::Pallet::<Runtime>::buffer_account();
+	let dap_buffer = pallet_dap::Pallet::<Runtime>::buffer_account();
 	let dap_staging = pallet_dap::Pallet::<Runtime>::staging_account();
 	let ed = ExistentialDeposit::get();
 
@@ -1273,7 +1273,7 @@ let dap_buffer = pallet_dap::Pallet::<Runtime>::buffer_account();
 		balances: vec![
 			(AccountId::from(ALICE), 1_000 * UNITS),
 			(dap_buffer.clone(), ed),
-            (dap_staging.clone(), ed)
+			(dap_staging.clone(), ed),
 		],
 		..Default::default()
 	}
@@ -1281,7 +1281,7 @@ let dap_buffer = pallet_dap::Pallet::<Runtime>::buffer_account();
 	.unwrap();
 
 	sp_io::TestExternalities::from(t).execute_with(|| {
-let dap_buffer_before = <Balances as Inspect<_>>::balance(&dap_buffer);
+		let dap_buffer_before = <Balances as Inspect<_>>::balance(&dap_buffer);
 		let dap_staging_before = <Balances as Inspect<_>>::balance(&dap_staging);
 
 		// When: a slash occurs (simulating staking slash via OnUnbalanced)
@@ -1289,7 +1289,7 @@ let dap_buffer_before = <Balances as Inspect<_>>::balance(&dap_buffer);
 		let credit = <Balances as Balanced<AccountId>>::issue(slash_amount);
 		Dap::on_unbalanced(credit);
 
-// Slash lands in staging first, not directly in the buffer.
+		// Slash lands in staging first, not directly in the buffer.
 		assert_eq!(
 			<Balances as Inspect<_>>::balance(&dap_staging),
 			dap_staging_before + slash_amount

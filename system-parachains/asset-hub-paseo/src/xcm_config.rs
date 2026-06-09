@@ -17,11 +17,11 @@ use cumulus_primitives_core::ParaId;
 pub use TreasuryAccount as RelayTreasuryPalletAccount;
 
 use super::{
-	treasury, AccountId, AllPalletsWithSystem, AssetConversion, Assets, Balance, Balances,
-	ForeignAssets, GeneralAdmin, NativeAndAssets, ParachainInfo,
+	treasury, AccountId, AllExceptReapStash, AllPalletsWithSystem, AssetConversion, Assets,
+	Balance, Balances, ForeignAssets, GeneralAdmin, NativeAndAssets, ParachainInfo,
 	ParachainSystem, PaseoWeightToFee as WeightToFee, PolkadotXcm, PoolAssets,
 	PriceForParentDelivery, Runtime, RuntimeCall, RuntimeEvent, RuntimeHoldReason, RuntimeOrigin,
-	StakingAdmin, ToKusamaXcmRouter, Treasurer, XcmpQueue, AllExceptReapStash,
+	StakingAdmin, ToKusamaXcmRouter, Treasurer, XcmpQueue,
 };
 use alloc::{collections::BTreeSet, vec, vec::Vec};
 use assets_common::{

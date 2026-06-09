@@ -92,7 +92,8 @@ fn test_buy_and_refund_weight_with_native() {
 
 			// assert.
 			assert_eq!(Balances::balance(&dap_staging_account), initial_balance);
-			// only after `trader` is dropped we expect the fee to be resolved into the DAP staging account.
+			// only after `trader` is dropped we expect the fee to be resolved into the DAP staging
+			// account.
 			drop(trader);
 			assert_eq!(Balances::balance(&dap_staging_account), initial_balance + fee - refund);
 			assert_eq!(Balances::total_issuance(), total_issuance + fee - refund);
@@ -152,11 +153,11 @@ fn test_buy_and_refund_weight_with_swap_local_asset_xcm_trader() {
 			let asset_total_issuance = Assets::total_issuance(asset_1);
 			let native_total_issuance = Balances::total_issuance();
 
-            // snapshot the DAP staging account *after* pool setup (the pool setup fee is
+			// snapshot the DAP staging account *after* pool setup (the pool setup fee is
 			// resolved there) so that subsequent assertions check the delta caused by the
 			// trader alone.
 			let dap_staging_after_pool_setup = Balances::balance(&dap_staging_account);
-            
+
 			// prepare input to buy weight.
 			let weight = Weight::from_parts(4_000_000_000, 0);
 			let fee = WeightToFee::weight_to_fee(&weight);
@@ -194,9 +195,13 @@ fn test_buy_and_refund_weight_with_swap_local_asset_xcm_trader() {
 
 			// assert.
 			assert_eq!(Balances::balance(&dap_staging_account), dap_staging_after_pool_setup);
-			// only after `trader` is dropped we expect the fee to be resolved into the DAP staging account.
+			// only after `trader` is dropped we expect the fee to be resolved into the DAP staging
+			// account.
 			drop(trader);
-			assert_eq!(Balances::balance(&dap_staging_account), dap_staging_after_pool_setup + fee - refund);
+			assert_eq!(
+				Balances::balance(&dap_staging_account),
+				dap_staging_after_pool_setup + fee - refund
+			);
 			assert_eq!(
 				Assets::total_issuance(asset_1),
 				asset_total_issuance + asset_fee - asset_refund
@@ -258,7 +263,7 @@ fn test_buy_and_refund_weight_with_swap_foreign_asset_xcm_trader() {
 			// keep initial total issuance to assert later.
 			let asset_total_issuance = ForeignAssets::total_issuance(foreign_location.clone());
 			let native_total_issuance = Balances::total_issuance();
-// snapshot the DAP staging account *after* pool setup (the pool setup fee is
+			// snapshot the DAP staging account *after* pool setup (the pool setup fee is
 			// resolved there) so that subsequent assertions check the delta caused by the
 			// trader alone.
 			let dap_staging_after_pool_setup = Balances::balance(&dap_staging_account);
@@ -300,9 +305,13 @@ fn test_buy_and_refund_weight_with_swap_foreign_asset_xcm_trader() {
 
 			// assert.
 			assert_eq!(Balances::balance(&dap_staging_account), dap_staging_after_pool_setup);
-			// only after `trader` is dropped we expect the fee to be resolved into the DAP staging account.
+			// only after `trader` is dropped we expect the fee to be resolved into the DAP staging
+			// account.
 			drop(trader);
-			assert_eq!(Balances::balance(&dap_staging_account), dap_staging_after_pool_setup + fee - refund);
+			assert_eq!(
+				Balances::balance(&dap_staging_account),
+				dap_staging_after_pool_setup + fee - refund
+			);
 			assert_eq!(
 				ForeignAssets::total_issuance(foreign_location),
 				asset_total_issuance + asset_fee - asset_refund

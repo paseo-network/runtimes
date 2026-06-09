@@ -176,6 +176,7 @@ pallet-treasury = { version = "47.0.0", default-features = false }
 pallet-uniques = { version = "48.0.0", default-features = false }
 pallet-utility = { version = "48.0.0", default-features = false }
 pallet-vesting = { version = "48.0.0", default-features = false }
+pallet-vesting-precompiles = { version = "0.3.0", default-features = false }
 pallet-whitelist = { version = "47.0.0", default-features = false }
 pallet-xcm = { version = "28.0.0", default-features = false }
 pallet-xcm-benchmarks = { version = "28.0.0", default-features = false }

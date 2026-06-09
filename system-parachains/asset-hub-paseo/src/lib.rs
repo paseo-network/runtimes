@@ -122,9 +122,9 @@ use frame_support::{
 		fungible::{self, HoldConsideration},
 		fungibles,
 		tokens::imbalance::{ResolveAssetTo, ResolveTo},
-		AsEnsureOriginWithArg, ConstBool, ConstU32, ConstU64, ConstU8, Contains, EitherOf, EitherOfDiverse,
-		Equals, InstanceFilter, LinearStoragePrice, NeverEnsureOrigin, PrivilegeCmp,
-		TransformOrigin, WithdrawReasons,
+		AsEnsureOriginWithArg, ConstBool, ConstU32, ConstU64, ConstU8, Contains, EitherOf,
+		EitherOfDiverse, Equals, InstanceFilter, LinearStoragePrice, NeverEnsureOrigin,
+		PrivilegeCmp, TransformOrigin, WithdrawReasons,
 	},
 	weights::{ConstantMultiplier, Weight},
 	PalletId,
@@ -168,8 +168,9 @@ use xcm::{
 	VersionedXcm,
 };
 use xcm_config::{
-	DotLocation, ForeignAssetsConvertedConcreteId, LocationToAccountId, PoolAssetsConvertedConcreteId, RelayChainLocation, TrustBackedAssetsConvertedConcreteId,
-	TrustBackedAssetsPalletLocation, XcmOriginToTransactDispatchOrigin
+	DotLocation, ForeignAssetsConvertedConcreteId, LocationToAccountId,
+	PoolAssetsConvertedConcreteId, RelayChainLocation, TrustBackedAssetsConvertedConcreteId,
+	TrustBackedAssetsPalletLocation, XcmOriginToTransactDispatchOrigin,
 };
 
 #[cfg(any(feature = "std", test))]
@@ -370,8 +371,10 @@ parameter_types! {
 
 impl pallet_transaction_payment::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type OnChargeTransaction =
-		pallet_transaction_payment::FungibleAdapter<Balances, ResolveTo<staking::DapStagingAccount, Balances>>;
+	type OnChargeTransaction = pallet_transaction_payment::FungibleAdapter<
+		Balances,
+		ResolveTo<staking::DapStagingAccount, Balances>,
+	>;
 	type WeightToFee = PaseoWeightToFee<Self>;
 	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 	type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
@@ -1085,7 +1088,7 @@ impl pallet_xcm_bridge_hub_router::Config<ToKusamaXcmRouterInstance> for Runtime
 	type FeeAsset = xcm_config::bridging::XcmBridgeHubRouterFeeAssetId;
 	type LocalXcmChannelManager =
 		cumulus_pallet_xcmp_queue::bridging::InAndOutXcmpChannelStatusProvider<Runtime>;
-    type UnpaidExport = frame_support::traits::ConstBool<true>;
+	type UnpaidExport = frame_support::traits::ConstBool<true>;
 }
 
 pub type PoolAssetsInstance = pallet_assets::Instance3;
@@ -1140,7 +1143,7 @@ pub type NativeAndAssets = fungible::UnionOf<
 parameter_types! {
 	pub const AssetConversionPalletId: PalletId = PalletId(*b"py/ascon");
 	pub const LiquidityWithdrawalFee: Permill = Permill::from_percent(0);
-    pub LpFee: Permill =  Permill::from_rational(3u32, 1_000u32);
+	pub LpFee: Permill =  Permill::from_rational(3u32, 1_000u32);
 	// Storage deposit for pool setup within asset conversion pallet
 	// and pool's lp token creation within assets pallet.
 	pub const PoolSetupFee: Balance = system_para_deposit(1, 4) + AssetDeposit::get();
@@ -1461,8 +1464,8 @@ impl pallet_revive::Config for Runtime {
 		ERC20<Self, InlineIdConfig<0x320>, PoolAssetsInstance>,
 		ERC20<Self, ForeignIdConfig<0x220, Self, ForeignAssetsInstance>, ForeignAssetsInstance>,
 		XcmPrecompile<Self>,
-        AssetConversionPrecompile<{ASSET_CONVERSION_PRECOMPILE }, Self>,
-        VestingPrecompile<Self>,
+		AssetConversionPrecompile<{ ASSET_CONVERSION_PRECOMPILE }, Self>,
+		VestingPrecompile<Self>,
 	);
 	type AddressMapper = pallet_revive::AccountId32Mapper<Self>;
 	type RuntimeMemory = ConstU32<{ 128 * 1024 * 1024 }>;
@@ -1476,11 +1479,11 @@ impl pallet_revive::Config for Runtime {
 	type FindAuthor = <Runtime as pallet_authorship::Config>::FindAuthor;
 	type AllowEVMBytecode = ConstBool<true>;
 	type FeeInfo = pallet_revive::evm::fees::Info<Address, Signature, EthExtraImpl>;
-    type Deposit = ();
+	type Deposit = ();
 	type MaxEthExtrinsicWeight = MaxEthExtrinsicWeight;
 	// Must be set to `false` in a live chain
 	type DebugEnabled = ConstBool<false>;
-    type AutoMap = ConstBool<true>;
+	type AutoMap = ConstBool<true>;
 	type GasScale = ConstU32<100_000>;
 	type OnBurn = Dap;
 }
@@ -1590,7 +1593,7 @@ construct_runtime!(
 		Revive: pallet_revive = 100,
 		AssetsPrecompiles: pallet_assets_precompiles::pallet = 101,
 		AssetsPrecompilesPermit: pallet_assets_precompiles::permit::pallet = 102,
-        VestingPrecompiles: pallet_vesting_precompiles::pallet = 103,
+		VestingPrecompiles: pallet_vesting_precompiles::pallet = 103,
 
 		// Sudo.
 		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 251,
@@ -1634,7 +1637,7 @@ pub struct EthExtraImpl;
 impl pallet_revive::evm::runtime::EthExtra for EthExtraImpl {
 	type Config = Runtime;
 	type ExtensionV0 = TxExtension;
-    type ExtensionOtherVersions = sp_runtime::traits::InvalidVersion;
+	type ExtensionOtherVersions = sp_runtime::traits::InvalidVersion;
 
 	fn get_eth_extension(nonce: u32, tip: Balance) -> Self::ExtensionV0 {
 		(
@@ -1770,7 +1773,7 @@ mod benches {
 		[pallet_uniques, Uniques]
 		[pallet_utility, Utility]
 		[pallet_vesting, Vesting]
-        [pallet_vesting_precompiles, VestingPrecompiles]
+		[pallet_vesting_precompiles, VestingPrecompiles]
 		[pallet_timestamp, Timestamp]
 		[pallet_treasury, Treasury]
 		[pallet_transaction_payment, TransactionPayment]
@@ -1804,7 +1807,7 @@ mod benches {
 		[pallet_staking_async, Staking]
 		[pallet_staking_async_rc_client, StakingRcClientBench::<Runtime>]
 		[pallet_bags_list, VoterList]
-        [pallet_dap, Dap]
+		[pallet_dap, Dap]
 		// DelegatedStaking has no calls
 		[pallet_election_provider_multi_block, MultiBlockElection]
 		[pallet_election_provider_multi_block::verifier, MultiBlockElectionVerifier]
@@ -3086,8 +3089,8 @@ mod tests {
 			"NonTransfer proxy must allow MultiAssetBounties::propose_curator",
 		);
 	}
-    
-    #[test]
+
+	#[test]
 	fn call_filter_blocks_reap_stash() {
 		let call = RuntimeCall::Staking(pallet_staking_async::Call::reap_stash {
 			stash: AccountId::from([0u8; 32]),
