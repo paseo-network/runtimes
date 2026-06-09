@@ -179,7 +179,11 @@ impl Contains<Location> for MockWaivedLocations {
 
 struct MockFeeHandler;
 impl HandleFee for MockFeeHandler {
-	fn handle_fee(fee: xcm_executor::AssetsInHolding, _context: Option<&XcmContext>, _reason: FeeReason) -> xcm_executor::AssetsInHolding {
+	fn handle_fee(
+		fee: xcm_executor::AssetsInHolding,
+		_context: Option<&XcmContext>,
+		_reason: FeeReason,
+	) -> xcm_executor::AssetsInHolding {
 		fee
 	}
 }
