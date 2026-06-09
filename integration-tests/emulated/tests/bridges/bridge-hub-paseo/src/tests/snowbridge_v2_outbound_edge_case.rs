@@ -23,8 +23,8 @@ use crate::{
 	*,
 };
 use asset_hub_paseo_runtime::xcm_config::bridging::to_ethereum::BridgeHubEthereumBaseFee;
-use paseo_system_emulated_network::penpal_emulated_chain::penpal_runtime::xcm_config::LocalPen2Asset;
 use frame_support::{assert_noop, BoundedVec};
+use paseo_system_emulated_network::penpal_emulated_chain::penpal_runtime::xcm_config::LocalPen2Asset;
 use snowbridge_core::AssetMetadata;
 use sp_runtime::DispatchError::BadOrigin;
 use xcm::v5::AssetTransferFilter;

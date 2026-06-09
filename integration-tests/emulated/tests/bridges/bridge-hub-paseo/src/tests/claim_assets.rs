@@ -25,5 +25,11 @@ fn assets_can_be_claimed() {
 	let amount = ExistentialDeposit::get();
 	let assets: Asset = (Parent, amount).into();
 
-	test_chain_can_claim_assets!(AssetHubPaseo, asset_hub_paseo_runtime::xcm_config::XcmConfig, NetworkId::Polkadot, assets, amount);
+	test_chain_can_claim_assets!(
+		AssetHubPaseo,
+		asset_hub_paseo_runtime::xcm_config::XcmConfig,
+		NetworkId::Polkadot,
+		assets,
+		amount
+	);
 }
