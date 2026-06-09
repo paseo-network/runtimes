@@ -179,7 +179,7 @@ impl Contains<Location> for MockWaivedLocations {
 
 struct MockFeeHandler;
 impl HandleFee for MockFeeHandler {
-	fn handle_fee(fee: Assets, _context: Option<&XcmContext>, _reason: FeeReason) -> Assets {
+	fn handle_fee(fee: xcm_executor::AssetsInHolding, _context: Option<&XcmContext>, _reason: FeeReason) -> xcm_executor::AssetsInHolding {
 		fee
 	}
 }
@@ -382,6 +382,7 @@ fn construct_extrinsic(
 ) -> UncheckedExtrinsic {
 	let account_id = AccountId32::from(sender.public());
 	let extra: TxExtension = (
+		frame_system::AuthorizeCall::<Runtime>::new(),
 		frame_system::CheckNonZeroSender::<Runtime>::new(),
 		frame_system::CheckSpecVersion::<Runtime>::new(),
 		frame_system::CheckTxVersion::<Runtime>::new(),
