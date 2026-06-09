@@ -53,7 +53,7 @@ fn can_receive_hollar_from_hydration() {
 			.build();
 
 		// Debug: check weight and fee calculations before execution
-		let xcm_weight = Runtime::query_xcm_weight(VersionedXcm::from(transfer_xcm.clone().into()));
+		let _xcm_weight = Runtime::query_xcm_weight(VersionedXcm::from(transfer_xcm.clone().into()));
 
 		let mut hash = transfer_xcm.using_encoded(sp_io::hashing::blake2_256);
 		assert_ok!(xcm_executor::XcmExecutor::<XcmConfig>::prepare_and_execute(
