@@ -755,6 +755,17 @@ impl frame_support::traits::OnRuntimeUpgrade for InitiateStakingAsync {
 	}
 }
 
+/// Removes the deprecated `March2026TI` storage value, now unused under pallet-dap
+/// non-minting mode. Mirrors the fellows v2.3.0 `RemoveMarchTIValue` migration.
+pub struct RemoveMarchTIValue;
+
+impl frame_support::traits::OnRuntimeUpgrade for RemoveMarchTIValue {
+	fn on_runtime_upgrade() -> Weight {
+		March2026TI::kill();
+		<Runtime as frame_system::Config>::DbWeight::get().writes(1)
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;

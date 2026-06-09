@@ -141,8 +141,8 @@ fn asset_hub_paseo_development_genesis(para_id: ParaId) -> serde_json::Value {
 	asset_hub_paseo_genesis(
 		invulnerables_asset_hub_paseo(),
 		testnet_accounts_with([
-			// Make sure `StakingPot` is funded for benchmarking purposes.
-			StakingPot::get(),
+			// Make sure the DAP staging account is funded for benchmarking purposes.
+			Dap::staging_account(),
 		]),
 		para_id,
 		vec![],

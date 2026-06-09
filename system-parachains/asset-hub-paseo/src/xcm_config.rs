@@ -453,7 +453,7 @@ impl xcm_executor::Config for XcmConfig {
 				TrustBackedAssetsAsLocation<TrustBackedAssetsPalletLocation, Balance, Location>,
 				ForeignAssetsConvertedConcreteId,
 			),
-			ResolveAssetTo<StakingPot, NativeAndAssets>,
+			ResolveAssetTo<DapStagingAccount, NativeAndAssets>,
 			AccountId,
 		>,
 	);

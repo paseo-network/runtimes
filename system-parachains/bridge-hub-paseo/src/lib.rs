@@ -40,7 +40,7 @@ use bridge_to_kusama_config::bp_kusama;
 use codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
 use cumulus_pallet_parachain_system::RelayNumberMonotonicallyIncreases;
 use cumulus_primitives_core::ParaId;
-use snowbridge_core::{sparse_bitmap::SparseBitMap, AgentId, PricingParameters};
+use snowbridge_core::{sparse_bitmap::SparseBitmap, AgentId, PricingParameters};
 use snowbridge_outbound_queue_primitives::v1::{Command, Fee};
 
 use sp_api::impl_runtime_apis;
