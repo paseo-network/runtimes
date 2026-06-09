@@ -52,6 +52,13 @@ pub fn genesis() -> sp_core::storage::Storage {
 				.iter()
 				.cloned()
 				.map(|k| (k, ED * 4096 * 4096))
+				// Fund the XCM checking account: PAS is homed on AssetHub (MintLocation::Local),
+				// so teleport-in withdraws from this account. Emulated genesis has no prior
+				// teleport-out, so seed it directly.
+				.chain(core::iter::once((
+					asset_hub_paseo_runtime::PolkadotXcm::check_account(),
+					ED * 4096 * 4096,
+				)))
 				.collect(),
 			dev_accounts: None,
 		},
