@@ -18,7 +18,9 @@ use asset_hub_paseo_runtime::xcm_config::{
 	bridging::to_ethereum::BridgeHubEthereumBaseFeeV2, LocationToAccountId,
 };
 use bp_bridge_hub_paseo::snowbridge::EthereumNetwork;
-use emulated_integration_tests_common::create_foreign_pool_with_native_on;
+use emulated_integration_tests_common::{
+	create_foreign_pool_with_native_on, create_foreign_pool_with_parent_native_on,
+};
 use frame_support::traits::fungibles::Mutate;
 use hex_literal::hex;
 use paseo_system_emulated_network::penpal_emulated_chain::{
@@ -376,7 +378,7 @@ pub(crate) fn set_up_foreign_asset_and_pas_pool_on_paseo_asset_hub(asset: Locati
 			INITIAL_FUND,
 		));
 	});
-	create_foreign_pool_with_native_on!(
+	create_foreign_pool_with_parent_native_on!(
 		AssetHubPaseo,
 		ForeignAssets,
 		asset,

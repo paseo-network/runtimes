@@ -43,7 +43,7 @@ fn set_up_dot_for_penpal_polkadot_through_pah_to_kah(
 	let dot_at_polkadot_parachains = dot_at_ah_polkadot();
 	let dot_at_asset_hub_kusama = bridged_dot_at_ah_kusama();
 	create_foreign_on_ah_kusama(dot_at_asset_hub_kusama.clone(), true);
-	create_foreign_pool_with_native_on!(
+	create_foreign_pool_with_parent_native_on!(
 		AssetHubKusama,
 		dot_at_asset_hub_kusama.clone(),
 		AssetHubKusamaSender::get()
@@ -99,7 +99,7 @@ fn send_dot_usdt_and_weth_from_asset_hub_polkadot_to_asset_hub_kusama() {
 	let bridged_dot_at_asset_hub_kusama = bridged_dot_at_ah_kusama();
 
 	create_foreign_on_ah_kusama(bridged_dot_at_asset_hub_kusama.clone(), true);
-	create_foreign_pool_with_native_on!(
+	create_foreign_pool_with_parent_native_on!(
 		AssetHubKusama,
 		bridged_dot_at_asset_hub_kusama.clone(),
 		AssetHubKusamaSender::get()
@@ -190,7 +190,7 @@ fn send_dot_usdt_and_weth_from_asset_hub_polkadot_to_asset_hub_kusama() {
 		MIN_ETHER_BALANCE,
 	);
 	create_foreign_on_ah_kusama(bridged_usdt_at_asset_hub_kusama.clone(), true);
-	create_foreign_pool_with_native_on!(
+	create_foreign_pool_with_parent_native_on!(
 		AssetHubKusama,
 		bridged_usdt_at_asset_hub_kusama.clone(),
 		AssetHubKusamaSender::get()
@@ -335,7 +335,7 @@ fn send_dot_from_polkadot_relay_through_asset_hub_polkadot_to_asset_hub_kusama()
 	let bridged_dot_at_ah_kusama = bridged_dot_at_ah_kusama();
 
 	create_foreign_on_ah_kusama(bridged_dot_at_ah_kusama.clone(), true);
-	create_foreign_pool_with_native_on!(
+	create_foreign_pool_with_parent_native_on!(
 		AssetHubKusama,
 		bridged_dot_at_ah_kusama.clone(),
 		AssetHubKusamaSender::get()
@@ -663,7 +663,7 @@ fn send_dot_from_paseo_relay_through_asset_hub_paseo_to_asset_hub_kusama_to_penp
 	let dot_at_kusama_parachains = bridged_dot_at_ah_kusama();
 	// create foreign PAS on AH Kusama
 	create_foreign_on_ah_kusama(dot_at_kusama_parachains.clone(), true);
-	create_foreign_pool_with_native_on!(
+	create_foreign_pool_with_parent_native_on!(
 		AssetHubKusama,
 		dot_at_kusama_parachains.clone(),
 		AssetHubKusamaSender::get()
@@ -976,7 +976,7 @@ fn send_back_ksm_from_penpal_paseo_through_asset_hub_paseo_to_asset_hub_kusama_t
 	let sov_penpal_on_pah = AssetHubPaseo::sovereign_account_id_of(penpal_location);
 	let prefund_accounts = vec![(sov_penpal_on_pah.clone(), amount * 2)];
 	create_foreign_on_ah_paseo(ksm_at_polkadot_parachains.clone(), true, prefund_accounts);
-	create_foreign_pool_with_native_on!(
+	create_foreign_pool_with_parent_native_on!(
 					AssetHubPaseo,
 		ksm_at_polkadot_parachains.clone(),
 		AssetHubKusamaSender::get()
@@ -1161,7 +1161,7 @@ fn send_back_ksm_from_penpal_paseo_through_asset_hub_paseo_to_asset_hub_kusama_t
 	let sov_penpal_on_pah = AssetHubPaseo::sovereign_account_id_of(penpal_location);
 	let prefund_accounts = vec![(sov_penpal_on_pah.clone(), amount * 2)];
 	create_foreign_on_ah_paseo(ksm_at_polkadot_parachains.clone(), true, prefund_accounts);
-	create_foreign_pool_with_native_on!(
+	create_foreign_pool_with_parent_native_on!(
 					AssetHubPaseo,
 		ksm_at_polkadot_parachains.clone(),
 		AssetHubKusamaSender::get()

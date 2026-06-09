@@ -42,14 +42,6 @@ pub mod collators {
 	use super::*;
 
 	pub use emulated_integration_tests_common::collators::invulnerables;
-	use parachains_common::AuraId;
-
-	pub fn session_keys() -> Vec<(AccountId, AuraId)> {
-		vec![
-			(Sr25519Keyring::Alice.to_account_id(), Sr25519Keyring::Alice.public().into()),
-			(Sr25519Keyring::Bob.to_account_id(), Sr25519Keyring::Bob.public().into()),
-		]
-	}
 }
 
 pub fn genesis() -> sp_core::storage::Storage {
@@ -73,7 +65,7 @@ pub fn genesis() -> sp_core::storage::Storage {
 			..Default::default()
 		},
 		session: asset_hub_paseo_runtime::SessionConfig {
-			keys: collators::session_keys()
+			keys: collators::invulnerables()
 				.into_iter()
 				.map(|(acc, aura)| {
 					(
