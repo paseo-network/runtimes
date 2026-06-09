@@ -43,7 +43,7 @@ fn register_penpal_a_asset_from_penpal_b_will_fail() {
 			AccountId32 { network: Some(Polkadot), id: PenpalBSender::get().into() },
 		],
 	);
-	let asset_location_on_penpal = PenpalATeleportableAssetLocation::get();
+	let asset_location_on_penpal = LocalPen2Asset::get();
 	let penpal_a_asset_at_asset_hub = Location::new(1, [Parachain(PenpalA::para_id().into())])
 		.appended_with(asset_location_on_penpal)
 		.unwrap();

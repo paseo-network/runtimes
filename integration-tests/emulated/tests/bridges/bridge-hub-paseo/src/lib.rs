@@ -35,7 +35,7 @@ pub use bp_messages::LegacyLaneId;
 // Cumulus
 pub use emulated_integration_tests_common::{
 	accounts::{ALICE, BOB},
-	create_pool_with_native_on,
+	create_foreign_pool_with_native_on,
 	impls::Inspect,
 	test_parachain_is_trusted_teleporter, test_parachain_is_trusted_teleporter_for_relay,
 	test_relay_is_trusted_teleporter,
@@ -50,9 +50,7 @@ pub use integration_tests_helpers::common::snowbridge::{MIN_ETHER_BALANCE, WETH}
 pub use parachains_common::{AccountId, Balance};
 pub use paseo_system_emulated_network::{
 	asset_hub_paseo_emulated_chain::{
-		genesis::{
-			AssetHubPaseoAssetOwner, PenpalATeleportableAssetLocation, ED as ASSET_HUB_POLKADOT_ED,
-		},
+		genesis::{AssetHubPaseoAssetOwner, ED as ASSET_HUB_POLKADOT_ED},
 		AssetHubPaseoParaPallet as AssetHubPaseoPallet, ForeignAssetReserveData,
 	},
 	bridge_hub_paseo_emulated_chain::{
