@@ -19,12 +19,13 @@ use asset_hub_paseo_runtime::xcm_config::{
 };
 use bp_bridge_hub_paseo::snowbridge::EthereumNetwork;
 use emulated_integration_tests_common::{
-	create_pool_with_native_on, PenpalBTeleportableAssetLocation,
+	create_foreign_pool_with_native_on, create_foreign_pool_with_parent_native_on,
+	PenpalBPen2TeleportableAssetLocation,
 };
 use frame_support::traits::fungibles::Mutate;
 use hex_literal::hex;
 use paseo_system_emulated_network::penpal_emulated_chain::{
-	penpal_runtime::xcm_config::{CheckingAccount, TELEPORTABLE_ASSET_ID},
+	penpal_runtime::xcm_config::{CheckingAccount, LocalPen2Asset},
 	PenpalAssetOwner,
 };
 use snowbridge_core::AssetMetadata;
@@ -210,7 +211,7 @@ pub fn register_pal_on_paseo_bh() {
 
 		assert_ok!(<BridgeHubPaseo as BridgeHubPaseoPallet>::EthereumSystem::register_token(
 			RuntimeOrigin::root(),
-			Box::new(VersionedLocation::from(PenpalBTeleportableAssetLocation::get())),
+			Box::new(VersionedLocation::from(PenpalBPen2TeleportableAssetLocation::get())),
 			AssetMetadata {
 				name: "pal".as_bytes().to_vec().try_into().unwrap(),
 				symbol: "pal".as_bytes().to_vec().try_into().unwrap(),
@@ -234,62 +235,62 @@ pub fn prefund_accounts_on_penpal_b() {
 		(sudo_account.clone(), INITIAL_FUND),
 	]);
 	PenpalB::execute_with(|| {
-		assert_ok!(<PenpalB as PenpalBPallet>::ForeignAssets::mint_into(
+		assert_ok!(<PenpalB as PenpalBPallet>::Assets::mint_into(
 			Location::parent(),
 			&PenpalBReceiver::get(),
 			INITIAL_FUND,
 		));
-		assert_ok!(<PenpalB as PenpalBPallet>::ForeignAssets::mint_into(
+		assert_ok!(<PenpalB as PenpalBPallet>::Assets::mint_into(
 			Location::parent(),
 			&PenpalBSender::get(),
 			INITIAL_FUND,
 		));
-		assert_ok!(<PenpalB as PenpalBPallet>::ForeignAssets::mint_into(
+		assert_ok!(<PenpalB as PenpalBPallet>::Assets::mint_into(
 			Location::parent(),
 			&sudo_account,
 			INITIAL_FUND,
 		));
 		assert_ok!(<PenpalB as PenpalBPallet>::Assets::mint_into(
-			TELEPORTABLE_ASSET_ID,
+			LocalPen2Asset::get(),
 			&PenpalBReceiver::get(),
 			INITIAL_FUND,
 		));
 		assert_ok!(<PenpalB as PenpalBPallet>::Assets::mint_into(
-			TELEPORTABLE_ASSET_ID,
+			LocalPen2Asset::get(),
 			&PenpalBSender::get(),
 			INITIAL_FUND,
 		));
 		assert_ok!(<PenpalB as PenpalBPallet>::Assets::mint_into(
-			TELEPORTABLE_ASSET_ID,
+			LocalPen2Asset::get(),
 			&sudo_account,
 			INITIAL_FUND,
 		));
-		assert_ok!(<PenpalB as PenpalBPallet>::ForeignAssets::mint_into(
+		assert_ok!(<PenpalB as PenpalBPallet>::Assets::mint_into(
 			weth_location(),
 			&PenpalBReceiver::get(),
 			INITIAL_FUND,
 		));
-		assert_ok!(<PenpalB as PenpalBPallet>::ForeignAssets::mint_into(
+		assert_ok!(<PenpalB as PenpalBPallet>::Assets::mint_into(
 			weth_location(),
 			&PenpalBSender::get(),
 			INITIAL_FUND,
 		));
-		assert_ok!(<PenpalB as PenpalBPallet>::ForeignAssets::mint_into(
+		assert_ok!(<PenpalB as PenpalBPallet>::Assets::mint_into(
 			weth_location(),
 			&sudo_account,
 			INITIAL_FUND,
 		));
-		assert_ok!(<PenpalB as PenpalBPallet>::ForeignAssets::mint_into(
+		assert_ok!(<PenpalB as PenpalBPallet>::Assets::mint_into(
 			eth_location(),
 			&PenpalBReceiver::get(),
 			INITIAL_FUND,
 		));
-		assert_ok!(<PenpalB as PenpalBPallet>::ForeignAssets::mint_into(
+		assert_ok!(<PenpalB as PenpalBPallet>::Assets::mint_into(
 			eth_location(),
 			&PenpalBSender::get(),
 			INITIAL_FUND,
 		));
-		assert_ok!(<PenpalB as PenpalBPallet>::ForeignAssets::mint_into(
+		assert_ok!(<PenpalB as PenpalBPallet>::Assets::mint_into(
 			eth_location(),
 			&sudo_account,
 			INITIAL_FUND,
@@ -378,7 +379,7 @@ pub(crate) fn set_up_foreign_asset_and_pas_pool_on_paseo_asset_hub(asset: Locati
 			INITIAL_FUND,
 		));
 	});
-	create_pool_with_native_on!(
+	create_foreign_pool_with_parent_native_on!(
 		AssetHubPaseo,
 		asset,
 		true,
@@ -393,13 +394,13 @@ pub(crate) fn set_up_eth_and_dot_pool_on_penpal() {
 	let ethereum_sovereign = ethereum_sovereign();
 	PenpalB::fund_accounts(vec![(ethereum_sovereign.clone(), INITIAL_FUND)]);
 	PenpalB::execute_with(|| {
-		assert_ok!(<PenpalB as PenpalBPallet>::ForeignAssets::mint_into(
+		assert_ok!(<PenpalB as PenpalBPallet>::Assets::mint_into(
 			eth_location(),
 			&ethereum_sovereign.clone(),
 			INITIAL_FUND,
 		));
 	});
-	create_pool_with_native_on!(
+	create_foreign_pool_with_native_on!(
 		PenpalB,
 		eth_location(),
 		true,

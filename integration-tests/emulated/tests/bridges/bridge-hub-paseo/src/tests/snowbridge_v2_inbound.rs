@@ -601,12 +601,12 @@ fn send_token_to_penpal_v2() {
 					pallet_message_queue::Event::Processed { success: true, .. }
 				) => {},
 				// Ether was issued to beneficiary
-				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { asset_id, owner, .. }) => {
+				RuntimeEvent::Assets(pallet_assets::Event::Issued { asset_id, owner, .. }) => {
 					asset_id: *asset_id == eth_location(),
 					owner: *owner == penpal_sov_on_ah,
 				},
 				// Token was issued to beneficiary
-				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { asset_id, owner, .. }) => {
+				RuntimeEvent::Assets(pallet_assets::Event::Issued { asset_id, owner, .. }) => {
 					asset_id: *asset_id == token_location,
 					owner: *owner == penpal_sov_on_ah,
 				},
@@ -640,9 +640,12 @@ fn send_token_to_penpal_v2() {
 			]
 		);
 
-		// Beneficiary received the token transfer value
+		// Beneficiary received the token transfer value.
 		assert_eq!(
-			ForeignAssets::balance(token_location, AccountId::from(beneficiary_acc_bytes)),
+			<PenpalB as PenpalBPallet>::Assets::balance(
+				token_location,
+				AccountId::from(beneficiary_acc_bytes),
+			),
 			TOKEN_AMOUNT
 		);
 	});
