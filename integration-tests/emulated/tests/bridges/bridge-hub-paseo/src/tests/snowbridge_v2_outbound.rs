@@ -818,7 +818,7 @@ fn register_token_from_penpal() {
 		type RuntimeEvent = <AssetHubPaseo as Chain>::RuntimeEvent;
 		assert_expected_events!(
 			AssetHubPaseo,
-			vec![RuntimeEvent::ForeignAssets(pallet_assets::Event::Burned { .. }) => {},]
+			vec![RuntimeEvent::ForeignAssets(pallet_assets::Event::BurnedCredit { .. }) => {},]
 		);
 	});
 
@@ -964,7 +964,7 @@ fn send_message_from_penpal_to_ethereum(sudo: bool) {
 		);
 		assert_expected_events!(
 			AssetHubPaseo,
-			vec![RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { .. }) => {},]
+			vec![RuntimeEvent::ForeignAssets(pallet_assets::Event::IssuedCredit { .. }) => {},]
 		);
 	});
 

@@ -749,12 +749,10 @@ fn send_foreign_erc20_token_back_to_paseo() {
 					pallet_message_queue::Event::Processed { success: true, .. }
 				) => {},
 				// Check that the native token burnt from some reserved account
-				RuntimeEvent::Assets(pallet_assets::Event::Burned { owner, .. }) => {
-					owner: *owner == ethereum_sovereign.clone(),
+				RuntimeEvent::Assets(pallet_assets::Event::BurnedCredit { .. }) => {
 				},
 				// Check that the token was minted to beneficiary
-				RuntimeEvent::Assets(pallet_assets::Event::Issued { owner, .. }) => {
-					owner: *owner == AssetHubPaseoReceiver::get(),
+				RuntimeEvent::Assets(pallet_assets::Event::IssuedCredit { .. }) => {
 				},
 			]
 		);

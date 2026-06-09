@@ -208,7 +208,7 @@ fn send_token_from_ethereum_to_penpal() {
 		assert_expected_events!(
 			PenpalB,
 			vec![
-				RuntimeEvent::Assets(pallet_assets::Event::Issued { .. }) => {},
+				RuntimeEvent::Assets(pallet_assets::Event::IssuedCredit { .. }) => {},
 			]
 		);
 	});
