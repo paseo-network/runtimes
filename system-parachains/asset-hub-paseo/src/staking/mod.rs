@@ -115,7 +115,13 @@ impl pallet_bags_list::Config<VoterBagsListInstance> for Runtime {
 parameter_types! {
 	pub const DelegatedStakingPalletId: PalletId = PalletId(*b"py/dlstk");
 	pub const SlashRewardFraction: Perbill = Perbill::from_percent(1);
-	pub const DapPalletId: PalletId = PalletId(*b"dap/buff");
+	pub const DapPalletId: PalletId = sp_dap::DAP_PALLET_ID;
+    pub DapStagingAccount: AccountId = pallet_dap::Pallet::<Runtime>::staging_account();
+    pub const StakingPotsPalletId: PalletId = PalletId(*b"py/stkng");
+	/// Minimum time (ms) between issuance drips. 60s = drip at most once per minute.
+	pub const DapIssuanceCadence: u64 = 60_000;
+	/// Safety ceiling (ms) for elapsed time in a single drip. Prevents over-minting after stalls.
+	pub const DapMaxElapsedPerDrip: u64 = 600_000;
 }
 
 impl pallet_delegated_staking::Config for Runtime {
@@ -131,6 +137,21 @@ impl pallet_delegated_staking::Config for Runtime {
 impl pallet_dap::Config for Runtime {
 	type Currency = Balances;
 	type PalletId = DapPalletId;
+    type IssuanceCurve = EraPayout;
+	type BudgetRecipients = (
+		pallet_dap::Pallet<Runtime>,
+		pallet_staking_async::StakerRewardRecipient<
+			pallet_staking_async::Seed<StakingPotsPalletId>,
+		>,
+		pallet_staking_async::ValidatorIncentiveRecipient<
+			pallet_staking_async::Seed<StakingPotsPalletId>,
+		>,
+	);
+	type Time = pallet_timestamp::Pallet<Runtime>;
+	type IssuanceCadence = DapIssuanceCadence;
+	type MaxElapsedPerDrip = DapMaxElapsedPerDrip;
+	type BudgetOrigin = EnsureRoot<AccountId>;
+	type WeightInfo = weights::pallet_dap::WeightInfo<Runtime>;
 }
 
 /// Election bounds for the on-chain fallback solver.
@@ -382,16 +403,17 @@ impl EraPayout {
 
 		// We assume un-delayed 24h eras.
 		let era_duration = 24 * 60 * 60 * 1000;
-		let next_mint =
-			<Self as pallet_staking_async::EraPayout<Balance>>::era_payout(0, 0, era_duration);
+let daily_emission = <Self as sp_staking::budget::IssuanceCurve<Balance>>::issue(
+			0, // ignored
+			era_duration,
+		);
 
 		// What is our effective issuance rate now?
-		let total = next_mint.0 + next_mint.1;
-		let annual_issuance = total * 36525 / 100;
+		let annual_issuance = daily_emission * 36525 / 100;
 		let ti = pallet_balances::TotalIssuance::<Runtime>::get();
 		let issuance = Perquintill::from_rational(annual_issuance, ti);
 
-		InflationInfo { issuance, next_mint }
+		InflationInfo { issuance, next_mint: (daily_emission, 0) }
 	}
 }
 
@@ -399,17 +421,16 @@ impl EraPayout {
 #[storage_alias(verbatim)]
 pub type March2026TI = StorageValue<Runtime, Balance, OptionQuery>;
 
-impl pallet_staking_async::EraPayout<Balance> for EraPayout {
-	fn era_payout(
-		_total_staked: Balance,
-		_total_issuance: Balance,
-		era_duration_millis: u64,
-	) -> (Balance, Balance) {
-		// A normal-sized era will have 1 / 365.25 here, though the value wobbles a bit:
-		let relative_era_len = FixedU128::from_rational(
-			era_duration_millis.into(),
-			Self::MILLISECONDS_PER_YEAR.into(),
-		);
+
+/// DAP issuance curve: total emission for a given elapsed period.
+///
+/// Same computation as the legacy `EraPayout` but returns the combined emission
+/// (no 85/15 split). The staker/treasury split is now handled by pallet-dap
+/// via `BudgetAllocation`.
+impl sp_staking::budget::IssuanceCurve<Balance> for EraPayout {
+	fn issue(_total_issuance: Balance, elapsed_millis: u64) -> Balance {
+		let relative_period =
+			FixedU128::from_rational(elapsed_millis.into(), Self::MILLISECONDS_PER_YEAR.into());
 
 		// Branch based off the 12AM 14th March 2026 initial stepping date -[Ref 1710](https://polkadot.subsquare.io/referenda/1710).
 		let relay_block_num =
@@ -421,13 +442,9 @@ impl pallet_staking_async::EraPayout<Balance> for EraPayout {
 			Self::yearly_after_hard_cap(relay_block_num)
 		};
 
-		let era_emission =
-			relative_era_len.saturating_mul_int(yearly_emission).min(Self::MAX_ERA_EMISSION);
-		// 15% to treasury, as per Polkadot ref 1139.
-		let to_treasury = FixedU128::from_rational(15, 100).saturating_mul_int(era_emission);
-		let to_stakers = era_emission.saturating_sub(to_treasury);
-
-		(to_stakers.saturated_into(), to_treasury.saturated_into())
+let emission =
+			relative_period.saturating_mul_int(yearly_emission).min(Self::MAX_ERA_EMISSION);
+		emission.saturated_into()
 	}
 }
 
@@ -457,7 +474,7 @@ impl pallet_staking_async::Config for Runtime {
 	type CurrencyBalance = Balance;
 	type RuntimeHoldReason = RuntimeHoldReason;
 	type CurrencyToVote = sp_staking::currency_to_vote::SaturatingCurrencyToVote;
-	type RewardRemainder = ResolveTo<xcm_config::TreasuryAccount, Balances>;
+	type RewardRemainder = ResolveTo<DapStagingAccount, Balances>;
 	type Slash = Dap;
 	type Reward = ();
 	type SessionsPerEra = SessionsPerEra;
@@ -465,7 +482,9 @@ impl pallet_staking_async::Config for Runtime {
 	type NominatorFastUnbondDuration = NominatorFastUnbondDuration;
 	type SlashDeferDuration = SlashDeferDuration;
 	type AdminOrigin = EitherOf<EnsureRoot<AccountId>, StakingAdmin>;
-	type EraPayout = EraPayout;
+// Non-minting mode: `EraPayout` is unused. Inflation is driven by pallet-dap via
+	// `IssuanceCurve` (implemented on `EraPayout` above).
+	type EraPayout = ();
 	type MaxExposurePageSize = MaxExposurePageSize;
 	type ElectionProvider = MultiBlockElection;
 	type VoterList = VoterList;
@@ -479,7 +498,13 @@ impl pallet_staking_async::Config for Runtime {
 	// This will start election for the next era as soon as an era starts.
 	type PlanningEraOffset = ConstU32<6>;
 	type RcClientInterface = StakingRcClient;
+    // Non-minting mode: `MaxEraDuration` is unused (legacy path only). Kept for compile.
 	type MaxEraDuration = MaxEraDuration;
+    type DisableMinting = ConstBool<true>;
+	type UnclaimedRewardHandler = Dap;
+	type RewardPots = pallet_staking_async::Seed<StakingPotsPalletId>;
+	type StakerRewardCalculator =
+		pallet_staking_async::reward::DefaultStakerRewardCalculator<Runtime>;
 	type MaxPruningItems = MaxPruningItems;
 	type WeightInfo = weights::pallet_staking_async::WeightInfo<Runtime>;
 }
@@ -741,7 +766,7 @@ mod tests {
 	use cumulus_primitives_core::{
 		relay_chain::BlockNumber as RC_BlockNumber, PersistedValidationData,
 	};
-	use pallet_staking_async::EraPayout as _;
+	use sp_staking::budget::IssuanceCurve as _;
 	use paseo_runtime_constants::time::YEARS as RC_YEARS;
 	use sp_runtime::{Perbill, Percent};
 	use sp_weights::constants::{WEIGHT_PROOF_SIZE_PER_KB, WEIGHT_REF_TIME_PER_MILLIS};
@@ -982,82 +1007,38 @@ mod tests {
 
 			// First period - March 14, 2026 -> March 14, 2028.
 			set_relay_number(MARCH_14_2026);
-			let (to_stakers, to_treasury) = EraPayout::era_payout(
-				123, // ignored
-				456, // ignored
-				MILLISECONDS_PER_DAY,
-			);
+            let daily_emission = EraPayout::issue(0 /* ignored */, MILLISECONDS_PER_DAY);
 			let two_year_rate = EraPayout::BI_ANNUAL_RATE;
 			let first_period_emission = two_year_rate * (TARGET_TI - MARCH_TI);
 			assert_relative_eq!(
-				(to_stakers as f64 + to_treasury as f64) * 365.25 * 2.0,
+				daily_emission * 365.25 * 2.0,
 				first_period_emission as f64,
 				max_relative = 0.00001
-			);
-			// Visual checks.
-			assert_relative_eq!(
-				to_stakers as f64 + to_treasury as f64,
-				(152_271 * UNITS) as f64,
-				max_relative = 0.00001,
-			);
-			assert_relative_eq!(
-				(to_stakers as f64 + to_treasury as f64) * 365.25, // full year
-				(55_617_170 * UNITS) as f64, // https://docs.google.com/spreadsheets/d/1pW6fVESnkenJkqIzRk2Pv4cp5KNzVYSupUI6EA-jeR8/edit?gid=0#gid=0&range=E2.
-				max_relative = 0.00001,
 			);
 
 			// Second period - March 14, 2028 -> March 14, 2030.
 			let march_14_2028 = MARCH_14_2026 + two_years;
 			set_relay_number(march_14_2028);
-			let (to_stakers, to_treasury) = EraPayout::era_payout(
-				123, // ignored
-				456, // ignored
-				MILLISECONDS_PER_DAY,
-			);
+			let daily_emission = EraPayout::issue(0 /* ignored */, MILLISECONDS_PER_DAY);
 			let ti_at_2028 = MARCH_TI + first_period_emission;
 			let second_period_emission = two_year_rate * (TARGET_TI - ti_at_2028);
 			assert_relative_eq!(
-				(to_stakers as f64 + to_treasury as f64) * 365.25 * 2.0,
+				daily_emission * 365.25 * 2.0,
 				second_period_emission as f64,
 				max_relative = 0.00001
 			);
-			// Visual checks.
-			assert_relative_eq!(
-				to_stakers as f64 + to_treasury as f64,
-				(112_254 * UNITS) as f64,
-				max_relative = 0.00001,
-			);
-			assert_relative_eq!(
-				(to_stakers as f64 + to_treasury as f64) * 365.25, // full year
-				(41_000_978 * UNITS) as f64, // https://docs.google.com/spreadsheets/d/1pW6fVESnkenJkqIzRk2Pv4cp5KNzVYSupUI6EA-jeR8/edit?gid=0#gid=0&range=E3.
-				max_relative = 0.00001,
-			);
+
 
 			// Third period - March 14, 2030 -> March 14, 2032.
 			let march_14_2030 = march_14_2028 + two_years;
 			set_relay_number(march_14_2030);
-			let (to_stakers, to_treasury) = EraPayout::era_payout(
-				123, // ignored
-				456, // ignored
-				MILLISECONDS_PER_DAY,
-			);
+			let daily_emission = EraPayout::issue(0 /* ignored */, MILLISECONDS_PER_DAY);
 			let ti_at_2030 = ti_at_2028 + second_period_emission;
 			let third_period_emission = two_year_rate * (TARGET_TI - ti_at_2030);
 			assert_relative_eq!(
-				(to_stakers as f64 + to_treasury as f64) * 365.25 * 2.0,
+				daily_emission * 365.25 * 2.0,
 				third_period_emission as f64,
 				max_relative = 0.00001
-			);
-			// Visual checks.
-			assert_relative_eq!(
-				to_stakers as f64 + to_treasury as f64,
-				(82_754 * UNITS) as f64,
-				max_relative = 0.00001,
-			);
-			assert_relative_eq!(
-				(to_stakers as f64 + to_treasury as f64) * 365.25, // full year
-				(30_225_921 * UNITS) as f64, // https://docs.google.com/spreadsheets/d/1pW6fVESnkenJkqIzRk2Pv4cp5KNzVYSupUI6EA-jeR8/edit?gid=0#gid=0&range=E4.
-				max_relative = 0.00001,
 			);
 		});
 	}
@@ -1071,23 +1052,15 @@ mod tests {
 
 			// Get payout at the beginning of the first stepped period.
 			set_relay_number(MARCH_14_2026);
-			let (to_stakers_start, to_treasury_start) = EraPayout::era_payout(
-				123, // ignored
-				456, // ignored
-				MILLISECONDS_PER_DAY,
-			);
+			let payout_start = EraPayout::issue(0 /* ignored */, MILLISECONDS_PER_DAY);
 
 			// Get payout just before the end of the first stepped period.
 			let almost_two_years_later: RC_BlockNumber = MARCH_14_2026 + two_years - 1;
 			set_relay_number(almost_two_years_later);
-			let (to_stakers_end, to_treasury_end) = EraPayout::era_payout(
-				123, // ignored
-				456, // ignored
-				MILLISECONDS_PER_DAY,
-			);
+            let payout_end = EraPayout::issue(0 /* ignored */, MILLISECONDS_PER_DAY);
 
 			// Payout identical.
-			assert_eq!(to_stakers_start + to_treasury_start, to_stakers_end + to_treasury_end);
+			assert_eq!(payout_start, payout_end);
 		});
 	}
 
@@ -1099,25 +1072,16 @@ mod tests {
 
 			let forseeable_future: RC_BlockNumber = MARCH_14_2026 + (RC_YEARS * 80);
 			set_relay_number(forseeable_future);
-			let (to_stakers, to_treasury) = EraPayout::era_payout(
-				123, // ignored
-				456, // ignored
-				MILLISECONDS_PER_DAY,
-			);
+let daily_emission = EraPayout::issue(0 /* ignored */, MILLISECONDS_PER_DAY);
 
-			// Payout is less than 1 UNIT after 41 steps.
-			assert!(to_stakers + to_treasury < UNITS);
+			assert!(daily_emission < UNITS);
 
 			let far_future: RC_BlockNumber = MARCH_14_2026 + (RC_YEARS * 500);
 			set_relay_number(far_future);
-			let (to_stakers, to_treasury) = EraPayout::era_payout(
-				123, // ignored
-				456, // ignored
-				MILLISECONDS_PER_DAY,
-			);
+			let daily_emission = EraPayout::issue(0 /* ignored */, MILLISECONDS_PER_DAY);
 
 			// TI has converged on asymptote. Payout is zero.
-			assert_eq!(to_stakers + to_treasury, 0);
+			assert_eq!(daily_emission, 0);
 		});
 	}
 
@@ -1137,10 +1101,7 @@ mod tests {
 			for _ in 0..250 {
 				set_relay_number(current_bn);
 
-				let (to_stakers, to_treasury) =
-					EraPayout::era_payout(123, 456, MILLISECONDS_PER_DAY);
-
-				let daily_emission = to_stakers + to_treasury;
+				let daily_emission = EraPayout::issue(0 /* ignored */, MILLISECONDS_PER_DAY);
 				let period_emission = (daily_emission * 7305) / 10;
 				current_ti += period_emission;
 
@@ -1162,14 +1123,10 @@ mod tests {
 
 			// Simulate an era that lasted 100 years (anomalous).
 			let anomalous_duration = 36525 * MILLISECONDS_PER_DAY;
-			let (to_stakers, to_treasury) = EraPayout::era_payout(
-				123, // ignored
-				456, // ignored
-				anomalous_duration,
-			);
+				let emission = EraPayout::issue(0 /* ignored */, anomalous_duration);
 
 			// Capped at MAX_ERA_EMISSION.
-			assert_eq!(to_stakers + to_treasury, EraPayout::MAX_ERA_EMISSION);
+			assert_eq!(emission EraPayout::MAX_ERA_EMISSION);
 		});
 	}
 

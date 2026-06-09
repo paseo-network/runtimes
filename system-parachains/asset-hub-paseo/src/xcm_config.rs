@@ -18,10 +18,10 @@ pub use TreasuryAccount as RelayTreasuryPalletAccount;
 
 use super::{
 	treasury, AccountId, AllPalletsWithSystem, AssetConversion, Assets, Balance, Balances,
-	CollatorSelection, ForeignAssets, GeneralAdmin, NativeAndAssets, ParachainInfo,
+	ForeignAssets, GeneralAdmin, NativeAndAssets, ParachainInfo,
 	ParachainSystem, PaseoWeightToFee as WeightToFee, PolkadotXcm, PoolAssets,
 	PriceForParentDelivery, Runtime, RuntimeCall, RuntimeEvent, RuntimeHoldReason, RuntimeOrigin,
-	StakingAdmin, ToKusamaXcmRouter, Treasurer, XcmpQueue,
+	StakingAdmin, ToKusamaXcmRouter, Treasurer, XcmpQueue, AllExceptReapStash,
 };
 use alloc::{collections::BTreeSet, vec, vec::Vec};
 use assets_common::{
@@ -69,6 +69,7 @@ use xcm_builder::{
 };
 use xcm_executor::{traits::ConvertLocation, XcmExecutor};
 
+use crate::staking::DapStagingAccount;
 pub use system_parachains_constants::paseo::locations::{AssetHubLocation, RelayChainLocation};
 
 parameter_types! {
@@ -87,7 +88,6 @@ parameter_types! {
 	pub RelayTreasuryLocation: Location = (Parent, PalletInstance(paseo_runtime_constants::TREASURY_PALLET_ID)).into();
 	pub PoolAssetsPalletLocation: Location =
 		PalletInstance(<PoolAssets as PalletInfoAccess>::index() as u8).into();
-	pub StakingPot: AccountId = CollatorSelection::account_id();
 	// Test [`crate::tests::treasury_pallet_account_not_none`] ensures that the result of location
 	// conversion is not `None`.
 	// Account address: `14xmwinmCEz6oRrFdczHKqHgWNMiCysE2KrA4jXXAAM1Eogk`
@@ -102,7 +102,6 @@ parameter_types! {
 	pub const Here: Location = Location::here();
 }
 
-// TODO: replace this with DAP account (for collecting fees)
 /// Treasury account that changes once migration ends.
 pub type TreasuryAccount = PostMigrationTreasuryAccount;
 
@@ -441,7 +440,7 @@ impl xcm_executor::Config for XcmConfig {
 			DotLocation,
 			AccountId,
 			Balances,
-			ResolveTo<StakingPot, Balances>,
+			ResolveTo<DapStagingAccount, Balances>,
 		>,
 		// This trader allows to pay with any assets exchangeable to DOT with
 		// [`AssetConversion`].
@@ -467,13 +466,13 @@ impl xcm_executor::Config for XcmConfig {
 	type AssetExchanger = PoolAssetsExchanger;
 	type FeeManager = XcmFeeManagerFromComponents<
 		WaivedLocations,
-		SendXcmFeeToAccount<Self::AssetTransactor, TreasuryAccount>,
+		SendXcmFeeToAccount<Self::AssetTransactor, DapStagingAccount>,
 	>;
 	type MessageExporter = ();
 	type UniversalAliases =
 		(bridging::to_kusama::UniversalAliases, bridging::to_ethereum::UniversalAliases);
 	type CallDispatcher = RuntimeCall;
-	type SafeCallFilter = Everything;
+	type SafeCallFilter = AllExceptReapStash;
 	type Aliasers = TrustedAliasers;
 	type TransactionalProcessor = FrameTransactionalProcessor;
 	type HrmpNewChannelOpenRequestHandler = ();

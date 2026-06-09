@@ -16,9 +16,9 @@
 
 //! Genesis configs presets for the AssetHubPaseo runtime
 
-use crate::{staking::DapPalletId, xcm_config::UniversalLocation, *};
+use crate::{xcm_config::UniversalLocation, *};
 use alloc::vec::Vec;
-use frame_support::sp_runtime::traits::AccountIdConversion;
+use pallet_revive::AddressMapper;
 use parachains_common::AuraId;
 use sp_core::sr25519;
 use sp_genesis_builder::PresetId;
@@ -28,10 +28,6 @@ use xcm_builder::GlobalConsensusConvertsFor;
 use xcm_executor::traits::ConvertLocation;
 
 const ASSET_HUB_POLKADOT_ED: Balance = ExistentialDeposit::get();
-
-fn dap_buffer_account() -> AccountId {
-	DapPalletId::get().into_account_truncating()
-}
 
 /// Invulnerable Collators for the particular case of AssetHubPaseo
 pub fn invulnerables_asset_hub_paseo() -> Vec<(AccountId, AuraId)> {
@@ -53,7 +49,8 @@ fn asset_hub_paseo_genesis(
 		.cloned()
 		.map(|k| (k, ASSET_HUB_POLKADOT_ED * 4096 * 4096))
 		.collect();
-	balances.push((dap_buffer_account(), ASSET_HUB_POLKADOT_ED));
+	balances.push((Dap::buffer_account(), ASSET_HUB_POLKADOT_ED));
+	balances.push((Dap::staging_account(), ASSET_HUB_POLKADOT_ED));
 
 	serde_json::json!({
 		"balances": BalancesConfig {
@@ -104,7 +101,7 @@ fn asset_hub_paseo_genesis(
 			..Default::default()
 		},
 		"revive": ReviveConfig {
-			mapped_accounts: endowed_accounts.iter().filter(|x| ! pallet_revive::is_eth_derived(x)).cloned().collect(),
+			mapped_accounts: endowed_accounts.iter().filter(|x| ! <Runtime as pallet_revive::Config>::AddressMapper::is_mapped(x)).cloned().collect(),
 			accounts: Vec::new(),
 			debug_settings: None,
 		},
