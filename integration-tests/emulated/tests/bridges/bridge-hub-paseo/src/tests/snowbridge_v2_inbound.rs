@@ -98,9 +98,8 @@ fn register_token_v2() {
 					owner: *owner == bridge_owner,
 				},
 				// Check that excess fees were paid to the claimer
-				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { asset_id, owner, .. }) => {
+				RuntimeEvent::ForeignAssets(pallet_assets::Event::IssuedCredit { asset_id, .. }) => {
 					asset_id: *asset_id == eth_location(),
-					owner: *owner == receiver.clone(),
 				},
 			]
 		);
@@ -207,14 +206,12 @@ fn send_token_v2() {
 					id: *id == topic_id.into(),
 				},
 				// Check that the token was received and issued as a foreign asset on AssetHub
-				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { asset_id, owner, .. }) => {
+				RuntimeEvent::ForeignAssets(pallet_assets::Event::IssuedCredit { asset_id, .. }) => {
 					asset_id: *asset_id == token_location,
-					owner: *owner == beneficiary_acc_bytes.into(),
 				},
 				// Check that excess fees were paid to the claimer, which was set by the UX
-				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { asset_id, owner, .. }) => {
+				RuntimeEvent::ForeignAssets(pallet_assets::Event::IssuedCredit { asset_id, .. }) => {
 					asset_id: *asset_id == eth_location(),
-					owner: *owner == receiver.clone(),
 				},
 			]
 		);
@@ -301,14 +298,12 @@ fn send_weth_v2() {
 					pallet_message_queue::Event::Processed { success: true, .. }
 				) => {},
 				// Check that the token was received and issued as a foreign asset on AssetHub
-				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { asset_id, owner, .. }) => {
+				RuntimeEvent::ForeignAssets(pallet_assets::Event::IssuedCredit { asset_id, .. }) => {
 					asset_id: *asset_id == weth_location(),
-					owner: *owner == beneficiary_acc_bytes.into(),
 				},
 				// Check that excess fees were paid to the beneficiary
-				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { asset_id, owner, .. }) => {
+				RuntimeEvent::ForeignAssets(pallet_assets::Event::IssuedCredit { asset_id, .. }) => {
 					asset_id: *asset_id == eth_location(),
-					owner: *owner == beneficiary_acc_bytes.into(),
 				},
 			]
 		);
@@ -443,14 +438,12 @@ fn register_and_send_multiple_tokens_v2() {
 					owner: *owner == bridge_owner.clone(),
 				},
 				// Check that the token was received and issued as a foreign asset on AssetHub
-				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { asset_id, owner, .. }) => {
+				RuntimeEvent::ForeignAssets(pallet_assets::Event::IssuedCredit { asset_id, .. }) => {
 					asset_id: *asset_id == token_location,
-					owner: *owner == beneficiary_acc_bytes.into(),
 				},
 				// Check that excess fees were paid to the beneficiary
-				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { asset_id, owner, .. }) => {
+				RuntimeEvent::ForeignAssets(pallet_assets::Event::IssuedCredit { asset_id, .. }) => {
 					asset_id: *asset_id == eth_location(),
-					owner: *owner == beneficiary_acc_bytes.into(),
 				},
 			]
 		);
@@ -601,14 +594,12 @@ fn send_token_to_penpal_v2() {
 					pallet_message_queue::Event::Processed { success: true, .. }
 				) => {},
 				// Ether was issued to beneficiary
-				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { asset_id, owner, .. }) => {
+				RuntimeEvent::ForeignAssets(pallet_assets::Event::IssuedCredit { asset_id, .. }) => {
 					asset_id: *asset_id == eth_location(),
-					owner: *owner == penpal_sov_on_ah,
 				},
 				// Token was issued to beneficiary
-				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { asset_id, owner, .. }) => {
+				RuntimeEvent::ForeignAssets(pallet_assets::Event::IssuedCredit { asset_id, .. }) => {
 					asset_id: *asset_id == token_location,
-					owner: *owner == penpal_sov_on_ah,
 				},
 				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},
 			]
@@ -896,14 +887,12 @@ fn invalid_claimer_does_not_fail_the_message() {
 			AssetHubPaseo,
 			vec![
 				// Token was issued to beneficiary
-				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { asset_id, owner, .. }) => {
+				RuntimeEvent::ForeignAssets(pallet_assets::Event::IssuedCredit { asset_id, .. }) => {
 					asset_id: *asset_id == weth_location(),
-					owner: *owner == beneficiary_acc.into(),
 				},
 				// Leftover fees deposited to beneficiary
-				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { asset_id, owner, .. }) => {
+				RuntimeEvent::ForeignAssets(pallet_assets::Event::IssuedCredit { asset_id, .. }) => {
 					asset_id: *asset_id == eth_location(),
-					owner: *owner == beneficiary_acc.into(),
 				},
 			]
 		);

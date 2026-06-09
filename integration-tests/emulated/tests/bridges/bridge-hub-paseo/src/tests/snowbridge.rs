@@ -196,7 +196,7 @@ fn send_token_from_ethereum_to_penpal() {
 		assert_expected_events!(
 			AssetHubPaseo,
 			vec![
-				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { .. }) => {},
+				RuntimeEvent::ForeignAssets(pallet_assets::Event::IssuedCredit { .. }) => {},
 				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},
 			]
 		);
@@ -279,7 +279,7 @@ fn send_weth_from_ethereum_to_asset_hub() {
 		assert_expected_events!(
 			AssetHubPaseo,
 			vec![
-				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { .. }) => {},
+				RuntimeEvent::ForeignAssets(pallet_assets::Event::IssuedCredit { .. }) => {},
 			]
 		);
 	});
@@ -371,7 +371,7 @@ fn send_token_from_ethereum_to_asset_hub_and_back_works(
 		assert_expected_events!(
 			AssetHubPaseo,
 			vec![
-				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { asset_id, .. }) => {
+				RuntimeEvent::ForeignAssets(pallet_assets::Event::IssuedCredit { asset_id, .. }) => {
 					asset_id: *asset_id == asset_location,
 				},
 			]
@@ -680,7 +680,7 @@ fn send_token_from_ethereum_to_existent_account_on_asset_hub() {
 		assert_expected_events!(
 			AssetHubPaseo,
 			vec![
-				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { .. }) => {},
+				RuntimeEvent::ForeignAssets(pallet_assets::Event::IssuedCredit { .. }) => {},
 			]
 		);
 	});
@@ -697,7 +697,7 @@ fn send_token_from_ethereum_to_non_existent_account_on_asset_hub() {
 		assert_expected_events!(
 			AssetHubPaseo,
 			vec![
-				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { .. }) => {},
+				RuntimeEvent::ForeignAssets(pallet_assets::Event::IssuedCredit { .. }) => {},
 			]
 		);
 	});
