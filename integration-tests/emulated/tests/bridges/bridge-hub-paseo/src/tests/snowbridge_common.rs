@@ -168,7 +168,25 @@ pub fn register_foreign_asset_on_penpal(id: Location, owner: AccountId, sufficie
 
 /// Registers a foreign asset on Paseo AssetHub.
 pub fn register_foreign_asset(id: Location, owner: AccountId, sufficient: bool) {
-	AssetHubPaseo::force_create_foreign_asset(id, owner, sufficient, ASSET_MIN_BALANCE, vec![]);
+	AssetHubPaseo::force_create_foreign_asset(
+		id.clone(),
+		owner.clone(),
+		sufficient,
+		ASSET_MIN_BALANCE,
+		vec![],
+	);
+	// v2.3.0: pallet-assets tracks reserves in a `Reserves` registry that
+	// `NonTeleportableAssetFromTrustedReserve` reads. The genesis sets it for Ether/Weth, but
+	// `force_create_foreign_asset` doesn't, so set the Ethereum reserve here for runtime-registered
+	// tokens (otherwise inbound ReserveAssetDeposited fails with UntrustedReserveLocation).
+	AssetHubPaseo::execute_with(|| {
+		type RuntimeOrigin = <AssetHubPaseo as Chain>::RuntimeOrigin;
+		assert_ok!(<AssetHubPaseo as AssetHubPaseoPallet>::ForeignAssets::set_reserves(
+			RuntimeOrigin::signed(owner),
+			id,
+			vec![(eth_location(), false).into()].try_into().expect("one reserve fits"),
+		));
+	});
 }
 
 /// Create PAL (native asset for penpal) on AH.
