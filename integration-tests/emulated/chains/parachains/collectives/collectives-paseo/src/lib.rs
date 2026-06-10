@@ -43,7 +43,7 @@ decl_test_parachains! {
 			Balances: collectives_paseo_runtime::Balances,
 			FellowshipTreasury: collectives_paseo_runtime::FellowshipTreasury,
 			AssetRate: collectives_paseo_runtime::AssetRate,
-			Scheduler: collectives_polkadot_runtime::Scheduler,
+			Scheduler: collectives_paseo_runtime::Scheduler,
 		}
 	},
 }

@@ -22,7 +22,7 @@ use asset_hub_paseo_runtime::{
 };
 
 // Cumulus
-use emulated_integration_tests_common::{
+pub use emulated_integration_tests_common::{
 	accounts, build_genesis_storage, xcm_emulator::ConvertLocation, PenpalALocation,
 	PenpalAPen2TeleportableAssetLocation, PenpalASiblingSovereignAccount, PenpalBLocation,
 	PenpalBPen2TeleportableAssetLocation, PenpalBSiblingSovereignAccount, RESERVABLE_ASSET_ID,
@@ -39,7 +39,7 @@ pub const USDT_ID: u32 = 1984;
 
 frame_support::parameter_types! {
 	pub AssetHubPaseoAssetOwner: AccountId = Sr25519Keyring::Alice.to_account_id();
-	pub UniversalLocation: InteriorLocation = [GlobalConsensus(Paseo), Parachain(PARA_ID)].into();
+	pub UniversalLocation: InteriorLocation = [GlobalConsensus(Polkadot), Parachain(PARA_ID)].into();
 	pub EthereumSovereignAccount: AccountId = ExternalConsensusLocationsConverterFor::<UniversalLocation, AccountId>::convert_location(
 		&EthLocation::get(),
 	).unwrap();

@@ -54,7 +54,8 @@ pub use parachains_common::{AccountId, Balance};
 pub use paseo_system_emulated_network::{
 	asset_hub_paseo_emulated_chain::{
 		genesis::{
-			AssetHubPaseoAssetOwner, PenpalATeleportableAssetLocation, ED as ASSET_HUB_POLKADOT_ED,
+			AssetHubPaseoAssetOwner, PenpalAPen2TeleportableAssetLocation,
+			ED as ASSET_HUB_POLKADOT_ED,
 		},
 		AssetHubPaseoParaPallet as AssetHubPaseoPallet, ForeignAssetReserveData,
 	},
