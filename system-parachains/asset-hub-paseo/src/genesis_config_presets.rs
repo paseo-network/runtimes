@@ -49,8 +49,17 @@ fn asset_hub_paseo_genesis(
 		.cloned()
 		.map(|k| (k, ASSET_HUB_POLKADOT_ED * 4096 * 4096))
 		.collect();
-	balances.push((Dap::buffer_account(), ASSET_HUB_POLKADOT_ED));
-	balances.push((Dap::staging_account(), ASSET_HUB_POLKADOT_ED));
+	// Ensure the DAP buffer and staging accounts hold at least the existential
+	// deposit, but skip any account a preset has already endowed (the dev preset
+	// seeds the staging account explicitly). Pushing a duplicate account makes the
+	// `balances` genesis builder panic with "duplicate balances in genesis", which
+	// silently breaks benchmarking (`frame-omni-bencher` builds a genesis preset)
+	// and dev chain-spec generation.
+	for account in [Dap::buffer_account(), Dap::staging_account()] {
+		if !balances.iter().any(|(who, _)| *who == account) {
+			balances.push((account, ASSET_HUB_POLKADOT_ED));
+		}
+	}
 
 	serde_json::json!({
 		"balances": BalancesConfig {
@@ -171,4 +180,54 @@ pub fn get_preset(id: &PresetId) -> Option<Vec<u8>> {
 			.expect("serialization to json is expected to work. qed.")
 			.into_bytes(),
 	)
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use frame_support::genesis_builder_helper::build_state;
+	use sp_genesis_builder::{DEV_RUNTIME_PRESET, LOCAL_TESTNET_RUNTIME_PRESET};
+
+	// Building a genesis preset must not panic. The `balances` genesis builder panics
+	// on duplicate accounts ("duplicate balances in genesis"); this previously broke
+	// asset-hub benchmarking (`frame-omni-bencher` builds the `local_testnet` preset)
+	// and dev chain-spec generation.
+	/// Recursively merge `patch` into `base`, as `sc-chain-spec` does when it
+	/// applies a preset patch on top of the default genesis config.
+	fn json_merge(base: &mut serde_json::Value, patch: serde_json::Value) {
+		match (base, patch) {
+			(serde_json::Value::Object(base), serde_json::Value::Object(patch)) =>
+				for (k, v) in patch {
+					json_merge(base.entry(k).or_insert(serde_json::Value::Null), v);
+				},
+			(base, patch) => *base = patch,
+		}
+	}
+
+	fn assert_preset_builds(id: &str) {
+		sp_io::TestExternalities::default().execute_with(|| {
+			// Preset generation itself reads storage (`AddressMapper::is_mapped`),
+			// so it must also run inside the externalities environment.
+			let preset = get_preset(&PresetId::from(id))
+				.unwrap_or_else(|| panic!("preset `{id}` is not defined"));
+			let patch = serde_json::from_slice(&preset).expect("preset is valid JSON; qed");
+			let mut config = serde_json::to_value(crate::RuntimeGenesisConfig::default())
+				.expect("default genesis config serializes; qed");
+			json_merge(&mut config, patch);
+			build_state::<crate::RuntimeGenesisConfig>(
+				serde_json::to_vec(&config).expect("merged config serializes; qed"),
+			)
+			.unwrap_or_else(|e| panic!("preset `{id}` failed to build: {e}"));
+		});
+	}
+
+	#[test]
+	fn local_testnet_genesis_preset_builds() {
+		assert_preset_builds(LOCAL_TESTNET_RUNTIME_PRESET);
+	}
+
+	#[test]
+	fn development_genesis_preset_builds() {
+		assert_preset_builds(DEV_RUNTIME_PRESET);
+	}
 }
