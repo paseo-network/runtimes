@@ -2921,6 +2921,7 @@ mod tests {
 		assert!(ProxyType::StakingOperator.filter(&RuntimeCall::StakingRcClient(
 			pallet_staking_async_rc_client::Call::set_keys {
 				keys: Default::default(),
+				proof: Default::default(),
 				max_delivery_and_remote_execution_fee: None,
 			}
 		)));
@@ -3005,9 +3006,7 @@ mod tests {
 		assert!(!ProxyType::StakingOperator.filter(&RuntimeCall::Session(
 			pallet_session::Call::set_keys {
 				keys: SessionKeys {
-					aura: sp_consensus_aura::ed25519::AuthorityId::from(
-						sp_core::ed25519::Public::from_raw([0u8; 32]),
-					),
+					aura: AuraId::from(sp_core::sr25519::Public::from_raw([0u8; 32])),
 				},
 				proof: vec![],
 			}
@@ -3040,6 +3039,7 @@ mod tests {
 		assert!(ProxyType::Staking.filter(&RuntimeCall::StakingRcClient(
 			pallet_staking_async_rc_client::Call::set_keys {
 				keys: Default::default(),
+				proof: Default::default(),
 				max_delivery_and_remote_execution_fee: None,
 			}
 		)));

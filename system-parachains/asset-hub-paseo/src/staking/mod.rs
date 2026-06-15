@@ -790,7 +790,6 @@ mod tests {
 
 	#[test]
 	fn inflation_sanity_check() {
-		use pallet_staking_async::EraPayout as _;
 		// values taken from the last Paseo staking payout while it was in RC.
 		//https://paseo.subscan.io/block/7926659
 		// Payout: 692k PAS to validators / 1221 PAS to treasury
@@ -799,13 +798,10 @@ mod tests {
 		// good.
 		sp_io::TestExternalities::new_empty().execute_with(|| {
 			let average_era_duration_millis = 6 * 60 * 60 * 1000;
-			let (staking, treasury) = super::EraPayout::era_payout(
-				0, // not used
-				0, // not used
-				average_era_duration_millis,
-			);
-			assert_eq!(staking, 69869_4526049627);
-			assert_eq!(treasury, 12329_9034008757);
+			// Combined staker + treasury emission; the split is now handled by pallet-dap.
+			let emission =
+				super::EraPayout::issue(0 /* ignored */, average_era_duration_millis);
+			assert_eq!(emission, 82199_3560058384);
 
 			// a recent TI of Paseo AH(block 3651137)
 			pallet_balances::TotalIssuance::<Runtime>::put(7435616143598483358);
@@ -814,7 +810,7 @@ mod tests {
 				super::EraPayout::impl_experimental_inflation_info(),
 				InflationInfo {
 					issuance: Perquintill::from_parts(expected_issuance_parts),
-					next_mint: (279477_8104198508, 49319_6136035030)
+					next_mint: (328797_4240233538, 0)
 				}
 			);
 			// around 4% for now.
@@ -825,29 +821,13 @@ mod tests {
 	#[test]
 	fn pre_march_2026_formula_staking_inflation_correct_single_era() {
 		ExtBuilder::<Runtime>::default().build().execute_with(|| {
-			let (to_stakers, to_treasury) = EraPayout::era_payout(
-				123, // ignored
+			let emission = EraPayout::issue(
 				456, // ignored
 				MILLISECONDS_PER_DAY,
 			);
 
-			// Values are within 0.1%
-			assert_relative_eq!(
-				to_stakers as f64,
-				APPROX_PRE_CAP_STAKING as f64,
-				max_relative = 0.001
-			);
-			assert_relative_eq!(
-				to_treasury as f64,
-				APPROX_PRE_CAP_TREASURY as f64,
-				max_relative = 0.001
-			);
-			// Total per day is ~328,797 DOT
-			assert_relative_eq!(
-				(to_stakers as f64 + to_treasury as f64),
-				APPROX_PRE_CAP_TOTAL as f64,
-				max_relative = 0.001
-			);
+			// Total per day is ~328,797 DOT, within 0.1%
+			assert_relative_eq!(emission as f64, APPROX_PRE_CAP_TOTAL as f64, max_relative = 0.001);
 		});
 	}
 
@@ -855,20 +835,14 @@ mod tests {
 	fn pre_march_2026_formula_staking_inflation_correct_longer_era() {
 		ExtBuilder::<Runtime>::default().build().execute_with(|| {
 			// Twice the era duration means twice the emission:
-			let (to_stakers, to_treasury) = EraPayout::era_payout(
-				123, // ignored
+			let emission = EraPayout::issue(
 				456, // ignored
 				2 * MILLISECONDS_PER_DAY,
 			);
 
 			assert_relative_eq!(
-				to_stakers as f64,
-				APPROX_PRE_CAP_STAKING as f64 * 2.0,
-				max_relative = 0.001
-			);
-			assert_relative_eq!(
-				to_treasury as f64,
-				APPROX_PRE_CAP_TREASURY as f64 * 2.0,
+				emission as f64,
+				APPROX_PRE_CAP_TOTAL as f64 * 2.0,
 				max_relative = 0.001
 			);
 		});
@@ -880,12 +854,10 @@ mod tests {
 		ExtBuilder::<Runtime>::default().build().execute_with(|| {
 			let mut emission_total = 0;
 			for _ in 0..36525 {
-				let (to_stakers, to_treasury) = EraPayout::era_payout(
-					123, // ignored
+				emission_total += EraPayout::issue(
 					456, // ignored
 					MILLISECONDS_PER_DAY,
 				);
-				emission_total += to_stakers + to_treasury;
 			}
 
 			let initial_ti: i128 = 15_011_657_390_566_252_333;
@@ -920,18 +892,18 @@ mod tests {
 		ExtBuilder::<Runtime>::default().build().execute_with(|| {
 			// Pre-march.
 			pallet_balances::pallet::TotalIssuance::<Runtime, ()>::set(MARCH_TI);
-			EraPayout::era_payout(0, 0, MILLISECONDS_PER_DAY);
+			EraPayout::issue(0, MILLISECONDS_PER_DAY);
 			assert!(March2026TI::get().is_none());
 
 			// Post-march.
 			set_relay_number(MARCH_14_2026);
-			EraPayout::era_payout(0, 0, MILLISECONDS_PER_DAY);
+			EraPayout::issue(0, MILLISECONDS_PER_DAY);
 			assert_eq!(March2026TI::get(), Some(MARCH_TI));
 
 			// No change on subsequent call.
 			set_relay_number(MARCH_14_2026 + 2 * RC_YEARS);
 			pallet_balances::pallet::TotalIssuance::<Runtime, ()>::set(MARCH_TI + 1);
-			EraPayout::era_payout(0, 0, MILLISECONDS_PER_DAY);
+			EraPayout::issue(0, MILLISECONDS_PER_DAY);
 			assert_eq!(March2026TI::get(), Some(MARCH_TI));
 		});
 	}
@@ -941,19 +913,19 @@ mod tests {
 		ExtBuilder::<Runtime>::default().build().execute_with(|| {
 			// Pre-march.
 			pallet_balances::pallet::TotalIssuance::<Runtime, ()>::set(MARCH_TI);
-			EraPayout::era_payout(0, 0, MILLISECONDS_PER_DAY);
+			EraPayout::issue(0, MILLISECONDS_PER_DAY);
 			assert!(March2026TI::get().is_none());
 
 			// Post-march, TI got messed up somehow.
 			pallet_balances::pallet::TotalIssuance::<Runtime, ()>::set(0);
 			set_relay_number(MARCH_14_2026);
-			EraPayout::era_payout(0, 0, MILLISECONDS_PER_DAY);
+			EraPayout::issue(0, MILLISECONDS_PER_DAY);
 			assert_eq!(March2026TI::get(), Some(super::EraPayout::FIXED_PRE_HARD_CAP_TI));
 
 			// No change on subsequent call.
 			set_relay_number(MARCH_14_2026 + 2 * RC_YEARS);
 			pallet_balances::pallet::TotalIssuance::<Runtime, ()>::set(MARCH_TI + 1);
-			EraPayout::era_payout(0, 0, MILLISECONDS_PER_DAY);
+			EraPayout::issue(0, MILLISECONDS_PER_DAY);
 			assert_eq!(March2026TI::get(), Some(super::EraPayout::FIXED_PRE_HARD_CAP_TI));
 		});
 	}
@@ -963,33 +935,17 @@ mod tests {
 	fn set_to_stepped_inflation_transition_works() {
 		ExtBuilder::<Runtime>::default().build().execute_with(|| {
 			// Check before transition date.
-			let (to_stakers, to_treasury) = EraPayout::era_payout(
-				123, // ignored
+			let emission = EraPayout::issue(
 				456, // ignored
 				MILLISECONDS_PER_DAY,
 			);
-			assert_relative_eq!(
-				to_stakers as f64,
-				APPROX_PRE_CAP_STAKING as f64,
-				max_relative = 0.001
-			);
-			assert_relative_eq!(
-				to_treasury as f64,
-				APPROX_PRE_CAP_TREASURY as f64,
-				max_relative = 0.001
-			);
-			assert_relative_eq!(
-				(to_stakers as f64 + to_treasury as f64),
-				APPROX_PRE_CAP_TOTAL as f64,
-				max_relative = 0.001
-			);
+			assert_relative_eq!(emission as f64, APPROX_PRE_CAP_TOTAL as f64, max_relative = 0.001);
 
 			pallet_balances::pallet::TotalIssuance::<Runtime, ()>::set(MARCH_TI);
 
 			// Check after transition date.
 			set_relay_number(MARCH_14_2026);
-			let (to_stakers, to_treasury) = EraPayout::era_payout(
-				123, // ignored
+			let emission = EraPayout::issue(
 				456, // ignored
 				MILLISECONDS_PER_DAY,
 			);
@@ -998,11 +954,7 @@ mod tests {
 				Perbill::from_rational(1u32, 2u32) *
 				Perbill::from_rational(100u32, 36525u32);
 			let assumed_payout = era_rate * (TARGET_TI - MARCH_TI);
-			assert_relative_eq!(
-				(to_stakers as f64 + to_treasury as f64),
-				assumed_payout as f64,
-				max_relative = 0.00001
-			);
+			assert_relative_eq!(emission as f64, assumed_payout as f64, max_relative = 0.00001);
 		});
 	}
 
@@ -1019,7 +971,7 @@ mod tests {
 			let two_year_rate = EraPayout::BI_ANNUAL_RATE;
 			let first_period_emission = two_year_rate * (TARGET_TI - MARCH_TI);
 			assert_relative_eq!(
-				daily_emission * 365.25 * 2.0,
+				daily_emission as f64 * 365.25 * 2.0,
 				first_period_emission as f64,
 				max_relative = 0.00001
 			);
@@ -1031,7 +983,7 @@ mod tests {
 			let ti_at_2028 = MARCH_TI + first_period_emission;
 			let second_period_emission = two_year_rate * (TARGET_TI - ti_at_2028);
 			assert_relative_eq!(
-				daily_emission * 365.25 * 2.0,
+				daily_emission as f64 * 365.25 * 2.0,
 				second_period_emission as f64,
 				max_relative = 0.00001
 			);
@@ -1043,7 +995,7 @@ mod tests {
 			let ti_at_2030 = ti_at_2028 + second_period_emission;
 			let third_period_emission = two_year_rate * (TARGET_TI - ti_at_2030);
 			assert_relative_eq!(
-				daily_emission * 365.25 * 2.0,
+				daily_emission as f64 * 365.25 * 2.0,
 				third_period_emission as f64,
 				max_relative = 0.00001
 			);
@@ -1133,7 +1085,7 @@ mod tests {
 			let emission = EraPayout::issue(0 /* ignored */, anomalous_duration);
 
 			// Capped at MAX_ERA_EMISSION.
-			assert_eq!(emission EraPayout::MAX_ERA_EMISSION);
+			assert_eq!(emission, EraPayout::MAX_ERA_EMISSION);
 		});
 	}
 
@@ -1259,7 +1211,7 @@ mod tests {
 			use multi_block::WeightInfo;
 			analyze_weight(
 				"snapshot_msp",
-				<Runtime as multi_block::Config>::WeightInfo::on_initialize_into_snapshot_msp(),
+				<Runtime as multi_block::Config>::WeightInfo::per_block_snapshot_msp(),
 				<Runtime as frame_system::Config>::BlockWeights::get().max_block,
 				Some(Percent::from_percent(75)),
 			);
@@ -1270,7 +1222,7 @@ mod tests {
 			use multi_block::WeightInfo;
 			analyze_weight(
 				"snapshot_rest",
-				<Runtime as multi_block::Config>::WeightInfo::on_initialize_into_snapshot_rest(),
+				<Runtime as multi_block::Config>::WeightInfo::per_block_snapshot_rest(),
 				<Runtime as frame_system::Config>::BlockWeights::get().max_block,
 				Some(Percent::from_percent(75)),
 			);
@@ -1281,14 +1233,15 @@ mod tests {
 			use multi_block::verifier::WeightInfo;
 			analyze_weight(
 				"verifier valid terminal",
-				<Runtime as multi_block::verifier::Config>::WeightInfo::on_initialize_valid_terminal(),
+				<Runtime as multi_block::verifier::Config>::WeightInfo::verification_valid_terminal(
+				),
 				<Runtime as frame_system::Config>::BlockWeights::get().max_block,
 				Some(Percent::from_percent(75)),
 			);
 
 			analyze_weight(
 				"verifier invalid terminal",
-				<Runtime as multi_block::verifier::Config>::WeightInfo::on_initialize_invalid_terminal(),
+				<Runtime as multi_block::verifier::Config>::WeightInfo::verification_invalid_terminal(),
 				<Runtime as frame_system::Config>::BlockWeights::get().max_block,
 				Some(Percent::from_percent(75)),
 			);
