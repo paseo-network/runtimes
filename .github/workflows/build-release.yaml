@@ -351,17 +351,17 @@ jobs:
       matrix:
         include:
           - name: "paseo"
-            rpc_uri: "wss://paseo.rpc.amforc.com"
+            rpc_uri: "wss://api2.zondax.ch/pas/relay/node/rpc"
           - name: "asset-hub-paseo"
-            rpc_uri: "wss://sys.ibp.network/asset-hub-paseo"
+            rpc_uri: "wss://api2.zondax.ch/pas/assethub/node/rpc"
           - name: "bridge-hub-paseo"
-            rpc_uri: "wss://bridge-hub-paseo.dotters.network"
+            rpc_uri: "wss://api2.zondax.ch/pas/bridgehub/node/rpc"
           - name: "collectives-paseo"
-            rpc_uri: "wss://collectives-paseo.rpc.amforc.com"
+            rpc_uri: "wss://api2.zondax.ch/pas/collectives/node/rpc"
           - name: "people-paseo"
-            rpc_uri: "wss://people-paseo.dotters.network"
+            rpc_uri: "wss://api2.zondax.ch/pas/people/node/rpc"
           - name: "coretime-paseo"
-            rpc_uri: "wss://coretime-paseo.dotters.network"
+            rpc_uri: "wss://api2.zondax.ch/pas/coretime/node/rpc"
 
     steps:
       - name: Check if runtime should run
