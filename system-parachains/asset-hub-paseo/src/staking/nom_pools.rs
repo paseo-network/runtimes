@@ -47,7 +47,8 @@ parameter_types! {
 /// points-to-balance ratio long enough for deferred pre-flip slashes (`SlashDeferDuration = 27`) to
 /// still be applied.
 ///
-/// TODO: this is an interim runtime fix, meant to be superseded by the in-pallet decoupling in polkadot-sdk
+/// TODO: this is an interim runtime fix, meant to be superseded by the in-pallet decoupling in
+/// polkadot-sdk
 pub struct PostUnbondingPoolsWindow;
 impl Get<u32> for PostUnbondingPoolsWindow {
 	fn get() -> u32 {

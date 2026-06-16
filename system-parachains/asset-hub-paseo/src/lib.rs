@@ -3121,7 +3121,7 @@ mod tests {
 		assert!(AllExceptReapStash::contains(&chill_other));
 	}
 
-    /// The nomination-pools `with_era` bound (`TotalUnbondingPools`) must stay pinned at its
+	/// The nomination-pools `with_era` bound (`TotalUnbondingPools`) must stay pinned at its
 	/// historical maximum (32) across the `AreNominatorsSlashable` fast-unbond flip. Otherwise the
 	/// lowered nominator bonding duration would shrink the bound (32 -> 6), making oversized
 	/// historical sub-pools undecodable and destroying per-era unbonding accounting on the next
