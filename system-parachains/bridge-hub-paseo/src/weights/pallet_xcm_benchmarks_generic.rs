@@ -121,7 +121,7 @@ impl<T: frame_system::Config> pallet_xcm_benchmarks::generic::WeightInfo for Wei
 		//  Measured:  `0`
 		//  Estimated: `0`
 		// Minimum execution time: 1_883_000 picoseconds.
-		Weight::from_parts(2_003_000, 0)
+		Weight::from_parts(2_003_001, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 	}
 	fn set_appendix() -> Weight {

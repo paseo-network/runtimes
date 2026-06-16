@@ -16,11 +16,16 @@
 // Substrate
 use sp_keyring::Sr25519Keyring;
 
+use asset_hub_paseo_runtime::{
+	xcm_config::{CheckingAccount, TreasuryAccount},
+	Dap,
+};
+
 // Cumulus
-use emulated_integration_tests_common::{
+pub use emulated_integration_tests_common::{
 	accounts, build_genesis_storage, xcm_emulator::ConvertLocation, PenpalALocation,
-	PenpalASiblingSovereignAccount, PenpalATeleportableAssetLocation, PenpalBLocation,
-	PenpalBSiblingSovereignAccount, PenpalBTeleportableAssetLocation, RESERVABLE_ASSET_ID,
+	PenpalAPen2TeleportableAssetLocation, PenpalASiblingSovereignAccount, PenpalBLocation,
+	PenpalBPen2TeleportableAssetLocation, PenpalBSiblingSovereignAccount, RESERVABLE_ASSET_ID,
 	SAFE_XCM_VERSION,
 };
 use integration_tests_helpers::common::snowbridge::{EthLocation, WethLocation, MIN_ETHER_BALANCE};
@@ -34,7 +39,7 @@ pub const USDT_ID: u32 = 1984;
 
 frame_support::parameter_types! {
 	pub AssetHubPaseoAssetOwner: AccountId = Sr25519Keyring::Alice.to_account_id();
-	pub UniversalLocation: InteriorLocation = [GlobalConsensus(Paseo), Parachain(PARA_ID)].into();
+	pub UniversalLocation: InteriorLocation = [GlobalConsensus(Polkadot), Parachain(PARA_ID)].into();
 	pub EthereumSovereignAccount: AccountId = ExternalConsensusLocationsConverterFor::<UniversalLocation, AccountId>::convert_location(
 		&EthLocation::get(),
 	).unwrap();
@@ -59,9 +64,12 @@ pub fn genesis() -> sp_core::storage::Storage {
 		system: asset_hub_paseo_runtime::SystemConfig::default(),
 		balances: asset_hub_paseo_runtime::BalancesConfig {
 			balances: accounts::init_balances()
-				.iter()
-				.cloned()
+				.into_iter()
+				.chain([TreasuryAccount::get(), Dap::buffer_account(), Dap::staging_account()])
 				.map(|k| (k, ED * 4096 * 4096))
+				// pre-fund checking account to avoid pre-funding for every test scenario
+				// teleporting funds to asset hub
+				.chain(std::iter::once((CheckingAccount::get(), ED * 4096 * 4096 * 4096)))
 				.collect(),
 			dev_accounts: None,
 		},
@@ -102,13 +110,13 @@ pub fn genesis() -> sp_core::storage::Storage {
 			assets: vec![
 				// Penpal's teleportable asset representation
 				(
-					PenpalATeleportableAssetLocation::get(),
+					PenpalAPen2TeleportableAssetLocation::get(),
 					PenpalASiblingSovereignAccount::get(),
 					false,
 					ED,
 				),
 				(
-					PenpalBTeleportableAssetLocation::get(),
+					PenpalBPen2TeleportableAssetLocation::get(),
 					PenpalBSiblingSovereignAccount::get(),
 					false,
 					ED,
@@ -120,11 +128,11 @@ pub fn genesis() -> sp_core::storage::Storage {
 			],
 			reserves: vec![
 				(
-					PenpalATeleportableAssetLocation::get(),
+					PenpalAPen2TeleportableAssetLocation::get(),
 					vec![(PenpalALocation::get(), true).into()],
 				),
 				(
-					PenpalBTeleportableAssetLocation::get(),
+					PenpalBPen2TeleportableAssetLocation::get(),
 					vec![(PenpalBLocation::get(), true).into()],
 				),
 				(EthLocation::get(), vec![(EthLocation::get(), false).into()]),
