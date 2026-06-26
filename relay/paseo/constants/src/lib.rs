@@ -199,6 +199,14 @@ pub mod proxy {
 		/// Operator proxy for validators. Can only manage session keys. Cannot do staking
 		/// operations since they moved to Asset Hub.
 		StakingOperator = 10,
+		/// Sudo-capable proxy whose one restriction is that it can never change or remove the
+		/// sudo key. Intended for automations that need `sudo` access: if the proxy key leaks,
+		/// the sudo account itself stays recoverable. See the runtime's `call_can_change_sudo`
+		/// for the exact (recursive) set of forbidden calls.
+		///
+		/// The index is padded well above the contiguous range so upstream can keep appending
+		/// proxy types (11, 12, …) without colliding with this Paseo-specific variant.
+		SafeSudo = 100,
 	}
 
 	/// Remote proxy interface that uses the relay chain as remote location.

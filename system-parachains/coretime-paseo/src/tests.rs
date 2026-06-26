@@ -307,3 +307,70 @@ fn governance_authorize_upgrade_works() {
 		RuntimeOrigin,
 	>(GovernanceOrigin::Location(AssetHubLocation::get())));
 }
+
+#[test]
+fn safe_sudo_proxy_filter_works() {
+	use alloc::boxed::Box;
+	use frame_support::traits::InstanceFilter;
+
+	let acc = || sp_runtime::MultiAddress::Id(AccountId::from([0u8; 32]));
+	let set_key = || RuntimeCall::Sudo(pallet_sudo::Call::set_key { new: acc() });
+	let remark = || RuntimeCall::System(frame_system::Call::remark { remark: vec![] });
+
+	// A weaker proxy must NOT be able to mint a SafeSudo proxy; only Any is its superset.
+	assert!(!ProxyType::NonTransfer.is_superset(&ProxyType::SafeSudo));
+	assert!(ProxyType::Any.is_superset(&ProxyType::SafeSudo));
+
+	// Directly key-mutating / escalating calls are blocked.
+	assert!(!ProxyType::SafeSudo.filter(&set_key()));
+	assert!(!ProxyType::SafeSudo.filter(&RuntimeCall::Sudo(pallet_sudo::Call::remove_key {})));
+	assert!(!ProxyType::SafeSudo
+		.filter(&RuntimeCall::System(frame_system::Call::set_storage { items: vec![] })));
+	assert!(!ProxyType::SafeSudo
+		.filter(&RuntimeCall::System(frame_system::Call::kill_storage { keys: vec![] })));
+	assert!(!ProxyType::SafeSudo.filter(&RuntimeCall::System(frame_system::Call::kill_prefix {
+		prefix: vec![],
+		subkeys: 0
+	})));
+	assert!(!ProxyType::SafeSudo.filter(&RuntimeCall::Proxy(pallet_proxy::Call::add_proxy {
+		delegate: acc(),
+		proxy_type: ProxyType::Any,
+		delay: 0,
+	})));
+
+	// The same calls are still blocked when smuggled through wrappers.
+	assert!(!ProxyType::SafeSudo
+		.filter(&RuntimeCall::Sudo(pallet_sudo::Call::sudo { call: Box::new(set_key()) })));
+	assert!(!ProxyType::SafeSudo.filter(&RuntimeCall::Sudo(pallet_sudo::Call::sudo_as {
+		who: acc(),
+		call: Box::new(set_key()),
+	})));
+	assert!(!ProxyType::SafeSudo.filter(&RuntimeCall::Utility(pallet_utility::Call::batch_all {
+		calls: vec![remark(), set_key()]
+	})));
+	// Deeply nested: sudo(batch_all([sudo(set_key)])).
+	assert!(!ProxyType::SafeSudo.filter(&RuntimeCall::Sudo(pallet_sudo::Call::sudo {
+		call: Box::new(RuntimeCall::Utility(pallet_utility::Call::batch_all {
+			calls: vec![RuntimeCall::Sudo(pallet_sudo::Call::sudo { call: Box::new(set_key()) })],
+		})),
+	})));
+
+	// Ordinary sudo automation that never touches the key is allowed.
+	assert!(ProxyType::SafeSudo.filter(&remark()));
+	assert!(ProxyType::SafeSudo
+		.filter(&RuntimeCall::Sudo(pallet_sudo::Call::sudo { call: Box::new(remark()) })));
+
+	// SafeSudo is deliberately "Any minus the sudo key": it still permits powerful Root calls
+	// such as `Balances::force_transfer`, directly and via `sudo`. Only the sudo key itself is
+	// protected — a leaked key can move funds but cannot lock us out of sudo.
+	let force_transfer = || {
+		RuntimeCall::Balances(pallet_balances::Call::force_transfer {
+			source: acc(),
+			dest: acc(),
+			value: 1,
+		})
+	};
+	assert!(ProxyType::SafeSudo.filter(&force_transfer()));
+	assert!(ProxyType::SafeSudo
+		.filter(&RuntimeCall::Sudo(pallet_sudo::Call::sudo { call: Box::new(force_transfer()) })));
+}
