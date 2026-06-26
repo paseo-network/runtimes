@@ -1255,6 +1255,9 @@ impl InstanceFilter<RuntimeCall> for TransparentProxyType<ProxyType> {
 						RuntimeCall::Utility { .. }
 				)
 			},
+			// Behaves like `Any`, except it can never change or remove the sudo key (directly
+			// or via any nesting wrapper). See `call_can_change_sudo`.
+			ProxyType::SafeSudo => !call_can_change_sudo(c),
 		}
 	}
 
@@ -1263,12 +1266,16 @@ impl InstanceFilter<RuntimeCall> for TransparentProxyType<ProxyType> {
 			(x, y) if x == y => true,
 			(ProxyType::Any, _) => true,
 			(_, ProxyType::Any) => false,
+			// `SafeSudo` can drive sudo, which `NonTransfer` cannot, so it is not a subset of it.
+			(ProxyType::NonTransfer, ProxyType::SafeSudo) => false,
 			(ProxyType::NonTransfer, _) => true,
 			(ProxyType::Staking, ProxyType::StakingOperator) => true,
 			_ => false,
 		}
 	}
 }
+
+paseo_runtime_constants::impl_call_can_change_sudo!(RuntimeCall, block = [Scheduler, Preimage]);
 
 impl pallet_proxy::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;

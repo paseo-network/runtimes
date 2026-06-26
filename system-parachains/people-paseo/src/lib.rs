@@ -490,7 +490,17 @@ pub enum ProxyType {
 	IdentityJudgement,
 	/// Collator selection proxy. Can execute calls related to collator selection mechanism.
 	Collator,
+	/// Sudo-capable proxy whose one restriction is that it can never change or remove the sudo
+	/// key (directly or via any nesting wrapper). Intended for automations that need `sudo`
+	/// access: if the proxy key leaks, the sudo account itself stays recoverable. See
+	/// `call_can_change_sudo` for the exact set of forbidden calls.
+	///
+	/// The index is padded well above the contiguous range so upstream can keep appending proxy
+	/// types without colliding with this Paseo-specific variant.
+	SafeSudo = 100,
 }
+
+paseo_runtime_constants::impl_call_can_change_sudo!(RuntimeCall);
 impl InstanceFilter<RuntimeCall> for ProxyType {
 	fn filter(&self, c: &RuntimeCall) -> bool {
 		match self {
@@ -555,6 +565,9 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 					RuntimeCall::Utility { .. } |
 					RuntimeCall::Multisig { .. }
 			),
+			// Behaves like `Any`, except it can never change or remove the sudo key (directly
+			// or via any nesting wrapper). See `call_can_change_sudo`.
+			ProxyType::SafeSudo => !call_can_change_sudo(c),
 		}
 	}
 
