@@ -435,43 +435,7 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 	}
 }
 
-/// Returns `true` if `call` could change or remove the sudo key, mint an escalation path to it,
-/// or defer/hide a call that later could (`Scheduler`/`Preimage`). The check is recursive so the
-/// forbidden leaf calls cannot be smuggled through `sudo`, `utility` batching, `dispatch_as`,
-/// etc. Used by the [`ProxyType::SafeSudo`] filter.
-///
-/// NOTE: when adding a pallet that can dispatch as `Root` or as the sudo account (new governance,
-/// new call wrappers, deferred dispatch), add it here or `SafeSudo` may leak a path to the key.
-fn call_can_change_sudo(call: &RuntimeCall) -> bool {
-	match call {
-		// Directly change or remove the sudo key.
-		RuntimeCall::Sudo(pallet_sudo::Call::set_key { .. }) |
-		RuntimeCall::Sudo(pallet_sudo::Call::remove_key { .. }) => true,
-		// Raw storage surgery can overwrite or delete `Sudo::Key`.
-		RuntimeCall::System(frame_system::Call::set_storage { .. }) |
-		RuntimeCall::System(frame_system::Call::kill_storage { .. }) |
-		RuntimeCall::System(frame_system::Call::kill_prefix { .. }) => true,
-		// Proxy management could mint a more powerful proxy (an escalation path to the key).
-		RuntimeCall::Proxy(..) => true,
-		// Deferred / hash-bounded dispatch escapes this filter at execution time; refuse it.
-		RuntimeCall::Scheduler(..) | RuntimeCall::Preimage(..) => true,
-		// Single-call wrappers: recurse into the wrapped call.
-		RuntimeCall::Sudo(pallet_sudo::Call::sudo { call }) |
-		RuntimeCall::Sudo(pallet_sudo::Call::sudo_unchecked_weight { call, .. }) |
-		RuntimeCall::Sudo(pallet_sudo::Call::sudo_as { call, .. }) |
-		RuntimeCall::Utility(pallet_utility::Call::as_derivative { call, .. }) |
-		RuntimeCall::Utility(pallet_utility::Call::dispatch_as { call, .. }) |
-		RuntimeCall::Utility(pallet_utility::Call::with_weight { call, .. }) |
-		RuntimeCall::Multisig(pallet_multisig::Call::as_multi_threshold_1 { call, .. }) =>
-			call_can_change_sudo(call),
-		// Batches: recurse into every wrapped call.
-		RuntimeCall::Utility(pallet_utility::Call::batch { calls }) |
-		RuntimeCall::Utility(pallet_utility::Call::batch_all { calls }) |
-		RuntimeCall::Utility(pallet_utility::Call::force_batch { calls }) =>
-			calls.iter().any(call_can_change_sudo),
-		_ => false,
-	}
-}
+paseo_runtime_constants::impl_call_can_change_sudo!(RuntimeCall, block = [Scheduler, Preimage]);
 
 impl pallet_proxy::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;

@@ -20,6 +20,66 @@ extern crate alloc;
 
 pub mod weights;
 
+/// Generates `call_can_change_sudo`, the recursive guard used by the `SafeSudo` proxy type.
+///
+/// `SafeSudo` behaves like `Any` but must never let a (possibly nested) call change or remove the
+/// sudo key. Each runtime has its own `RuntimeCall` type, so the matcher is emitted per runtime
+/// via this macro. Pass the runtime's call type and, for runtimes that have them, the extra
+/// pallets to block wholesale (`Scheduler`/`Preimage` can defer or hash-hide a call past this
+/// filter, so they cannot be allowed):
+///
+/// ```ignore
+/// paseo_runtime_constants::impl_call_can_change_sudo!(RuntimeCall, block = [Scheduler, Preimage]);
+/// paseo_runtime_constants::impl_call_can_change_sudo!(RuntimeCall);
+/// ```
+///
+/// The invoking runtime must have `pallet_sudo`, `pallet_utility`, `pallet_multisig`,
+/// `pallet_proxy` and `frame_system` in scope (every Paseo runtime does).
+///
+/// NOTE: when adding a pallet that can dispatch as `Root` or as the sudo account (new governance,
+/// new call wrappers, deferred dispatch), block it here or via `block = [..]` at the call site, or
+/// `SafeSudo` may leak a path to the key.
+#[macro_export]
+macro_rules! impl_call_can_change_sudo {
+	($rc:path $(, block = [ $( $extra:ident ),+ $(,)? ])?) => {
+		/// Returns `true` if `call` could (recursively) change or remove the sudo key, or mint an
+		/// escalation path to it. Used by the `SafeSudo` proxy filter.
+		fn call_can_change_sudo(call: &$rc) -> bool {
+			// The pallet aliases (`System`, `Proxy`, …) are type aliases, so importing the
+			// same-named call variants into the value namespace is unambiguous in patterns.
+			use $rc::{Multisig, Proxy, Sudo, System, Utility $( $(, $extra)+ )?};
+			match call {
+				// Directly change or remove the sudo key.
+				Sudo(pallet_sudo::Call::set_key { .. }) |
+				Sudo(pallet_sudo::Call::remove_key { .. }) => true,
+				// Raw storage surgery can overwrite or delete `Sudo::Key`.
+				System(frame_system::Call::set_storage { .. }) |
+				System(frame_system::Call::kill_storage { .. }) |
+				System(frame_system::Call::kill_prefix { .. }) => true,
+				// Proxy management could mint a more powerful proxy (an escalation path).
+				Proxy(..) => true,
+				// Extra pallets blocked wholesale (e.g. deferred / hash-hidden dispatch).
+				$( $( $extra(..) => true, )+ )?
+				// Single-call wrappers: recurse into the wrapped call.
+				Sudo(pallet_sudo::Call::sudo { call }) |
+				Sudo(pallet_sudo::Call::sudo_unchecked_weight { call, .. }) |
+				Sudo(pallet_sudo::Call::sudo_as { call, .. }) |
+				Utility(pallet_utility::Call::as_derivative { call, .. }) |
+				Utility(pallet_utility::Call::dispatch_as { call, .. }) |
+				Utility(pallet_utility::Call::with_weight { call, .. }) |
+				Multisig(pallet_multisig::Call::as_multi_threshold_1 { call, .. }) =>
+					call_can_change_sudo(call),
+				// Batches: recurse into every wrapped call.
+				Utility(pallet_utility::Call::batch { calls }) |
+				Utility(pallet_utility::Call::batch_all { calls }) |
+				Utility(pallet_utility::Call::force_batch { calls }) =>
+					calls.iter().any(call_can_change_sudo),
+				_ => false,
+			}
+		}
+	};
+}
+
 pub use self::currency::DOLLARS;
 
 /// Money matters.
