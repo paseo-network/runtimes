@@ -336,6 +336,14 @@ pub enum ProxyType {
 	Ambassador,
 	/// Secretary proxy. Allows calls related to the Secretary collective
 	Secretary,
+	/// Sudo-capable proxy whose one restriction is that it can never change or remove the sudo
+	/// key (directly or via any nesting wrapper). Intended for automations that need `sudo`
+	/// access: if the proxy key leaks, the sudo account itself stays recoverable. See
+	/// `call_can_change_sudo` for the exact set of forbidden calls.
+	///
+	/// The index is padded well above the contiguous range so upstream can keep appending proxy
+	/// types without colliding with this Paseo-specific variant.
+	SafeSudo = 100,
 }
 impl InstanceFilter<RuntimeCall> for ProxyType {
 	fn filter(&self, c: &RuntimeCall) -> bool {
@@ -409,6 +417,9 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 					RuntimeCall::Utility { .. } |
 					RuntimeCall::Multisig { .. }
 			),
+			// Behaves like `Any`, except it can never change or remove the sudo key (directly
+			// or via any nesting wrapper). See `call_can_change_sudo`.
+			ProxyType::SafeSudo => !call_can_change_sudo(c),
 		}
 	}
 	fn is_superset(&self, o: &Self) -> bool {
@@ -416,11 +427,15 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 			(x, y) if x == y => true,
 			(ProxyType::Any, _) => true,
 			(_, ProxyType::Any) => false,
+			// `SafeSudo` can drive sudo, which `NonTransfer` cannot, so it is not a subset of it.
+			(ProxyType::NonTransfer, ProxyType::SafeSudo) => false,
 			(ProxyType::NonTransfer, _) => true,
 			_ => false,
 		}
 	}
 }
+
+paseo_runtime_constants::impl_call_can_change_sudo!(RuntimeCall, block = [Scheduler, Preimage]);
 
 impl pallet_proxy::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
