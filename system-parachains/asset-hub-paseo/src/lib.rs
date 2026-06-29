@@ -208,9 +208,7 @@ pub fn native_version() -> NativeVersion {
 }
 
 /// Asset Hub Paseo uses a 24s Aura slot duration.
-/// TODO: Uncomment me after 2.3.1 is on chain
-/// pub const SLOT_DURATION: u64 = 24_000;
-pub use system_parachains_constants::SLOT_DURATION;
+pub const SLOT_DURATION: u64 = 24_000;
 
 parameter_types! {
 	pub const Version: RuntimeVersion = VERSION;
