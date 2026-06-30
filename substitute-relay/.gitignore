@@ -2,3 +2,4 @@ node_modules/
 package-lock.json
 chopsticks/db.sqlite*
 *.log
+operators*.json

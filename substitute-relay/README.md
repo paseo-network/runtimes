@@ -24,7 +24,9 @@ down, then hand validator election to Asset Hub (AH) without losing relay livene
   self-elects and finalizes.
 - `chopsticks/` — dry-run the `Passive → Buffered → Active` handover + the `MinimumValidatorSetSize`
   gate against a forked relay, sudo-driven, **no AH/XCM needed**.
-- `tools/derive-session-keys.mjs` — derive real operator session keys to replace the dev keys.
+- `tools/format-operator-keys.mjs` — turn community-operator key submissions into the Rust
+  `substitute_authority(...)` block to paste into the preset (see **Operator key intake** below).
+- `tools/derive-session-keys.mjs` — generate session keys + keystore-insert commands (team/dev keys).
 
 ---
 
@@ -37,14 +39,58 @@ Minimal, by design. Built from the existing testnet genesis with these substitut
 | `session.keys` | 4 bootstrap authorities (**Alice/Bob/Charlie/Dave — placeholders**) | seat the relay in Passive |
 | `staking` | 4 self-bonded stakers, `validatorCount=4`, `forceEra: ForceNone` | fallback election input; `ForceNone` freezes the set (no EPM churn) |
 | `sudo.key` | `13uYxsEfJL5FYbJ1E7cW85ihp5LckYTyZT6Bqpc7tS4NAArK` | **current on-chain relay sudo**, reused |
-| `configuration.config` | live host config, `scheduler_params.num_cores = 2` | default leaves cores at 0; small until validators scale |
+| `configuration.config` | faithful snapshot of the **live** `configuration.activeConfig`, `num_cores` 56 → 2 | match the running chain; only `num_cores` is deliberately overridden (raise via `coretime.request_core_count`) |
 | `ah_client` | omitted → `Mode = Passive` | bootstrap without AH |
 | paras / hrmp | none | onboard AH after launch |
 
-> ⚠️ **Substitute the 4 dev validators with real operator keys before any real launch.** Each
-> operator runs `author_rotateKeys` on their new-chain node and sends you the public blob; replace
-> the `get_authority_keys_from_seed(...)` entries (use `tools/derive-session-keys.mjs` to format).
-> The dev keys are fine for zombienet/chopsticks only.
+> ⚠️ The 4 authorities in `paseo_substitute_genesis()` are well-known **DEV keys** (Alice/Bob/Charlie/Dave),
+> fine for zombienet/chopsticks only. Replace them with real community-operator keys via the
+> **Operator key intake** process below before any real launch.
+
+## Operator key intake
+
+The 4 bootstrap validators are run by **community providers**. Each one supplies **public keys only**
+(never secrets), and you bake them into the `substitute` preset via `substitute_authority(...)`.
+
+### What each operator sends you
+
+1. **`stash`** — their validator account, SS58 or `0x`-hex (32 bytes). Funded at genesis + self-bonded.
+2. **`sessionKeys`** — the `0x` blob from **`author_rotateKeys`** run on their own node:
+   ```bash
+   # on the operator's node (keys are generated into ITS keystore; only the public blob leaves)
+   curl -H 'Content-Type: application/json' \
+     -d '{"id":1,"jsonrpc":"2.0","method":"author_rotateKeys","params":[]}' \
+     http://127.0.0.1:9944
+   ```
+   The blob is 193 bytes = `babe`(32) + `grandpa`(32) + `para_validator`(32) + `para_assignment`(32) +
+   `authority_discovery`(32) + `beefy`(33), in `SessionKeys` order. **All six are required** — `babe`
+   alone gives blocks but no finality and no parachain backing. The operator keeps the matching private
+   keys in the keystore of the node they will run for the substitute relay.
+
+### Turning submissions into genesis
+
+Collect them into `operators.json` (order = the 4 genesis slots):
+
+```json
+[
+  { "name": "provider-a", "stash": "13...", "sessionKeys": "0x<193-byte blob>" },
+  { "name": "provider-b", "stash": "0x..", "sessionKeys": "0x..." },
+  { "name": "provider-c", "stash": "13...", "sessionKeys": "0x..." },
+  { "name": "provider-d", "stash": "13...", "sessionKeys": "0x..." }
+]
+```
+
+```bash
+cd substitute-relay && npm i
+node tools/format-operator-keys.mjs operators.json   # validates lengths, splits the blob
+```
+
+It prints a ready-to-paste `let initial_authorities = vec![ substitute_authority(...) ... ];` block.
+Replace the placeholder block in `paseo_substitute_genesis()` with it. (Operators who'd rather send the
+six keys individually can supply `babe`/`grandpa`/`paraValidator`/`paraAssignment`/`authorityDiscovery`/
+`beefy` fields instead of `sessionKeys`; a `seed` field is accepted for dev/team keys only.)
+
+After substituting, rebuild + re-run the fmt checks (`cargo +nightly fmt`, `taplo format --check`).
 
 ### Build the chain spec
 

@@ -22,6 +22,7 @@ use crate::*;
 #[cfg(not(feature = "std"))]
 use alloc::format;
 use babe_primitives::AuthorityId as BabeId;
+use hex_literal::hex;
 use pallet_staking::{Forcing, StakerStatus};
 use paseo_runtime_constants::currency::UNITS as PAS;
 use polkadot_primitives::{
@@ -31,7 +32,7 @@ use polkadot_primitives::{
 	PvfExecKind,
 };
 use runtime_parachains::configuration::HostConfiguration;
-use sp_core::{sr25519, Pair, Public};
+use sp_core::{crypto::UncheckedInto, sr25519, Pair, Public};
 use sp_genesis_builder::PresetId;
 use sp_runtime::{traits::IdentifyAccount, Perbill};
 
@@ -72,6 +73,47 @@ fn get_authority_keys_from_seed(
 		get_from_seed::<AssignmentId>(seed),
 		get_from_seed::<AuthorityDiscoveryId>(seed),
 		get_from_seed::<BeefyId>(seed),
+	)
+}
+
+/// Build a bootstrap authority from an operator's **public** keys (no secrets in source).
+///
+/// `stash` is the validator account (sr25519 public, 32 bytes); it is reused as the controller.
+/// The six session keys are the public halves of the operator's keystore entries — taken from
+/// `author_rotateKeys` on their node and split with
+/// `substitute-relay/tools/format-operator-keys.mjs`, or generated with
+/// `substitute-relay/tools/derive-session-keys.mjs`. Crypto per key: `babe` sr25519, `grandpa`
+/// ed25519, `para_validator`/`para_assignment`/`authority_discovery` sr25519, `beefy` ecdsa
+/// (33-byte compressed).
+#[allow(clippy::type_complexity)]
+fn substitute_authority(
+	stash: [u8; 32],
+	babe: [u8; 32],
+	grandpa: [u8; 32],
+	para_validator: [u8; 32],
+	para_assignment: [u8; 32],
+	authority_discovery: [u8; 32],
+	beefy: [u8; 33],
+) -> (
+	AccountId,
+	AccountId,
+	BabeId,
+	GrandpaId,
+	ValidatorId,
+	AssignmentId,
+	AuthorityDiscoveryId,
+	BeefyId,
+) {
+	let stash = AccountId::from(stash);
+	(
+		stash.clone(),
+		stash,
+		babe.unchecked_into(),
+		grandpa.unchecked_into(),
+		para_validator.unchecked_into(),
+		para_assignment.unchecked_into(),
+		authority_discovery.unchecked_into(),
+		beefy.unchecked_into(),
 	)
 }
 
@@ -361,11 +403,52 @@ fn substitute_host_configuration() -> HostConfiguration<polkadot_primitives::Blo
 /// with real operator session keys before any real launch** (each operator derives their own and
 /// the public keys replace the `get_authority_keys_from_seed(...)` entries below).
 pub fn paseo_substitute_genesis() -> serde_json::Value {
+	// ⚠️ PLACEHOLDERS — the four entries below are well-known DEV keys (Alice/Bob/Charlie/Dave).
+	// Replace each with a community operator's submitted keys before any real launch: collect their
+	// stash + `author_rotateKeys` blob and run `substitute-relay/tools/format-operator-keys.mjs` to
+	// regenerate this block (arg order: stash, babe, grandpa, para_validator, para_assignment,
+	// authority_discovery, beefy).
 	let initial_authorities = vec![
-		get_authority_keys_from_seed("Alice"),
-		get_authority_keys_from_seed("Bob"),
-		get_authority_keys_from_seed("Charlie"),
-		get_authority_keys_from_seed("Dave"),
+		// dev-alice (PLACEHOLDER — replace with operator 1)
+		substitute_authority(
+			hex!["be5ddb1579b72e84524fc29e78609e3caf42e85aa118ebfe0b0ad404b5bdd25f"],
+			hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"],
+			hex!["88dc3417d5058ec4b4503e0c12ea1a0a89be200fe98922423d4334014fa6b0ee"],
+			hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"],
+			hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"],
+			hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"],
+			hex!["020a1091341fe5664bfa1782d5e04779689068c916b04cb365ec3153755684d9a1"],
+		),
+		// dev-bob (PLACEHOLDER — replace with operator 2)
+		substitute_authority(
+			hex!["fe65717dad0447d715f660a0a58411de509b42e6efb8375f562f58a554d5860e"],
+			hex!["8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"],
+			hex!["d17c2d7823ebf260fd138f2d7e27d114c0145d968b5ff5006125f2414fadae69"],
+			hex!["8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"],
+			hex!["8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"],
+			hex!["8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"],
+			hex!["0390084fdbf27d2b79d26a4f13f0ccd982cb755a661969143c37cbc49ef5b91f27"],
+		),
+		// dev-charlie (PLACEHOLDER — replace with operator 3)
+		substitute_authority(
+			hex!["1e07379407fecc4b89eb7dbd287c2c781cfb1907a96947a3eb18e4f8e7198625"],
+			hex!["90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22"],
+			hex!["439660b36c6c03afafca027b910b4fecf99801834c62a5e6006f27d978de234f"],
+			hex!["90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22"],
+			hex!["90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22"],
+			hex!["90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22"],
+			hex!["0389411795514af1627765eceffcbd002719f031604fadd7d188e2dc585b4e1afb"],
+		),
+		// dev-dave (PLACEHOLDER — replace with operator 4)
+		substitute_authority(
+			hex!["e860f1b1c7227f7c22602f53f15af80747814dffd839719731ee3bba6edc126c"],
+			hex!["306721211d5404bd9da88e0204360a1a9ab8b87c66c1bc2fcdd37f3c2222cc20"],
+			hex!["5e639b43e0052c47447dac87d6fd2b6ec50bdd4d0f614e4299c665249bbd09d9"],
+			hex!["306721211d5404bd9da88e0204360a1a9ab8b87c66c1bc2fcdd37f3c2222cc20"],
+			hex!["306721211d5404bd9da88e0204360a1a9ab8b87c66c1bc2fcdd37f3c2222cc20"],
+			hex!["306721211d5404bd9da88e0204360a1a9ab8b87c66c1bc2fcdd37f3c2222cc20"],
+			hex!["03bc9d0ca094bd5b8b3225d7651eac5d18c1c04bf8ae8f8b263eebca4e1410ed0c"],
+		),
 	];
 	// Reuse the current on-chain relay sudo key.
 	let root_key: AccountId = AccountId::from(SUBSTITUTE_SUDO);
