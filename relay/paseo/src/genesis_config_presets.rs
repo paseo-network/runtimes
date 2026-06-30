@@ -261,7 +261,8 @@ const SUBSTITUTE_SUDO: [u8; 32] = [
 /// Bootstrap core count for the substitute relay. With only 4 bootstrap validators a large
 /// core count produces empty backing groups (groups are formed one-per-core), so start small
 /// and raise post-launch via `coretime.request_core_count` as validators scale. Target:
-/// 20 cores at 3 validators each (= 60 validators), driven by Asset Hub once staking is handed over.
+/// 20 cores at 3 validators each (= 60 validators), driven by Asset Hub once staking is handed
+/// over.
 const SUBSTITUTE_BOOTSTRAP_CORES: u32 = 2;
 
 /// Host configuration for the substitute relay: the standard config with `num_cores` pinned to
@@ -300,10 +301,8 @@ pub fn paseo_substitute_genesis() -> serde_json::Value {
 	const STASH: u128 = 100 * PAS;
 
 	// Minimal endowment: sudo + each authority's stash and controller account.
-	let mut endowed_accounts: Vec<AccountId> = initial_authorities
-		.iter()
-		.flat_map(|x| [x.0.clone(), x.1.clone()])
-		.collect();
+	let mut endowed_accounts: Vec<AccountId> =
+		initial_authorities.iter().flat_map(|x| [x.0.clone(), x.1.clone()]).collect();
 	endowed_accounts.push(root_key.clone());
 	endowed_accounts.sort();
 	endowed_accounts.dedup();

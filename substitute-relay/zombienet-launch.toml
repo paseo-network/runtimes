@@ -16,23 +16,23 @@
 
 [relaychain]
 default_command = "polkadot"
-chain_spec_path = "./chain_spec_substitute_raw.json"   # <- build this from the `substitute` preset
+chain_spec_path = "./chain_spec_substitute_raw.json" # <- build this from the `substitute` preset
 
-  [[relaychain.nodes]]
-  name = "alice"
-  validator = true
+[[relaychain.nodes]]
+name = "alice"
+validator = true
 
-  [[relaychain.nodes]]
-  name = "bob"
-  validator = true
+[[relaychain.nodes]]
+name = "bob"
+validator = true
 
-  [[relaychain.nodes]]
-  name = "charlie"
-  validator = true
+[[relaychain.nodes]]
+name = "charlie"
+validator = true
 
-  [[relaychain.nodes]]
-  name = "dave"
-  validator = true
+[[relaychain.nodes]]
+name = "dave"
+validator = true
 
 # No [parachains] — Asset Hub is onboarded after launch (Phase 2), not at genesis.
 
