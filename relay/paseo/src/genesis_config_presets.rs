@@ -247,11 +247,119 @@ pub fn paseo_development_config_genesis() -> serde_json::Value {
 	)
 }
 
+/// Preset id for the substitute relay (fresh, from block 0).
+pub const SUBSTITUTE_RUNTIME_PRESET: &str = "substitute";
+
+/// Raw public bytes of the **current on-chain Paseo relay sudo key**, reused as the
+/// substitute relay's genesis sudo. SS58 (Paseo, prefix 0):
+/// `13uYxsEfJL5FYbJ1E7cW85ihp5LckYTyZT6Bqpc7tS4NAArK` (surveyed live 2026-06-30).
+const SUBSTITUTE_SUDO: [u8; 32] = [
+	0x80, 0x8c, 0xd3, 0x60, 0x29, 0xa4, 0x14, 0x2a, 0xd7, 0xd2, 0x55, 0xcd, 0x50, 0x4e, 0x82, 0x61,
+	0x56, 0xfe, 0xe8, 0x6f, 0x45, 0x38, 0x41, 0xd3, 0x98, 0xf8, 0x74, 0x46, 0x7c, 0x7f, 0x6e, 0x0b,
+];
+
+/// Bootstrap core count for the substitute relay. With only 4 bootstrap validators a large
+/// core count produces empty backing groups (groups are formed one-per-core), so start small
+/// and raise post-launch via `coretime.request_core_count` as validators scale. Target:
+/// 20 cores at 3 validators each (= 60 validators), driven by Asset Hub once staking is handed over.
+const SUBSTITUTE_BOOTSTRAP_CORES: u32 = 2;
+
+/// Host configuration for the substitute relay: the standard config with `num_cores` pinned to
+/// the bootstrap value (the default leaves it at 0, which cannot back any parachain).
+fn substitute_host_configuration() -> HostConfiguration<polkadot_primitives::BlockNumber> {
+	let mut config = default_parachains_host_configuration();
+	config.scheduler_params.num_cores = SUBSTITUTE_BOOTSTRAP_CORES;
+	config
+}
+
+/// Genesis for the **substitute Paseo relay** — a fresh relay started from block 0 that will
+/// take over once the current relay is wound down.
+///
+/// Boots in `pallet_staking_async_ah_client::OperatingMode::Passive` (the pallet default —
+/// `StakingAhClient` genesis is intentionally omitted, so `Mode` falls back to `Passive`).
+/// In Passive mode the relay self-elects the bootstrap authorities from the local
+/// `pallet_staking` fallback; Asset Hub plays no part until the operator drives the staking
+/// handover (`ah_client.buffer()` → `activate()`). `forceEra = ForceNone` freezes the bootstrap
+/// set for the whole Passive window so `ElectionProviderMultiPhase` never has to run over the
+/// tiny set.
+///
+/// ⚠️ The four authorities are WELL-KNOWN dev keys (Alice/Bob/Charlie/Dave) — **substitute them
+/// with real operator session keys before any real launch** (each operator derives their own and
+/// the public keys replace the `get_authority_keys_from_seed(...)` entries below).
+pub fn paseo_substitute_genesis() -> serde_json::Value {
+	let initial_authorities = vec![
+		get_authority_keys_from_seed("Alice"),
+		get_authority_keys_from_seed("Bob"),
+		get_authority_keys_from_seed("Charlie"),
+		get_authority_keys_from_seed("Dave"),
+	];
+	// Reuse the current on-chain relay sudo key.
+	let root_key: AccountId = AccountId::from(SUBSTITUTE_SUDO);
+
+	const ENDOWMENT: u128 = 1_000_000 * PAS;
+	const STASH: u128 = 100 * PAS;
+
+	// Minimal endowment: sudo + each authority's stash and controller account.
+	let mut endowed_accounts: Vec<AccountId> = initial_authorities
+		.iter()
+		.flat_map(|x| [x.0.clone(), x.1.clone()])
+		.collect();
+	endowed_accounts.push(root_key.clone());
+	endowed_accounts.sort();
+	endowed_accounts.dedup();
+
+	serde_json::json!({
+		"balances": {
+			"balances": endowed_accounts.iter().map(|k| (k.clone(), ENDOWMENT)).collect::<Vec<_>>(),
+		},
+		"session": {
+			"keys": initial_authorities
+				.iter()
+				.map(|x| {
+					(
+						x.0.clone(),
+						x.0.clone(),
+						paseo_session_keys(
+							x.2.clone(),
+							x.3.clone(),
+							x.4.clone(),
+							x.5.clone(),
+							x.6.clone(),
+							x.7.clone(),
+						),
+					)
+				})
+				.collect::<Vec<_>>(),
+		},
+		"staking": {
+			"minimumValidatorCount": 1,
+			"validatorCount": initial_authorities.len() as u32,
+			"stakers": initial_authorities
+				.iter()
+				.map(|x| (x.0.clone(), x.0.clone(), STASH, StakerStatus::<AccountId>::Validator))
+				.collect::<Vec<_>>(),
+			"invulnerables": initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
+			"forceEra": Forcing::ForceNone,
+			"slashRewardFraction": Perbill::from_percent(10),
+		},
+		"sudo": {
+			"key": Some(root_key),
+		},
+		"babe": {
+			"epochConfig": Some(BABE_GENESIS_EPOCH_CONFIG),
+		},
+		"configuration": {
+			"config": substitute_host_configuration(),
+		},
+	})
+}
+
 /// Provides the names of the predefined genesis configs for this runtime.
 pub fn preset_names() -> Vec<PresetId> {
 	vec![
 		PresetId::from(sp_genesis_builder::DEV_RUNTIME_PRESET),
 		PresetId::from(sp_genesis_builder::LOCAL_TESTNET_RUNTIME_PRESET),
+		PresetId::from(SUBSTITUTE_RUNTIME_PRESET),
 	]
 }
 
@@ -260,6 +368,7 @@ pub fn get_preset(id: &sp_genesis_builder::PresetId) -> Option<Vec<u8>> {
 	let patch = match id.as_ref() {
 		sp_genesis_builder::DEV_RUNTIME_PRESET => paseo_development_config_genesis(),
 		sp_genesis_builder::LOCAL_TESTNET_RUNTIME_PRESET => paseo_local_testnet_genesis(),
+		SUBSTITUTE_RUNTIME_PRESET => paseo_substitute_genesis(),
 		_ => return None,
 	};
 	Some(

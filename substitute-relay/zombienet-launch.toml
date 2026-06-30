@@ -1,0 +1,40 @@
+# Boot the substitute Paseo relay (4 bootstrap validators, ah_client = Passive) and confirm it
+# self-elects from local staking and finalizes. No parachains — Phase 1 launch test only.
+#
+# Prereqs:
+#   1. cargo build --release -p paseo-runtime
+#   2. chain-spec-builder create -r .../paseo_runtime.compact.compressed.wasm named-preset substitute
+#      then convert to a RAW spec and point `chain_spec_path` at it.
+#   3. A `polkadot` binary on PATH (or set `default_command`).
+#
+# The preset's authorities are the well-known dev seeds (//Alice../Dave), so zombienet's
+# --alice/--bob/--charlie/--dave keystores match the baked session keys exactly.
+#
+# Run:  zombienet spawn zombienet-launch.toml
+# Expect: all 4 author, GRANDPA finalizes, session.validators() == the 4 stashes,
+#         stakingAhClient.mode() == Passive.
+
+[relaychain]
+default_command = "polkadot"
+chain_spec_path = "./chain_spec_substitute_raw.json"   # <- build this from the `substitute` preset
+
+  [[relaychain.nodes]]
+  name = "alice"
+  validator = true
+
+  [[relaychain.nodes]]
+  name = "bob"
+  validator = true
+
+  [[relaychain.nodes]]
+  name = "charlie"
+  validator = true
+
+  [[relaychain.nodes]]
+  name = "dave"
+  validator = true
+
+# No [parachains] — Asset Hub is onboarded after launch (Phase 2), not at genesis.
+
+[settings]
+timeout = 1000
