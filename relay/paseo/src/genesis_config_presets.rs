@@ -265,12 +265,85 @@ const SUBSTITUTE_SUDO: [u8; 32] = [
 /// over.
 const SUBSTITUTE_BOOTSTRAP_CORES: u32 = 2;
 
-/// Host configuration for the substitute relay: the standard config with `num_cores` pinned to
-/// the bootstrap value (the default leaves it at 0, which cannot back any parachain).
+/// Host configuration for the substitute relay.
+///
+/// This is a faithful **snapshot of the live Paseo relay `configuration.activeConfig`** (surveyed
+/// at spec_version 2_003_001 on 2026-06-30), NOT the runtime's
+/// `default_parachains_host_configuration` — the default has drifted from what governance has since
+/// set on-chain (validation upgrade delays, HRMP channel limits, scheduler params, node features,
+/// ...). We bring the running values over and override only what we deliberately change to
+/// bootstrap from scratch, so the substitute relay behaves identically to the chain it replaces.
+///
+/// Deliberate override:
+/// - `scheduler_params.num_cores`: live is 56; we start at [`SUBSTITUTE_BOOTSTRAP_CORES`] and raise
+///   it post-launch via `coretime.request_core_count` as validators scale (4 bootstrap validators
+///   cannot back 56 cores). `max_validators_per_core` is kept at the live value of 3 — already the
+///   target ratio (60 validators / 20 cores).
 fn substitute_host_configuration() -> HostConfiguration<polkadot_primitives::BlockNumber> {
-	let mut config = default_parachains_host_configuration();
-	config.scheduler_params.num_cores = SUBSTITUTE_BOOTSTRAP_CORES;
-	config
+	let executor_params = ExecutorParams::from(
+		&[
+			MaxMemoryPages(8192),
+			PvfExecTimeout(PvfExecKind::Backing, 2500),
+			PvfExecTimeout(PvfExecKind::Approval, 15000),
+		][..],
+	);
+
+	runtime_parachains::configuration::HostConfiguration {
+		validation_upgrade_cooldown: 60,
+		validation_upgrade_delay: 60,
+		code_retention_period: 1200,
+		max_code_size: 3_500_000,
+		max_pov_size: 10_485_760,
+		max_head_data_size: 32 * 1024,
+		max_upward_queue_count: 174_762,
+		max_upward_queue_size: 1024 * 1024,
+		max_downward_message_size: 51_200,
+		max_upward_message_size: 65_531,
+		max_upward_message_num_per_candidate: 16,
+		hrmp_sender_deposit: 0,
+		hrmp_recipient_deposit: 0,
+		hrmp_channel_max_capacity: 1000,
+		hrmp_channel_max_total_size: 102_400,
+		hrmp_max_parachain_inbound_channels: 30,
+		hrmp_channel_max_message_size: 102_400,
+		hrmp_max_parachain_outbound_channels: 30,
+		hrmp_max_message_num_per_candidate: 10,
+		dispute_period: 6,
+		dispute_post_conclusion_acceptance_period: 100,
+		no_show_slots: 2,
+		n_delay_tranches: 25,
+		zeroth_delay_tranche_width: 0,
+		needed_approvals: 2,
+		relay_vrf_modulo_samples: 2,
+		pvf_voting_ttl: 2,
+		minimum_validation_upgrade_delay: 5,
+		minimum_backing_votes: 1,
+		node_features: NodeFeatures::from_element(
+			1u8 << (FeatureIndex::EnableAssignmentsV2 as usize) |
+				1u8 << (FeatureIndex::ElasticScalingMVP as usize) |
+				1u8 << (FeatureIndex::CandidateReceiptV2 as usize),
+		),
+		approval_voting_params: ApprovalVotingParams { max_approval_coalesce_count: 1 },
+		async_backing_params: AsyncBackingParams {
+			max_candidate_depth: 3,
+			allowed_ancestry_len: 2,
+		},
+		executor_params,
+		max_validators: None,
+		max_relay_parent_session_age: 0,
+		scheduler_params: polkadot_primitives::vstaging::SchedulerParams {
+			group_rotation_frequency: 10,
+			paras_availability_period: 4,
+			max_validators_per_core: Some(3),
+			lookahead: 5,
+			// Override: live is 56; bootstrap small, raise via `coretime.request_core_count`.
+			num_cores: SUBSTITUTE_BOOTSTRAP_CORES,
+			on_demand_queue_max_size: 100,
+			on_demand_target_queue_utilization: Perbill::from_parts(250_000_000),
+			on_demand_fee_variability: Perbill::from_parts(30_000_000),
+			on_demand_base_fee: 10_000_000,
+		},
+	}
 }
 
 /// Genesis for the **substitute Paseo relay** — a fresh relay started from block 0 that will
@@ -280,9 +353,9 @@ fn substitute_host_configuration() -> HostConfiguration<polkadot_primitives::Blo
 /// `StakingAhClient` genesis is intentionally omitted, so `Mode` falls back to `Passive`).
 /// In Passive mode the relay self-elects the bootstrap authorities from the local
 /// `pallet_staking` fallback; Asset Hub plays no part until the operator drives the staking
-/// handover (`ah_client.buffer()` → `activate()`). `forceEra = ForceNone` freezes the bootstrap
-/// set for the whole Passive window so `ElectionProviderMultiPhase` never has to run over the
-/// tiny set.
+/// handover (`ah_client.set_mode(Buffered)` → `set_mode(Active)`). `forceEra = ForceNone` freezes
+/// the bootstrap set for the whole Passive window so `ElectionProviderMultiPhase` never has to run
+/// over the tiny set.
 ///
 /// ⚠️ The four authorities are WELL-KNOWN dev keys (Alice/Bob/Charlie/Dave) — **substitute them
 /// with real operator session keys before any real launch** (each operator derives their own and
