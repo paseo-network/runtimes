@@ -417,7 +417,7 @@ jobs:
           ##echo "✅ Runtime check completed for ${{ matrix.name }}"
 
   create-release:
-    needs: [create-tag, generate-chain-specs]
+    needs: [create-tag, generate-chain-specs, build-runtimes]
     runs-on: ubuntu-latest
     permissions:
       contents: write
