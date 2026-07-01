@@ -31,7 +31,7 @@ pub mod xcm_config;
 
 use alloc::{borrow::Cow, vec, vec::Vec};
 use codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
-use cumulus_pallet_parachain_system::{RelayNumberMonotonicallyIncreases, RelaychainDataProvider};
+use cumulus_pallet_parachain_system::{AnyRelayNumber, RelaychainDataProvider};
 use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
 use frame_support::{
 	construct_runtime, derive_impl,
@@ -183,9 +183,7 @@ pub fn native_version() -> NativeVersion {
 }
 
 /// People Paseo uses a 24s Aura slot duration.
-/// TODO: Uncomment me after 2.3.1 is on chain
-/// pub const SLOT_DURATION: u64 = 24_000;
-pub use system_parachains_constants::SLOT_DURATION;
+pub const SLOT_DURATION: u64 = 24_000;
 
 parameter_types! {
 	pub const Version: RuntimeVersion = VERSION;
@@ -307,7 +305,7 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type ReservedDmpWeight = ReservedDmpWeight;
 	type XcmpMessageHandler = XcmpQueue;
 	type ReservedXcmpWeight = ReservedXcmpWeight;
-	type CheckAssociatedRelayNumber = RelayNumberMonotonicallyIncreases;
+	type CheckAssociatedRelayNumber = AnyRelayNumber;
 	type ConsensusHook = ConsensusHook;
 	type WeightInfo = weights::cumulus_pallet_parachain_system::WeightInfo<Runtime>;
 	type RelayParentOffset = ConstU32<RELAY_PARENT_OFFSET>;
