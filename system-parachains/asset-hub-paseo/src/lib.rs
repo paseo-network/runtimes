@@ -85,7 +85,7 @@ use assets_common::{
 	AssetIdForTrustBackedAssetsConvert,
 };
 use core::cmp::Ordering;
-use cumulus_pallet_parachain_system::{RelayNumberMonotonicallyIncreases, RelaychainDataProvider};
+use cumulus_pallet_parachain_system::{AnyRelayNumber, RelaychainDataProvider};
 use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
 use frame_support::traits::EnsureOrigin;
 use governance::{pallet_custom_origins, GeneralAdmin, StakingAdmin, Treasurer, TreasurySpender};
@@ -208,9 +208,7 @@ pub fn native_version() -> NativeVersion {
 }
 
 /// Asset Hub Paseo uses a 24s Aura slot duration.
-/// TODO: Uncomment me after 2.3.1 is on chain
-/// pub const SLOT_DURATION: u64 = 24_000;
-pub use system_parachains_constants::SLOT_DURATION;
+pub const SLOT_DURATION: u64 = 24_000;
 
 parameter_types! {
 	pub const Version: RuntimeVersion = VERSION;
@@ -851,7 +849,7 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type OutboundXcmpMessageSource = XcmpQueue;
 	type XcmpMessageHandler = XcmpQueue;
 	type ReservedXcmpWeight = ReservedXcmpWeight;
-	type CheckAssociatedRelayNumber = RelayNumberMonotonicallyIncreases;
+	type CheckAssociatedRelayNumber = AnyRelayNumber;
 	type ConsensusHook = ConsensusHook;
 	type WeightInfo = weights::cumulus_pallet_parachain_system::WeightInfo<Runtime>;
 	type RelayParentOffset = ConstU32<RELAY_PARENT_OFFSET>;
