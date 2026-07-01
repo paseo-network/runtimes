@@ -403,8 +403,8 @@ fn substitute_host_configuration() -> HostConfiguration<polkadot_primitives::Blo
 /// with real operator session keys before any real launch** (each operator derives their own and
 /// the public keys replace the `get_authority_keys_from_seed(...)` entries below).
 pub fn paseo_substitute_genesis() -> serde_json::Value {
-	// Bootstrap authorities. Operator 1 (turboflakes) is a real community provider; operators 2-4
-	// below are still well-known DEV keys (Bob/Charlie/Dave) — ⚠️ replace them with the remaining
+	// Bootstrap authorities. Operators 1-2 (turboflakes) are real community providers; operators
+	// 3-4 below are still well-known DEV keys (Charlie/Dave) — ⚠️ replace them with the remaining
 	// providers' submitted keys before any real launch. Regenerate entries from a provider's stash
 	// + `author_rotateKeys` blob with `substitute-relay/tools/format-operator-keys.mjs` (arg
 	// order: stash, babe, grandpa, para_validator, para_assignment, authority_discovery, beefy).
@@ -419,15 +419,15 @@ pub fn paseo_substitute_genesis() -> serde_json::Value {
 			hex!["40a020e8bc4f7ad6ba890557e915c581b98da880302c34d8c7c0ba483a933a33"],
 			hex!["02cc3ddd8bbe9038048a5803f093ff00770d6ecc14dcad38f11b1496a8abd15704"],
 		),
-		// dev-bob (PLACEHOLDER — replace with operator 2)
+		// operator 2: turboflakes.io/01
 		substitute_authority(
-			hex!["fe65717dad0447d715f660a0a58411de509b42e6efb8375f562f58a554d5860e"],
-			hex!["8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"],
-			hex!["d17c2d7823ebf260fd138f2d7e27d114c0145d968b5ff5006125f2414fadae69"],
-			hex!["8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"],
-			hex!["8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"],
-			hex!["8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"],
-			hex!["0390084fdbf27d2b79d26a4f13f0ccd982cb755a661969143c37cbc49ef5b91f27"],
+			hex!["784ab3c8324d8d957ccd8be0b3ccaf006b77b503dc0b89194657c4dc6ecc222b"],
+			hex!["8819d545b5476790fd97a58a4f705208ac52c57cccee2237fbf37579fa4ea547"],
+			hex!["119a070623bc5088013c1a3f9037e177285c654c748136a4c6d85e03ca0e64e8"],
+			hex!["f4511ed75a8c202d33cc6022df5a9e5420ca02f6f738f0e9a670c4b40edaff4d"],
+			hex!["921fa6442cfc257aa8d213e88e5351540f7148bda0e8b71248b33adbabd3c155"],
+			hex!["7c0a746c40f2f8a81203ebc56de2d4f9c38b0dcc54437ec26d3ba53e6f4e0c7a"],
+			hex!["0358681e51bad908404c2c8108f70928dd34568e63553aa1a781fccfca364b4991"],
 		),
 		// dev-charlie (PLACEHOLDER — replace with operator 3)
 		substitute_authority(
