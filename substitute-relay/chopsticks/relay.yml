@@ -1,0 +1,18 @@
+# Chopsticks fork of the live Paseo relay, prepared to dry-run the staking handover.
+#
+# We override Sudo.Key to //Alice so the driver can dispatch sudo calls with a known dev key.
+# (The live runtime is post-AHM and already Active; the driver resets ah_client Mode back to
+#  Passive via dev_setStorage, then replays Passive -> Buffered -> Active.)
+#
+# Run:  npx @acala-network/chopsticks@latest -c relay.yml
+#       (serves a dev RPC on ws://localhost:8000)
+# Then: node ../drive-handover.mjs
+
+endpoint: wss://paseo-rpc.n.dwellir.com
+port: 8000
+# db: ./db.sqlite        # uncomment to cache the fork between runs
+
+import-storage:
+  Sudo:
+    # //Alice (sr25519). ss58 prefix is irrelevant — chopsticks decodes any.
+    Key: 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
