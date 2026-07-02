@@ -403,9 +403,10 @@ fn substitute_host_configuration() -> HostConfiguration<polkadot_primitives::Blo
 /// with real operator session keys before any real launch** (each operator derives their own and
 /// the public keys replace the `get_authority_keys_from_seed(...)` entries below).
 pub fn paseo_substitute_genesis() -> serde_json::Value {
-	// Bootstrap authorities. Operators 1-2 (turboflakes) are real community providers; operators
-	// 3-4 below are still well-known DEV keys (Charlie/Dave) — ⚠️ replace them with the remaining
-	// providers' submitted keys before any real launch. Regenerate entries from a provider's stash
+	// Bootstrap authorities. Operators 1-3 are real community providers (turboflakes x2,
+	// CoinStudio); operator 4 below is still a well-known DEV key (Dave) — ⚠️ replace it with the
+	// remaining provider's submitted keys before any real launch. Regenerate entries from a
+	// provider's stash
 	// + `author_rotateKeys` blob with `substitute-relay/tools/format-operator-keys.mjs` (arg
 	// order: stash, babe, grandpa, para_validator, para_assignment, authority_discovery, beefy).
 	let initial_authorities = vec![
@@ -429,15 +430,15 @@ pub fn paseo_substitute_genesis() -> serde_json::Value {
 			hex!["7c0a746c40f2f8a81203ebc56de2d4f9c38b0dcc54437ec26d3ba53e6f4e0c7a"],
 			hex!["0358681e51bad908404c2c8108f70928dd34568e63553aa1a781fccfca364b4991"],
 		),
-		// dev-charlie (PLACEHOLDER — replace with operator 3)
+		// operator 3: CoinStudio
 		substitute_authority(
-			hex!["1e07379407fecc4b89eb7dbd287c2c781cfb1907a96947a3eb18e4f8e7198625"],
-			hex!["90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22"],
-			hex!["439660b36c6c03afafca027b910b4fecf99801834c62a5e6006f27d978de234f"],
-			hex!["90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22"],
-			hex!["90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22"],
-			hex!["90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22"],
-			hex!["0389411795514af1627765eceffcbd002719f031604fadd7d188e2dc585b4e1afb"],
+			hex!["8eef6710734f5d1e7d2eb303fa8f04e9bef65fb680647b24624723f95b868964"],
+			hex!["b6e24d45e4b33049391c302499c0767640460215d82296dd9f7e6d72f62dc5dc"],
+			hex!["d800a130cf1abec4ab5e264e2910aff610830559c15c416e2e7293205c7df168"],
+			hex!["fce0ff5f07e00544a3a56314ac9a7a78bddee931af8cc00384e93cb9dfef6268"],
+			hex!["6c646ea838e64ace9db13518f67101e2be3d40cef79c2f7f1a31e4e909d8e55e"],
+			hex!["9c9578da7dacdbcc1322754abcfb1b33a08668427c4e5866031152abd8316336"],
+			hex!["03119725dcc1ce7debc9eeec0231dac2970c0c466a7e16d53eaee6e130d76bd0d3"],
 		),
 		// dev-dave (PLACEHOLDER — replace with operator 4)
 		substitute_authority(
