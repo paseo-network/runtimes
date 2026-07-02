@@ -26,17 +26,53 @@ import { readFileSync } from 'node:fs';
 import { Keyring } from '@polkadot/keyring';
 import { cryptoWaitReady, decodeAddress } from '@polkadot/util-crypto';
 import { hexToU8a, u8aToHex, isHex } from '@polkadot/util';
+import { ed25519, RistrettoPoint } from '@noble/curves/ed25519';
+import { secp256k1 } from '@noble/curves/secp256k1';
 
 await cryptoWaitReady();
+
+// --- crypto-type verification ---------------------------------------------------------------
+// Each session key must be the crypto the runtime expects. A wrong-type key (e.g. an ed25519 key
+// submitted as `babe`, or a grandpa/babe swap) would leave the validator unable to author/finalize.
+// We check the public key actually lies on the expected curve. `stash` is an account (any 32 bytes),
+// so it is not curve-checked.
+const _Ed = ed25519.Point || ed25519.ExtendedPoint;
+const onEd25519 = (u8) => { try { _Ed.fromHex(u8aToHex(u8, undefined, false)); return true; } catch { return false; } };
+const onRistretto = (u8) => { try { RistrettoPoint.fromHex(u8aToHex(u8, undefined, false)); return true; } catch { return false; } };
+const onSecp256k1 = (u8) => { try { secp256k1.Point.fromHex(u8aToHex(u8, undefined, false)); return true; } catch { return false; } };
+const SCHEME = {
+  babe: ['sr25519', onRistretto],
+  grandpa: ['ed25519', onEd25519],
+  paraValidator: ['sr25519', onRistretto],
+  paraAssignment: ['sr25519', onRistretto],
+  authorityDiscovery: ['sr25519', onRistretto],
+  beefy: ['ecdsa/secp256k1', onSecp256k1],
+};
+function verifyCrypto(name, k) {
+  const bad = [];
+  for (const [field, [scheme, ok]] of Object.entries(SCHEME)) {
+    if (!ok(k[field]))
+      bad.push(`${field} is not a valid ${scheme} public key (0x${u8aToHex(k[field], undefined, false)})`);
+  }
+  if (bad.length) {
+    const hint = bad.some((b) => b.startsWith('babe') || b.startsWith('grandpa'))
+      ? ' — likely a babe<->grandpa swap (runtime SessionKeys is grandpa-first).'
+      : '';
+    throw new Error(`${name}: crypto-type check failed:\n    - ${bad.join('\n    - ')}${hint}`);
+  }
+}
 
 const path = process.argv[2] || 'operators.json';
 const operators = JSON.parse(readFileSync(path, 'utf8'));
 if (!Array.isArray(operators)) throw new Error('expected a JSON array of operators');
 
-// SessionKeys layout (declaration order) and byte sizes — must match the runtime's SessionKeys.
+// SessionKeys layout (declaration order) + byte sizes — MUST match the runtime's SessionKeys.
+// The Paseo relay declares GRANDPA FIRST, then babe (relay/paseo/src/lib.rs). So an
+// `author_rotateKeys` blob is grandpa-first; splitting it babe-first swaps babe<->grandpa
+// (a real submission hit exactly this). This order is authoritative for blob-splitting.
 const LAYOUT = [
-  ['babe', 32],
   ['grandpa', 32],
+  ['babe', 32],
   ['paraValidator', 32],
   ['paraAssignment', 32],
   ['authorityDiscovery', 32],
@@ -98,6 +134,7 @@ function resolve(op) {
 const snippets = [];
 for (const op of operators) {
   const k = resolve(op);
+  verifyCrypto(op.name, k); // hard-fail on wrong-crypto keys (e.g. babe<->grandpa swap)
   // arg order matches substitute_authority(): stash, babe, grandpa, para_validator,
   // para_assignment, authority_discovery, beefy.
   snippets.push(

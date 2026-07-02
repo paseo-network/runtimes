@@ -436,11 +436,11 @@ pub fn paseo_substitute_genesis() -> serde_json::Value {
 			hex!["7c0a746c40f2f8a81203ebc56de2d4f9c38b0dcc54437ec26d3ba53e6f4e0c7a"],
 			hex!["0358681e51bad908404c2c8108f70928dd34568e63553aa1a781fccfca364b4991"],
 		),
-		// operator 3: CoinStudio
+		// operator 3: CoinStudio (babe/grandpa corrected — submission had them swapped)
 		substitute_authority(
 			hex!["8eef6710734f5d1e7d2eb303fa8f04e9bef65fb680647b24624723f95b868964"],
-			hex!["b6e24d45e4b33049391c302499c0767640460215d82296dd9f7e6d72f62dc5dc"],
 			hex!["d800a130cf1abec4ab5e264e2910aff610830559c15c416e2e7293205c7df168"],
+			hex!["b6e24d45e4b33049391c302499c0767640460215d82296dd9f7e6d72f62dc5dc"],
 			hex!["fce0ff5f07e00544a3a56314ac9a7a78bddee931af8cc00384e93cb9dfef6268"],
 			hex!["6c646ea838e64ace9db13518f67101e2be3d40cef79c2f7f1a31e4e909d8e55e"],
 			hex!["9c9578da7dacdbcc1322754abcfb1b33a08668427c4e5866031152abd8316336"],
