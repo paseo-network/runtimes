@@ -2,7 +2,12 @@
   "name": "Paseo",
   "id": "paseo",
   "chainType": "Live",
-  "bootNodes": [],
+  "bootNodes": [
+    "/ip4/193.39.195.54/tcp/40310/p2p/12D3KooWRnhmJPNauPYbx8q3s2mEWQqmZiUHxna2zcRA7xTubEEw",
+    "/ip4/193.39.195.54/tcp/40311/ws/p2p/12D3KooWRnhmJPNauPYbx8q3s2mEWQqmZiUHxna2zcRA7xTubEEw",
+    "/ip4/193.39.195.54/tcp/40312/p2p/12D3KooWJhVVqm5qmrfMJ248F5qPg9HVZ3UHWa75KbjEnRtD8dKb",
+    "/ip4/193.39.195.54/tcp/40313/ws/p2p/12D3KooWJhVVqm5qmrfMJ248F5qPg9HVZ3UHWa75KbjEnRtD8dKb"
+  ],
   "telemetryEndpoints": null,
   "protocolId": "pad",
   "properties": {
