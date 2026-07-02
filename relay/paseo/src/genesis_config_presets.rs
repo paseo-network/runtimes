@@ -322,6 +322,8 @@ const SUBSTITUTE_BOOTSTRAP_CORES: u32 = 2;
 ///   cannot back 56 cores). `max_validators_per_core` is kept at the live value of 3 — already the
 ///   target ratio (60 validators / 20 cores).
 fn substitute_host_configuration() -> HostConfiguration<polkadot_primitives::BlockNumber> {
+	use polkadot_primitives::{MAX_CODE_SIZE, MAX_POV_SIZE};
+
 	let executor_params = ExecutorParams::from(
 		&[
 			MaxMemoryPages(8192),
@@ -334,8 +336,14 @@ fn substitute_host_configuration() -> HostConfiguration<polkadot_primitives::Blo
 		validation_upgrade_cooldown: 60,
 		validation_upgrade_delay: 60,
 		code_retention_period: 1200,
-		max_code_size: 3_500_000,
-		max_pov_size: 10_485_760,
+		// Genesis enforces the compile-time hard limits (`MAX_CODE_SIZE` = 3 MiB, `MAX_POV_SIZE` =
+		// 10 MiB). The live chain runs `max_code_size = 3_500_000`, set post-genesis by governance
+		// (that path skips the genesis consistency check) — it can't be used at genesis. Use the
+		// hard limit here; raise it after launch via `configuration.set_max_code_size` if a
+		// system chain's validation code exceeds 3 MiB. `max_pov_size` equals the live value (10
+		// MiB = MAX_POV_SIZE).
+		max_code_size: MAX_CODE_SIZE,
+		max_pov_size: MAX_POV_SIZE,
 		max_head_data_size: 32 * 1024,
 		max_upward_queue_count: 174_762,
 		max_upward_queue_size: 1024 * 1024,
