@@ -21,7 +21,7 @@ get_package_params() {
   local pkg="$1"
 
   ## Clean variables just in case
-  NAME="" ID="" PARA_ID="" RUNTIME="" RELAY="" PROTOCOL_ID="" TYPE="" CHAIN=""
+  NAME="" ID="" PARA_ID="" RUNTIME="" RELAY="" PROTOCOL_ID="" TYPE="" CHAIN="" SS58=""
   case "$pkg" in
     paseo-local)
       NAME="Paseo Local Testnet"
@@ -38,6 +38,19 @@ get_package_params() {
       PROTOCOL_ID="pas"
       TYPE="development"
       CHAIN="development"
+    ;;
+    # Substitute relay — fresh from-genesis Paseo relay (4 community-provider bootstrap validators,
+    # ah_client Passive). Presents AS Paseo (name/id "paseo") since it replaces it; only the
+    # protocol-id differs ("pad" = polkadot apps devenet). Not in the default PACKAGES list; build:
+    #   CHAIN_SPEC_PACKAGES="paseo-substitute" ./scripts/generate_chain_specs.sh
+    paseo-substitute)
+      NAME="Paseo"
+      ID="paseo"
+      RUNTIME="relay/paseo"
+      PROTOCOL_ID="pad"
+      TYPE="live"
+      CHAIN="substitute"
+      SS58=42
     ;;
     asset-hub-paseo-local)
       NAME="Asset Hub Paseo Local"
@@ -109,7 +122,7 @@ for pkg in "${PACKAGES[@]}"; do
     --type "$TYPE"
     --chain "$CHAIN"
     --output "chain-specs/${pkg}.json"
-    --properties ss58Format=0,tokenDecimals=10,tokenSymbol="PAS"
+    --properties ss58Format=${SS58:-0},tokenDecimals=10,tokenSymbol="PAS"
     --protocol-id "$PROTOCOL_ID"
     --default-bootnode=false
     --genesis-code=false
