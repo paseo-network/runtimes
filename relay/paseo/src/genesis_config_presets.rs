@@ -403,12 +403,10 @@ fn substitute_host_configuration() -> HostConfiguration<polkadot_primitives::Blo
 /// with real operator session keys before any real launch** (each operator derives their own and
 /// the public keys replace the `get_authority_keys_from_seed(...)` entries below).
 pub fn paseo_substitute_genesis() -> serde_json::Value {
-	// Bootstrap authorities. Operators 1-3 are real community providers (turboflakes x2,
-	// CoinStudio); operator 4 below is still a well-known DEV key (Dave) — ⚠️ replace it with the
-	// remaining provider's submitted keys before any real launch. Regenerate entries from a
-	// provider's stash
-	// + `author_rotateKeys` blob with `substitute-relay/tools/format-operator-keys.mjs` (arg
-	// order: stash, babe, grandpa, para_validator, para_assignment, authority_discovery, beefy).
+	// Bootstrap authorities — all four are real community providers (turboflakes x2, CoinStudio,
+	// ParaNodes). Regenerate entries from a provider's stash + `author_rotateKeys` blob with
+	// `substitute-relay/tools/format-operator-keys.mjs` (arg order: stash, babe, grandpa,
+	// para_validator, para_assignment, authority_discovery, beefy).
 	let initial_authorities = vec![
 		// operator 1: turboflakes (turboflakes.io)
 		substitute_authority(
@@ -440,15 +438,15 @@ pub fn paseo_substitute_genesis() -> serde_json::Value {
 			hex!["9c9578da7dacdbcc1322754abcfb1b33a08668427c4e5866031152abd8316336"],
 			hex!["03119725dcc1ce7debc9eeec0231dac2970c0c466a7e16d53eaee6e130d76bd0d3"],
 		),
-		// dev-dave (PLACEHOLDER — replace with operator 4)
+		// operator 4: ParaNodes
 		substitute_authority(
-			hex!["e860f1b1c7227f7c22602f53f15af80747814dffd839719731ee3bba6edc126c"],
-			hex!["306721211d5404bd9da88e0204360a1a9ab8b87c66c1bc2fcdd37f3c2222cc20"],
-			hex!["5e639b43e0052c47447dac87d6fd2b6ec50bdd4d0f614e4299c665249bbd09d9"],
-			hex!["306721211d5404bd9da88e0204360a1a9ab8b87c66c1bc2fcdd37f3c2222cc20"],
-			hex!["306721211d5404bd9da88e0204360a1a9ab8b87c66c1bc2fcdd37f3c2222cc20"],
-			hex!["306721211d5404bd9da88e0204360a1a9ab8b87c66c1bc2fcdd37f3c2222cc20"],
-			hex!["03bc9d0ca094bd5b8b3225d7651eac5d18c1c04bf8ae8f8b263eebca4e1410ed0c"],
+			hex!["043393e76c137dfdc403a6fd9a2d6129d470d51c5a67bd40517378030c87170d"],
+			hex!["02d0a5c4dc88271d54931c74fca673f7574b0cca137085e7bd93d7c9a22c7759"],
+			hex!["a256c0ce61b51b44eb77967256f966c7acaf1882f3e7d4503e909f687472f5fa"],
+			hex!["0efa555c900803275e008525249e8ab297f024b086884bdfbdb41e2288d8b648"],
+			hex!["a6192171d3af30abdb3e7b137e88d3c31130c951490fe4180fe063a85f15545f"],
+			hex!["6cfe0d905baba4d28f45d4156ec31fe77a10310e9b4236a07621339aa3e1b26c"],
+			hex!["02a9e9680265ba52df5ed43a1616c9c5bb81915142d80371dc3848f0608fbca4bf"],
 		),
 	];
 	// Reuse the current on-chain relay sudo key.
