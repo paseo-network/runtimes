@@ -6,7 +6,6 @@ use super::{
 	ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeHoldReason,
 	RuntimeOrigin, TransactionByteFee, WeightToFee, XcmpQueue,
 };
-use crate::paseo_constants::system_parachain::{ASSET_HUB_ID, COLLECTIVES_ID};
 use alloc::{vec, vec::Vec};
 use frame_support::{
 	parameter_types,
@@ -25,6 +24,7 @@ use parachains_common::{
 	},
 	TREASURY_PALLET_ID,
 };
+use paseo_runtime_constants::system_parachain::{ASSET_HUB_ID, COLLECTIVES_ID, PEOPLE_ID};
 use polkadot_parachain_primitives::primitives::Sibling;
 use polkadot_runtime_common::xcm_sender::ExponentialPrice;
 use sp_runtime::traits::AccountIdConversion;
@@ -43,7 +43,7 @@ use xcm_builder::{
 use xcm_executor::XcmExecutor;
 
 // Re-export
-pub use crate::paseo_constants::locations::PeopleLocation;
+pub use system_parachains_constants::paseo::locations::PeopleLocation;
 
 /// The genesis hash of the Paseo testnet relay chain. Used to identify it over XCM.
 ///
@@ -133,11 +133,11 @@ parameter_types! {
 	/// Sibling parachain IDs authorized to dispatch storage authorizations via
 	/// XCM. Storage-backed so governance (root) can update via
 	/// `system.set_storage` without a runtime upgrade.
-	pub storage AllowedParachainIds: Vec<u32> = vec![1502, 5140];
+	pub storage AllowedParachainIds: Vec<u32> = vec![PEOPLE_ID];
 	/// Sibling parachain IDs treated as governance origins. Storage-backed so
 	/// governance (root) can update via `system.set_storage` without a runtime
-	/// upgrade.
-	pub storage GovernanceParachainIds: Vec<u32> = vec![1500];
+	/// upgrade. Matches bulletin-westend's `GovernanceLocation = AssetHubLocation`.
+	pub storage GovernanceParachainIds: Vec<u32> = vec![ASSET_HUB_ID];
 }
 
 /// Filter matching sibling parachain origins listed in [`AllowedParachainIds`]
@@ -307,8 +307,8 @@ pub type XcmRouter = WithUniqueTopic<(
 )>;
 
 parameter_types! {
-	pub const DepositPerItem: Balance = crate::deposit(1, 0);
-	pub const DepositPerByte: Balance = crate::deposit(0, 1);
+	pub const DepositPerItem: Balance = crate::system_para_deposit(1, 0);
+	pub const DepositPerByte: Balance = crate::system_para_deposit(0, 1);
 	pub const AuthorizeAliasHoldReason: RuntimeHoldReason = RuntimeHoldReason::PolkadotXcm(pallet_xcm::HoldReason::AuthorizeAlias);
 }
 

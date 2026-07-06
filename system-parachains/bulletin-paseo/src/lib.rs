@@ -16,23 +16,18 @@ pub mod fast_runtime_binary {
 }
 
 mod genesis_config_presets;
-pub mod paseo_constants;
 pub mod storage;
 mod weights;
 pub mod xcm_config;
 
 extern crate alloc;
 
-use crate::paseo_constants::{
-	consensus::{
-		async_backing::UNINCLUDED_SEGMENT_CAPACITY, BLOCK_PROCESSING_VELOCITY,
-		MAXIMUM_BLOCK_WEIGHT, RELAY_CHAIN_SLOT_DURATION_MILLIS,
-	},
-	currency::*,
-	fee::WeightToFee,
-	time::*,
+use paseo_runtime_constants::system_parachain;
+use system_parachains_constants::paseo::{
+	currency::{system_para_deposit, CENTS, SYSTEM_PARA_EXISTENTIAL_DEPOSIT, UNITS},
+	fee::TRANSACTION_BYTE_FEE,
 };
-use alloc::{vec, vec::Vec};
+use alloc::{borrow::Cow, vec, vec::Vec};
 use cumulus_pallet_parachain_system::AnyRelayNumber;
 use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
 use frame_support::{
@@ -40,22 +35,29 @@ use frame_support::{
 	dispatch::DispatchClass,
 	genesis_builder_helper::{build_state, get_preset},
 	parameter_types,
-	traits::{ConstBool, ConstU32, ConstU64, ConstU8, EitherOfDiverse, TransformOrigin},
-	weights::{ConstantMultiplier, Weight},
+	traits::{
+		tokens::imbalance::ResolveTo, ConstBool, ConstU32, ConstU64, ConstU8, EitherOfDiverse,
+		TransformOrigin,
+	},
+	weights::{
+		constants::WEIGHT_REF_TIME_PER_SECOND, ConstantMultiplier, FeePolynomial, Weight,
+		WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
+	},
 	PalletId,
 };
 use frame_system::{
 	limits::{BlockLength, BlockWeights},
 	EnsureRoot,
 };
+use pallet_collator_selection::StakingPotAccountId;
 use pallet_xcm::{EnsureXcm, IsVoiceOfBody};
 use parachains_common::{
-	impls::DealWithFees,
 	message_queue::{NarrowOriginToSibling, ParaIdToSibling},
 	AccountId, AuraId, Balance, BlockNumber, Hash, Header, Nonce, Signature,
 	AVERAGE_ON_INITIALIZE_RATIO,
 };
 use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
+use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 #[cfg(any(feature = "std", test))]
@@ -172,11 +174,11 @@ impl_opaque_keys! {
 
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: alloc::borrow::Cow::Borrowed("bulletin-paseo"),
-	impl_name: alloc::borrow::Cow::Borrowed("bulletin-paseo"),
+	spec_name: Cow::Borrowed("bulletin-paseo"),
+	impl_name: Cow::Borrowed("bulletin-paseo"),
 	authoring_version: 1,
-	spec_version: 1_000_020,
-	impl_version: 1,
+	spec_version: 2_003_001,
+	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
 	system_version: 1,
@@ -186,6 +188,86 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 #[cfg(feature = "std")]
 pub fn native_version() -> NativeVersion {
 	NativeVersion { runtime_version: VERSION, can_author_with: Default::default() }
+}
+
+/// Consensus/timing constants, kept local rather than sourced from
+/// `system_parachains_constants::paseo::consensus`: this runtime uses the base async-backing
+/// parameters (`BLOCK_PROCESSING_VELOCITY = 1`, no relay-parent offset), not the
+/// `elastic_scaling` variant (`BLOCK_PROCESSING_VELOCITY = 3`, `RELAY_PARENT_OFFSET = 1`) that
+/// the other system chains have since moved to — switching would be a real, untested change to
+/// this chain's block-authoring/collation timing, not just deduplication.
+const BLOCK_PROCESSING_VELOCITY: u32 = 1;
+/// Relay chain slot duration, in milliseconds.
+const RELAY_CHAIN_SLOT_DURATION_MILLIS: u32 = 6000;
+/// Average expected block time targeted by the parachain. Picked up by `pallet_timestamp` and
+/// `pallet_aura`.
+const MILLISECS_PER_BLOCK: u64 = 6000;
+/// 2 seconds of compute with a 6 second average block.
+const MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
+	WEIGHT_REF_TIME_PER_SECOND.saturating_mul(2),
+	cumulus_primitives_core::relay_chain::MAX_POV_SIZE as u64,
+);
+/// Maximum number of blocks simultaneously accepted by the Runtime, not yet included into the
+/// relay chain.
+const UNINCLUDED_SEGMENT_CAPACITY: u32 = 3;
+
+/// Time-related, computed from this runtime's actual 6s block time (`MILLISECS_PER_BLOCK` above),
+/// not `parachains_common::HOURS` (which assumes a stale 12s block time still used incidentally by
+/// some sibling chains despite them also running 6s async-backed blocks).
+const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
+const HOURS: BlockNumber = MINUTES * 60;
+const DAYS: BlockNumber = HOURS * 24;
+
+/// Default XCM version for genesis config.
+const SAFE_XCM_VERSION: u32 = XCM_VERSION;
+
+/// Maps a weight scalar to a fee. Mirrors the relay chain mapping
+/// (`extrinsic_base_weight -> 1/10 CENT`), scaled to 1/100 of that rate for system parachains.
+///
+/// Kept as a local polynomial (not `system_parachains_constants::paseo::fee::WeightToFee`, which
+/// every sibling chain uses) because this runtime does not implement `pallet_revive::TxConfig`.
+pub struct WeightToFee;
+impl frame_support::weights::WeightToFee for WeightToFee {
+	type Balance = Balance;
+
+	fn weight_to_fee(weight: &Weight) -> Self::Balance {
+		let time_poly: FeePolynomial<Balance> = RefTimeToFee::polynomial().into();
+		let proof_poly: FeePolynomial<Balance> = ProofSizeToFee::polynomial().into();
+		time_poly.eval(weight.ref_time()).max(proof_poly.eval(weight.proof_size()))
+	}
+}
+
+/// Maps the reference time component of `Weight` to a fee.
+pub struct RefTimeToFee;
+impl WeightToFeePolynomial for RefTimeToFee {
+	type Balance = Balance;
+	fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
+		let p = CENTS;
+		let q = 100 * Balance::from(ExtrinsicBaseWeight::get().ref_time());
+		smallvec![WeightToFeeCoefficient {
+			degree: 1,
+			negative: false,
+			coeff_frac: Perbill::from_rational(p % q, q),
+			coeff_integer: p / q,
+		}]
+	}
+}
+
+/// Maps the proof size component of `Weight` to a fee.
+pub struct ProofSizeToFee;
+impl WeightToFeePolynomial for ProofSizeToFee {
+	type Balance = Balance;
+	fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
+		// Map 10kb proof to 1 CENT.
+		let p = CENTS;
+		let q = 10_000;
+		smallvec![WeightToFeeCoefficient {
+			degree: 1,
+			negative: false,
+			coeff_frac: Perbill::from_rational(p % q, q),
+			coeff_integer: p / q,
+		}]
+	}
 }
 
 /// We allow for 90% of the block to be consumed by normal transactions.
@@ -280,8 +362,8 @@ impl pallet_authorship::Config for Runtime {
 }
 
 parameter_types! {
-	pub const ExistentialDeposit: Balance = EXISTENTIAL_DEPOSIT;
-	pub AssetHubParaId: ParaId = ParaId::new(paseo_constants::system_parachain::ASSET_HUB_ID);
+	pub const ExistentialDeposit: Balance = SYSTEM_PARA_EXISTENTIAL_DEPOSIT;
+	pub AssetHubParaId: ParaId = ParaId::new(system_parachain::ASSET_HUB_ID);
 }
 
 impl pallet_balances::Config for Runtime {
@@ -297,19 +379,19 @@ impl pallet_balances::Config for Runtime {
 	type RuntimeHoldReason = RuntimeHoldReason;
 	type RuntimeFreezeReason = RuntimeFreezeReason;
 	type FreezeIdentifier = ();
-	type MaxFreezes = ConstU32<0>;
+	type MaxFreezes = frame_support::traits::VariantCountOf<RuntimeFreezeReason>;
 	type DoneSlashHandler = ();
 }
 
 parameter_types! {
 	/// Relay Chain `TransactionByteFee` / 20 (per Paseo system-parachain convention).
-	pub const TransactionByteFee: Balance = paseo_constants::fee::TRANSACTION_BYTE_FEE;
+	pub const TransactionByteFee: Balance = TRANSACTION_BYTE_FEE;
 }
 
 impl pallet_transaction_payment::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type OnChargeTransaction =
-		pallet_transaction_payment::FungibleAdapter<Balances, DealWithFees<Runtime>>;
+		pallet_transaction_payment::FungibleAdapter<Balances, ResolveTo<StakingPotAccountId<Runtime>, Balances>>;
 	type OperationalFeeMultiplier = ConstU8<5>;
 	type WeightToFee = WeightToFee;
 	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
@@ -349,6 +431,7 @@ type ConsensusHook = cumulus_pallet_aura_ext::FixedVelocityConsensusHook<
 
 parameter_types! {
 	pub MessageQueueServiceWeight: Weight = Perbill::from_percent(35) * RuntimeBlockWeights::get().max_block;
+	pub MessageQueueIdleServiceWeight: Weight = Perbill::from_percent(20) * RuntimeBlockWeights::get().max_block;
 }
 
 impl pallet_message_queue::Config for Runtime {

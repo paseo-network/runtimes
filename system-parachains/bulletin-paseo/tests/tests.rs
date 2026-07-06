@@ -5,9 +5,9 @@
 
 use bulletin_paseo_runtime as runtime;
 use bulletin_paseo_runtime::{
-	paseo_constants::fee::WeightToFee, xcm_config::LocationToAccountId, AllPalletsWithoutSystem,
-	Balances, Block, HopPromotion, Runtime, RuntimeCall, RuntimeEvent, RuntimeGenesisConfig,
-	RuntimeOrigin, SessionKeys, System, TransactionStorage, TxExtension, UncheckedExtrinsic,
+	xcm_config::LocationToAccountId, AllPalletsWithoutSystem, Balances, Block, HopPromotion,
+	Runtime, RuntimeCall, RuntimeEvent, RuntimeGenesisConfig, RuntimeOrigin, SessionKeys, System,
+	TransactionStorage, TxExtension, UncheckedExtrinsic, WeightToFee,
 };
 use bulletin_transaction_storage_primitives::cids::{calculate_cid, CidConfig, HashingAlgorithm};
 use frame_support::{
@@ -770,7 +770,7 @@ fn xcm_payment_api_works() {
 
 #[test]
 fn governance_authorize_upgrade_works() {
-	use bulletin_paseo_runtime::paseo_constants::system_parachain::{ASSET_HUB_ID, COLLECTIVES_ID};
+	use paseo_runtime_constants::system_parachain::{ASSET_HUB_ID, COLLECTIVES_ID};
 
 	// no - random para: not in the governance/authorizer allowlists, so the Barrier
 	// rejects its unpaid execution before the Transact origin check is even reached.
@@ -1928,7 +1928,7 @@ fn xcm_transact_authorize_account_works() {
 /// on success the hashed-account budget is decremented.
 #[test]
 fn xcm_transact_authorize_account_from_asset_hub_contract() {
-	use bulletin_paseo_runtime::paseo_constants::system_parachain::ASSET_HUB_ID;
+	use paseo_runtime_constants::system_parachain::ASSET_HUB_ID;
 
 	let contract_addr = [0xAAu8; 20];
 	let hashed: AccountId =

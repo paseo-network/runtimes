@@ -86,6 +86,10 @@ pallet-collator-selection = { workspace = true }
 parachain-info = { workspace = true }
 parachains-common = { workspace = true }
 
+# Paseo
+paseo-runtime-constants = { workspace = true }
+system-parachains-constants = { workspace = true }
+
 [dev-dependencies]
 parachains-runtimes-test-utils = { workspace = true, default-features = true }
 sp-io = { workspace = true }
@@ -137,6 +141,7 @@ std = [
 	"pallet-xcm/std",
 	"parachain-info/std",
 	"parachains-common/std",
+	"paseo-runtime-constants/std",
 	"polkadot-parachain-primitives/std",
 	"polkadot-runtime-common/std",
 	"scale-info/std",
@@ -159,6 +164,7 @@ std = [
 	"sp-transaction-storage-proof/std",
 	"sp-version/std",
 	"substrate-wasm-builder",
+	"system-parachains-constants/std",
 	"tracing/std",
 	"xcm-builder/std",
 	"xcm-executor/std",
@@ -192,9 +198,11 @@ runtime-benchmarks = [
 	"pallet-xcm-benchmarks/runtime-benchmarks",
 	"pallet-xcm/runtime-benchmarks",
 	"parachains-common/runtime-benchmarks",
+	"paseo-runtime-constants/runtime-benchmarks",
 	"polkadot-parachain-primitives/runtime-benchmarks",
 	"polkadot-runtime-common/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
+	"system-parachains-constants/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
 	"xcm-executor/runtime-benchmarks",
 	"xcm-runtime-apis/runtime-benchmarks",

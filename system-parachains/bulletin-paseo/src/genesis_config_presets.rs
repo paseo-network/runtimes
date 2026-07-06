@@ -3,10 +3,7 @@
 
 //! # Bulletin Paseo Runtime genesis config presets
 
-use crate::{
-	paseo_constants::{currency::UNITS as PAS, xcm_version::SAFE_XCM_VERSION},
-	*,
-};
+use crate::{UNITS as PAS, *};
 use alloc::{vec, vec::Vec};
 use cumulus_primitives_core::ParaId;
 use frame_support::build_struct_json_patch;
