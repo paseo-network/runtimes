@@ -34,6 +34,16 @@ people-paseo-runtime = { path = "system-parachains/people-paseo", default-featur
 coretime-paseo-runtime = { path = "system-parachains/coretime-paseo", default-features = false }
 collectives-paseo-runtime = { path = "system-parachains/collectives-paseo" }
 collectives-paseo-runtime-constants = { path = "system-parachains/collectives-paseo/constants" }
+bulletin-paseo-runtime = { path = "system-parachains/bulletin-paseo", default-features = false }
+
+# Bulletin Chain pallets, shared with paritytech/polkadot-bulletin-chain's own
+# bulletin-westend/bulletin-paseo runtimes — sourced upstream rather than forked,
+# same as pallet-rc-migrator/pallet-ah-ops above.
+bulletin-pallets-common = { git = "https://github.com/paritytech/polkadot-bulletin-chain", tag = "v0.0.20-paseo", default-features = false }
+bulletin-transaction-storage-primitives = { git = "https://github.com/paritytech/polkadot-bulletin-chain", tag = "v0.0.20-paseo", default-features = false }
+pallet-bulletin-hop-promotion = { git = "https://github.com/paritytech/polkadot-bulletin-chain", tag = "v0.0.20-paseo", default-features = false }
+pallet-bulletin-transaction-storage = { git = "https://github.com/paritytech/polkadot-bulletin-chain", tag = "v0.0.20-paseo", default-features = false }
+pallet-bulletin-transaction-storage-runtime-api = { git = "https://github.com/paritytech/polkadot-bulletin-chain", tag = "v0.0.20-paseo", default-features = false }
 
 # Polkadot SDK
 bp-bridge-hub-paseo = { path = "system-parachains/bridge-hub-paseo/primitives", default-features = false }
@@ -94,6 +104,7 @@ grandpa = { version = "0.42.0", package = "sc-consensus-grandpa" }
 grandpa-primitives = { version = "29.0.0", default-features = false, package = "sp-consensus-grandpa" }
 hex-literal = { version = "0.4.1" }
 log = { version = "0.4.22", default-features = false }
+tracing = { version = "0.1.41", default-features = false }
 pallet-alliance = { version = "47.0.0", default-features = false }
 pallet-asset-conversion = { version = "30.0.0", default-features = false }
 pallet-asset-conversion-tx-payment = { version = "30.0.0", default-features = false }
@@ -252,6 +263,8 @@ sp-state-machine = { version = "0.51.0", default-features = false }
 sp-storage = { version = "23.0.0", default-features = false }
 sp-tracing = { version = "19.0.0", default-features = false }
 sp-transaction-pool = { version = "42.0.0", default-features = false }
+sp-hop = { version = "0.2.0", default-features = false }
+sp-transaction-storage-proof = { version = "42.0.1", default-features = false }
 sp-trie = { version = "44.0.0", default-features = false }
 sp-version = { version = "45.0.0", default-features = false }
 sp-weights = { version = "34.0.0", default-features = false }
@@ -296,6 +309,7 @@ members = [
 	"system-parachains/asset-hub-paseo/primitives",
 	"system-parachains/bridge-hub-paseo",
 	"system-parachains/bridge-hub-paseo/primitives",
+	"system-parachains/bulletin-paseo",
 	"system-parachains/collectives-paseo",
 	"system-parachains/collectives-paseo/constants",
 	"system-parachains/constants",

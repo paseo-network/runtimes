@@ -13,6 +13,7 @@ else
     "collectives-paseo-local"
     "people-paseo-local"
     "coretime-paseo-local"
+    "bulletin-paseo-local"
   )
   echo "📦 Generating chain specs for all packages"
 fi
@@ -99,6 +100,16 @@ get_package_params() {
       RUNTIME="system-parachains/coretime-paseo"
       RELAY="paseo-local"
       PROTOCOL_ID="ct-pas"
+      TYPE="local"
+      CHAIN="local_testnet"
+    ;;
+    bulletin-paseo-local)
+      NAME="Bulletin Paseo Local"
+      ID="bulletin-paseo-local"
+      PARA_ID=1501
+      RUNTIME="system-parachains/bulletin-paseo"
+      RELAY="paseo-local"
+      PROTOCOL_ID="bl-pas"
       TYPE="local"
       CHAIN="local_testnet"
     ;;

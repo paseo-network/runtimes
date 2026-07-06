@@ -40,6 +40,10 @@ on:
         description: 'Build coretime-paseo runtime'
         type: boolean
         default: false
+      build_bulletin_paseo:
+        description: 'Build bulletin-paseo runtime'
+        type: boolean
+        default: false
       dry_run:
         description: 'Run without creating tag or GitHub release (for testing)'
         type: boolean
@@ -125,6 +129,9 @@ jobs:
           - name: "coretime-paseo"
             path: "system-parachains/coretime-paseo"
             package_type: "parachains"
+          - name: "bulletin-paseo"
+            path: "system-parachains/bulletin-paseo"
+            package_type: "parachains"
 
     steps:
       - name: Check package type
@@ -159,6 +166,11 @@ jobs:
               ;;
             "coretime-paseo")
               if [[ "${{ github.event.inputs.build_coretime_paseo }}" == "true" ]]; then
+                should_run=true
+              fi
+              ;;
+            "bulletin-paseo")
+              if [[ "${{ github.event.inputs.build_bulletin_paseo }}" == "true" ]]; then
                 should_run=true
               fi
               ;;
@@ -319,6 +331,10 @@ jobs:
             PACKAGES+=("coretime-paseo-local")
           fi
 
+          if [[ "${{ github.event.inputs.build_bulletin_paseo }}" == "true" ]]; then
+            PACKAGES+=("bulletin-paseo-local")
+          fi
+
           # If no packages are selected, build all
           if [[ ${#PACKAGES[@]} -eq 0 ]]; then
             PACKAGES=(
@@ -329,6 +345,7 @@ jobs:
               "collectives-paseo-local"
               "people-paseo-local"
               "coretime-paseo-local"
+              "bulletin-paseo-local"
             )
           fi
 
