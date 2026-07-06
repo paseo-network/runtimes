@@ -23,7 +23,7 @@ parameter_types! {
 	/// Cap on the total bytes committed to permanent storage (via `renew`) across all
 	/// authorizations on this chain. Seeded at 1 TiB; storage-backed so governance
 	/// (root) can raise/lower it via `system.set_storage` without a runtime upgrade.
-	pub storage MaxPermanentStorageSize: u64 = 1 * 1024 * 1024 * 1024 * 1024 / 10;
+	pub storage MaxPermanentStorageSize: u64 = 1024 * 1024 * 1024 * 1024;
 }
 
 parameter_types! {
