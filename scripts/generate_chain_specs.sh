@@ -106,7 +106,7 @@ get_package_params() {
     bulletin-paseo-local)
       NAME="Bulletin Paseo Local"
       ID="bulletin-paseo-local"
-      PARA_ID=1501
+      PARA_ID=1010
       RUNTIME="system-parachains/bulletin-paseo"
       RELAY="paseo-local"
       PROTOCOL_ID="bl-pas"
