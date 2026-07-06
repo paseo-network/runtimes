@@ -36,9 +36,6 @@ collectives-paseo-runtime = { path = "system-parachains/collectives-paseo" }
 collectives-paseo-runtime-constants = { path = "system-parachains/collectives-paseo/constants" }
 bulletin-paseo-runtime = { path = "system-parachains/bulletin-paseo", default-features = false }
 
-# Bulletin Chain pallets, shared with paritytech/polkadot-bulletin-chain's own
-# bulletin-westend/bulletin-paseo runtimes — sourced upstream rather than forked,
-# same as pallet-rc-migrator/pallet-ah-ops above.
 bulletin-pallets-common = { git = "https://github.com/paritytech/polkadot-bulletin-chain", tag = "v0.0.20-paseo", default-features = false }
 bulletin-transaction-storage-primitives = { git = "https://github.com/paritytech/polkadot-bulletin-chain", tag = "v0.0.20-paseo", default-features = false }
 pallet-bulletin-hop-promotion = { git = "https://github.com/paritytech/polkadot-bulletin-chain", tag = "v0.0.20-paseo", default-features = false }
