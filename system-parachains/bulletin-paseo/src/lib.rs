@@ -22,11 +22,6 @@ pub mod xcm_config;
 
 extern crate alloc;
 
-use paseo_runtime_constants::system_parachain;
-use system_parachains_constants::paseo::{
-	currency::{system_para_deposit, CENTS, SYSTEM_PARA_EXISTENTIAL_DEPOSIT, UNITS},
-	fee::TRANSACTION_BYTE_FEE,
-};
 use alloc::{borrow::Cow, vec, vec::Vec};
 use cumulus_pallet_parachain_system::AnyRelayNumber;
 use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
@@ -56,6 +51,7 @@ use parachains_common::{
 	AccountId, AuraId, Balance, BlockNumber, Hash, Header, Nonce, Signature,
 	AVERAGE_ON_INITIALIZE_RATIO,
 };
+use paseo_runtime_constants::system_parachain;
 use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
@@ -71,6 +67,10 @@ use sp_runtime::{
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
+use system_parachains_constants::paseo::{
+	currency::{system_para_deposit, CENTS, SYSTEM_PARA_EXISTENTIAL_DEPOSIT, UNITS},
+	fee::TRANSACTION_BYTE_FEE,
+};
 
 /// Override SDK's SLOT_DURATION: 24 seconds (4 relay chain slots).
 const SLOT_DURATION: u64 = 24_000;
@@ -390,8 +390,10 @@ parameter_types! {
 
 impl pallet_transaction_payment::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type OnChargeTransaction =
-		pallet_transaction_payment::FungibleAdapter<Balances, ResolveTo<StakingPotAccountId<Runtime>, Balances>>;
+	type OnChargeTransaction = pallet_transaction_payment::FungibleAdapter<
+		Balances,
+		ResolveTo<StakingPotAccountId<Runtime>, Balances>,
+	>;
 	type OperationalFeeMultiplier = ConstU8<5>;
 	type WeightToFee = WeightToFee;
 	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
