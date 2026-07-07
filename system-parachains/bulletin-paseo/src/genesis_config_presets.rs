@@ -86,11 +86,22 @@ fn bulletin_paseo_live_genesis() -> serde_json::Value {
 		BULLETIN_PARA_ID,
 		// Sudo: 5EyFpXybSYon74HVGUZVyvtYxTLy4EuqUxMhgXcmLM2qz1BL
 		Some(hex!("808cd36029a4142ad7d255cd504e826156fee86f453841d398f874467c7f6e0b").into()),
-		// No account authorizations at genesis: Root (sudo) and the People chain grant them
-		// on the live network.
-		vec![],
-		// No additional authorizers at genesis: register via `add_authorizer` when needed.
-		vec![],
+		// Account authorizations (account, transactions_allowance, bytes_allowance): the sudo
+		// account can store from genesis. Note: subject to `AuthorizationPeriod` (14 days),
+		// renewable on-chain.
+		vec![(
+			hex!("808cd36029a4142ad7d255cd504e826156fee86f453841d398f874467c7f6e0b").into(),
+			1_000,
+			10 * 1024 * 1024 * 1024,
+		)],
+		// Additional authorizers (account, transactions budget, bytes budget): the sudo
+		// account can also grant authorizations via plain signed calls, without wrapping
+		// them in `sudo.sudo`.
+		vec![(
+			hex!("808cd36029a4142ad7d255cd504e826156fee86f453841d398f874467c7f6e0b").into(),
+			100_000,
+			100 * 1024 * 1024 * 1024,
+		)],
 	)
 }
 

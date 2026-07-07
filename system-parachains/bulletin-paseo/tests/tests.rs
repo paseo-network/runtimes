@@ -950,12 +950,13 @@ fn people_chain_can_authorize_storage_with_transact() {
 }
 
 #[test]
-fn people_next_chain_can_authorize_storage_with_transact() {
+fn allowlisted_parachain_can_authorize_storage_with_transact() {
 	// A parachain added to the storage-backed `AllowedParachainIds` allowlist at runtime
-	// (as governance would via `system.set_storage`, e.g. a future PeopleNext chain) should
-	// be able to authorize storage via XCM Transact, similar to the People chain.
-	let people_next_para_id = 5140;
-	let people_next_location = Location::new(1, [Parachain(people_next_para_id)]);
+	// (as governance would via `system.set_storage`) should be able to authorize storage
+	// via XCM Transact, similar to the People chain. The para ID is arbitrary: only
+	// allowlist membership matters.
+	let added_para_id = 2000;
+	let added_para_location = Location::new(1, [Parachain(added_para_id)]);
 
 	let account = Sr25519Keyring::Ferdie;
 	let authorize_call = RuntimeCall::TransactionStorage(
@@ -979,11 +980,11 @@ fn people_next_chain_can_authorize_storage_with_transact() {
 			// Extend the allowlist as governance would (storage-backed parameter).
 			bulletin_paseo_runtime::xcm_config::AllowedParachainIds::set(&vec![
 				paseo_runtime_constants::system_parachain::PEOPLE_ID,
-				people_next_para_id,
+				added_para_id,
 			]);
 
 			assert_ok!(RuntimeHelper::<Runtime, AllPalletsWithoutSystem>::execute_as_origin(
-				(people_next_location, OriginKind::Xcm),
+				(added_para_location, OriginKind::Xcm),
 				authorize_call,
 				None
 			)
