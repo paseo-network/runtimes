@@ -34,9 +34,9 @@ use xcm_runtime_apis::conversions::LocationToAccountHelper;
 
 const ALICE: [u8; 32] = [1u8; 32];
 
-/// Governance location used in tests: paraId 1500, a configured `GovernanceParachainIds` member.
+/// Governance location used in tests: Asset Hub, the default `GovernanceParachainIds` member.
 fn governance_location() -> Location {
-	Location::new(1, [Parachain(1500)])
+	Location::new(1, [Parachain(paseo_runtime_constants::system_parachain::ASSET_HUB_ID)])
 }
 
 /// Advance to the next block for testing transaction storage.
@@ -770,7 +770,7 @@ fn xcm_payment_api_works() {
 
 #[test]
 fn governance_authorize_upgrade_works() {
-	use paseo_runtime_constants::system_parachain::{ASSET_HUB_ID, COLLECTIVES_ID};
+	use paseo_runtime_constants::system_parachain::{COLLECTIVES_ID, PEOPLE_ID};
 
 	// no - random para: not in the governance/authorizer allowlists, so the Barrier
 	// rejects its unpaid execution before the Transact origin check is even reached.
@@ -781,14 +781,15 @@ fn governance_authorize_upgrade_works() {
 		>(GovernanceOrigin::Location(Location::new(1, Parachain(12334)))),
 		Either::Right(InstructionError { index: 0, error: XcmError::Barrier })
 	);
-	// no - AssetHub: not in the governance/authorizer allowlists, so the Barrier
-	// rejects its unpaid execution before the Transact origin check is even reached.
+	// no - People: an authorizer parachain gets unpaid execution through the Barrier, but it
+	// is not a `GovernanceParachainIds` member, so the Superuser Transact origin conversion
+	// fails.
 	assert_err!(
 		parachains_runtimes_test_utils::test_cases::can_governance_authorize_upgrade::<
 			Runtime,
 			RuntimeOrigin,
-		>(GovernanceOrigin::Location(Location::new(1, Parachain(ASSET_HUB_ID)))),
-		Either::Right(InstructionError { index: 0, error: XcmError::Barrier })
+		>(GovernanceOrigin::Location(Location::new(1, Parachain(PEOPLE_ID)))),
+		Either::Right(InstructionError { index: 1, error: XcmError::BadOrigin })
 	);
 	// no - Collectives: a bare Collectives parachain origin is not in the
 	// governance/authorizer allowlists, so the Barrier rejects it.
@@ -799,7 +800,8 @@ fn governance_authorize_upgrade_works() {
 		>(GovernanceOrigin::Location(Location::new(1, Parachain(COLLECTIVES_ID)))),
 		Either::Right(InstructionError { index: 0, error: XcmError::Barrier })
 	);
-	// no - Collectives Voice of Fellows plurality
+	// no - Collectives Voice of Fellows plurality: the fellowship carve-out was removed from
+	// the Barrier, so its unpaid execution is rejected outright.
 	assert_err!(
 		parachains_runtimes_test_utils::test_cases::can_governance_authorize_upgrade::<
 			Runtime,
@@ -808,7 +810,7 @@ fn governance_authorize_upgrade_works() {
 			Location::new(1, Parachain(COLLECTIVES_ID)),
 			Plurality { id: BodyId::Technical, part: BodyPart::Voice }.into()
 		)),
-		Either::Right(InstructionError { index: 2, error: XcmError::BadOrigin })
+		Either::Right(InstructionError { index: 0, error: XcmError::Barrier })
 	);
 
 	// no - relaychain (relay chain does not have superuser access, only `GovernanceParachainIds`
@@ -821,7 +823,7 @@ fn governance_authorize_upgrade_works() {
 		Either::Right(InstructionError { index: 1, error: XcmError::BadOrigin })
 	);
 
-	// ok - governance location (paraId 1500)
+	// ok - governance location (Asset Hub)
 	assert_ok!(parachains_runtimes_test_utils::test_cases::can_governance_authorize_upgrade::<
 		Runtime,
 		RuntimeOrigin,
@@ -904,8 +906,10 @@ fn non_authorizer_cannot_sign_authorize_account_extrinsic() {
 
 #[test]
 fn people_chain_can_authorize_storage_with_transact() {
-	// People chain (parachain 1502) should be able to authorize storage via XCM Transact.
-	let people_location = Location::new(1, [Parachain(1502)]);
+	// People chain (default `AllowedParachainIds` member) should be able to authorize storage
+	// via XCM Transact.
+	let people_location =
+		Location::new(1, [Parachain(paseo_runtime_constants::system_parachain::PEOPLE_ID)]);
 
 	let account = Sr25519Keyring::Ferdie;
 	let authorize_call = RuntimeCall::TransactionStorage(
@@ -947,9 +951,11 @@ fn people_chain_can_authorize_storage_with_transact() {
 
 #[test]
 fn people_next_chain_can_authorize_storage_with_transact() {
-	// PeopleNext chain (parachain 5140) should be able to authorize storage via XCM Transact,
-	// similar to the People chain.
-	let people_next_location = Location::new(1, [Parachain(5140)]);
+	// A parachain added to the storage-backed `AllowedParachainIds` allowlist at runtime
+	// (as governance would via `system.set_storage`, e.g. a future PeopleNext chain) should
+	// be able to authorize storage via XCM Transact, similar to the People chain.
+	let people_next_para_id = 5140;
+	let people_next_location = Location::new(1, [Parachain(people_next_para_id)]);
 
 	let account = Sr25519Keyring::Ferdie;
 	let authorize_call = RuntimeCall::TransactionStorage(
@@ -970,6 +976,12 @@ fn people_next_chain_can_authorize_storage_with_transact() {
 		.with_tracing()
 		.build()
 		.execute_with(|| {
+			// Extend the allowlist as governance would (storage-backed parameter).
+			bulletin_paseo_runtime::xcm_config::AllowedParachainIds::set(&vec![
+				paseo_runtime_constants::system_parachain::PEOPLE_ID,
+				people_next_para_id,
+			]);
+
 			assert_ok!(RuntimeHelper::<Runtime, AllPalletsWithoutSystem>::execute_as_origin(
 				(people_next_location, OriginKind::Xcm),
 				authorize_call,

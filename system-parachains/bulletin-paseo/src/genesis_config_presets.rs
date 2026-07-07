@@ -7,7 +7,9 @@ use crate::{UNITS as PAS, *};
 use alloc::{vec, vec::Vec};
 use cumulus_primitives_core::ParaId;
 use frame_support::build_struct_json_patch;
+use hex_literal::hex;
 use parachains_common::{AccountId, AuraId};
+use sp_core::crypto::UncheckedInto;
 use sp_genesis_builder::PresetId;
 use sp_keyring::Sr25519Keyring;
 
@@ -54,9 +56,48 @@ fn bulletin_paseo_genesis(
 	})
 }
 
+/// Genesis for the live Bulletin Paseo deployment (para 1010 on the Paseo relay).
+///
+/// The two genesis invulnerables are PLACEHOLDERS using well-known dev keys; swap in the
+/// collator providers' real account/Aura keys (the `hex!` pairs below) before generating the
+/// launch chain spec.
+fn bulletin_paseo_live_genesis() -> serde_json::Value {
+	bulletin_paseo_genesis(
+		// Initial collators (invulnerables).
+		vec![
+			// PLACEHOLDER: provider 1 — currently Alice (well-known dev key).
+			// 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
+			(
+				hex!("d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d").into(),
+				hex!("d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d")
+					.unchecked_into(),
+			),
+			// PLACEHOLDER: provider 2 — currently Bob (well-known dev key).
+			// 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
+			(
+				hex!("8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48").into(),
+				hex!("8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48")
+					.unchecked_into(),
+			),
+		],
+		// Endow the sudo account so it exists and can pay fees for regular calls.
+		vec![hex!("808cd36029a4142ad7d255cd504e826156fee86f453841d398f874467c7f6e0b").into()],
+		PAS * 1_000,
+		BULLETIN_PARA_ID,
+		// Sudo: 5EyFpXybSYon74HVGUZVyvtYxTLy4EuqUxMhgXcmLM2qz1BL
+		Some(hex!("808cd36029a4142ad7d255cd504e826156fee86f453841d398f874467c7f6e0b").into()),
+		// No account authorizations at genesis: Root (sudo) and the People chain grant them
+		// on the live network.
+		vec![],
+		// No additional authorizers at genesis: register via `add_authorizer` when needed.
+		vec![],
+	)
+}
+
 /// Provides the JSON representation of predefined genesis config for given `id`.
 pub fn get_preset(id: &PresetId) -> Option<Vec<u8>> {
 	let patch = match id.as_ref() {
+		"live" => bulletin_paseo_live_genesis(),
 		sp_genesis_builder::LOCAL_TESTNET_RUNTIME_PRESET => bulletin_paseo_genesis(
 			// initial collators.
 			vec![
@@ -104,7 +145,57 @@ pub fn get_preset(id: &PresetId) -> Option<Vec<u8>> {
 /// List of supported presets.
 pub fn preset_names() -> Vec<PresetId> {
 	vec![
+		PresetId::from("live"),
 		PresetId::from(sp_genesis_builder::DEV_RUNTIME_PRESET),
 		PresetId::from(sp_genesis_builder::LOCAL_TESTNET_RUNTIME_PRESET),
 	]
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use frame_support::genesis_builder_helper::build_state;
+	use sp_genesis_builder::{DEV_RUNTIME_PRESET, LOCAL_TESTNET_RUNTIME_PRESET};
+
+	/// Recursively merge `patch` into `base`, as `sc-chain-spec` does when it
+	/// applies a preset patch on top of the default genesis config.
+	fn json_merge(base: &mut serde_json::Value, patch: serde_json::Value) {
+		match (base, patch) {
+			(serde_json::Value::Object(base), serde_json::Value::Object(patch)) =>
+				for (k, v) in patch {
+					json_merge(base.entry(k).or_insert(serde_json::Value::Null), v);
+				},
+			(base, patch) => *base = patch,
+		}
+	}
+
+	fn assert_preset_builds(id: &str) {
+		sp_io::TestExternalities::default().execute_with(|| {
+			let preset = get_preset(&PresetId::from(id))
+				.unwrap_or_else(|| panic!("preset `{id}` is not defined"));
+			let patch = serde_json::from_slice(&preset).expect("preset is valid JSON; qed");
+			let mut config = serde_json::to_value(crate::RuntimeGenesisConfig::default())
+				.expect("default genesis config serializes; qed");
+			json_merge(&mut config, patch);
+			build_state::<crate::RuntimeGenesisConfig>(
+				serde_json::to_vec(&config).expect("merged config serializes; qed"),
+			)
+			.unwrap_or_else(|e| panic!("preset `{id}` failed to build: {e}"));
+		});
+	}
+
+	#[test]
+	fn live_genesis_preset_builds() {
+		assert_preset_builds("live");
+	}
+
+	#[test]
+	fn local_testnet_genesis_preset_builds() {
+		assert_preset_builds(LOCAL_TESTNET_RUNTIME_PRESET);
+	}
+
+	#[test]
+	fn development_genesis_preset_builds() {
+		assert_preset_builds(DEV_RUNTIME_PRESET);
+	}
 }

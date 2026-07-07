@@ -112,6 +112,23 @@ get_package_params() {
       PROTOCOL_ID="bl-pas"
       TYPE="local"
       CHAIN="local_testnet"
+      SS58=42
+    ;;
+    # Live Bulletin Paseo spec. Uses the `live` genesis preset (real sudo key; the genesis
+    # invulnerables are placeholders — swap in the collator providers' keys in
+    # `genesis_config_presets.rs` before generating the launch spec). Not in the default
+    # PACKAGES list; build:
+    #   CHAIN_SPEC_PACKAGES="bulletin-paseo" ./scripts/generate_chain_specs.sh
+    bulletin-paseo)
+      NAME="Bulletin Paseo"
+      ID="bulletin-paseo"
+      PARA_ID=1010
+      RUNTIME="system-parachains/bulletin-paseo"
+      RELAY="paseo"
+      PROTOCOL_ID="bl-pas"
+      TYPE="live"
+      CHAIN="live"
+      SS58=42
     ;;
     *)
       echo "⚠️  No config found for $pkg"
