@@ -24,7 +24,7 @@ use parachains_common::{
 	},
 	TREASURY_PALLET_ID,
 };
-use paseo_runtime_constants::system_parachain::{ASSET_HUB_ID, COLLECTIVES_ID, PEOPLE_ID};
+use paseo_runtime_constants::system_parachain::{ASSET_HUB_ID, PEOPLE_ID};
 use polkadot_parachain_primitives::primitives::Sibling;
 use polkadot_runtime_common::xcm_sender::ExponentialPrice;
 use sp_runtime::traits::AccountIdConversion;
@@ -45,26 +45,16 @@ use xcm_executor::XcmExecutor;
 // Re-export
 pub use system_parachains_constants::paseo::locations::PeopleLocation;
 
-/// The genesis hash of the Paseo testnet relay chain. Used to identify it over XCM.
-///
-/// Not yet exposed by the Polkadot SDK, so we define it locally. Matches
-/// `0x77afd6190f1554ad45fd0d31aee62aacc33c6db0ea801129acb813f913e0764f`.
-pub const PASEO_GENESIS_HASH: [u8; 32] = [
-	0x77, 0xaf, 0xd6, 0x19, 0x0f, 0x15, 0x54, 0xad, 0x45, 0xfd, 0x0d, 0x31, 0xae, 0xe6, 0x2a, 0xac,
-	0xc3, 0x3c, 0x6d, 0xb0, 0xea, 0x80, 0x11, 0x29, 0xac, 0xb8, 0x13, 0xf9, 0x13, 0xe0, 0x76, 0x4f,
-];
-
 parameter_types! {
 	pub const RootLocation: Location = Location::here();
 	pub const TokenRelayLocation: Location = Location::parent();
 	pub AssetHubLocation: Location = Location::new(1, [Parachain(ASSET_HUB_ID)]);
-	pub const RelayNetwork: Option<NetworkId> = Some(NetworkId::ByGenesis(PASEO_GENESIS_HASH));
+	pub const RelayNetwork: Option<NetworkId> = Some(NetworkId::Polkadot);
 	pub RelayChainOrigin: RuntimeOrigin = cumulus_pallet_xcm::Origin::Relay.into();
 	pub UniversalLocation: InteriorLocation =
 		[GlobalConsensus(RelayNetwork::get().unwrap()), Parachain(ParachainInfo::parachain_id().into())].into();
 	pub const MaxInstructions: u32 = 100;
 	pub const MaxAssetsIntoHolding: u32 = 64;
-	pub FellowshipLocation: Location = Location::new(1, Parachain(COLLECTIVES_ID));
 }
 
 /// Type for specifying how a `Location` can be converted into an `AccountId`. This is used
@@ -177,16 +167,6 @@ impl<B: frame_support::traits::Get<BodyId>> Contains<Location> for IsGovernanceV
 	}
 }
 
-pub struct FellowsPlurality;
-impl Contains<Location> for FellowsPlurality {
-	fn contains(location: &Location) -> bool {
-		matches!(
-			location.unpack(),
-			(1, [Parachain(COLLECTIVES_ID), Plurality { id: BodyId::Technical, .. }])
-		)
-	}
-}
-
 pub type Barrier = TrailingSetTopicAsId<(
 	// Allow local users to buy weight credit.
 	TakeWeightCredit,
@@ -197,11 +177,10 @@ pub type Barrier = TrailingSetTopicAsId<(
 			// If the message is one that immediately attempts to pay for execution, then
 			// allow it.
 			AllowTopLevelPaidExecutionFrom<Everything>,
-			// Parent, its pluralities (i.e. governance bodies), Fellows plurality,
-			// governance parachains, and authorizer parachains get free execution.
+			// Parent, its pluralities (i.e. governance bodies), governance parachains, and
+			// authorizer parachains get free execution.
 			AllowExplicitUnpaidExecutionFrom<(
 				ParentOrParentsPlurality,
-				FellowsPlurality,
 				IsGovernanceLocation,
 				IsAuthorizerParachain,
 			)>,

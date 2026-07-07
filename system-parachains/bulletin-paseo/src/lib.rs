@@ -45,7 +45,7 @@ use frame_system::{
 	EnsureRoot,
 };
 use pallet_collator_selection::StakingPotAccountId;
-use pallet_xcm::{EnsureXcm, IsVoiceOfBody};
+use pallet_xcm::EnsureXcm;
 use parachains_common::{
 	message_queue::{NarrowOriginToSibling, ParaIdToSibling},
 	AccountId, AuraId, Balance, BlockNumber, Hash, Header, Nonce, Signature,
@@ -78,10 +78,7 @@ use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 use xcm::{prelude::*, Version as XcmVersion};
 #[cfg(feature = "runtime-benchmarks")]
 use xcm_config::AssetHubLocation;
-use xcm_config::{
-	FellowshipLocation, IsGovernanceVoiceOfBody, TokenRelayLocation,
-	XcmOriginToTransactDispatchOrigin,
-};
+use xcm_config::{IsGovernanceVoiceOfBody, TokenRelayLocation, XcmOriginToTransactDispatchOrigin};
 use xcm_runtime_apis::{
 	dry_run::{CallDryRunEffects, Error as XcmDryRunApiError, XcmDryRunEffects},
 	fees::Error as XcmPaymentApiError,
@@ -483,17 +480,6 @@ impl pallet_migrations::Config for Runtime {
 }
 
 parameter_types! {
-	/// Fellows pluralistic body.
-	pub const FellowsBodyId: BodyId = BodyId::Technical;
-}
-
-/// Privileged origin that represents Root or Fellows pluralistic body.
-pub type RootOrFellows = EitherOfDiverse<
-	EnsureRoot<AccountId>,
-	EnsureXcm<IsVoiceOfBody<FellowshipLocation, FellowsBodyId>>,
->;
-
-parameter_types! {
 	/// The asset ID for the asset that we use to pay for message delivery fees.
 	pub FeeAssetId: AssetId = AssetId(TokenRelayLocation::get());
 	/// The base fee for the message delivery fees.
@@ -517,7 +503,7 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	// Most on-chain HRMP channels are configured to use 102400 bytes of max message size, so we
 	// need to set the page size larger than that until we reduce the channel size on-chain.
 	type MaxPageSize = ConstU32<{ 103 * 1024 }>;
-	type ControllerOrigin = RootOrFellows;
+	type ControllerOrigin = EnsureRoot<AccountId>;
 	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
 	type WeightInfo = weights::cumulus_pallet_xcmp_queue::WeightInfo<Runtime>;
 	type PriceForSiblingDelivery = PriceForSiblingParachainDelivery;
