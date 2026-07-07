@@ -14,7 +14,8 @@ use sp_genesis_builder::PresetId;
 use sp_keyring::Sr25519Keyring;
 
 const BULLETIN_PASEO_ED: Balance = ExistentialDeposit::get();
-pub const BULLETIN_PARA_ID: ParaId = ParaId::new(1010);
+pub const BULLETIN_PARA_ID: ParaId =
+	ParaId::new(paseo_runtime_constants::system_parachain::BULLETIN_ID);
 
 fn bulletin_paseo_genesis(
 	invulnerables: Vec<(AccountId, AuraId)>,
