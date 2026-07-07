@@ -23,7 +23,7 @@ pub mod xcm_config;
 extern crate alloc;
 
 use alloc::{borrow::Cow, vec, vec::Vec};
-use cumulus_pallet_parachain_system::AnyRelayNumber;
+use cumulus_pallet_parachain_system::RelayNumberMonotonicallyIncreases;
 use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
 use frame_support::{
 	derive_impl,
@@ -416,9 +416,7 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type ReservedDmpWeight = ReservedDmpWeight;
 	type XcmpMessageHandler = XcmpQueue;
 	type ReservedXcmpWeight = ReservedXcmpWeight;
-	// Temporary for the Paseo relay chain replacement (new relay genesis restarts block
-	// numbers). Revert to `RelayNumberMonotonicallyIncreases` once stable on the new relay.
-	type CheckAssociatedRelayNumber = AnyRelayNumber;
+	type CheckAssociatedRelayNumber = RelayNumberMonotonicallyIncreases;
 	type ConsensusHook = ConsensusHook;
 	type RelayParentOffset = ConstU32<0>;
 }
