@@ -57,10 +57,6 @@ fn bulletin_paseo_genesis(
 }
 
 /// Genesis for the live Bulletin Paseo deployment (para 1010 on the Paseo relay).
-///
-/// The second genesis invulnerable is a PLACEHOLDER using a well-known dev key; swap in the
-/// collator provider's real account/Aura keys (the `hex!` pair below) before generating the
-/// launch chain spec.
 fn bulletin_paseo_live_genesis() -> serde_json::Value {
 	bulletin_paseo_genesis(
 		// Initial collators (invulnerables).
@@ -73,11 +69,11 @@ fn bulletin_paseo_live_genesis() -> serde_json::Value {
 				hex!("74be29347a15988f9e2e35f9eb91b82aedd5ef2851e3c0b3b298886a71035b65")
 					.unchecked_into(),
 			),
-			// PLACEHOLDER: provider 2 — currently Bob (well-known dev key).
-			// 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
+			// Provider 2: Bestvalidator.
+			// Stash: 5DyXERCPinP2i95pnhR2JpqHB5PQWvJadWKseNJjATTZSNA4
 			(
-				hex!("8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48").into(),
-				hex!("8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48")
+				hex!("548479101af891b02dadd4577fc80d27f57525b2b4f668d7e9489c779aa7ef0a").into(),
+				hex!("fa981a07aa770cc65ba4edf414e2956f7a702cf4fdfd09a9ba3bc445e79e7928")
 					.unchecked_into(),
 			),
 		],
