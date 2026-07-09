@@ -2116,6 +2116,110 @@ dependencies = [
 ]
 
 [[package]]
+name = "bulletin-pallets-common"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/polkadot-bulletin-chain?tag=v0.0.20-paseo#86fd727cfe6f59b043460be94e59f5261ea86981"
+dependencies = [
+ "pallet-proxy",
+ "pallet-sudo",
+ "pallet-utility",
+ "parity-scale-codec",
+ "polkadot-sdk-frame",
+ "scale-info",
+]
+
+[[package]]
+name = "bulletin-paseo-runtime"
+version = "0.1.0"
+dependencies = [
+ "bulletin-pallets-common",
+ "bulletin-transaction-storage-primitives",
+ "cumulus-pallet-aura-ext",
+ "cumulus-pallet-parachain-system",
+ "cumulus-pallet-session-benchmarking",
+ "cumulus-pallet-weight-reclaim",
+ "cumulus-pallet-xcm",
+ "cumulus-pallet-xcmp-queue",
+ "cumulus-primitives-aura",
+ "cumulus-primitives-core",
+ "cumulus-primitives-utility",
+ "frame-benchmarking",
+ "frame-executive",
+ "frame-metadata-hash-extension",
+ "frame-support",
+ "frame-system",
+ "frame-system-benchmarking",
+ "frame-system-rpc-runtime-api",
+ "frame-try-runtime",
+ "hex-literal",
+ "pallet-aura",
+ "pallet-authorship",
+ "pallet-balances",
+ "pallet-bulletin-hop-promotion",
+ "pallet-bulletin-transaction-storage",
+ "pallet-bulletin-transaction-storage-runtime-api",
+ "pallet-collator-selection",
+ "pallet-message-queue",
+ "pallet-migrations",
+ "pallet-session",
+ "pallet-skip-feeless-payment",
+ "pallet-sudo",
+ "pallet-timestamp",
+ "pallet-transaction-payment",
+ "pallet-transaction-payment-rpc-runtime-api",
+ "pallet-utility",
+ "pallet-xcm",
+ "pallet-xcm-benchmarks",
+ "parachains-common",
+ "parachains-runtimes-test-utils",
+ "parity-scale-codec",
+ "paseo-runtime-constants",
+ "polkadot-parachain-primitives",
+ "polkadot-runtime-common",
+ "scale-info",
+ "serde",
+ "serde_json",
+ "smallvec",
+ "sp-api",
+ "sp-block-builder",
+ "sp-consensus-aura",
+ "sp-core",
+ "sp-genesis-builder",
+ "sp-hop",
+ "sp-inherents",
+ "sp-io",
+ "sp-keyring",
+ "sp-offchain",
+ "sp-runtime",
+ "sp-session",
+ "sp-storage",
+ "sp-transaction-pool",
+ "sp-transaction-storage-proof",
+ "sp-version",
+ "staging-parachain-info",
+ "staging-xcm",
+ "staging-xcm-builder",
+ "staging-xcm-executor",
+ "substrate-wasm-builder",
+ "system-parachains-constants 2.3.1",
+ "tracing",
+ "xcm-runtime-apis",
+]
+
+[[package]]
+name = "bulletin-transaction-storage-primitives"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/polkadot-bulletin-chain?tag=v0.0.20-paseo#86fd727cfe6f59b043460be94e59f5261ea86981"
+dependencies = [
+ "cid",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-io",
+ "sp-transaction-storage-proof",
+ "tracing",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.20.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7924,6 +8028,49 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-bulletin-hop-promotion"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/polkadot-bulletin-chain?tag=v0.0.20-paseo#86fd727cfe6f59b043460be94e59f5261ea86981"
+dependencies = [
+ "bulletin-transaction-storage-primitives",
+ "frame-support",
+ "frame-system",
+ "pallet-bulletin-transaction-storage",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "polkadot-sdk-frame",
+ "scale-info",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
+name = "pallet-bulletin-transaction-storage"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/polkadot-bulletin-chain?tag=v0.0.20-paseo#86fd727cfe6f59b043460be94e59f5261ea86981"
+dependencies = [
+ "array-bytes 6.2.3",
+ "bulletin-transaction-storage-primitives",
+ "pallet-bulletin-transaction-storage-runtime-api",
+ "parity-scale-codec",
+ "polkadot-sdk-frame",
+ "scale-info",
+ "sp-transaction-storage-proof",
+ "tracing",
+]
+
+[[package]]
+name = "pallet-bulletin-transaction-storage-runtime-api"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/polkadot-bulletin-chain?tag=v0.0.20-paseo#86fd727cfe6f59b043460be94e59f5261ea86981"
+dependencies = [
+ "bulletin-transaction-storage-primitives",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-api",
+]
+
+[[package]]
 name = "pallet-child-bounties"
 version = "47.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8745,6 +8892,19 @@ dependencies = [
  "rand 0.8.5",
  "sp-runtime",
  "sp-session",
+]
+
+[[package]]
+name = "pallet-skip-feeless-payment"
+version = "22.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3d5ee1833a57b8cfdc16c07b8183cc1bd0cdb8dc9ad4b9b108a87d736565b9b3"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-runtime",
 ]
 
 [[package]]
@@ -13739,6 +13899,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "sp-hop"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fca325b1970c01a8ba3b085cba67f6cb507dbb128e11a8ed248d6684edcd162a"
+dependencies = [
+ "parity-scale-codec",
+ "sp-api",
+ "sp-runtime",
+]
+
+[[package]]
 name = "sp-inherents"
 version = "42.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -14095,6 +14266,22 @@ checksum = "bd9caa506f1b9865e6f79b8d24401fe687aa323151f252d62b1b79ebd4084e91"
 dependencies = [
  "sp-api",
  "sp-runtime",
+]
+
+[[package]]
+name = "sp-transaction-storage-proof"
+version = "42.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ce86ffe8a02bf8363dea6836438f96dfd0812ef0dc35324fef1827592b921f1f"
+dependencies = [
+ "async-trait",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-api",
+ "sp-core",
+ "sp-inherents",
+ "sp-runtime",
+ "sp-trie",
 ]
 
 [[package]]
