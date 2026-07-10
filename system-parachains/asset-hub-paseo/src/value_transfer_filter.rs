@@ -56,14 +56,20 @@ fn assets_call_targets_protected_asset(
 fn asset_conversion_call_touches_protected_asset(
 	call: &pallet_asset_conversion::Call<Runtime>,
 ) -> bool {
-	let protected_asset = paseo_runtime_constants::ProtectedAssetLocation::get();
+	// AssetConversion pools key the protected asset by its Asset Hub-local (`parents: 0`) view;
+	// also match the sibling (`parents: 1`) view for defense-in-depth.
+	let protected_local = crate::xcm_config::ExternalAssetLocation::get();
+	let protected_sibling = paseo_runtime_constants::ProtectedAssetLocation::get();
 	match call {
 		pallet_asset_conversion::Call::add_liquidity { asset1, asset2, .. } |
 		pallet_asset_conversion::Call::remove_liquidity { asset1, asset2, .. } =>
-			**asset1 == protected_asset || **asset2 == protected_asset,
+			**asset1 == protected_local ||
+				**asset1 == protected_sibling ||
+				**asset2 == protected_local ||
+				**asset2 == protected_sibling,
 		pallet_asset_conversion::Call::swap_exact_tokens_for_tokens { path, .. } |
 		pallet_asset_conversion::Call::swap_tokens_for_exact_tokens { path, .. } =>
-			path.iter().any(|a| **a == protected_asset),
+			path.iter().any(|a| **a == protected_local || **a == protected_sibling),
 		_ => false,
 	}
 }

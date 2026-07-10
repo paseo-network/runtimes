@@ -51,7 +51,7 @@ use parachains_common::xcm_config::{
 	AllSiblingSystemParachains, ConcreteAssetFromSystem, ParentRelayOrSiblingParachains,
 	RelayOrOtherSystemParachains,
 };
-use paseo_runtime_constants::{system_parachain, ProtectedAssetLocation, PROTECTED_ASSET_ID};
+use paseo_runtime_constants::{system_parachain, PROTECTED_ASSET_ID};
 use polkadot_parachain_primitives::primitives::Sibling;
 use snowbridge_outbound_queue_primitives::v2::exporter::PausableExporter;
 use sp_runtime::traits::TryConvertInto;
@@ -200,9 +200,13 @@ pub type PoolAssetsConvertedConcreteId =
 	assets_common::PoolAssetsConvertedConcreteId<PoolAssetsPalletLocation, Balance>;
 
 /// Means for transacting assets on this chain.
+// The protected asset is a local trust-backed asset on Asset Hub, so the executor presents it
+// to the transactor in the chain-local (`parents: 0`) form. Key the guard off that anchor
+// (`ExternalAssetLocation`), not the sibling (`parents: 1`) `ProtectedAssetLocation` used on the
+// People chain — otherwise the guard never matches and the block flag is bypassable here.
 pub type AssetTransactors = ProtectedAssetTransactor<
 	(FungibleTransactor, FungiblesTransactor, ForeignFungiblesTransactor),
-	ProtectedAssetLocation,
+	ExternalAssetLocation,
 	AllowOnlySiblings<AssetHubParaId, PeopleParaId>,
 >;
 
