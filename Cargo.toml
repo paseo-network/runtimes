@@ -376,8 +376,8 @@ members = [
 	"pallets/score",
 	"pallets/storage-initialization",
 	"pallets/value-transfer-auth",
-	"support",
 	"precompiles/personhood",
+	"support",
 
 	"integration-tests/emulated/chains/parachains/assets/asset-hub-paseo",
 	"integration-tests/emulated/chains/parachains/bridges/bridge-hub-paseo",

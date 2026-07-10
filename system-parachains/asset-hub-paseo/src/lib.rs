@@ -73,8 +73,8 @@ pub mod protected_asset_erc20_guard;
 #[cfg(all(test, feature = "try-runtime"))]
 mod remote_tests;
 pub mod staking;
-pub mod value_transfer_filter;
 pub mod treasury;
+pub mod value_transfer_filter;
 mod weights;
 pub mod xcm_config;
 
@@ -141,7 +141,6 @@ use frame_system::{
 };
 use indiv_pallet_value_transfer_auth::extension::AuthorizeValueTransfer;
 use indiv_precompile_personhood::PersonhoodCheck;
-use paseo_runtime_constants::system_parachain::PEOPLE_ID;
 use pallet_asset_conversion_precompiles::AssetConversion as AssetConversionPrecompile;
 use pallet_assets_precompiles::{ForeignAssetId, ForeignIdConfig, InlineIdConfig, ERC20};
 use pallet_nfts::PalletFeatures;
@@ -152,6 +151,7 @@ use parachains_common::{
 	message_queue::*, AccountId, AssetIdForTrustBackedAssets, AuraId, Balance, BlockNumber, Hash,
 	Header, Nonce, Signature,
 };
+use paseo_runtime_constants::system_parachain::PEOPLE_ID;
 use sp_runtime::Debug;
 use system_parachains_common::ForceUnstuckOnFailedMigration;
 use system_parachains_constants::{
@@ -2527,7 +2527,9 @@ impl pallet_revive::evm::runtime::EthExtra for EthExtraImpl {
 				Runtime,
 				pallet_asset_conversion_tx_payment::ChargeAssetTxPayment<Runtime>,
 			>::new_skip_pgas(
-				pallet_asset_conversion_tx_payment::ChargeAssetTxPayment::<Runtime>::from(tip, None),
+				pallet_asset_conversion_tx_payment::ChargeAssetTxPayment::<Runtime>::from(
+					tip, None,
+				),
 			),
 			(
 				pallet_claims::PrevalidateAttests::<Runtime>::new(),
