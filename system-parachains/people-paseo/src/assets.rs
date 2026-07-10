@@ -15,6 +15,7 @@
 
 use super::*;
 
+use assets_common::local_and_foreign_assets::ForeignAssetReserveData;
 use frame_support::{parameter_types, traits::fungibles::Balanced};
 use frame_system::{EnsureNever, EnsureRoot};
 use xcm::latest::{Asset, AssetId, Junction::*, Location};
@@ -48,8 +49,7 @@ impl pallet_assets::Config for Runtime {
 	type WeightInfo = weights::pallet_assets::WeightInfo<Runtime>;
 	type CallbackHandle = ();
 	type AssetAccountDeposit = AssetAccountDeposit;
-	// TODO FIXME BEFORE 2.1.0: see https://github.com/sigurpol/runtimes/pull/5
-	type ReserveData = ();
+	type ReserveData = ForeignAssetReserveData;
 	type RemoveItemsLimit = frame_support::traits::ConstU32<1000>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = xcm_config::XcmBenchmarkHelper;

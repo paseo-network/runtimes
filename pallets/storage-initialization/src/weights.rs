@@ -68,6 +68,81 @@ pub trait WeightInfo {
 	fn set_people_lite_attestation_allowances(n: u32) -> Weight;
 }
 
+/// Weight functions for `indiv_pallet_storage_initialization`.
+pub struct SubstrateWeight<T>(PhantomData<T>);
+impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
+	fn on_poll_status_read() -> Weight {
+		Weight::from_parts(4_001_000, 0)
+			.saturating_add(Weight::from_parts(0, 1486))
+			.saturating_add(T::DbWeight::get().reads(1))
+	}
+	fn init_pallet_proof_of_ink() -> Weight {
+		Weight::from_parts(8_657_000, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			.saturating_add(T::DbWeight::get().writes(3))
+	}
+	fn on_poll_create_asset() -> Weight {
+		Weight::from_parts(33_501_000, 0)
+			.saturating_add(Weight::from_parts(0, 4273))
+			.saturating_add(T::DbWeight::get().reads(4))
+			.saturating_add(T::DbWeight::get().writes(3))
+	}
+	fn on_poll_xcm_transfer() -> Weight {
+		Weight::from_parts(29_912_000, 0)
+			.saturating_add(Weight::from_parts(0, 3776))
+			.saturating_add(T::DbWeight::get().reads(4))
+	}
+	fn on_poll_verify_funds() -> Weight {
+		Weight::from_parts(20_694_000, 0)
+			.saturating_add(Weight::from_parts(0, 4197))
+			.saturating_add(T::DbWeight::get().reads(4))
+			.saturating_add(T::DbWeight::get().writes(2))
+	}
+	fn fund_pots() -> Weight {
+		Weight::from_parts(276_333_000, 0)
+			.saturating_add(Weight::from_parts(0, 20232))
+			.saturating_add(T::DbWeight::get().reads(15))
+			.saturating_add(T::DbWeight::get().writes(13))
+	}
+	fn on_poll_set_people_lite_attestation_allowances() -> Weight {
+		Weight::from_parts(41_309_000, 0)
+			.saturating_add(Weight::from_parts(0, 8571))
+			.saturating_add(T::DbWeight::get().reads(4))
+			.saturating_add(T::DbWeight::get().writes(4))
+	}
+	fn on_poll_schedule_mob_rule_payouts() -> Weight {
+		Weight::from_parts(11_802_000, 0)
+			.saturating_add(Weight::from_parts(0, 1606))
+			.saturating_add(T::DbWeight::get().reads(2))
+			.saturating_add(T::DbWeight::get().writes(2))
+	}
+	fn on_poll_schedule_score_payouts() -> Weight {
+		Weight::from_parts(15_018_000, 0)
+			.saturating_add(Weight::from_parts(0, 1726))
+			.saturating_add(T::DbWeight::get().reads(2))
+			.saturating_add(T::DbWeight::get().writes(3))
+	}
+	fn grant_invites_migration() -> Weight {
+		Weight::from_parts(29_147_000, 0)
+			.saturating_add(Weight::from_parts(0, 3517))
+			.saturating_add(T::DbWeight::get().reads(2))
+			.saturating_add(T::DbWeight::get().writes(2))
+	}
+	fn set_proof_of_ink_reimbursement_values() -> Weight {
+		Weight::from_parts(11_202_000, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			.saturating_add(T::DbWeight::get().writes(2))
+	}
+	fn set_people_lite_attestation_allowances(n: u32) -> Weight {
+		Weight::from_parts(4_510_316, 0)
+			.saturating_add(Weight::from_parts(0, 990))
+			.saturating_add(Weight::from_parts(8_021_252, 0).saturating_mul(n.into()))
+			.saturating_add(T::DbWeight::get().reads((1_u64).saturating_mul(n.into())))
+			.saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(n.into())))
+			.saturating_add(Weight::from_parts(0, 2527).saturating_mul(n.into()))
+	}
+}
+
 // For tests
 impl WeightInfo for () {
 	fn on_poll_status_read() -> Weight { Weight::zero() }

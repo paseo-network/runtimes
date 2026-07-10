@@ -26,6 +26,7 @@ pub mod genesis_config_presets;
 pub mod people;
 #[cfg(test)]
 mod tests;
+pub mod value_transfer_filter;
 mod weights;
 pub mod xcm_config;
 
@@ -40,13 +41,14 @@ use frame_support::{
 	parameter_types,
 	traits::{
 		tokens::imbalance::ResolveTo, ConstBool, ConstU32, ConstU64, ConstU8, EitherOf,
-		EitherOfDiverse, Everything, InstanceFilter, TransformOrigin,
+		EitherOfDiverse, InstanceFilter, TransformOrigin,
 	},
 	weights::{ConstantMultiplier, Weight},
 	PalletId,
 };
 use frame_system::{
 	limits::{BlockLength, BlockWeights},
+	offchain::{CreateAuthorizedTransaction, CreateBare, CreateTransaction, CreateTransactionBase},
 	EnsureRoot,
 };
 use pallet_xcm::{EnsureXcm, IsVoiceOfBody};
@@ -112,7 +114,26 @@ pub type BlockId = generic::BlockId<Block>;
 pub type TxExtension = cumulus_pallet_weight_reclaim::StorageWeightReclaim<
 	Runtime,
 	(
-		frame_system::AuthorizeCall<Runtime>,
+		// Origin modifiers
+		(
+			indiv_pallet_value_transfer_auth::extension::AuthorizeValueTransfer<
+				Runtime,
+				paseo_runtime_constants::ValueTransferAuthorizationPubkey,
+			>,
+			pallet_verify_signature::VerifySignature<Runtime>,
+			indiv_pallet_people::extension::AsPerson<Runtime>,
+			indiv_pallet_proof_of_ink::extension::AsProofOfInkParticipant<Runtime>,
+			indiv_pallet_score::ScoreAsParticipant<Runtime>,
+			indiv_pallet_game::GameAsInvited<Runtime>,
+			indiv_pallet_people_lite::extension::PeopleLiteAuth<Runtime>,
+			indiv_pallet_members::extension::AsMember<Runtime>,
+			indiv_pallet_coinage::extension::AsCoinage<Runtime>,
+			indiv_pallet_resources::extension::AsResources<Runtime>,
+			indiv_pallet_honour::extension::VoterAuth<Runtime>,
+			frame_system::AuthorizeCall<Runtime>,
+		),
+		// General checks and operations
+		indiv_pallet_origin_restriction::RestrictOrigin<Runtime>,
 		frame_system::CheckNonZeroSender<Runtime>,
 		frame_system::CheckSpecVersion<Runtime>,
 		frame_system::CheckTxVersion<Runtime>,
@@ -120,7 +141,10 @@ pub type TxExtension = cumulus_pallet_weight_reclaim::StorageWeightReclaim<
 		frame_system::CheckEra<Runtime>,
 		frame_system::CheckNonce<Runtime>,
 		frame_system::CheckWeight<Runtime>,
-		pallet_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
+		pallet_skip_feeless_payment::SkipCheckIfFeeless<
+			Runtime,
+			pallet_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
+		>,
 		frame_metadata_hash_extension::CheckMetadataHash<Runtime>,
 	),
 >;
@@ -130,24 +154,7 @@ pub type UncheckedExtrinsic =
 	generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, TxExtension>;
 /// The runtime migrations per release.
 #[allow(deprecated, missing_docs)]
-pub mod migrations {
-	use super::*;
-
-	/// Unreleased migrations. Add new ones here:
-	pub type Unreleased = (
-		cumulus_pallet_xcmp_queue::migration::v6::MigrateV5ToV6<Runtime>,
-		cumulus_pallet_parachain_system::migration::Migration<Runtime>,
-	);
-
-	/// Migrations/checks that do not need to be versioned and can run on every update.
-	pub type Permanent = pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>;
-
-	/// All migrations that will run on the next runtime upgrade.
-	pub type SingleBlockMigrations = (Unreleased, Permanent);
-
-	/// MBM migrations to apply on runtime upgrade.
-	pub type MbmMigrations = ();
-}
+pub mod migrations;
 
 /// Executive: handles dispatch to the various modules.
 pub type Executive = frame_executive::Executive<
@@ -169,10 +176,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: Cow::Borrowed("people-paseo"),
 	impl_name: Cow::Borrowed("people-paseo"),
 	authoring_version: 1,
-	spec_version: 2_003_001,
+	spec_version: 2_004_000,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 0,
+	transaction_version: 1,
 	system_version: 1,
 };
 
@@ -218,7 +225,9 @@ parameter_types! {
 
 #[derive_impl(frame_system::config_preludes::ParaChainDefaultConfig as frame_system::DefaultConfig)]
 impl frame_system::Config for Runtime {
-	type BaseCallFilter = Everything;
+	type BaseCallFilter = indiv_pallet_value_transfer_auth::BlockValueTransfersWhenFlagSet<
+		crate::value_transfer_filter::PeopleValueTransferFilter,
+	>;
 	type BlockWeights = RuntimeBlockWeights;
 	type BlockLength = RuntimeBlockLength;
 	type AccountId = AccountId;
@@ -649,6 +658,77 @@ impl pallet_sudo::Config for Runtime {
 	type WeightInfo = pallet_sudo::weights::SubstrateWeight<Runtime>;
 }
 
+impl<LocalCall> CreateBare<LocalCall> for Runtime
+where
+	RuntimeCall: From<LocalCall>,
+{
+	fn create_bare(call: Self::RuntimeCall) -> Self::Extrinsic {
+		UncheckedExtrinsic::new_bare(call)
+	}
+}
+
+impl<LocalCall> CreateTransactionBase<LocalCall> for Runtime
+where
+	RuntimeCall: From<LocalCall>,
+{
+	type Extrinsic = UncheckedExtrinsic;
+	type RuntimeCall = RuntimeCall;
+}
+
+impl<LocalCall> CreateTransaction<LocalCall> for Runtime
+where
+	RuntimeCall: From<LocalCall>,
+{
+	type Extension = TxExtension;
+	fn create_transaction(
+		call: <Self as frame_system::offchain::CreateTransactionBase<LocalCall>>::RuntimeCall,
+		extension: Self::Extension,
+	) -> Self::Extrinsic {
+		UncheckedExtrinsic::new_transaction(call, extension)
+	}
+}
+
+impl<LocalCall> CreateAuthorizedTransaction<LocalCall> for Runtime
+where
+	RuntimeCall: From<LocalCall>,
+{
+	fn create_extension() -> Self::Extension {
+		(
+			(
+				indiv_pallet_value_transfer_auth::extension::AuthorizeValueTransfer::<
+					Runtime,
+					paseo_runtime_constants::ValueTransferAuthorizationPubkey,
+				>::default(),
+				pallet_verify_signature::VerifySignature::<Runtime>::Disabled,
+				indiv_pallet_people::extension::AsPerson::<Runtime>::new(None),
+				indiv_pallet_proof_of_ink::extension::AsProofOfInkParticipant::<Runtime>::new(None),
+				indiv_pallet_score::ScoreAsParticipant::<Runtime>::new(None),
+				indiv_pallet_game::GameAsInvited::<Runtime>::new(None),
+				indiv_pallet_people_lite::extension::PeopleLiteAuth::<Runtime>::new(None),
+				indiv_pallet_members::extension::AsMember::<Runtime>::new(None),
+				indiv_pallet_coinage::extension::AsCoinage::<Runtime>::new(None),
+				indiv_pallet_resources::extension::AsResources::<Runtime>::new(None),
+				indiv_pallet_honour::extension::VoterAuth::<Runtime>::new(None),
+				frame_system::AuthorizeCall::<Runtime>::new(),
+			),
+			indiv_pallet_origin_restriction::RestrictOrigin::<Runtime>::new(false),
+			frame_system::CheckNonZeroSender::<Runtime>::new(),
+			frame_system::CheckSpecVersion::<Runtime>::new(),
+			frame_system::CheckTxVersion::<Runtime>::new(),
+			frame_system::CheckGenesis::<Runtime>::new(),
+			frame_system::CheckEra::<Runtime>::from(generic::Era::Immortal),
+			frame_system::CheckNonce::<Runtime>::from(0),
+			frame_system::CheckWeight::<Runtime>::new(),
+			pallet_skip_feeless_payment::SkipCheckIfFeeless::<
+				Runtime,
+				pallet_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
+			>::from(pallet_asset_tx_payment::ChargeAssetTxPayment::<Runtime>::from(0u128, None)),
+			frame_metadata_hash_extension::CheckMetadataHash::<Runtime>::new(false),
+		)
+			.into()
+	}
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime
@@ -668,6 +748,8 @@ construct_runtime!(
 		AssetRate: pallet_asset_rate = 13,
 		AssetTxPayment: pallet_asset_tx_payment = 14,
 		AssetsHolder: pallet_assets_holder = 15,
+		SkipFeelessPayment: pallet_skip_feeless_payment = 16,
+		OriginRestriction: indiv_pallet_origin_restriction = 17,
 
 		// Collator support. The order of these 5 are important and shall not change.
 		Authorship: pallet_authorship = 20,
@@ -686,9 +768,28 @@ construct_runtime!(
 		Utility: pallet_utility = 40,
 		Multisig: pallet_multisig = 41,
 		Proxy: pallet_proxy = 42,
+		VerifySignature: pallet_verify_signature = 43,
 
 		// The main stage.
 		Identity: pallet_identity = 50,
+
+		// Individuality (Proof of Personhood).
+		People: indiv_pallet_people = 51,
+		MobRule: indiv_pallet_mob_rule = 52,
+		ProofOfInk: indiv_pallet_proof_of_ink = 53,
+		Game: indiv_pallet_game = 55,
+		Score: indiv_pallet_score = 56,
+		DummyDim: indiv_pallet_dummy_dim = 59,
+		StorageInitialization: indiv_pallet_storage_initialization = 60,
+		PeopleLite: indiv_pallet_people_lite = 62,
+		Resources: indiv_pallet_resources = 63,
+		ChunksManager: indiv_pallet_chunks_manager = 64,
+		Members: indiv_pallet_members = 67,
+		Coinage: indiv_pallet_coinage = 68,
+		MembersNotifier: indiv_pallet_members_notifier = 69,
+		Airdrop: indiv_pallet_airdrop = 70,
+		Honour: indiv_pallet_honour = 71,
+
 		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 255,
 	}
 );
@@ -731,6 +832,23 @@ mod benches {
 		[pallet_xcm, PalletXcmExtrinsicsBenchmark::<Runtime>]
 		[pallet_xcm_benchmarks::fungible, XcmBalances]
 		[pallet_xcm_benchmarks::generic, XcmGeneric]
+		// Individuality (Proof of Personhood)
+		[indiv_pallet_origin_restriction, OriginRestriction]
+		[indiv_pallet_people, People]
+		[indiv_pallet_dummy_dim, DummyDim]
+		[indiv_pallet_game, Game]
+		[indiv_pallet_score, Score]
+		[indiv_pallet_storage_initialization, StorageInitialization]
+		[indiv_pallet_proof_of_ink, ProofOfInk]
+		[indiv_pallet_mob_rule, MobRule]
+		[indiv_pallet_people_lite, PeopleLite]
+		[indiv_pallet_resources, Resources]
+		[indiv_pallet_chunks_manager, ChunksManager]
+		[indiv_pallet_members, Members]
+		[indiv_pallet_members_notifier, MembersNotifier]
+		[indiv_pallet_coinage, Coinage]
+		[indiv_pallet_airdrop, Airdrop]
+		[indiv_pallet_honour, Honour]
 	);
 
 	impl frame_system_benchmarking::Config for Runtime {
@@ -1165,6 +1283,36 @@ impl_runtime_apis! {
 	impl cumulus_primitives_core::GetParachainInfo<Block> for Runtime {
 		fn parachain_id() -> ParaId {
 			ParachainInfo::parachain_id()
+		}
+	}
+
+	impl indiv_pallet_mob_rule::runtime_api::MobRuleApi<Block, AccountId, Balance> for Runtime {
+		fn voted_on(
+			voter: &indiv_support::traits::Alias,
+			done_only: bool,
+		) -> Vec<indiv_pallet_mob_rule::CaseIndex> {
+			MobRule::voted_on(voter, done_only)
+		}
+	}
+
+	impl indiv_pallet_proof_of_ink::runtime_api::ProofOfInkApi<Block, Balance> for Runtime {
+		fn candidacy_deposit() -> Balance {
+			use sp_runtime::traits::Convert;
+			let footprint = frame_support::traits::Footprint::from_mel::<(
+				AccountId,
+				indiv_pallet_proof_of_ink::CandidateOf<Runtime>,
+			)>();
+			frame_support::traits::LinearStoragePrice::<
+				crate::people::ProofOfInkBaseDeposit,
+				crate::people::ProofOfInkByteDeposit,
+				Balance,
+			>::convert(footprint)
+		}
+	}
+
+	impl indiv_pallet_game::runtime_api::PalletGameApi<Block, Balance> for Runtime {
+		fn play_deposit() -> Balance {
+			indiv_pallet_game::PlayDepositAmount::<Runtime>::get()
 		}
 	}
 

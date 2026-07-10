@@ -20,6 +20,7 @@ use crate::*;
 use sp_core::sr25519;
 use sp_genesis_builder::PresetId;
 use system_parachains_constants::genesis_presets::*;
+use verifiable::ring::ark_vrf::suites::bandersnatch::BandersnatchSha512Ell2;
 
 const PEOPLE_POLKADOT_ED: Balance = ExistentialDeposit::get();
 
@@ -58,6 +59,13 @@ fn people_paseo_genesis(
 				})
 				.collect(),
 			..Default::default()
+		},
+		"chunksManager": ChunksManagerConfig {
+			encoded_chunk_page_hashes:
+				indiv_support::genesis::ring_verifier_r2e9_r2e10_builder_params_hashes::<BandersnatchSha512Ell2>(
+					people::ChunkPageSize::get()
+				),
+			_phantom: Default::default(),
 		},
 		"sudo": {
 			"key": Some(get_account_id_from_seed::<sr25519::Public>("Alice"))

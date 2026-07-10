@@ -9738,6 +9738,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-verify-signature"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5b82b1421a0d2cf2b53daf556c7a673c72cf1534b3309bef28130ca8c944a6bc"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-io",
+ "sp-runtime",
+ "sp-weights",
+]
+
+[[package]]
 name = "pallet-vesting"
 version = "48.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -10433,6 +10449,7 @@ dependencies = [
  "cumulus-primitives-aura",
  "cumulus-primitives-core",
  "cumulus-primitives-utility",
+ "ed25519-zebra",
  "enumflags2",
  "frame-benchmarking",
  "frame-executive",
@@ -10443,6 +10460,24 @@ dependencies = [
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
  "hex-literal",
+ "indiv-pallet-airdrop",
+ "indiv-pallet-chunks-manager",
+ "indiv-pallet-coinage",
+ "indiv-pallet-dummy-dim",
+ "indiv-pallet-game",
+ "indiv-pallet-honour",
+ "indiv-pallet-members",
+ "indiv-pallet-members-notifier",
+ "indiv-pallet-mob-rule",
+ "indiv-pallet-origin-restriction",
+ "indiv-pallet-people",
+ "indiv-pallet-people-lite",
+ "indiv-pallet-proof-of-ink",
+ "indiv-pallet-resources",
+ "indiv-pallet-score",
+ "indiv-pallet-storage-initialization",
+ "indiv-pallet-value-transfer-auth",
+ "indiv-support",
  "log",
  "pallet-asset-rate",
  "pallet-asset-tx-payment",
@@ -10458,11 +10493,13 @@ dependencies = [
  "pallet-multisig",
  "pallet-proxy",
  "pallet-session",
+ "pallet-skip-feeless-payment",
  "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
  "pallet-utility",
+ "pallet-verify-signature",
  "pallet-xcm",
  "pallet-xcm-benchmarks",
  "parachains-common",
@@ -10480,9 +10517,13 @@ dependencies = [
  "sp-core",
  "sp-genesis-builder",
  "sp-inherents",
+ "sp-io",
+ "sp-keyring",
+ "sp-keystore",
  "sp-offchain",
  "sp-runtime",
  "sp-session",
+ "sp-statement-store 26.0.0",
  "sp-storage",
  "sp-transaction-pool",
  "sp-version",
@@ -10492,6 +10533,7 @@ dependencies = [
  "staging-xcm-executor",
  "substrate-wasm-builder",
  "system-parachains-constants 2.3.1",
+ "verifiable",
  "xcm-runtime-apis",
 ]
 
