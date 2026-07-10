@@ -232,8 +232,13 @@ pub mod auth_keys {
 	use sp_core::ed25519::Public;
 
 	/// Ed25519 public key bytes for value-transfer authorization.
+	///
+	/// Public half of the W3S authorizer key held by the apps; the apps sign
+	/// `AuthorizeValueTransfer` payloads with the corresponding secret. Rotate the on-chain
+	/// `ValueTransferAuthorizationPubkey` parameter via Root `system.setStorage` to change it
+	/// without a runtime upgrade.
 	pub const VALUE_TRANSFER_AUTHORIZATION_PUBKEY_BYTES: [u8; 32] =
-		hex!("1353170342d3d1b8df1dd45458eb24257e99858efd06677cc2326534216c21a9");
+		hex!("42848a49406c38281557d49a447ff5c87de698eb44e88dae6ab9884f961727ba");
 
 	#[cfg(feature = "std")]
 	std::thread_local! {
@@ -267,6 +272,13 @@ pub mod auth_keys {
 	}
 
 	parameter_types! {
+		/// Storage-backed override of the authorizer key, falling back to
+		/// `VALUE_TRANSFER_AUTHORIZATION_PUBKEY_BYTES` when unset. Rotate it live (Root) without a
+		/// runtime upgrade by writing the raw 32-byte pubkey at its storage key:
+		///
+		/// `twox_128(":ValueTransferAuthorizationPubkey:")` = `0xee09ea9497a37b3d30df6f09e7f66e69`
+		///
+		/// e.g. `System::set_storage([(0xee09ea9497a37b3d30df6f09e7f66e69, <pubkey>)])`.
 		pub storage ValueTransferAuthorizationPubkey: Public =
 			value_transfer_authorization_pubkey();
 	}
