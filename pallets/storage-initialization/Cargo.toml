@@ -1,0 +1,121 @@
+[package]
+name = "indiv-pallet-storage-initialization"
+description = "Pallet to initialize storage items in pallets of individuality / PoP project"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+readme.workspace = true
+
+[dependencies]
+codec = { features = ["derive"], workspace = true }
+scale-info = { features = ["derive"], workspace = true }
+frame-benchmarking = { workspace = true, optional = true }
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+sp-runtime = { workspace = true }
+sp-core = { workspace = true }
+sp-std = { workspace = true }
+indiv-pallet-people = { workspace = true }
+indiv-pallet-people-lite = { workspace = true }
+indiv-pallet-chunks-manager = { workspace = true }
+indiv-pallet-members = { workspace = true }
+indiv-pallet-proof-of-ink = { workspace = true }
+indiv-pallet-game = { workspace = true }
+indiv-pallet-mob-rule = { workspace = true }
+indiv-pallet-score = { workspace = true }
+verifiable = { workspace = true, features = ["builder-params"] }
+log = { workspace = true }
+hex-literal = { workspace = true }
+indiv-support = { workspace = true }
+xcm = { workspace = true }
+pallet-xcm = { workspace = true }
+cumulus-primitives-core = { workspace = true }
+pallet-assets = { workspace = true }
+
+[dev-dependencies]
+sp-statement-store = { workspace = true }
+pallet-balances = { workspace = true }
+xcm-executor = { workspace = true }
+xcm = { workspace = true }
+indiv-pallet-airdrop = { workspace = true }
+pallet-assets-holder = { workspace = true }
+
+[lints]
+workspace = true
+
+[features]
+default = ["std"]
+std = [
+	"codec/std",
+	"cumulus-primitives-core/std",
+	"frame-benchmarking?/std",
+	"frame-support/std",
+	"frame-system/std",
+	"indiv-pallet-airdrop/std",
+	"indiv-pallet-chunks-manager/std",
+	"indiv-pallet-game/std",
+	"indiv-pallet-members/std",
+	"indiv-pallet-mob-rule/std",
+	"indiv-pallet-people-lite/std",
+	"indiv-pallet-people/std",
+	"indiv-pallet-proof-of-ink/std",
+	"indiv-pallet-score/std",
+	"indiv-support/std",
+	"log/std",
+	"pallet-assets-holder/std",
+	"pallet-assets/std",
+	"pallet-balances/std",
+	"pallet-xcm/std",
+	"scale-info/std",
+	"sp-core/std",
+	"sp-runtime/std",
+	"sp-statement-store/std",
+	"sp-std/std",
+	"verifiable/std",
+	"xcm-executor/std",
+	"xcm/std",
+]
+runtime-benchmarks = [
+	"cumulus-primitives-core/runtime-benchmarks",
+	"frame-benchmarking/runtime-benchmarks",
+	"frame-support/runtime-benchmarks",
+	"frame-system/runtime-benchmarks",
+	"indiv-pallet-airdrop/runtime-benchmarks",
+	"indiv-pallet-chunks-manager/runtime-benchmarks",
+	"indiv-pallet-game/runtime-benchmarks",
+	"indiv-pallet-members/runtime-benchmarks",
+	"indiv-pallet-mob-rule/runtime-benchmarks",
+	"indiv-pallet-people-lite/runtime-benchmarks",
+	"indiv-pallet-people/runtime-benchmarks",
+	"indiv-pallet-proof-of-ink/runtime-benchmarks",
+	"indiv-pallet-score/runtime-benchmarks",
+	"indiv-support/runtime-benchmarks",
+	"pallet-assets-holder/runtime-benchmarks",
+	"pallet-assets/runtime-benchmarks",
+	"pallet-balances/runtime-benchmarks",
+	"pallet-xcm/runtime-benchmarks",
+	"sp-runtime/runtime-benchmarks",
+	"xcm-executor/runtime-benchmarks",
+	"xcm/runtime-benchmarks",
+]
+try-runtime = [
+	"frame-support/try-runtime",
+	"frame-system/try-runtime",
+	"indiv-pallet-airdrop/try-runtime",
+	"indiv-pallet-chunks-manager/try-runtime",
+	"indiv-pallet-game/try-runtime",
+	"indiv-pallet-members/try-runtime",
+	"indiv-pallet-mob-rule/try-runtime",
+	"indiv-pallet-people-lite/try-runtime",
+	"indiv-pallet-people/try-runtime",
+	"indiv-pallet-proof-of-ink/try-runtime",
+	"indiv-pallet-score/try-runtime",
+	"pallet-assets-holder/try-runtime",
+	"pallet-assets/try-runtime",
+	"pallet-balances/try-runtime",
+	"pallet-xcm/try-runtime",
+	"sp-runtime/try-runtime",
+]

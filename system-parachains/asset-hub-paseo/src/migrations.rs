@@ -153,6 +153,8 @@ pub type Unreleased = (
 		crate::dynamic_params::staking_election::MaxEraDuration,
 	>,
 	MigrateBountyAccountAssets,
+	// Create the PGAS asset (id 2_000_000_000) used by the individuality pallets.
+	indiv_pallet_pgas::migration::CreatePgasAsset<Runtime>,
 );
 
 /// Migrations/checks that do not need to be versioned and can run on every update.

@@ -1,0 +1,28 @@
+# Proof-of-Ink Pallet
+
+- Index prefix: 0x00
+- Maps:
+  - Accounts `AccountId -> Status`
+  - DesignFamilies `FamilyId -> FamilyKind`
+- Traits:
+  - Statement-oracle callback flow
+    - Receives a judgement for submitted evidence.
+    - If the evidence is accepted, mutate to `Proven` and release `cred`.
+    - Otherwise clear the pending judgement and increment `judgements`.
+- Dispatchables:
+  - `apply()`
+    - Declare intention to pursue proof-of-ink verification.
+    - Deposit is taken.
+  - `refer(Signed(who), target: AccountId)`
+    - Allow `target` to apply without paying the initial deposit.
+    - Only possible if `who` is a person (uses People/`Get<Verifiable::Members>`).
+  - `submit_evidence(Signed(who), evidence: EvidenceHash)`
+    - Open a Mob Rule case to judge the candidate's evidence.
+    - The pallet requests a judgement from its configured statement oracle; in the current People runtime, that oracle is Mob Rule.
+    - Needs `SignedExtension` to avoid upfront requirement for fee if `judgements == 0`.
+    - If `judgements > 0`, then an additional fee should be charged into Treasury.
+  - `register_non_referred(...)` / `register_referred(...)`
+    - Register the verified person in the People system.
+- Uses:
+  - People/`Get<Verifiable::Members>`
+  - Configured statement oracle (`MobRule` in `next-people-paseo`)
