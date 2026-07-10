@@ -152,17 +152,26 @@ impl pallet_dap::Config for Runtime {
 	type WeightInfo = weights::pallet_dap::WeightInfo<Runtime>;
 }
 
-/// Election bounds for the on-chain fallback solver, only used in benchmarks.
+/// Election bounds for the on-chain fallback solver.
+///
+/// In benchmarks these are unbounded; in production they are capped to a single snapshot page
+/// so that the on-chain solver stays within block weight limits.
 #[cfg(feature = "runtime-benchmarks")]
 parameter_types! {
 	pub ElectionBoundsOnChain: frame_election_provider_support::bounds::ElectionBounds =
 		frame_election_provider_support::bounds::ElectionBoundsBuilder::default().build();
 }
+#[cfg(not(feature = "runtime-benchmarks"))]
+parameter_types! {
+	pub ElectionBoundsOnChain: frame_election_provider_support::bounds::ElectionBounds =
+		frame_election_provider_support::bounds::ElectionBoundsBuilder::default()
+			.voters_count(VoterSnapshotPerBlock::get().into())
+			.targets_count(MaxValidatorSet::get().into())
+			.build();
+}
 
-#[cfg(feature = "runtime-benchmarks")]
 pub struct OnChainConfig;
 
-#[cfg(feature = "runtime-benchmarks")]
 impl frame_election_provider_support::onchain::Config for OnChainConfig {
 	type Bounds = ElectionBoundsOnChain;
 	type Sort = ConstBool<true>;
@@ -186,13 +195,13 @@ impl multi_block::Config for Runtime {
 	type DataProvider = Staking;
 	type MinerConfig = Self;
 	type Verifier = MultiBlockElectionVerifier;
-	// we chill and do nothing in the fallback.
-	#[cfg(not(feature = "runtime-benchmarks"))]
-	type Fallback = multi_block::Continue<Self>;
-	#[cfg(feature = "runtime-benchmarks")]
+	// Fall back to on-chain SequentialPhragmen if no signed/unsigned solution is submitted.
+	// This ensures era transitions always happen, even without external election miners.
 	type Fallback = frame_election_provider_support::onchain::OnChainExecution<OnChainConfig>;
-	// Revert back to signed phase if nothing is submitted and queued, so we prolong the election.
-	type AreWeDone = multi_block::RevertToSignedIfNotQueuedOf<Self>;
+	// Proceed to Done after one full election cycle regardless of whether a solution was queued.
+	// Combined with the on-chain Fallback above, this guarantees the election resolves and
+	// produces a (possibly suboptimal) validator set rather than looping indefinitely.
+	type AreWeDone = multi_block::ProceedRegardlessOf<Self>;
 	type OnRoundRotation = multi_block::CleanRound<Self>;
 	type WeightInfo = weights::pallet_election_provider_multi_block::WeightInfo<Runtime>;
 	type Signed = MultiBlockElectionSigned;
@@ -491,7 +500,8 @@ impl pallet_staking_async::Config for Runtime {
 	type SlashDeferDuration = SlashDeferDuration;
 	type AdminOrigin = EitherOf<EnsureRoot<AccountId>, StakingAdmin>;
 	// Non-minting mode: `EraPayout` is unused. Inflation is driven by pallet-dap via the
-	// `IssuanceCurve` struct. The `EraPayout` struct is kept for `impl_experimental_inflation_info`.
+	// `IssuanceCurve` struct. The `EraPayout` struct is kept for
+	// `impl_experimental_inflation_info`.
 	type EraPayout = ();
 	type MaxExposurePageSize = MaxExposurePageSize;
 	type ElectionProvider = MultiBlockElection;
@@ -768,8 +778,8 @@ mod tests {
 	use cumulus_primitives_core::{
 		relay_chain::BlockNumber as RC_BlockNumber, PersistedValidationData,
 	};
-	use paseo_runtime_constants::time::YEARS as RC_YEARS;
 	use pallet_staking_async::EraPayout as _;
+	use paseo_runtime_constants::time::YEARS as RC_YEARS;
 	use sp_runtime::{Perbill, Percent};
 	use sp_weights::constants::{WEIGHT_PROOF_SIZE_PER_KB, WEIGHT_REF_TIME_PER_MILLIS};
 

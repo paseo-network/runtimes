@@ -104,7 +104,7 @@ parameter_types! {
 	pub SelfParaId: ParaId = ParachainInfo::parachain_id();
 	/// The Checking Account along with the indication that the local chain is able to mint tokens.
 	pub TeleportTracking: Option<(AccountId, MintLocation)> =
-		Some((treasury::TreasuryAccount::get(), MintLocation::NonLocal));
+		Some((CheckingAccount::get(), MintLocation::Local));
 	pub const Here: Location = Location::here();
 }
 
