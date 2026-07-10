@@ -47,9 +47,9 @@ static CAN_CHECK_OUT_CALLS: AtomicUsize = AtomicUsize::new(0);
 static CHECK_OUT_CALLS: AtomicUsize = AtomicUsize::new(0);
 
 parameter_types! {
-	pub ProtectedAssetLocation: Location = Location::new(1, [Parachain(1500)]);
-	pub NextAhId: u32 = 1500;
-	pub NextPeopleId: u32 = 1502;
+	pub ProtectedAssetLocation: Location = Location::new(1, [Parachain(1000)]);
+	pub AhId: u32 = 1000;
+	pub PeopleId: u32 = 1004;
 }
 
 struct TrustedNone;
@@ -59,10 +59,10 @@ impl Contains<Location> for TrustedNone {
 	}
 }
 
-type TrustedNextAh = AllowOnlySiblings<NextAhId, NextPeopleId>;
+type TrustedSiblings = AllowOnlySiblings<AhId, PeopleId>;
 
 type Guard = ProtectedAssetTransactor<Inner, ProtectedAssetLocation, TrustedNone>;
-type GuardWithTrusted = ProtectedAssetTransactor<Inner, ProtectedAssetLocation, TrustedNextAh>;
+type GuardWithTrusted = ProtectedAssetTransactor<Inner, ProtectedAssetLocation, TrustedSiblings>;
 
 struct Inner;
 
@@ -315,7 +315,7 @@ fn pass_through_check_in_check_out() {
 #[test]
 fn deposit_from_trusted_sibling_passes_when_blocked() {
 	let _guard = reset();
-	let ctx = context_with_origin(Location::new(1, [Parachain(1500)]));
+	let ctx = context_with_origin(Location::new(1, [Parachain(1000)]));
 
 	let result =
 		GuardWithTrusted::deposit_asset(holding(protected_asset()), &Location::here(), Some(&ctx));
@@ -347,7 +347,7 @@ fn deposit_with_no_context_rejected_when_blocked() {
 #[test]
 fn mint_from_trusted_sibling_passes_when_blocked() {
 	let _guard = reset();
-	let ctx = context_with_origin(Location::new(1, [Parachain(1500)]));
+	let ctx = context_with_origin(Location::new(1, [Parachain(1000)]));
 
 	let result = GuardWithTrusted::mint_asset(&protected_asset(), &ctx);
 	assert!(result.is_ok());
