@@ -258,28 +258,29 @@ use frame_support::{
 };
 use indiv_pallet_game::PhaseDurationValues;
 use indiv_pallet_origin_restriction::Allowance;
+#[cfg(feature = "runtime-benchmarks")]
+use indiv_support::traits::PersonalId;
 use indiv_support::{
 	fungibles::CombineAssetsWithHolder,
 	traits::{Alias, AllocateStorage, Context, RingIndex},
 	utils::TypedGetToGet,
 };
 use paseo_runtime_constants::system_parachain::ASSET_HUB_ID;
+#[cfg(feature = "runtime-benchmarks")]
+use sp_runtime::BoundedVec;
 use sp_runtime::{
 	traits::{ConstI8, ConstU16, IdentifyAccount},
 	DispatchResult, MultiSignature, MultiSigner, Percent,
 };
 use sp_statement_store::StatementAllowance;
-#[cfg(feature = "runtime-benchmarks")]
-use indiv_support::traits::PersonalId;
-#[cfg(feature = "runtime-benchmarks")]
-use sp_runtime::BoundedVec;
 use verifiable::{ring::bandersnatch::BandersnatchVrfVerifiable, GenerateVerifiable};
 use xcm::{
 	latest::prelude::{send_xcm, OriginKind, Transact, UnpaidExecution},
 	v5::{Location, WeightLimit},
 };
 
-/// External asset id as registered on Paseo Asset Hub, reused from the shared runtime constants.
+/// External asset id as registered on Paseo Asset Hub, reused from the shared runtime
+/// constants.
 pub use paseo_runtime_constants::ProtectedAssetLocation as ExternalAssetLocation;
 
 parameter_types! {
