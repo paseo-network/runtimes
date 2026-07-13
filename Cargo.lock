@@ -524,6 +524,7 @@ dependencies = [
  "num-bigint",
  "num-integer",
  "num-traits",
+ "rayon",
  "zeroize",
 ]
 
@@ -594,6 +595,7 @@ dependencies = [
  "num-bigint",
  "num-traits",
  "paste",
+ "rayon",
  "zeroize",
 ]
 
@@ -691,6 +693,7 @@ dependencies = [
  "educe",
  "fnv",
  "hashbrown 0.15.5",
+ "rayon",
 ]
 
 [[package]]
@@ -720,6 +723,18 @@ dependencies = [
  "ark-std 0.5.0",
  "tracing",
  "tracing-subscriber 0.2.25",
+]
+
+[[package]]
+name = "ark-scale"
+version = "0.0.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "985c81a9c7b23a72f62b7b20686d5326d2a9956806f37de9ee35cb1238faf0c0"
+dependencies = [
+ "ark-serialize 0.5.0",
+ "ark-std 0.5.0",
+ "parity-scale-codec",
+ "scale-info",
 ]
 
 [[package]]
@@ -755,6 +770,7 @@ dependencies = [
  "arrayvec",
  "digest 0.10.7",
  "num-bigint",
+ "rayon",
 ]
 
 [[package]]
@@ -807,6 +823,7 @@ checksum = "246a225cc6131e9ee4f24619af0f19d67761fff15d7ccc22e42b80846e69449a"
 dependencies = [
  "num-traits",
  "rand 0.8.5",
+ "rayon",
 ]
 
 [[package]]
@@ -837,6 +854,7 @@ dependencies = [
  "ark-std 0.5.0",
  "digest 0.10.7",
  "generic-array 0.14.7",
+ "rayon",
  "sha2 0.10.9",
  "w3f-ring-proof",
  "zeroize",
@@ -989,6 +1007,7 @@ dependencies = [
  "cumulus-primitives-aura",
  "cumulus-primitives-core",
  "cumulus-primitives-utility",
+ "ethereum-standards",
  "frame-benchmarking",
  "frame-election-provider-support",
  "frame-executive",
@@ -1001,6 +1020,14 @@ dependencies = [
  "frame-try-runtime",
  "hex",
  "hex-literal",
+ "indiv-pallet-alias-accounts",
+ "indiv-pallet-dotns-gateway",
+ "indiv-pallet-members-subscriber",
+ "indiv-pallet-origin-restriction",
+ "indiv-pallet-pgas",
+ "indiv-pallet-value-transfer-auth",
+ "indiv-precompile-personhood",
+ "indiv-support",
  "kusama-runtime-constants",
  "log",
  "pallet-ah-ops",
@@ -1009,6 +1036,8 @@ dependencies = [
  "pallet-asset-conversion-tx-payment",
  "pallet-asset-rate",
  "pallet-assets",
+ "pallet-assets-freezer",
+ "pallet-assets-holder",
  "pallet-assets-precompiles",
  "pallet-aura",
  "pallet-authorship",
@@ -1032,6 +1061,7 @@ dependencies = [
  "pallet-nomination-pools-benchmarking",
  "pallet-nomination-pools-runtime-api",
  "pallet-parameters",
+ "pallet-pgas-allowance",
  "pallet-preimage",
  "pallet-proxy",
  "pallet-rc-migrator",
@@ -1105,6 +1135,7 @@ dependencies = [
  "system-parachains-common",
  "system-parachains-constants 2.3.1",
  "tokio",
+ "verifiable",
  "xcm-runtime-apis",
 ]
 
@@ -5724,6 +5755,501 @@ dependencies = [
 ]
 
 [[package]]
+name = "indiv-pallet-airdrop"
+version = "2.3.1"
+dependencies = [
+ "frame-benchmarking",
+ "frame-executive",
+ "frame-support",
+ "frame-system",
+ "indiv-support",
+ "log",
+ "merlin",
+ "pallet-assets",
+ "pallet-assets-holder",
+ "pallet-balances",
+ "parity-scale-codec",
+ "parking_lot 0.12.5",
+ "rand_core 0.6.4",
+ "scale-info",
+ "schnorrkel",
+ "sp-core",
+ "sp-io",
+ "sp-keystore",
+ "sp-runtime",
+ "verifiable",
+]
+
+[[package]]
+name = "indiv-pallet-alias-accounts"
+version = "2.3.1"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "indiv-support",
+ "pallet-assets",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "staging-xcm",
+ "verifiable",
+]
+
+[[package]]
+name = "indiv-pallet-chunks-manager"
+version = "2.3.1"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "indiv-support",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-io",
+ "sp-runtime",
+ "verifiable",
+]
+
+[[package]]
+name = "indiv-pallet-coinage"
+version = "2.3.1"
+dependencies = [
+ "frame-benchmarking",
+ "frame-executive",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "indiv-pallet-chunks-manager",
+ "indiv-pallet-members",
+ "indiv-support",
+ "log",
+ "pallet-assets",
+ "pallet-assets-holder",
+ "pallet-balances",
+ "parity-scale-codec",
+ "parking_lot 0.12.5",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "verifiable",
+]
+
+[[package]]
+name = "indiv-pallet-dotns-gateway"
+version = "2.3.1"
+dependencies = [
+ "alloy-core",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "indiv-pallet-members-subscriber",
+ "indiv-support",
+ "log",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "staging-xcm",
+ "verifiable",
+]
+
+[[package]]
+name = "indiv-pallet-dummy-dim"
+version = "2.3.1"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "indiv-pallet-chunks-manager",
+ "indiv-pallet-members",
+ "indiv-pallet-people",
+ "indiv-support",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "verifiable",
+]
+
+[[package]]
+name = "indiv-pallet-game"
+version = "2.3.1"
+dependencies = [
+ "cumulus-pallet-parachain-system",
+ "cumulus-primitives-core",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "indiv-pallet-airdrop",
+ "indiv-pallet-chunks-manager",
+ "indiv-pallet-members",
+ "indiv-pallet-people",
+ "indiv-pallet-score",
+ "indiv-support",
+ "log",
+ "pallet-assets",
+ "pallet-assets-holder",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-api",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-state-machine",
+ "sp-statement-store 26.0.0",
+ "sp-trie",
+ "staging-xcm",
+ "verifiable",
+]
+
+[[package]]
+name = "indiv-pallet-honour"
+version = "2.3.1"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "indiv-support",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "verifiable",
+]
+
+[[package]]
+name = "indiv-pallet-members"
+version = "2.3.1"
+dependencies = [
+ "frame-benchmarking",
+ "frame-executive",
+ "frame-support",
+ "frame-system",
+ "indiv-pallet-chunks-manager",
+ "indiv-support",
+ "log",
+ "parity-scale-codec",
+ "parking_lot 0.12.5",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "verifiable",
+]
+
+[[package]]
+name = "indiv-pallet-members-notifier"
+version = "2.3.1"
+dependencies = [
+ "cumulus-primitives-core",
+ "frame-benchmarking",
+ "frame-executive",
+ "frame-support",
+ "frame-system",
+ "indiv-pallet-people",
+ "indiv-support",
+ "log",
+ "pallet-balances",
+ "parity-scale-codec",
+ "parking_lot 0.12.5",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "staging-xcm",
+ "staging-xcm-executor",
+ "verifiable",
+]
+
+[[package]]
+name = "indiv-pallet-members-subscriber"
+version = "2.3.1"
+dependencies = [
+ "frame-benchmarking",
+ "frame-executive",
+ "frame-support",
+ "frame-system",
+ "indiv-support",
+ "log",
+ "parity-scale-codec",
+ "parking_lot 0.12.5",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "staging-xcm",
+ "verifiable",
+]
+
+[[package]]
+name = "indiv-pallet-mob-rule"
+version = "2.3.1"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "indiv-support",
+ "log",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-api",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "staging-xcm",
+]
+
+[[package]]
+name = "indiv-pallet-origin-restriction"
+version = "2.3.1"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-transaction-payment",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
+name = "indiv-pallet-people"
+version = "2.3.1"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "indiv-pallet-chunks-manager",
+ "indiv-pallet-members",
+ "indiv-support",
+ "log",
+ "parity-scale-codec",
+ "parking_lot 0.12.5",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "verifiable",
+]
+
+[[package]]
+name = "indiv-pallet-people-lite"
+version = "2.3.1"
+dependencies = [
+ "ed25519-zebra",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "indiv-support",
+ "log",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "verifiable",
+]
+
+[[package]]
+name = "indiv-pallet-pgas"
+version = "2.3.1"
+dependencies = [
+ "frame-benchmarking",
+ "frame-executive",
+ "frame-support",
+ "frame-system",
+ "indiv-support",
+ "log",
+ "pallet-assets",
+ "pallet-balances",
+ "parity-scale-codec",
+ "parking_lot 0.12.5",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "verifiable",
+]
+
+[[package]]
+name = "indiv-pallet-proof-of-ink"
+version = "2.3.1"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "indiv-support",
+ "log",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-api",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "verifiable",
+]
+
+[[package]]
+name = "indiv-pallet-resources"
+version = "2.3.1"
+dependencies = [
+ "frame-benchmarking",
+ "frame-executive",
+ "frame-support",
+ "frame-system",
+ "indiv-pallet-chunks-manager",
+ "indiv-pallet-members",
+ "indiv-pallet-people",
+ "indiv-pallet-people-lite",
+ "indiv-support",
+ "log",
+ "parity-scale-codec",
+ "parking_lot 0.12.5",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-statement-store 26.0.0",
+ "verifiable",
+]
+
+[[package]]
+name = "indiv-pallet-score"
+version = "2.3.1"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "indiv-pallet-chunks-manager",
+ "indiv-pallet-members",
+ "indiv-pallet-people",
+ "indiv-support",
+ "log",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "staging-xcm",
+ "verifiable",
+]
+
+[[package]]
+name = "indiv-pallet-storage-initialization"
+version = "2.3.1"
+dependencies = [
+ "cumulus-primitives-core",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "indiv-pallet-airdrop",
+ "indiv-pallet-chunks-manager",
+ "indiv-pallet-game",
+ "indiv-pallet-members",
+ "indiv-pallet-mob-rule",
+ "indiv-pallet-people",
+ "indiv-pallet-people-lite",
+ "indiv-pallet-proof-of-ink",
+ "indiv-pallet-score",
+ "indiv-support",
+ "log",
+ "pallet-assets",
+ "pallet-assets-holder",
+ "pallet-balances",
+ "pallet-xcm",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-runtime",
+ "sp-statement-store 26.0.0",
+ "sp-std",
+ "staging-xcm",
+ "staging-xcm-executor",
+ "verifiable",
+]
+
+[[package]]
+name = "indiv-pallet-value-transfer-auth"
+version = "2.3.1"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "staging-xcm",
+ "staging-xcm-executor",
+]
+
+[[package]]
+name = "indiv-precompile-personhood"
+version = "2.3.1"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "indiv-pallet-alias-accounts",
+ "indiv-pallet-members-subscriber",
+ "indiv-support",
+ "log",
+ "pallet-assets",
+ "pallet-balances",
+ "pallet-revive",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "staging-xcm",
+ "verifiable",
+]
+
+[[package]]
+name = "indiv-support"
+version = "2.3.1"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-asset-conversion",
+ "pallet-asset-conversion-tx-payment",
+ "pallet-asset-tx-payment",
+ "pallet-assets",
+ "pallet-balances",
+ "pallet-transaction-payment",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-statement-store 26.0.0",
+ "verifiable",
+]
+
+[[package]]
 name = "inout"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7711,6 +8237,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-assets-freezer"
+version = "0.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "15621de603c5545907267e6363a2d5f0be9fc4e3fcc1e37b4c4da0d94380659a"
+dependencies = [
+ "log",
+ "pallet-assets",
+ "parity-scale-codec",
+ "polkadot-sdk-frame",
+ "scale-info",
+]
+
+[[package]]
 name = "pallet-assets-holder"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8569,6 +9108,22 @@ dependencies = [
  "scale-info",
  "serde",
  "sp-core",
+ "sp-runtime",
+]
+
+[[package]]
+name = "pallet-pgas-allowance"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d56b947fcadc0c46c636c9fe17a9b7522e9cd3791bc7f4f86463b1655a9c802b"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "pallet-transaction-payment",
+ "parity-scale-codec",
+ "scale-info",
  "sp-runtime",
 ]
 
@@ -9658,6 +10213,7 @@ name = "paseo-runtime-constants"
 version = "2.3.1"
 dependencies = [
  "frame-support",
+ "hex-literal",
  "pallet-remote-proxy",
  "parity-scale-codec",
  "polkadot-primitives",
@@ -12269,7 +12825,7 @@ dependencies = [
  "sp-core",
  "sp-rpc",
  "sp-runtime",
- "sp-statement-store",
+ "sp-statement-store 27.0.0",
  "sp-version",
  "thiserror 1.0.69",
 ]
@@ -14188,6 +14744,33 @@ dependencies = [
 
 [[package]]
 name = "sp-statement-store"
+version = "26.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f4757d575f993bfecea902bb638c21d70d3c3af227b355ab707d07c142f5483"
+dependencies = [
+ "aes-gcm",
+ "curve25519-dalek",
+ "ed25519-dalek",
+ "frame-support",
+ "hkdf",
+ "parity-scale-codec",
+ "rand 0.8.5",
+ "scale-info",
+ "serde",
+ "sha2 0.10.9",
+ "sp-api",
+ "sp-application-crypto",
+ "sp-core",
+ "sp-crypto-hashing",
+ "sp-externalities",
+ "sp-runtime",
+ "sp-runtime-interface",
+ "thiserror 1.0.69",
+ "x25519-dalek",
+]
+
+[[package]]
+name = "sp-statement-store"
 version = "27.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "21644d0770f68bad867fb7b46ffcb0ebc083c90711cd9869f8b9ccc69d7916cb"
@@ -15595,6 +16178,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
 
 [[package]]
+name = "verifiable"
+version = "0.5.0"
+source = "git+https://github.com/paritytech/verifiable?rev=93464a69a9aeb0db5d392aae5963ca1d8b5d6fa5#93464a69a9aeb0db5d392aae5963ca1d8b5d6fa5"
+dependencies = [
+ "ark-scale",
+ "ark-serialize 0.5.0",
+ "ark-vrf",
+ "bounded-collections",
+ "parity-scale-codec",
+ "scale-info",
+ "sha2 0.10.9",
+ "smallvec",
+ "spin 0.9.8",
+]
+
+[[package]]
 name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -15640,6 +16239,7 @@ dependencies = [
  "ark-serialize 0.5.0",
  "ark-std 0.5.0",
  "merlin",
+ "rayon",
 ]
 
 [[package]]
@@ -15655,6 +16255,7 @@ dependencies = [
  "ark-std 0.5.0",
  "getrandom_or_panic",
  "rand_core 0.6.4",
+ "rayon",
  "w3f-pcs",
 ]
 
@@ -15670,6 +16271,7 @@ dependencies = [
  "ark-serialize 0.5.0",
  "ark-std 0.5.0",
  "ark-transcript",
+ "rayon",
  "w3f-pcs",
  "w3f-plonk-common",
 ]

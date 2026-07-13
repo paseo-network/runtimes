@@ -69,10 +69,12 @@ pub mod bridge_to_ethereum_config;
 pub mod genesis_config_presets;
 pub mod governance;
 pub mod migrations;
+pub mod protected_asset_erc20_guard;
 #[cfg(all(test, feature = "try-runtime"))]
 mod remote_tests;
 pub mod staking;
 pub mod treasury;
+pub mod value_transfer_filter;
 mod weights;
 pub mod xcm_config;
 
@@ -97,7 +99,10 @@ use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, ConstU128, Get, OpaqueMetadata};
 use sp_runtime::{
 	generic, impl_opaque_keys,
-	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, ConvertInto, IdentityLookup, Verify},
+	traits::{
+		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, ConvertInto,
+		IdentityLookup, Verify,
+	},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, FixedU128, Perbill, Permill,
 };
@@ -122,8 +127,8 @@ use frame_support::{
 		fungible::{self, HoldConsideration},
 		fungibles,
 		tokens::imbalance::{ResolveAssetTo, ResolveTo},
-		AsEnsureOriginWithArg, ConstBool, ConstU32, ConstU64, ConstU8, Contains, EitherOf,
-		EitherOfDiverse, Equals, InstanceFilter, LinearStoragePrice, NeverEnsureOrigin,
+		AsEnsureOriginWithArg, ConstBool, ConstU32, ConstU64, ConstU8, Contains, ContainsPair,
+		EitherOf, EitherOfDiverse, Equals, InstanceFilter, LinearStoragePrice, NeverEnsureOrigin,
 		PrivilegeCmp, TransformOrigin, WithdrawReasons,
 	},
 	weights::{ConstantMultiplier, Weight},
@@ -134,6 +139,8 @@ use frame_system::{
 	pallet_prelude::BlockNumberFor,
 	EnsureRoot, EnsureSigned, EnsureSignedBy,
 };
+use indiv_pallet_value_transfer_auth::extension::AuthorizeValueTransfer;
+use indiv_precompile_personhood::PersonhoodCheck;
 use pallet_asset_conversion_precompiles::AssetConversion as AssetConversionPrecompile;
 use pallet_assets_precompiles::{ForeignAssetId, ForeignIdConfig, InlineIdConfig, ERC20};
 use pallet_nfts::PalletFeatures;
@@ -144,6 +151,7 @@ use parachains_common::{
 	message_queue::*, AccountId, AssetIdForTrustBackedAssets, AuraId, Balance, BlockNumber, Hash,
 	Header, Nonce, Signature,
 };
+use paseo_runtime_constants::system_parachain::PEOPLE_ID;
 use sp_runtime::Debug;
 use system_parachains_common::ForceUnstuckOnFailedMigration;
 use system_parachains_constants::{
@@ -194,10 +202,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	impl_name: Cow::Borrowed("asset-hub-paseo"),
 	spec_name: Cow::Borrowed("asset-hub-paseo"),
 	authoring_version: 1,
-	spec_version: 2_003_002,
+	spec_version: 2_004_000,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 15,
+	transaction_version: 16,
 	system_version: 1,
 };
 
@@ -256,9 +264,26 @@ impl Contains<RuntimeCall> for AllExceptReapStash {
 	}
 }
 
+/// Base call filter composing the two independent runtime-level restrictions:
+///
+/// - [`AllExceptReapStash`]: filters `reap_stash` out during the `MinValidatorBond` transition.
+/// - [`indiv_pallet_value_transfer_auth::BlockValueTransfersWhenFlagSet`]: blocks moves of the
+///   protected asset when the protected-asset kill switch flag is set.
+///
+/// A call is admitted only if both filters admit it.
+pub struct BaseCallFilter;
+impl Contains<RuntimeCall> for BaseCallFilter {
+	fn contains(call: &RuntimeCall) -> bool {
+		AllExceptReapStash::contains(call) &&
+			indiv_pallet_value_transfer_auth::BlockValueTransfersWhenFlagSet::<
+				crate::value_transfer_filter::AhValueTransferFilter,
+			>::contains(call)
+	}
+}
+
 // Configure FRAME pallets to include in runtime.
 impl frame_system::Config for Runtime {
-	type BaseCallFilter = AllExceptReapStash;
+	type BaseCallFilter = BaseCallFilter;
 	type BlockWeights = RuntimeBlockWeights;
 	type BlockLength = RuntimeBlockLength;
 	type AccountId = AccountId;
@@ -419,8 +444,8 @@ impl pallet_assets::Config<TrustBackedAssetsInstance> for Runtime {
 	type MetadataDepositPerByte = MetadataDepositPerByte;
 	type ApprovalDeposit = ExistentialDeposit;
 	type StringLimit = AssetsStringLimit;
-	type Freezer = ();
-	type Holder = ();
+	type Freezer = AssetsFreezer;
+	type Holder = AssetsHolder;
 	type Extra = ();
 	type WeightInfo = weights::pallet_assets_local::WeightInfo<Runtime>;
 	type CallbackHandle = pallet_assets::AutoIncAssetId<Runtime, TrustBackedAssetsInstance>;
@@ -430,6 +455,20 @@ impl pallet_assets::Config<TrustBackedAssetsInstance> for Runtime {
 	type ReserveData = ();
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = ();
+}
+
+// Allow Freezes for the `Assets` pallet.
+pub type AssetsFreezerInstance = pallet_assets_freezer::Instance1;
+impl pallet_assets_freezer::Config<AssetsFreezerInstance> for Runtime {
+	type RuntimeFreezeReason = RuntimeFreezeReason;
+	type RuntimeEvent = RuntimeEvent;
+}
+
+// Allow Holds for the `Assets` pallet.
+pub type AssetsHolderInstance = pallet_assets_holder::Instance1;
+impl pallet_assets_holder::Config<AssetsHolderInstance> for Runtime {
+	type RuntimeHoldReason = RuntimeHoldReason;
+	type RuntimeEvent = RuntimeEvent;
 }
 
 parameter_types! {
@@ -1465,6 +1504,9 @@ parameter_types! {
 	pub const DepositPerByte: Balance = system_para_deposit(0, 1);
 	pub CodeHashLockupDepositPercent: Perbill = Perbill::from_percent(30);
 	pub const MaxEthExtrinsicWeight: FixedU128 = FixedU128::from_rational(5, 10);
+	/// Fraction of a PGAS-backed storage deposit refunded when the deposit is released.
+	/// The rest is burned, so contracts cannot mint free PGAS via storage churn.
+	pub const PGasRefundPercent: Perbill = Perbill::from_percent(10);
 }
 
 impl pallet_revive::Config for Runtime {
@@ -1480,12 +1522,17 @@ impl pallet_revive::Config for Runtime {
 	// TODO(#840): use `weights::pallet_revive::WeightInfo` here
 	type WeightInfo = pallet_revive::weights::SubstrateWeight<Self>;
 	type Precompiles = (
-		ERC20<Self, InlineIdConfig<0x120>, TrustBackedAssetsInstance>,
+		protected_asset_erc20_guard::RestrictProtectedAssetErc20<
+			Self,
+			InlineIdConfig<0x120>,
+			TrustBackedAssetsInstance,
+		>,
 		ERC20<Self, InlineIdConfig<0x320>, PoolAssetsInstance>,
 		ERC20<Self, ForeignIdConfig<0x220, Self, ForeignAssetsInstance>, ForeignAssetsInstance>,
 		XcmPrecompile<Self>,
 		AssetConversionPrecompile<{ ASSET_CONVERSION_PRECOMPILE }, Self>,
 		VestingPrecompile<Self>,
+		PersonhoodCheck<Self>,
 	);
 	type AddressMapper = pallet_revive::AccountId32Mapper<Self>;
 	type RuntimeMemory = ConstU32<{ 128 * 1024 * 1024 }>;
@@ -1499,13 +1546,20 @@ impl pallet_revive::Config for Runtime {
 	type FindAuthor = <Runtime as pallet_authorship::Config>::FindAuthor;
 	type AllowEVMBytecode = ConstBool<true>;
 	type FeeInfo = pallet_revive::evm::fees::Info<Address, Signature, EthExtraImpl>;
-	type Deposit = ();
 	type MaxEthExtrinsicWeight = MaxEthExtrinsicWeight;
 	// Must be set to `false` in a live chain
 	type DebugEnabled = ConstBool<false>;
 	type AutoMap = ConstBool<true>;
 	type GasScale = ConstU32<100_000>;
 	type OnBurn = Dap;
+	type Deposit = pallet_revive::PGasDeposit<
+		Runtime,
+		Assets,
+		AssetsHolder,
+		AssetsFreezer,
+		PgasAssetId,
+		PGasRefundPercent,
+	>;
 }
 
 impl pallet_assets_precompiles::ForeignAssetsConfig for Runtime {
@@ -1526,6 +1580,767 @@ impl pallet_vesting_precompiles::pallet::Config for Runtime {
 
 impl cumulus_pallet_weight_reclaim::Config for Runtime {
 	type WeightInfo = weights::cumulus_pallet_weight_reclaim::WeightInfo<Runtime>;
+}
+
+/// Bridges `pallet-dotns-gateway`'s `AddressMapper` trait to `pallet_revive::AccountId32Mapper`.
+pub struct ReviveAddressMapper;
+impl indiv_pallet_dotns_gateway::AddressMapper<AccountId> for ReviveAddressMapper {
+	fn to_address(account_id: &AccountId) -> sp_core::H160 {
+		<pallet_revive::AccountId32Mapper<Runtime> as pallet_revive::AddressMapper<Runtime>>::to_address(account_id)
+	}
+}
+
+/// Adapter exposing `pallet_revive::Pallet::bare_call` to `pallet-dotns-gateway`.
+pub struct ReviveContractCaller;
+impl indiv_pallet_dotns_gateway::ContractCaller for ReviveContractCaller {
+	fn call(
+		dest: sp_core::H160,
+		data: Vec<u8>,
+		value: u128,
+	) -> Result<(Vec<u8>, Weight), indiv_pallet_dotns_gateway::ContractCallError> {
+		use pallet_revive::{ExecConfig, TransactionLimits};
+		let cr = pallet_revive::Pallet::<Runtime>::bare_call(
+			RuntimeOrigin::root(),
+			dest,
+			value.into(),
+			TransactionLimits::WeightAndDeposit {
+				weight_limit: DotnsMaxContractCallWeight::get(),
+				// Root origin does not pay the deposit cost; per-call storage growth
+				// is bounded by `weight_limit.proof_size`.
+				deposit_limit: u128::MAX,
+			},
+			data,
+			&ExecConfig::new_substrate_tx(),
+		);
+		match cr.result {
+			Ok(ret) if !ret.did_revert() => Ok((ret.data, cr.weight_consumed)),
+			Ok(ret) => Err(indiv_pallet_dotns_gateway::ContractCallError {
+				dispatch: sp_runtime::DispatchError::Other("contract reverted"),
+				revert_data: Some(ret.data),
+			}),
+			Err(e) => Err(indiv_pallet_dotns_gateway::ContractCallError::from(e)),
+		}
+	}
+}
+
+parameter_types! {
+	// On-chain measured weight is below these limits so this is to have some margin.
+	pub const DotnsMaxContractCallWeight: Weight =
+		Weight::from_parts(100_000_000_000, 2 * 1024 * 1024);
+	pub const DotnsMaxValiditySeconds: u64 = 3 * 24 * 60 * 60; // 3 days
+	pub const DotnsMaxFutureSkewSeconds: u64 = 30;
+}
+
+impl indiv_pallet_dotns_gateway::Config for Runtime {
+	type WeightInfo = indiv_pallet_dotns_gateway::weights::SubstrateWeight<Runtime>;
+	type MemberService = MembersSubscriber;
+	type ContractCaller = ReviveContractCaller;
+	type AddressMapper = ReviveAddressMapper;
+	type MaxContractCallWeight = DotnsMaxContractCallWeight;
+	type MaxValiditySeconds = DotnsMaxValiditySeconds;
+	type MaxFutureSkewSeconds = DotnsMaxFutureSkewSeconds;
+	type UnixTime = Timestamp;
+	type AttestationAllowanceManager = EnsureRoot<AccountId>;
+	type DispatcherAddressManager = EnsureRoot<AccountId>;
+	type AttestationSignature = Signature;
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = DotnsGatewayBenchHelper;
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+pub struct DotnsGatewayBenchHelper;
+
+#[cfg(feature = "runtime-benchmarks")]
+impl indiv_pallet_dotns_gateway::benchmarking::BenchmarkHelper<Runtime>
+	for DotnsGatewayBenchHelper
+{
+	fn setup_ring_root(
+		identifier: &indiv_support::traits::Identifier,
+		ring_index: indiv_support::traits::RingIndex,
+	) {
+		use frame_support::traits::UnixTime;
+
+		let ring_exponent = if identifier == indiv_support::traits::PEOPLE_LITE_IDENTIFIER {
+			<Runtime as indiv_pallet_alias_accounts::Config>::PeopleLiteRingExponent::get()
+		} else {
+			<Runtime as indiv_pallet_alias_accounts::Config>::PeopleRingExponent::get()
+		};
+		let real_root = bandersnatch_bench::seed_ring_root(ring_exponent);
+
+		// Filling the sliding window to capacity for worst-case verify_membership iteration
+		let now = <Timestamp as UnixTime>::now().as_secs();
+		let max_recent = <<Runtime as indiv_pallet_members_subscriber::Config>::MaxRecentRootsPerRing
+			as frame_support::traits::Get<u32>>::get();
+		let mut roots: frame_support::BoundedVec<_, _> = frame_support::BoundedVec::new();
+		for i in 0..max_recent {
+			roots
+				.try_push(indiv_pallet_members_subscriber::types::RingCommitmentRecord::<Runtime> {
+					root: <Runtime as indiv_pallet_members_subscriber::benchmarking::BenchmarkHelper<Runtime>>::mock_ring_root(i),
+					revision: i + 1,
+					source_time: now,
+					source_sequence: 0,
+				})
+				.expect("within MaxRecentRootsPerRing bound");
+		}
+		let last_idx = roots.len() - 1;
+		roots[last_idx].root = real_root;
+		indiv_pallet_members_subscriber::RingRoots::<Runtime>::insert(
+			*identifier,
+			ring_index,
+			roots,
+		);
+		indiv_pallet_members_subscriber::RingCollectionExponents::<Runtime>::insert(
+			*identifier,
+			ring_exponent,
+		);
+	}
+
+	fn valid_proof(
+		collection: &indiv_pallet_dotns_gateway::Collection,
+		message: &[u8],
+	) -> indiv_pallet_dotns_gateway::ProofOf<Runtime> {
+		let ring_exponent = if collection == &indiv_pallet_dotns_gateway::Collection::PeopleLite {
+			<Runtime as indiv_pallet_alias_accounts::Config>::PeopleLiteRingExponent::get()
+		} else {
+			<Runtime as indiv_pallet_alias_accounts::Config>::PeopleRingExponent::get()
+		};
+		bandersnatch_bench::create_proof(ring_exponent, message)
+	}
+
+	fn candidate() -> AccountId {
+		bandersnatch_bench::bench_candidate()
+	}
+
+	fn sign(message: &[u8]) -> Signature {
+		bandersnatch_bench::bench_sign(message)
+	}
+
+	fn set_time(seconds: u64) {
+		pallet_timestamp::Now::<Runtime>::put(seconds.saturating_mul(1_000));
+	}
+}
+
+/// Bandersnatch + sr25519 helpers shared by the dotNS gateway benchmark.
+#[cfg(feature = "runtime-benchmarks")]
+mod bandersnatch_bench {
+	use super::{AccountId, Signature};
+	use indiv_support::{genesis::ring_verifier_builder_params, traits::RingExponent};
+	use sp_core::{crypto::KeyTypeId, sr25519};
+	use sp_runtime::{traits::IdentifyAccount, MultiSignature, MultiSigner};
+	use verifiable::{
+		ring::{
+			ark_vrf::suites::bandersnatch::BandersnatchSha512Ell2,
+			bandersnatch::BandersnatchVrfVerifiable, RingDomainSize,
+		},
+		GenerateVerifiable,
+	};
+
+	type Crypto = BandersnatchVrfVerifiable;
+
+	const BENCH_RING_SECRET: [u8; 32] = [42u8; 32];
+	const DOTNS_BENCH_KEY_TYPE: KeyTypeId = KeyTypeId(*b"dnbe");
+	const DOTNS_BENCH_SEED: &[u8] = b"//DotnsGatewayBench";
+
+	fn ensure_bench_key() -> sr25519::Public {
+		let existing = sp_io::crypto::sr25519_public_keys(DOTNS_BENCH_KEY_TYPE);
+		if let Some(pk) = existing.first() {
+			return *pk;
+		}
+		sp_io::crypto::sr25519_generate(DOTNS_BENCH_KEY_TYPE, Some(DOTNS_BENCH_SEED.to_vec()))
+	}
+
+	pub fn bench_candidate() -> AccountId {
+		MultiSigner::Sr25519(ensure_bench_key()).into_account()
+	}
+
+	pub fn bench_sign(message: &[u8]) -> Signature {
+		let pk = ensure_bench_key();
+		let sig = sp_io::crypto::sr25519_sign(DOTNS_BENCH_KEY_TYPE, &pk, message)
+			.expect("bench key was just inserted");
+		MultiSignature::Sr25519(sig)
+	}
+
+	fn ring_setup(
+		ring_exponent: RingExponent,
+	) -> (
+		<Crypto as GenerateVerifiable>::Members,
+		<Crypto as GenerateVerifiable>::Member,
+		<Crypto as GenerateVerifiable>::Secret,
+		<Crypto as GenerateVerifiable>::Config,
+	) {
+		let domain: RingDomainSize =
+			ring_exponent.try_into().expect("RingExponent maps to RingDomainSize");
+		let chunks = ring_verifier_builder_params::<BandersnatchSha512Ell2>(domain);
+
+		let secret = Crypto::new_secret(BENCH_RING_SECRET);
+		let member = Crypto::member_from_secret(&secret);
+
+		let mut intermediate = Crypto::start_members(domain);
+		Crypto::push_members(&mut intermediate, core::iter::once(member), |range| {
+			Ok(chunks[range].to_vec())
+		})
+		.expect("push_members for single bench member");
+		let members = Crypto::finish_members(intermediate);
+		(members, member, secret, domain)
+	}
+
+	pub fn seed_ring_root(ring_exponent: RingExponent) -> <Crypto as GenerateVerifiable>::Members {
+		ring_setup(ring_exponent).0
+	}
+
+	pub fn create_proof(
+		ring_exponent: RingExponent,
+		message: &[u8],
+	) -> <Crypto as GenerateVerifiable>::Proof {
+		let (_members, member, secret, capacity) = ring_setup(ring_exponent);
+		let commitment = Crypto::open(capacity, &member, core::iter::once(member)).expect("open");
+		let (proof, _alias) = Crypto::create(
+			commitment,
+			&secret,
+			&indiv_pallet_dotns_gateway::DOTNS_GATEWAY_CONTEXT[..],
+			message,
+		)
+		.expect("create proof");
+		proof
+	}
+}
+
+/// A really small allowance: any non-trivial extrinsic fee exhausts it, so
+/// every `register_name` attempt relies on [`OperationAllowedOneTimeExcess`]
+/// to be admitted, then locks the alias out until recovery brings the usage
+/// back to zero.
+const DOTNS_PERSON_REGISTRATION_ALLOWANCE_MAX: Balance = MILLICENTS;
+/// Recover enough so that if a call to the name registration fails, another one can be retried in
+/// about 30 minutes. The 50 CENTS number is based on napkin math I did looking at the weight of the
+/// call.
+const DOTNS_PERSON_REGISTRATION_ALLOWANCE_RECOVERY: Balance =
+	50 * CENTS / ((30 * MINUTES) as Balance);
+
+#[derive(
+	Clone,
+	Encode,
+	Decode,
+	Debug,
+	MaxEncodedLen,
+	scale_info::TypeInfo,
+	Eq,
+	PartialEq,
+	DecodeWithMemTracking,
+)]
+pub enum RestrictedEntity {
+	/// A full-person dotNS registration attempt, keyed by the anonymous alias
+	/// derived from the ring proof in [`indiv_pallet_dotns_gateway::AsDotnsGateway`].
+	DotnsPersonRegistration(indiv_support::traits::Alias),
+}
+
+impl indiv_pallet_origin_restriction::RestrictedEntity<OriginCaller, Balance> for RestrictedEntity {
+	fn allowance(&self) -> indiv_pallet_origin_restriction::Allowance<Balance> {
+		match self {
+			RestrictedEntity::DotnsPersonRegistration(_) =>
+				indiv_pallet_origin_restriction::Allowance {
+					max: DOTNS_PERSON_REGISTRATION_ALLOWANCE_MAX,
+					recovery_per_block: DOTNS_PERSON_REGISTRATION_ALLOWANCE_RECOVERY,
+				},
+		}
+	}
+
+	fn restricted_entity(origin_caller: &OriginCaller) -> Option<Self> {
+		match origin_caller {
+			OriginCaller::DotnsGateway(indiv_pallet_dotns_gateway::Origin::PersonRegistration(
+				alias,
+			)) => Some(RestrictedEntity::DotnsPersonRegistration(*alias)),
+			_ => None,
+		}
+	}
+}
+
+pub struct OperationAllowedOneTimeExcess;
+impl ContainsPair<RestrictedEntity, RuntimeCall> for OperationAllowedOneTimeExcess {
+	fn contains(entity: &RestrictedEntity, call: &RuntimeCall) -> bool {
+		match entity {
+			RestrictedEntity::DotnsPersonRegistration(_) => matches!(
+				call,
+				RuntimeCall::DotnsGateway(indiv_pallet_dotns_gateway::Call::register_name { .. })
+			),
+		}
+	}
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+pub struct OriginRestrictionBenchmarkHelper;
+#[cfg(feature = "runtime-benchmarks")]
+impl indiv_pallet_origin_restriction::BenchmarkHelper<OriginCaller, RuntimeCall>
+	for OriginRestrictionBenchmarkHelper
+{
+	fn excess_pair() -> (OriginCaller, RuntimeCall) {
+		(
+			OriginCaller::DotnsGateway(indiv_pallet_dotns_gateway::Origin::PersonRegistration(
+				[0u8; 32],
+			)),
+			RuntimeCall::DotnsGateway(indiv_pallet_dotns_gateway::Call::register_name {
+				who: AccountId::from([0u8; 32]),
+				label: indiv_pallet_dotns_gateway::BaseLabel::try_from(b"a".to_vec())
+					.expect("single byte label fits"),
+				link: indiv_pallet_dotns_gateway::Link::None(
+					indiv_pallet_dotns_gateway::ChatKey::from([0u8; 65]),
+				),
+			}),
+		)
+	}
+}
+
+impl indiv_pallet_origin_restriction::Config for Runtime {
+	type WeightInfo = indiv_pallet_origin_restriction::weights::SubstrateWeight<Runtime>;
+	type RestrictedEntity = RestrictedEntity;
+	type OperationAllowedOneTimeExcess = OperationAllowedOneTimeExcess;
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = OriginRestrictionBenchmarkHelper;
+}
+
+impl indiv_precompile_personhood::Config for Runtime {
+	type Proof = indiv_pallet_alias_accounts::ProofOf<Runtime>;
+	type PersonhoodResolver = AliasAccounts;
+}
+
+parameter_types! {
+	/// XCM location + pallet index of the members-notifier instance publishing ring roots.
+	pub RingRootsNotifierEndpoint: indiv_pallet_members_subscriber::types::NotifierEndpoint =
+		indiv_pallet_members_subscriber::types::NotifierEndpoint {
+			location: xcm::latest::Location::new(
+				1,
+				[xcm::latest::Junction::Parachain(PEOPLE_ID)],
+			),
+			// Matches `MembersNotifier` index in people-paseo `construct_runtime!`.
+			pallet_index: 69,
+		};
+	pub MembersSubscriberSelfParaId: u32 = parachain_info::Pallet::<Runtime>::parachain_id().into();
+}
+
+/// Origin check restricted to the configured notifier sibling parachain (people-paseo).
+pub struct EnsureNotifierSibling;
+impl frame_support::traits::EnsureOrigin<RuntimeOrigin> for EnsureNotifierSibling {
+	type Success = ();
+
+	fn try_origin(o: RuntimeOrigin) -> Result<Self::Success, RuntimeOrigin> {
+		match o.clone().into() {
+			Ok(cumulus_pallet_xcm::Origin::SiblingParachain(id)) if u32::from(id) == PEOPLE_ID =>
+				Ok(()),
+			_ => Err(o),
+		}
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn try_successful_origin() -> Result<RuntimeOrigin, ()> {
+		Ok(cumulus_pallet_xcm::Origin::SiblingParachain(PEOPLE_ID.into()).into())
+	}
+}
+
+impl indiv_pallet_members_subscriber::Config for Runtime {
+	type WeightInfo = indiv_pallet_members_subscriber::weights::SubstrateWeight<Runtime>;
+	type Crypto = verifiable::ring::bandersnatch::BandersnatchVrfVerifiable;
+	type XcmSender = xcm_config::XcmRouter;
+	type RingRootsNotifier = RingRootsNotifierEndpoint;
+	type SelfParaId = MembersSubscriberSelfParaId;
+	type MaxMissingRootsPerCollection = ConstU32<255>;
+	type MaxDeletedRingsPerCollection = ConstU32<100>;
+	type MaxRingRootsPerCollection = ConstU32<100>;
+	type EnsureNotifierOrigin = EnsureNotifierSibling;
+	type EnsureTerminationOrigin = EitherOfDiverse<EnsureRoot<AccountId>, EnsureNotifierSibling>;
+	type MaxCollections = ConstU32<10>;
+	type UnixTime = Timestamp;
+	type ReplayCooldownSeconds = ConstU64<60>;
+	type MaxUpdatesPerBatch = ConstU32<10>;
+	type ReplayWarningThreshold = ConstU32<5>;
+	type ReplayAbandonThreshold = ConstU32<10>;
+	type MaxRecentRootsPerRing = ConstU32<3>;
+	type OffchainWorkerInterval = ConstU32<1>;
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+impl indiv_pallet_members_subscriber::benchmarking::BenchmarkHelper<Runtime> for Runtime {
+	fn init() {
+		use cumulus_pallet_parachain_system::RelevantMessagingState;
+		use cumulus_primitives_core::relay_chain::AbridgedHrmpChannel;
+
+		// Timestamp advanced beyond `ReplayCooldownSeconds` (60s) so
+		// `authorize_replay_missing_roots` passes the cooldown check.
+		pallet_timestamp::Now::<Runtime>::put(120_000u64);
+
+		// Faking an HRMP egress channel to the publisher parachain so benchmarks
+		// exercising XCM replay-request sends do not fail with `NoChannel`.
+		let channel = AbridgedHrmpChannel {
+			max_capacity: 1000,
+			max_total_size: 1_000_000,
+			max_message_size: 100_000,
+			msg_count: 0,
+			total_size: 0,
+			mqc_head: None,
+		};
+		let egress_channels = alloc::vec![(ParaId::from(PEOPLE_ID), channel)];
+		let messaging_state =
+			cumulus_pallet_parachain_system::relay_state_snapshot::MessagingStateSnapshot {
+				dmq_mqc_head: Default::default(),
+				relay_dispatch_queue_remaining_capacity: Default::default(),
+				ingress_channels: Vec::new(),
+				egress_channels,
+			};
+		RelevantMessagingState::<Runtime>::put(messaging_state);
+	}
+
+	fn mock_ring_root(seed: u32) -> indiv_pallet_members_subscriber::types::MembersOf<Runtime> {
+		use indiv_support::genesis::ring_verifier_builder_params;
+		use verifiable::{
+			ring::{
+				ark_vrf::suites::bandersnatch::BandersnatchSha512Ell2,
+				bandersnatch::BandersnatchVrfVerifiable, RingDomainSize,
+			},
+			GenerateVerifiable,
+		};
+
+		type Crypto = BandersnatchVrfVerifiable;
+		let domain = RingDomainSize::Domain11;
+		let chunks = ring_verifier_builder_params::<BandersnatchSha512Ell2>(domain);
+
+		let secret = Crypto::new_secret(alias_bench_entropy(seed));
+		let member = Crypto::member_from_secret(&secret);
+
+		let mut intermediate = Crypto::start_members(domain);
+		Crypto::push_members(&mut intermediate, core::iter::once(member), |range| {
+			Ok(chunks[range].to_vec())
+		})
+		.expect("push_members succeeds for a single member");
+		Crypto::finish_members(intermediate)
+	}
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+fn alias_bench_entropy(seed: u32) -> [u8; 32] {
+	let mut entropy = [0u8; 32];
+	entropy[..4].copy_from_slice(&seed.to_le_bytes());
+	entropy
+}
+
+parameter_types! {
+	pub const PeopleRingExponent: indiv_support::traits::RingExponent =
+		indiv_support::traits::RingExponent::R2e9;
+	pub const PeopleLiteRingExponent: indiv_support::traits::RingExponent =
+		indiv_support::traits::RingExponent::R2e9;
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+const BENCH_ALIAS_CONTEXT: indiv_support::traits::Context = *b"pop:ah-bench-context            ";
+
+impl indiv_pallet_alias_accounts::Config for Runtime {
+	type WeightInfo = indiv_pallet_alias_accounts::weights::SubstrateWeight<Runtime>;
+	type MemberService = MembersSubscriber;
+	type UnixTime = Timestamp;
+	type ProofValidityWindow = ConstU64<300>;
+	type CleanupGracePeriod = ConstU64<3600>;
+	type PeopleLiteRingExponent = PeopleLiteRingExponent;
+	type PeopleRingExponent = PeopleRingExponent;
+	type Fungibles = Assets;
+	type PgasAssetId = PgasAssetId;
+	type FeeManagerOrigin = EnsureRoot<AccountId>;
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+impl indiv_pallet_alias_accounts::benchmarking::BenchmarkHelper<Runtime> for Runtime {
+	fn set_time(seconds: u64) {
+		pallet_timestamp::Now::<Runtime>::put(seconds.saturating_mul(1_000));
+	}
+
+	fn allowed_context() -> indiv_support::traits::Context {
+		BENCH_ALIAS_CONTEXT
+	}
+
+	fn mock_proof(
+		seed: u32,
+		context: indiv_support::traits::Context,
+		msg: &[u8],
+	) -> (indiv_pallet_alias_accounts::ProofOf<Runtime>, indiv_support::traits::Alias) {
+		use verifiable::{
+			ring::{bandersnatch::BandersnatchVrfVerifiable, RingDomainSize},
+			GenerateVerifiable,
+		};
+		type Crypto = BandersnatchVrfVerifiable;
+
+		let secret = Crypto::new_secret(alias_bench_entropy(seed));
+		let member = Crypto::member_from_secret(&secret);
+
+		let commitment = Crypto::open(RingDomainSize::Domain11, &member, core::iter::once(member))
+			.expect("open succeeds for single-member ring");
+		Crypto::create(commitment, &secret, &context[..], msg)
+			.expect("create succeeds for valid commitment")
+	}
+
+	/// Seed a single-member Bandersnatch ring at `(identifier, ring_index)` in members-subscriber
+	/// storage and return a real ring-VRF proof for that ring against `context` + `message`.
+	fn create_proof_for_revision(
+		identifier: &indiv_support::traits::Identifier,
+		ring_index: indiv_support::traits::RingIndex,
+		revision: indiv_support::traits::RevisionIndex,
+		context: &indiv_support::traits::Context,
+		message: &[u8],
+	) -> indiv_pallet_alias_accounts::ProofOf<Runtime> {
+		use indiv_support::genesis::ring_verifier_builder_params;
+		use verifiable::{
+			ring::{
+				ark_vrf::suites::bandersnatch::BandersnatchSha512Ell2,
+				bandersnatch::BandersnatchVrfVerifiable, RingDomainSize,
+			},
+			GenerateVerifiable,
+		};
+
+		type Crypto = BandersnatchVrfVerifiable;
+
+		// Derive the domain from the runtime's configured exponent for this collection so
+		// the proof's verifier params match what alias-accounts uses to validate.
+		let ring_exponent = if identifier == indiv_support::traits::PEOPLE_LITE_IDENTIFIER {
+			<Runtime as indiv_pallet_alias_accounts::Config>::PeopleLiteRingExponent::get()
+		} else {
+			<Runtime as indiv_pallet_alias_accounts::Config>::PeopleRingExponent::get()
+		};
+		let domain: RingDomainSize =
+			ring_exponent.try_into().expect("RingExponent maps to RingDomainSize");
+		let chunks = ring_verifier_builder_params::<BandersnatchSha512Ell2>(domain);
+
+		let secret = Crypto::new_secret([42u8; 32]);
+		let member = Crypto::member_from_secret(&secret);
+
+		let mut intermediate = Crypto::start_members(domain);
+		Crypto::push_members(&mut intermediate, core::iter::once(member), |range| {
+			Ok(chunks[range].to_vec())
+		})
+		.expect("push_members succeeds for a single member");
+		let root = Crypto::finish_members(intermediate);
+
+		// The bench fills the sliding window with mock records before calling us; replace
+		// the record matching `revision` with our real Bandersnatch commitment so
+		// `verify_proof` against the bench-chosen target revision succeeds.
+		indiv_pallet_members_subscriber::RingRoots::<Runtime>::mutate(
+			*identifier,
+			ring_index,
+			|roots_opt| {
+				let roots = roots_opt
+					.as_mut()
+					.expect("seed_ring populates RingRoots before create_proof_for_revision");
+				let idx = roots
+					.iter()
+					.position(|r| r.revision == revision)
+					.expect("requested revision must be present in seeded roots");
+				roots[idx].root = root;
+			},
+		);
+		indiv_pallet_members_subscriber::RingCollectionExponents::<Runtime>::insert(
+			*identifier,
+			ring_exponent,
+		);
+
+		let commitment = Crypto::open(domain, &member, core::iter::once(member)).expect("open");
+		let (proof, _alias) =
+			Crypto::create(commitment, &secret, &context[..], message).expect("create proof");
+		proof
+	}
+
+	/// Idempotently creates the PGAS asset under `PgasAdmin` so paid-alias benchmarks have
+	/// a destination for fee transfers.
+	fn setup_pgas_asset() {
+		use frame_support::traits::fungibles::{Create, Inspect};
+		if !<Assets as Inspect<AccountId>>::asset_exists(PgasAssetId::get()) {
+			<Assets as Create<AccountId>>::create(
+				PgasAssetId::get(),
+				PgasAdmin::get(),
+				true,
+				PgasMinBalance::get(),
+			)
+			.expect("create pgas asset");
+		}
+	}
+
+	fn max_ring_revisions() -> u32 {
+		<<Runtime as indiv_pallet_members_subscriber::Config>::MaxRecentRootsPerRing as Get<u32>>::get()
+	}
+
+	fn seed_ring(
+		collection: indiv_support::traits::Identifier,
+		ring: indiv_support::traits::RingIndex,
+		revisions: u32,
+		source_time: u64,
+	) {
+		use indiv_pallet_members_subscriber::types::RingCommitmentRecord;
+		use sp_runtime::BoundedVec;
+
+		let ring_exponent = if collection == *indiv_support::traits::PEOPLE_LITE_IDENTIFIER {
+			<Runtime as indiv_pallet_alias_accounts::Config>::PeopleLiteRingExponent::get()
+		} else {
+			<Runtime as indiv_pallet_alias_accounts::Config>::PeopleRingExponent::get()
+		};
+		indiv_pallet_members_subscriber::RingCollectionExponents::<Runtime>::insert(
+			collection,
+			ring_exponent,
+		);
+
+		let mut roots: BoundedVec<
+			RingCommitmentRecord<Runtime>,
+			<Runtime as indiv_pallet_members_subscriber::Config>::MaxRecentRootsPerRing,
+		> = BoundedVec::new();
+		for i in 0..revisions {
+			let root =
+				<Runtime as indiv_pallet_members_subscriber::benchmarking::BenchmarkHelper<
+					Runtime,
+				>>::mock_ring_root(i);
+			roots
+				.try_push(RingCommitmentRecord {
+					root,
+					revision: i,
+					source_time,
+					source_sequence: 1,
+				})
+				.expect("revisions bounded by max_ring_revisions");
+		}
+		indiv_pallet_members_subscriber::RingRoots::<Runtime>::insert(collection, ring, roots);
+	}
+}
+
+parameter_types! {
+	pub const PgasPalletId: PalletId = PalletId(*b"py/pgas ");
+	pub PgasAdmin: AccountId =
+		AccountIdConversion::<AccountId>::into_account_truncating(&PgasPalletId::get());
+	pub PgasAssetId: AssetIdForTrustBackedAssets = 2_000_000_000;
+	pub PgasMinBalance: Balance = ExistentialDeposit::get() / 10;
+	pub PgasClaimAmount: Balance = 5000 * PgasMinBalance::get();
+}
+
+impl indiv_pallet_pgas::Config for Runtime {
+	type WeightInfo = indiv_pallet_pgas::weights::SubstrateWeight<Runtime>;
+	type MembershipProver = MembersSubscriber;
+	type Clock = Timestamp;
+	type Fungibles = Assets;
+	type PgasAssetId = PgasAssetId;
+	type PgasClaimAmount = PgasClaimAmount;
+	type MaxClaimsPerPeriodPerPerson = ConstU32<100>;
+	type MaxClaimsPerPeriodPerLitePerson = ConstU32<40>;
+	type MaxPgasClaimRecordCleanupPerCall = ConstU32<20>;
+	type PgasAdmin = PgasAdmin;
+	type PgasMinBalance = PgasMinBalance;
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = PgasBenchHelper;
+}
+
+/// Calls eligible to be paid for with PGAS.
+pub struct PGASCallFilter;
+impl frame_support::traits::Contains<RuntimeCall> for PGASCallFilter {
+	fn contains(call: &RuntimeCall) -> bool {
+		match call {
+			RuntimeCall::Revive(..) => true,
+			RuntimeCall::Utility(pallet_utility::Call::batch { calls }) |
+			RuntimeCall::Utility(pallet_utility::Call::batch_all { calls }) |
+			RuntimeCall::Utility(pallet_utility::Call::force_batch { calls }) =>
+				calls.iter().all(|inner_call| matches!(inner_call, RuntimeCall::Revive(..))),
+			_ => false,
+		}
+	}
+}
+
+impl pallet_pgas_allowance::Config for Runtime {
+	type Assets = Assets;
+	type PGASAssetId = PgasAssetId;
+
+	#[cfg(not(feature = "runtime-benchmarks"))]
+	type CallFilter = PGASCallFilter;
+	#[cfg(feature = "runtime-benchmarks")]
+	type CallFilter = frame_support::traits::Everything;
+
+	type WeightInfo = pallet_pgas_allowance::weights::SubstrateWeight<Runtime>;
+
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = PGASBenchmarkHelper;
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+pub struct PGASBenchmarkHelper;
+#[cfg(feature = "runtime-benchmarks")]
+impl pallet_pgas_allowance::BenchmarkHelperTrait<AccountId, AssetIdForTrustBackedAssets, Balance>
+	for PGASBenchmarkHelper
+{
+	fn mint_pgas(who: &AccountId, asset_id: AssetIdForTrustBackedAssets, amount: Balance) {
+		use frame_support::traits::tokens::fungibles::{Create, Inspect, Mutate};
+		if !<Assets as Inspect<AccountId>>::asset_exists(asset_id) {
+			<Assets as Create<AccountId>>::create(
+				asset_id,
+				PgasAdmin::get(),
+				true,
+				PgasMinBalance::get(),
+			)
+			.expect("create pgas asset");
+		}
+		<Assets as Mutate<AccountId>>::mint_into(asset_id, who, amount).unwrap();
+	}
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+pub struct PgasBenchHelper;
+#[cfg(feature = "runtime-benchmarks")]
+impl indiv_pallet_pgas::benchmarking::BenchmarkHelper<Runtime> for PgasBenchHelper {
+	fn set_time(now: core::time::Duration) {
+		pallet_timestamp::Now::<Runtime>::put(now.as_millis() as u64);
+	}
+
+	/// Seed a single-member Bandersnatch ring at `(identifier, ring_index)` in members-subscriber
+	/// storage and return a real ring-VRF proof for that ring against `context` + `message`.
+	fn seed_and_create_proof(
+		identifier: &indiv_support::traits::Identifier,
+		ring_index: indiv_support::traits::RingIndex,
+		context: &indiv_support::traits::Context,
+		message: &[u8],
+	) -> indiv_pallet_pgas::ProofOf<Runtime> {
+		use indiv_support::genesis::ring_verifier_builder_params;
+		use verifiable::{
+			ring::{
+				ark_vrf::suites::bandersnatch::BandersnatchSha512Ell2,
+				bandersnatch::BandersnatchVrfVerifiable, RingDomainSize,
+			},
+			GenerateVerifiable,
+		};
+
+		type Crypto = BandersnatchVrfVerifiable;
+		let domain = RingDomainSize::Domain11;
+		let chunks = ring_verifier_builder_params::<BandersnatchSha512Ell2>(domain);
+
+		let secret = Crypto::new_secret([42u8; 32]);
+		let member = Crypto::member_from_secret(&secret);
+
+		let mut intermediate = Crypto::start_members(domain);
+		Crypto::push_members(&mut intermediate, core::iter::once(member), |range| {
+			Ok(chunks[range].to_vec())
+		})
+		.expect("push_members succeeds for a single member");
+		let root = Crypto::finish_members(intermediate);
+
+		let revision = 1u32;
+		let record = indiv_pallet_members_subscriber::types::RingCommitmentRecord::<Runtime> {
+			root,
+			revision,
+			source_time: pallet_timestamp::Now::<Runtime>::get() / 1_000,
+			source_sequence: 1,
+		};
+		let mut roots: frame_support::BoundedVec<_, _> = Default::default();
+		roots.try_push(record).expect("MaxRecentRootsPerRing > 0");
+		indiv_pallet_members_subscriber::RingRoots::<Runtime>::insert(
+			*identifier,
+			ring_index,
+			roots,
+		);
+		indiv_pallet_members_subscriber::RingCollectionExponents::<Runtime>::insert(
+			*identifier,
+			indiv_support::traits::RingExponent::R2e9,
+		);
+
+		let commitment = Crypto::open(domain, &member, core::iter::once(member)).expect("open");
+		let (proof, _alias) =
+			Crypto::create(commitment, &secret, &context[..], message).expect("create proof");
+		proof
+	}
 }
 
 /// Precompile address identifier (embedded at bytes [16..18] of the H160 address).
@@ -1583,6 +2398,8 @@ construct_runtime!(
 		ForeignAssets: pallet_assets::<Instance2> = 53,
 		PoolAssets: pallet_assets::<Instance3> = 54,
 		AssetConversion: pallet_asset_conversion = 55,
+		AssetsFreezer: pallet_assets_freezer::<Instance1> = 56,
+		AssetsHolder: pallet_assets_holder::<Instance1> = 57,
 
 		// OpenGov stuff
 		Treasury: pallet_treasury = 60,
@@ -1609,14 +2426,24 @@ construct_runtime!(
 		MultiBlockElectionSigned: pallet_election_provider_multi_block::signed = 88,
 		Staking: pallet_staking_async = 89,
 
+		// Individuality
+		MembersSubscriber: indiv_pallet_members_subscriber = 97,
+		AliasAccounts: indiv_pallet_alias_accounts = 98,
+		Pgas: indiv_pallet_pgas = 99,
+
 		// Contracts
 		Revive: pallet_revive = 100,
 		AssetsPrecompiles: pallet_assets_precompiles::pallet = 101,
 		AssetsPrecompilesPermit: pallet_assets_precompiles::permit::pallet = 102,
 		VestingPrecompiles: pallet_vesting_precompiles::pallet = 103,
 
+		// Individuality (continued)
+		DotnsGateway: indiv_pallet_dotns_gateway = 152,
+		OriginRestriction: indiv_pallet_origin_restriction = 153,
+
 		// Sudo.
 		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 251,
+		PgasAllowance: pallet_pgas_allowance = 252,
 
 		// Asset Hub Migration in the 250s
 		AhOps: pallet_ah_ops = 254,
@@ -1635,7 +2462,19 @@ pub type BlockId = generic::BlockId<Block>;
 pub type TxExtension = cumulus_pallet_weight_reclaim::StorageWeightReclaim<
 	Runtime,
 	(
-		frame_system::AuthorizeCall<Runtime>,
+		// Origin modifiers
+		(
+			AuthorizeValueTransfer<
+				Runtime,
+				paseo_runtime_constants::ValueTransferAuthorizationPubkey,
+			>,
+			frame_system::AuthorizeCall<Runtime>,
+			indiv_pallet_pgas::AsPgas<Runtime>,
+			indiv_pallet_alias_accounts::AsRingAlias<Runtime>,
+			indiv_pallet_dotns_gateway::AsDotnsGateway<Runtime>,
+		),
+		// General checks and operations
+		indiv_pallet_origin_restriction::RestrictOrigin<Runtime>,
 		frame_system::CheckNonZeroSender<Runtime>,
 		frame_system::CheckSpecVersion<Runtime>,
 		frame_system::CheckTxVersion<Runtime>,
@@ -1643,10 +2482,15 @@ pub type TxExtension = cumulus_pallet_weight_reclaim::StorageWeightReclaim<
 		frame_system::CheckEra<Runtime>,
 		frame_system::CheckNonce<Runtime>,
 		frame_system::CheckWeight<Runtime>,
-		pallet_asset_conversion_tx_payment::ChargeAssetTxPayment<Runtime>,
-		pallet_claims::PrevalidateAttests<Runtime>,
-		frame_metadata_hash_extension::CheckMetadataHash<Runtime>,
-		pallet_revive::evm::tx_extension::SetOrigin<Runtime>,
+		pallet_pgas_allowance::ChargePGAS<
+			Runtime,
+			pallet_asset_conversion_tx_payment::ChargeAssetTxPayment<Runtime>,
+		>,
+		(
+			pallet_claims::PrevalidateAttests<Runtime>,
+			frame_metadata_hash_extension::CheckMetadataHash<Runtime>,
+			pallet_revive::evm::tx_extension::SetOrigin<Runtime>,
+		),
 	),
 >;
 
@@ -1661,7 +2505,17 @@ impl pallet_revive::evm::runtime::EthExtra for EthExtraImpl {
 
 	fn get_eth_extension(nonce: u32, tip: Balance) -> Self::ExtensionV0 {
 		(
-			frame_system::AuthorizeCall::<Runtime>::new(),
+			(
+				AuthorizeValueTransfer::<
+					Runtime,
+					paseo_runtime_constants::ValueTransferAuthorizationPubkey,
+				>::default(),
+				frame_system::AuthorizeCall::<Runtime>::new(),
+				indiv_pallet_pgas::AsPgas::<Runtime>::new(None),
+				indiv_pallet_alias_accounts::AsRingAlias::<Runtime>::new(None),
+				indiv_pallet_dotns_gateway::AsDotnsGateway::<Runtime>::new(None),
+			),
+			indiv_pallet_origin_restriction::RestrictOrigin::<Runtime>::new(true),
 			frame_system::CheckNonZeroSender::<Runtime>::new(),
 			frame_system::CheckSpecVersion::<Runtime>::new(),
 			frame_system::CheckTxVersion::<Runtime>::new(),
@@ -1669,12 +2523,63 @@ impl pallet_revive::evm::runtime::EthExtra for EthExtraImpl {
 			frame_system::CheckMortality::from(generic::Era::Immortal),
 			frame_system::CheckNonce::<Runtime>::from(nonce),
 			frame_system::CheckWeight::<Runtime>::new(),
-			pallet_asset_conversion_tx_payment::ChargeAssetTxPayment::<Runtime>::from(tip, None),
-			pallet_claims::PrevalidateAttests::<Runtime>::new(),
-			frame_metadata_hash_extension::CheckMetadataHash::<Runtime>::new(false),
-			pallet_revive::evm::tx_extension::SetOrigin::<Runtime>::new_from_eth_transaction(),
+			pallet_pgas_allowance::ChargePGAS::<
+				Runtime,
+				pallet_asset_conversion_tx_payment::ChargeAssetTxPayment<Runtime>,
+			>::new_skip_pgas(
+				pallet_asset_conversion_tx_payment::ChargeAssetTxPayment::<Runtime>::from(
+					tip, None,
+				),
+			),
+			(
+				pallet_claims::PrevalidateAttests::<Runtime>::new(),
+				frame_metadata_hash_extension::CheckMetadataHash::<Runtime>::new(false),
+				pallet_revive::evm::tx_extension::SetOrigin::<Runtime>::new_from_eth_transaction(),
+			),
 		)
 			.into()
+	}
+}
+
+/// Builds a `TxExtension` carrying only authorization-related checks. Used by the
+/// members-subscriber offchain worker when submitting `replay_missing_roots` via
+/// `frame_system::AuthorizeCall`.
+impl<LocalCall> frame_system::offchain::CreateAuthorizedTransaction<LocalCall> for Runtime
+where
+	RuntimeCall: From<LocalCall>,
+{
+	fn create_extension() -> Self::Extension {
+		TxExtension::from((
+			(
+				AuthorizeValueTransfer::<
+					Runtime,
+					paseo_runtime_constants::ValueTransferAuthorizationPubkey,
+				>::default(),
+				frame_system::AuthorizeCall::<Runtime>::new(),
+				indiv_pallet_pgas::AsPgas::<Runtime>::new(None),
+				indiv_pallet_alias_accounts::AsRingAlias::<Runtime>::new(None),
+				indiv_pallet_dotns_gateway::AsDotnsGateway::<Runtime>::new(None),
+			),
+			indiv_pallet_origin_restriction::RestrictOrigin::<Runtime>::new(true),
+			frame_system::CheckNonZeroSender::<Runtime>::new(),
+			frame_system::CheckSpecVersion::<Runtime>::new(),
+			frame_system::CheckTxVersion::<Runtime>::new(),
+			frame_system::CheckGenesis::<Runtime>::new(),
+			frame_system::CheckEra::<Runtime>::from(generic::Era::Immortal),
+			frame_system::CheckNonce::<Runtime>::from(0),
+			frame_system::CheckWeight::<Runtime>::new(),
+			pallet_pgas_allowance::ChargePGAS::<
+				Runtime,
+				pallet_asset_conversion_tx_payment::ChargeAssetTxPayment<Runtime>,
+			>::new_skip_pgas(
+				pallet_asset_conversion_tx_payment::ChargeAssetTxPayment::<Runtime>::from(0, None),
+			),
+			(
+				pallet_claims::PrevalidateAttests::<Runtime>::new(),
+				frame_metadata_hash_extension::CheckMetadataHash::<Runtime>::new(false),
+				pallet_revive::evm::tx_extension::SetOrigin::<Runtime>::default(),
+			),
+		))
 	}
 }
 
@@ -1811,8 +2716,16 @@ mod benches {
 		[pallet_indices, Indices]
 		[polkadot_runtime_common::claims, Claims]
 		[pallet_ah_ops, AhOps]
+		[pallet_pgas_allowance, PgasAllowance]
 		// TODO(#840): uncomment this so that pallet-revive is also benchmarked with this runtime
 		// [pallet_revive, Revive]
+
+		// Individuality
+		[indiv_pallet_alias_accounts, AliasAccounts]
+		[indiv_pallet_dotns_gateway, DotnsGateway]
+		[indiv_pallet_members_subscriber, MembersSubscriber]
+		[indiv_pallet_origin_restriction, OriginRestriction]
+		[indiv_pallet_pgas, Pgas]
 
 		// XCM
 		[pallet_xcm, PalletXcmExtrinsicsBenchmark::<Runtime>]

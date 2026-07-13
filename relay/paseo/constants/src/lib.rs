@@ -225,6 +225,99 @@ pub mod system_parachain {
 /// Paseo Treasury pallet instance.
 pub const TREASURY_PALLET_ID: u8 = 19;
 
+/// Value-transfer authorization key.
+pub mod auth_keys {
+	use frame_support::parameter_types;
+	use hex_literal::hex;
+	use sp_core::ed25519::Public;
+
+	/// Ed25519 public key bytes for value-transfer authorization.
+	///
+	/// Public half of the W3S authorizer key held by the apps; the apps sign
+	/// `AuthorizeValueTransfer` payloads with the corresponding secret. Rotate the on-chain
+	/// `ValueTransferAuthorizationPubkey` parameter via Root `system.setStorage` to change it
+	/// without a runtime upgrade.
+	pub const VALUE_TRANSFER_AUTHORIZATION_PUBKEY_BYTES: [u8; 32] =
+		hex!("42848a49406c38281557d49a447ff5c87de698eb44e88dae6ab9884f961727ba");
+
+	#[cfg(feature = "std")]
+	std::thread_local! {
+		static AUTHORIZATION_PUBKEY_OVERRIDE: core::cell::RefCell<Option<Public>> =
+			const { core::cell::RefCell::new(None) };
+	}
+
+	/// Test-only: install a per-thread override for the authorization public key.
+	///
+	/// The override only applies on `feature = "std"` (which is what `cargo test`
+	/// uses). When the wasm runtime executes on-chain, the storage-backed parameter
+	/// below is the source of truth, falling back to the embedded const only when
+	/// storage has not been populated.
+	#[cfg(feature = "std")]
+	pub fn set_value_transfer_authorization_pubkey_override(pubkey: Option<Public>) {
+		AUTHORIZATION_PUBKEY_OVERRIDE.with(|cell| *cell.borrow_mut() = pubkey);
+	}
+
+	/// Typed accessor for the authorization key.
+	///
+	/// Resolution order:
+	/// 1. Per-thread override (std-only, set via
+	///    `set_value_transfer_authorization_pubkey_override`)
+	/// 2. Compile-time const `VALUE_TRANSFER_AUTHORIZATION_PUBKEY_BYTES`
+	pub fn value_transfer_authorization_pubkey() -> Public {
+		#[cfg(feature = "std")]
+		if let Some(pubkey) = AUTHORIZATION_PUBKEY_OVERRIDE.with(|cell| *cell.borrow()) {
+			return pubkey;
+		}
+		Public::from_raw(VALUE_TRANSFER_AUTHORIZATION_PUBKEY_BYTES)
+	}
+
+	parameter_types! {
+		/// Storage-backed override of the authorizer key, falling back to
+		/// `VALUE_TRANSFER_AUTHORIZATION_PUBKEY_BYTES` when unset. Rotate it live (Root) without a
+		/// runtime upgrade by writing the raw 32-byte pubkey at its storage key:
+		///
+		/// `twox_128(":ValueTransferAuthorizationPubkey:")` = `0xee09ea9497a37b3d30df6f09e7f66e69`
+		///
+		/// e.g. `System::set_storage([(0xee09ea9497a37b3d30df6f09e7f66e69, <pubkey>)])`.
+		pub storage ValueTransferAuthorizationPubkey: Public =
+			value_transfer_authorization_pubkey();
+	}
+}
+
+pub use auth_keys::{
+	value_transfer_authorization_pubkey, ValueTransferAuthorizationPubkey,
+	VALUE_TRANSFER_AUTHORIZATION_PUBKEY_BYTES,
+};
+
+/// Protected-asset identifiers used by both runtimes.
+///
+/// `PROTECTED_ASSET_ID` is the pallet-assets u32 id used on Asset Hub (where Assets is keyed by
+/// u32). `ProtectedAssetLocation` is the XCM `Location` view used on the People chain (where Assets
+/// is Location-keyed) and by the `ProtectedAssetTransactor` XCM filter.
+pub mod protected_asset {
+	use frame_support::parameter_types;
+	use xcm::latest::{Junction, Location};
+
+	/// Protected-asset pallet-assets u32 id.
+	pub const PROTECTED_ASSET_ID: u32 = 50_000_413;
+
+	parameter_types! {
+		/// Protected-asset pallet-assets u32 id, exposed as `Get<u32>`.
+		pub const ProtectedAssetId: u32 = PROTECTED_ASSET_ID;
+		/// Protected-asset pallet-assets `Location`.
+		pub ProtectedAssetLocation: Location = Location::new(
+			1,
+			[
+				Junction::Parachain(crate::system_parachain::ASSET_HUB_ID),
+				Junction::PalletInstance(50),
+				Junction::GeneralIndex(PROTECTED_ASSET_ID as u128),
+			],
+		);
+	}
+}
+
+pub use protected_asset::{ProtectedAssetId, ProtectedAssetLocation, PROTECTED_ASSET_ID};
+
 pub mod proxy {
 	use pallet_remote_proxy::ProxyDefinition;
 	use polkadot_primitives::{AccountId, BlakeTwo256, BlockNumber, Hash};

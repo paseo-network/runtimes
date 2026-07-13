@@ -16,7 +16,10 @@
 
 //! Genesis configs presets for the AssetHubPaseo runtime
 
-use crate::{xcm_config::UniversalLocation, *};
+use crate::{
+	xcm_config::{StakingPot, UniversalLocation},
+	*,
+};
 use alloc::vec::Vec;
 use pallet_revive::AddressMapper;
 use parachains_common::AuraId;
@@ -28,6 +31,9 @@ use xcm_builder::GlobalConsensusConvertsFor;
 use xcm_executor::traits::ConvertLocation;
 
 const ASSET_HUB_POLKADOT_ED: Balance = ExistentialDeposit::get();
+
+/// External asset id on Asset Hub. Mirrors `ExternalAssetLocation` in the People chain.
+pub const EXTERNAL_ASSET_ID: u32 = 50_000_413;
 
 /// Invulnerable Collators for the particular case of AssetHubPaseo
 pub fn invulnerables_asset_hub_paseo() -> Vec<(AccountId, AuraId)> {
@@ -44,26 +50,15 @@ fn asset_hub_paseo_genesis(
 	foreign_assets: Vec<(Location, AccountId, Balance)>,
 	foreign_assets_endowed_accounts: Vec<(Location, AccountId, Balance)>,
 ) -> serde_json::Value {
-	let mut balances: Vec<(AccountId, Balance)> = endowed_accounts
-		.iter()
-		.cloned()
-		.map(|k| (k, ASSET_HUB_POLKADOT_ED * 4096 * 4096))
-		.collect();
-	// Ensure the DAP buffer and staging accounts hold at least the existential
-	// deposit, but skip any account a preset has already endowed (the dev preset
-	// seeds the staging account explicitly). Pushing a duplicate account makes the
-	// `balances` genesis builder panic with "duplicate balances in genesis", which
-	// silently breaks benchmarking (`frame-omni-bencher` builds a genesis preset)
-	// and dev chain-spec generation.
-	for account in [Dap::buffer_account(), Dap::staging_account()] {
-		if !balances.iter().any(|(who, _)| *who == account) {
-			balances.push((account, ASSET_HUB_POLKADOT_ED));
-		}
-	}
-
+	let dev_stakers =
+		if cfg!(feature = "runtime-benchmarks") { Some((2_000, 25_000)) } else { None };
 	serde_json::json!({
 		"balances": BalancesConfig {
-			balances,
+			balances: endowed_accounts
+				.iter()
+				.cloned()
+				.map(|k| (k, ASSET_HUB_POLKADOT_ED * 4096 * 4096))
+				.collect(),
 			dev_accounts: None,
 		},
 		"parachainInfo": ParachainInfoConfig {
@@ -96,7 +91,7 @@ fn asset_hub_paseo_genesis(
 		},
 		"staking": {
 			"validatorCount": 100,
-			"devStakers": Some((2_000, 25_000)),
+			"devStakers": dev_stakers,
 		},
 		"foreignAssets": ForeignAssetsConfig {
 			assets: foreign_assets
@@ -110,7 +105,7 @@ fn asset_hub_paseo_genesis(
 			..Default::default()
 		},
 		"revive": ReviveConfig {
-			mapped_accounts: endowed_accounts.iter().filter(|x| ! <Runtime as pallet_revive::Config>::AddressMapper::is_mapped(x)).cloned().collect(),
+			mapped_accounts: endowed_accounts.iter().filter(|x| !<Runtime as pallet_revive::Config>::AddressMapper::is_eth_derived(x)).cloned().collect(),
 			accounts: Vec::new(),
 			debug_settings: None,
 		},
@@ -150,8 +145,8 @@ fn asset_hub_paseo_development_genesis(para_id: ParaId) -> serde_json::Value {
 	asset_hub_paseo_genesis(
 		invulnerables_asset_hub_paseo(),
 		testnet_accounts_with([
-			// Make sure the DAP staging account is funded for benchmarking purposes.
-			Dap::staging_account(),
+			// Make sure `StakingPot` is funded for benchmarking purposes.
+			StakingPot::get(),
 		]),
 		para_id,
 		vec![],

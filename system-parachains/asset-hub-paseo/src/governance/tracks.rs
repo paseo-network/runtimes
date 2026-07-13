@@ -261,7 +261,7 @@ const TRACKS_DATA: [pallet_referenda::Track<u16, Balance, BlockNumber>; 16] = [
 		info: pallet_referenda::TrackInfo {
 			name: s("small_spender"),
 			max_deciding: 5,
-			decision_deposit: 500 * DOLLARS,
+			decision_deposit: GRAND,
 			prepare_period: 4 * RC_HOURS,
 			decision_period: 28 * RC_DAYS,
 			confirm_period: 2 * RC_DAYS,
@@ -274,8 +274,8 @@ const TRACKS_DATA: [pallet_referenda::Track<u16, Balance, BlockNumber>; 16] = [
 		id: 33,
 		info: pallet_referenda::TrackInfo {
 			name: s("medium_spender"),
-			max_deciding: 5,
-			decision_deposit: GRAND,
+			max_deciding: 50,
+			decision_deposit: 200 * DOLLARS,
 			prepare_period: 4 * RC_HOURS,
 			decision_period: 28 * RC_DAYS,
 			confirm_period: 4 * RC_DAYS,

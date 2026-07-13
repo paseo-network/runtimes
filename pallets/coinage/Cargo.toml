@@ -1,0 +1,87 @@
+[package]
+name = "indiv-pallet-coinage"
+description = "Coinage pallet for People"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+readme.workspace = true
+
+[lints]
+workspace = true
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+codec = { workspace = true, features = ["derive"] }
+log = { workspace = true }
+scale-info = { workspace = true, features = ["derive"] }
+frame-benchmarking = { workspace = true, optional = true }
+hex-literal = { workspace = true, optional = true }
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+sp-core = { workspace = true }
+sp-runtime = { workspace = true }
+verifiable = { workspace = true }
+indiv-support = { workspace = true }
+
+[dev-dependencies]
+pallet-balances = { workspace = true }
+pallet-assets = { workspace = true }
+pallet-assets-holder = { workspace = true }
+sp-io = { workspace = true }
+parking_lot = { workspace = true }
+frame-executive = { workspace = true }
+indiv-pallet-members = { workspace = true }
+indiv-pallet-chunks-manager = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+	"codec/std",
+	"frame-benchmarking?/std",
+	"frame-executive/std",
+	"frame-support/std",
+	"frame-system/std",
+	"indiv-pallet-chunks-manager/std",
+	"indiv-pallet-members/std",
+	"indiv-support/genesis",
+	"indiv-support/std",
+	"log/std",
+	"pallet-assets-holder/std",
+	"pallet-assets/std",
+	"pallet-balances/std",
+	"scale-info/std",
+	"sp-core/std",
+	"sp-io/std",
+	"sp-runtime/std",
+	"verifiable/std",
+]
+runtime-benchmarks = [
+	"frame-benchmarking/runtime-benchmarks",
+	"frame-support/runtime-benchmarks",
+	"frame-system/runtime-benchmarks",
+	"hex-literal",
+	"indiv-pallet-chunks-manager/runtime-benchmarks",
+	"indiv-pallet-members/runtime-benchmarks",
+	"indiv-support/runtime-benchmarks",
+	"pallet-assets-holder/runtime-benchmarks",
+	"pallet-assets/runtime-benchmarks",
+	"pallet-balances/runtime-benchmarks",
+	"sp-runtime/runtime-benchmarks",
+]
+benchmark-proof-cache-regenerate = []
+try-runtime = [
+	"frame-executive/try-runtime",
+	"frame-support/try-runtime",
+	"frame-system/try-runtime",
+	"indiv-pallet-chunks-manager/try-runtime",
+	"indiv-pallet-members/try-runtime",
+	"pallet-assets-holder/try-runtime",
+	"pallet-assets/try-runtime",
+	"pallet-balances/try-runtime",
+	"sp-runtime/try-runtime",
+]

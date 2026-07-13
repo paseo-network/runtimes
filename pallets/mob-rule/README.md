@@ -1,0 +1,25 @@
+# Mob Rule Pallet
+
+- Index prefix: 0x00
+- Maps:
+  - `OpenCases`, `RipeCases`, `DoneCases`
+  - `Votes`, `VotedOn`, `CreditOf`
+- Traits:
+  - Implements `StatementOracle`
+    - Creates cases for factual statements.
+    - Tallies votes from people in the `MOB_CONTEXT`.
+    - Resolves callbacks with a final `Judgement`.
+- Dispatchables:
+  - `vote(...)`
+    - Cast a judgement on an open case.
+  - `close(...)`
+    - Close a ripe case and execute its callback.
+  - `claim(...)`
+    - Claim voter rewards after case completion.
+  - `reap(...)`
+    - Remove an expired done case.
+  - `intervene(...)`
+    - Governance forces a verdict for an open case.
+- Uses:
+  - People pallet for person-only voting via `MOB_CONTEXT`
+  - Statement callbacks for downstream pallets such as Proof-of-Ink

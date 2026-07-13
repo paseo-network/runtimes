@@ -14,16 +14,12 @@
 // limitations under the License.
 
 use crate::{governance::Treasurer, *};
-use frame_support::traits::{
-	fungible::HoldConsideration, tokens::UnityOrOuterConversion, FromContains,
-};
-use pallet_bounties::TransferAllFungibles;
-use parachains_common::pay::{AccountIdToLocalLocation, LocalPay, VersionedLocatableAccount};
+use frame_support::traits::{tokens::UnityOrOuterConversion, FromContains};
+use parachains_common::pay::VersionedLocatableAccount;
 use polkadot_runtime_common::impls::{ContainsParts, VersionedLocatableAsset};
 
 parameter_types! {
 	pub const SpendPeriod: BlockNumber = 3 * RC_DAYS;
-	pub const DisableSpends: BlockNumber = BlockNumber::MAX;
 	pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
 	pub const PayoutSpendPeriod: BlockNumber = 4 * RC_DAYS;
 	pub const MaxApprovals: u32 = 100;
@@ -93,9 +89,9 @@ impl pallet_bounties::Config for Runtime {
 	type ChildBountyManager = ChildBounties;
 	type DataDepositPerByte = DataDepositPerByte;
 	type MaximumReasonLength = MaximumReasonLength;
-	type OnSlash = pallet_dap::DapLegacyAdapter<Runtime, Balances>;
+	type OnSlash = Treasury;
 	type WeightInfo = weights::pallet_bounties::WeightInfo<Runtime>;
-	type TransferAllAssets = TransferAllFungibles<AccountId, NativeAndAssets, BountyRelevantAssets>;
+	type TransferAllAssets = ();
 }
 
 parameter_types! {
@@ -108,60 +104,6 @@ impl pallet_child_bounties::Config for Runtime {
 	type MaxActiveChildBountyCount = MaxActiveChildBountyCount;
 	type ChildBountyValueMinimum = ChildBountyValueMinimum;
 	type WeightInfo = weights::pallet_child_bounties::WeightInfo<Runtime>;
-}
-
-parameter_types! {
-	pub const MultiAssetCuratorHoldReason: RuntimeHoldReason =
-		RuntimeHoldReason::MultiAssetBounties(pallet_multi_asset_bounties::HoldReason::CuratorDeposit);
-}
-
-impl pallet_multi_asset_bounties::Config for Runtime {
-	type Balance = Balance;
-	type RejectOrigin = EitherOfDiverse<EnsureRoot<AccountId>, Treasurer>;
-	type SpendOrigin = TreasurySpender;
-	type AssetKind = VersionedLocatableAsset;
-	type Beneficiary = VersionedLocatableAccount;
-	type BeneficiaryLookup = IdentityLookup<Self::Beneficiary>;
-	type BountyValueMinimum = BountyValueMinimum;
-	type ChildBountyValueMinimum = ChildBountyValueMinimum;
-	type MaxActiveChildBountyCount = MaxActiveChildBountyCount;
-	type WeightInfo = weights::pallet_multi_asset_bounties::WeightInfo<Runtime>;
-	type FundingSource = pallet_multi_asset_bounties::PalletIdAsFundingSource<
-		TreasuryPalletId,
-		Runtime,
-		AccountIdToLocalLocation,
-	>;
-	type BountySource = pallet_multi_asset_bounties::BountySourceFromPalletId<
-		TreasuryPalletId,
-		pallet_multi_asset_bounties::BountyAccountPrefix,
-		Runtime,
-		AccountIdToLocalLocation,
-	>;
-	type ChildBountySource = pallet_multi_asset_bounties::ChildBountySourceFromPalletId<
-		TreasuryPalletId,
-		pallet_multi_asset_bounties::ChildBountyAccountPrefix,
-		Runtime,
-		AccountIdToLocalLocation,
-	>;
-	type Paymaster = LocalPay<NativeAndAssets, AccountId, xcm_config::LocationToAccountId>;
-	type BalanceConverter = AssetRateWithNative;
-	type Preimages = Preimage;
-	type Consideration = HoldConsideration<
-		AccountId,
-		Balances,
-		MultiAssetCuratorHoldReason,
-		pallet_multi_asset_bounties::CuratorDepositAmount<
-			CuratorDepositMultiplier,
-			CuratorDepositMin,
-			CuratorDepositMax,
-			Balance,
-		>,
-		Balance,
-	>;
-	#[cfg(feature = "runtime-benchmarks")]
-	type BenchmarkHelper = parachains_common::pay::benchmarks::LocalPayWithSourceArguments<
-		xcm_config::TrustBackedAssetsPalletIndex,
-	>;
 }
 
 /// The [frame_support::traits::tokens::ConversionFromAssetBalance] implementation provided by the

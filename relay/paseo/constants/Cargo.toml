@@ -10,6 +10,7 @@ license.workspace = true
 smallvec = { workspace = true }
 codec = { workspace = true }
 scale-info = { workspace = true }
+hex-literal = { workspace = true }
 
 frame-support = { workspace = true }
 pallet-remote-proxy = { workspace = true }

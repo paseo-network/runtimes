@@ -17,9 +17,16 @@
 //! Governance configurations for the Asset Hub runtime.
 
 use super::*;
-use crate::xcm_config::FellowshipLocation;
+use crate::{
+	treasury::{AssetRateWithNative, TreasuryPalletId},
+	xcm_config::FellowshipLocation,
+};
+use frame_support::traits::fungible::HoldConsideration;
 use frame_system::EnsureRootWithSuccess;
 use pallet_xcm::{EnsureXcm, IsVoiceOfBody};
+use parachains_common::pay::{AccountIdToLocalLocation, LocalPay, VersionedLocatableAccount};
+use polkadot_runtime_common::impls::VersionedLocatableAsset;
+use sp_runtime::traits::IdentityLookup;
 use xcm::latest::BodyId;
 
 mod origins;
@@ -86,7 +93,7 @@ impl pallet_referenda::Config for Runtime {
 	type SubmitOrigin = frame_system::EnsureSigned<AccountId>;
 	type CancelOrigin = EitherOf<EnsureRoot<AccountId>, ReferendumCanceller>;
 	type KillOrigin = EitherOf<EnsureRoot<AccountId>, ReferendumKiller>;
-	type Slash = pallet_dap::DapLegacyAdapter<Runtime, Balances>;
+	type Slash = Treasury;
 	type Votes = pallet_conviction_voting::VotesOf<Runtime>;
 	type Tally = pallet_conviction_voting::TallyOf<Runtime>;
 	type SubmissionDeposit = SubmissionDeposit;
@@ -96,4 +103,64 @@ impl pallet_referenda::Config for Runtime {
 	type Tracks = TracksInfo;
 	type Preimages = Preimage;
 	type BlockNumberProvider = RelaychainDataProvider<Runtime>;
+}
+
+parameter_types! {
+	pub const MultiAssetBountyValueMinimum: Balance = 200 * CENTS;
+	pub const MultiAssetChildBountyValueMinimum: Balance = MultiAssetBountyValueMinimum::get() / 10;
+	pub const MultiAssetMaxActiveChildBountyCount: u32 = 100;
+	pub const MultiAssetCuratorHoldReason: RuntimeHoldReason =
+		RuntimeHoldReason::MultiAssetBounties(pallet_multi_asset_bounties::HoldReason::CuratorDeposit);
+	pub const MultiAssetCuratorDepositFromValueMultiplier: Permill = Permill::from_percent(10);
+	pub const MultiAssetCuratorDepositMin: Balance = 10 * CENTS;
+	pub const MultiAssetCuratorDepositMax: Balance = 500 * CENTS;
+}
+
+impl pallet_multi_asset_bounties::Config for Runtime {
+	type Balance = Balance;
+	type RejectOrigin = EitherOfDiverse<EnsureRoot<AccountId>, Treasurer>;
+	type SpendOrigin = TreasurySpender;
+	type AssetKind = VersionedLocatableAsset;
+	type Beneficiary = VersionedLocatableAccount;
+	type BeneficiaryLookup = IdentityLookup<Self::Beneficiary>;
+	type BountyValueMinimum = MultiAssetBountyValueMinimum;
+	type ChildBountyValueMinimum = MultiAssetChildBountyValueMinimum;
+	type MaxActiveChildBountyCount = MultiAssetMaxActiveChildBountyCount;
+	type WeightInfo = weights::pallet_multi_asset_bounties::WeightInfo<Runtime>;
+	type FundingSource = pallet_multi_asset_bounties::PalletIdAsFundingSource<
+		TreasuryPalletId,
+		Runtime,
+		AccountIdToLocalLocation,
+	>;
+	type BountySource = pallet_multi_asset_bounties::BountySourceFromPalletId<
+		TreasuryPalletId,
+		pallet_multi_asset_bounties::BountyAccountPrefix,
+		Runtime,
+		AccountIdToLocalLocation,
+	>;
+	type ChildBountySource = pallet_multi_asset_bounties::ChildBountySourceFromPalletId<
+		TreasuryPalletId,
+		pallet_multi_asset_bounties::ChildBountyAccountPrefix,
+		Runtime,
+		AccountIdToLocalLocation,
+	>;
+	type Paymaster = LocalPay<NativeAndAssets, AccountId, xcm_config::LocationToAccountId>;
+	type BalanceConverter = AssetRateWithNative;
+	type Preimages = Preimage;
+	type Consideration = HoldConsideration<
+		AccountId,
+		Balances,
+		MultiAssetCuratorHoldReason,
+		pallet_multi_asset_bounties::CuratorDepositAmount<
+			MultiAssetCuratorDepositFromValueMultiplier,
+			MultiAssetCuratorDepositMin,
+			MultiAssetCuratorDepositMax,
+			Balance,
+		>,
+		Balance,
+	>;
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = parachains_common::pay::benchmarks::LocalPayWithSourceArguments<
+		xcm_config::TrustBackedAssetsPalletIndex,
+	>;
 }

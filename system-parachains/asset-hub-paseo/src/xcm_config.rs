@@ -17,8 +17,8 @@ use cumulus_primitives_core::ParaId;
 pub use TreasuryAccount as RelayTreasuryPalletAccount;
 
 use super::{
-	treasury, AccountId, AllExceptReapStash, AllPalletsWithSystem, AssetConversion, Assets,
-	Balance, Balances, ForeignAssets, GeneralAdmin, NativeAndAssets, ParachainInfo,
+	treasury, AccountId, AllPalletsWithSystem, AssetConversion, Assets, Balance, Balances,
+	CollatorSelection, ForeignAssets, GeneralAdmin, NativeAndAssets, ParachainInfo,
 	ParachainSystem, PaseoWeightToFee as WeightToFee, PolkadotXcm, PoolAssets,
 	PriceForParentDelivery, Runtime, RuntimeCall, RuntimeEvent, RuntimeHoldReason, RuntimeOrigin,
 	StakingAdmin, ToKusamaXcmRouter, Treasurer, XcmpQueue,
@@ -43,12 +43,15 @@ use frame_support::{
 	},
 };
 use frame_system::EnsureRoot;
+use indiv_pallet_value_transfer_auth::{
+	allow_only_siblings::AllowOnlySiblings, ProtectedAssetTransactor,
+};
 use pallet_xcm::{AuthorizedAliasers, XcmPassthrough};
 use parachains_common::xcm_config::{
 	AllSiblingSystemParachains, ConcreteAssetFromSystem, ParentRelayOrSiblingParachains,
 	RelayOrOtherSystemParachains,
 };
-use paseo_runtime_constants::system_parachain;
+use paseo_runtime_constants::{system_parachain, PROTECTED_ASSET_ID};
 use polkadot_parachain_primitives::primitives::Sibling;
 use snowbridge_outbound_queue_primitives::v2::exporter::PausableExporter;
 use sp_runtime::traits::TryConvertInto;
@@ -69,7 +72,6 @@ use xcm_builder::{
 };
 use xcm_executor::{traits::ConvertLocation, XcmExecutor};
 
-use crate::staking::DapStagingAccount;
 pub use system_parachains_constants::paseo::locations::{AssetHubLocation, RelayChainLocation};
 
 parameter_types! {
@@ -88,6 +90,9 @@ parameter_types! {
 	pub RelayTreasuryLocation: Location = (Parent, PalletInstance(paseo_runtime_constants::TREASURY_PALLET_ID)).into();
 	pub PoolAssetsPalletLocation: Location =
 		PalletInstance(<PoolAssets as PalletInfoAccess>::index() as u8).into();
+	pub StakingPot: AccountId = CollatorSelection::account_id();
+	pub AssetHubParaId: u32 = system_parachain::ASSET_HUB_ID;
+	pub PeopleParaId: u32 = system_parachain::PEOPLE_ID;
 	// Test [`crate::tests::treasury_pallet_account_not_none`] ensures that the result of location
 	// conversion is not `None`.
 	// Account address: `14xmwinmCEz6oRrFdczHKqHgWNMiCysE2KrA4jXXAAM1Eogk`
@@ -98,7 +103,8 @@ parameter_types! {
 	/// The Checking Account along with the indication that the local chain is able to mint tokens.
 	pub SelfParaId: ParaId = ParachainInfo::parachain_id();
 	/// The Checking Account along with the indication that the local chain is able to mint tokens.
-	pub TeleportTracking: Option<(AccountId, MintLocation)> = Some((CheckingAccount::get(), MintLocation::Local));
+	pub TeleportTracking: Option<(AccountId, MintLocation)> =
+		Some((CheckingAccount::get(), MintLocation::Local));
 	pub const Here: Location = Location::here();
 }
 
@@ -194,7 +200,15 @@ pub type PoolAssetsConvertedConcreteId =
 	assets_common::PoolAssetsConvertedConcreteId<PoolAssetsPalletLocation, Balance>;
 
 /// Means for transacting assets on this chain.
-pub type AssetTransactors = (FungibleTransactor, FungiblesTransactor, ForeignFungiblesTransactor);
+// The protected asset is a local trust-backed asset on Asset Hub, so the executor presents it
+// to the transactor in the chain-local (`parents: 0`) form. Key the guard off that anchor
+// (`ExternalAssetLocation`), not the sibling (`parents: 1`) `ProtectedAssetLocation` used on the
+// People chain — otherwise the guard never matches and the block flag is bypassable here.
+pub type AssetTransactors = ProtectedAssetTransactor<
+	(FungibleTransactor, FungiblesTransactor, ForeignFungiblesTransactor),
+	ExternalAssetLocation,
+	AllowOnlySiblings<AssetHubParaId, PeopleParaId>,
+>;
 
 /// Asset converter for pool assets.
 /// Used to convert one asset to another, when there is a pool available between the two.
@@ -311,6 +325,25 @@ impl Contains<Location> for AmbassadorEntities {
 	}
 }
 
+/// Location type to determine the Secretary Collective related
+/// pallets for use in XCM.
+pub struct SecretaryEntities;
+impl Contains<Location> for SecretaryEntities {
+	fn contains(location: &Location) -> bool {
+		const SECRETARY_SALARY_PALLET_INDEX: u8 = 81;
+		matches!(
+			location.unpack(),
+			(
+				1,
+				[
+					Parachain(system_parachain::COLLECTIVES_ID),
+					PalletInstance(SECRETARY_SALARY_PALLET_INDEX)
+				]
+			)
+		)
+	}
+}
+
 pub struct ParentOrParentsPlurality;
 impl Contains<Location> for ParentOrParentsPlurality {
 	fn contains(location: &Location) -> bool {
@@ -348,6 +381,7 @@ pub type Barrier = TrailingSetTopicAsId<
 							Equals<RelayTreasuryLocation>,
 							Equals<bridging::SiblingBridgeHub>,
 							AmbassadorEntities,
+							SecretaryEntities,
 							IsSiblingSystemParachain<ParaId, parachain_info::Pallet<Runtime>>,
 						),
 						TrustedAliasers,
@@ -371,6 +405,7 @@ pub type WaivedLocations = (
 	Equals<RelayTreasuryLocation>,
 	FellowshipEntities,
 	AmbassadorEntities,
+	SecretaryEntities,
 	LocalPlurality,
 );
 
@@ -382,14 +417,34 @@ pub type TrustedReserves = (
 	>,
 );
 
+parameter_types! {
+	/// Asset Hub-local view of the external asset, re-anchored to this chain.
+	pub ExternalAssetLocation: Location = Location::new(
+		0,
+		[PalletInstance(TrustBackedAssetsPalletIndex::get()), GeneralIndex(PROTECTED_ASSET_ID as u128)],
+	);
+	pub PeopleLocation: Location = Location::new(1, [Parachain(system_parachain::PEOPLE_ID)]);
+}
+
+/// Accept an external asset as a teleport only when it comes from the
+/// People parachain.
+pub struct ExternalAssetFromPeople;
+impl ContainsPair<Asset, Location> for ExternalAssetFromPeople {
+	fn contains(asset: &Asset, origin: &Location) -> bool {
+		origin == &PeopleLocation::get() && asset.id.0 == ExternalAssetLocation::get()
+	}
+}
+
 /// Cases where a remote origin is accepted as trusted Teleporter for a given asset:
 ///
-/// - DOT with the parent Relay Chain and sibling system parachains; and
+/// - DOT with the parent Relay Chain and sibling system parachains;
 /// - Sibling parachains' assets according to their configured trusted reserves (teleportable when
-///   `Here` and `origin` are both trusted reserve locations).
+///   `Here` and `origin` are both trusted reserve locations); and
+/// - an external asset from the People parachain.
 pub type TrustedTeleporters = (
 	ConcreteAssetFromSystem<DotLocation>,
 	IsForeignConcreteAsset<TeleportableAssetWithTrustedReserve<SelfParaId, crate::ForeignAssets>>,
+	ExternalAssetFromPeople,
 );
 
 /// During migration we only allow teleports of foreign assets (not DOT).
@@ -440,7 +495,7 @@ impl xcm_executor::Config for XcmConfig {
 			DotLocation,
 			AccountId,
 			Balances,
-			ResolveTo<DapStagingAccount, Balances>,
+			ResolveTo<StakingPot, Balances>,
 		>,
 		// This trader allows to pay with any assets exchangeable to DOT with
 		// [`AssetConversion`].
@@ -453,7 +508,7 @@ impl xcm_executor::Config for XcmConfig {
 				TrustBackedAssetsAsLocation<TrustBackedAssetsPalletLocation, Balance, Location>,
 				ForeignAssetsConvertedConcreteId,
 			),
-			ResolveAssetTo<DapStagingAccount, NativeAndAssets>,
+			ResolveAssetTo<StakingPot, NativeAndAssets>,
 			AccountId,
 		>,
 	);
@@ -466,13 +521,19 @@ impl xcm_executor::Config for XcmConfig {
 	type AssetExchanger = PoolAssetsExchanger;
 	type FeeManager = XcmFeeManagerFromComponents<
 		WaivedLocations,
-		SendXcmFeeToAccount<Self::AssetTransactor, DapStagingAccount>,
+		SendXcmFeeToAccount<Self::AssetTransactor, TreasuryAccount>,
 	>;
 	type MessageExporter = ();
 	type UniversalAliases =
 		(bridging::to_kusama::UniversalAliases, bridging::to_ethereum::UniversalAliases);
 	type CallDispatcher = RuntimeCall;
-	type SafeCallFilter = AllExceptReapStash;
+	// Inbound XCM `Transact` is bounced through the same protected-asset value-transfer gate as
+	// local dispatch: the block flag defaults to BLOCKED because no
+	// `AuthorizeValueTransfer::prepare` runs for XCM-borne calls, so any protected-asset-touching
+	// call carried inside a `Transact` is rejected before dispatch.
+	type SafeCallFilter = indiv_pallet_value_transfer_auth::BlockValueTransfersWhenFlagSet<
+		crate::value_transfer_filter::AhValueTransferFilter,
+	>;
 	type Aliasers = TrustedAliasers;
 	type TransactionalProcessor = FrameTransactionalProcessor;
 	type HrmpNewChannelOpenRequestHandler = ();
