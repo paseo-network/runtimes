@@ -23,7 +23,7 @@ mod tests;
 
 #[cfg(feature = "runtime-benchmarks")]
 pub mod benchmarking;
-mod weights;
+pub mod weights;
 
 use codec::Encode;
 use cumulus_primitives_core::ParaId;
