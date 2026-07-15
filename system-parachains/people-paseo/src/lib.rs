@@ -176,7 +176,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: Cow::Borrowed("people-paseo"),
 	impl_name: Cow::Borrowed("people-paseo"),
 	authoring_version: 1,
-	spec_version: 2_004_000,
+	spec_version: 2_004_001,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -1044,6 +1044,33 @@ mod benches {
 #[cfg(feature = "runtime-benchmarks")]
 use benches::*;
 
+/// Temporarily lifts the value-transfer block flag for the duration of a runtime-API call,
+/// restoring the previous value on drop.
+///
+/// Dry-runs (`DryRunApi`) do not execute transaction extensions, so
+/// `AuthorizeValueTransfer::prepare` never calls `block_flag::unblock()` during fee-estimation.
+/// This lets a client fee-estimate a People->AH withdraw (`WithdrawAsset` of the protected asset
+/// executed on People) without `ProtectedAssetTransactor::withdraw_asset` returning `NoPermission`
+/// and emptying `forwarded_xcms`. The RAII guard save-and-restores the prior flag (rather than a
+/// blind `block()`), which is mandatory because `block_flag` is a Wasm `static mut` that persists
+/// across runtime-API calls and is not rolled back by the dry-run overlay.
+fn value_transfer_block_flag_scope() -> impl Drop {
+	use indiv_pallet_value_transfer_auth::extension::block_flag;
+	struct Restore(bool);
+	impl Drop for Restore {
+		fn drop(&mut self) {
+			if self.0 {
+				block_flag::block();
+			} else {
+				block_flag::unblock();
+			}
+		}
+	}
+	let prev = block_flag::is_blocked();
+	block_flag::unblock();
+	Restore(prev)
+}
+
 impl_runtime_apis! {
 	impl sp_consensus_aura::AuraApi<Block, AuraId> for Runtime {
 		fn slot_duration() -> sp_consensus_aura::SlotDuration {
@@ -1230,10 +1257,12 @@ impl_runtime_apis! {
 
 	impl xcm_runtime_apis::dry_run::DryRunApi<Block, RuntimeCall, RuntimeEvent, OriginCaller> for Runtime {
 		fn dry_run_call(origin: OriginCaller, call: RuntimeCall, result_xcms_version: XcmVersion) -> Result<CallDryRunEffects<RuntimeEvent>, XcmDryRunApiError> {
+			let _guard = value_transfer_block_flag_scope();
 			PolkadotXcm::dry_run_call::<Runtime, xcm_config::XcmRouter, OriginCaller, RuntimeCall>(origin, call, result_xcms_version)
 		}
 
 		fn dry_run_xcm(origin_location: VersionedLocation, xcm: VersionedXcm<RuntimeCall>) -> Result<XcmDryRunEffects<RuntimeEvent>, XcmDryRunApiError> {
+			let _guard = value_transfer_block_flag_scope();
 			PolkadotXcm::dry_run_xcm::<xcm_config::XcmRouter>(origin_location, xcm)
 		}
 	}
