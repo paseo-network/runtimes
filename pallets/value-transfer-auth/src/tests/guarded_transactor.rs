@@ -223,12 +223,17 @@ fn withdraw_non_protected_asset_passes_when_blocked() {
 }
 
 #[test]
-fn deposit_protected_asset_when_blocked_rejects() {
+fn deposit_protected_asset_with_cleared_origin_passes_when_blocked() {
+	// A cleared origin (`context.origin == None`) is the post-`ClearOrigin` teleport-settlement
+	// shape. It is permitted even while blocked: provenance was already enforced at
+	// `ReceiveTeleportedAsset`, before `ClearOrigin` nulled the origin.
 	let _guard = reset();
+	let ctx = context();
 
-	let result = Guard::deposit_asset(holding(protected_asset()), &Location::here(), None);
-	assert!(matches!(result, Err((_, XcmError::NoPermission))));
-	assert_eq!(DEPOSIT_CALLS.load(Ordering::SeqCst), 0);
+	let result =
+		GuardWithTrusted::deposit_asset(holding(protected_asset()), &Location::here(), Some(&ctx));
+	assert!(result.is_ok());
+	assert_eq!(DEPOSIT_CALLS.load(Ordering::SeqCst), 1);
 }
 
 #[test]
@@ -335,11 +340,32 @@ fn deposit_from_untrusted_origin_rejected_when_blocked() {
 }
 
 #[test]
-fn deposit_with_no_context_rejected_when_blocked() {
+fn deposit_with_surplus_cleared_origin_passes_when_blocked() {
+	// The executor may settle teleport deposits through the `_with_surplus` variant; it must
+	// permit the cleared-origin shape identically to `deposit_asset`.
 	let _guard = reset();
+	let ctx = context();
 
-	let result =
-		GuardWithTrusted::deposit_asset(holding(protected_asset()), &Location::here(), None);
+	let result = GuardWithTrusted::deposit_asset_with_surplus(
+		holding(protected_asset()),
+		&Location::here(),
+		Some(&ctx),
+	);
+	assert!(result.is_ok());
+	assert_eq!(DEPOSIT_CALLS.load(Ordering::SeqCst), 1);
+}
+
+#[test]
+fn deposit_with_surplus_untrusted_origin_rejected_when_blocked() {
+	// Regression guard: a `Some(untrusted)` origin is still rejected on the `_with_surplus` path.
+	let _guard = reset();
+	let ctx = context_with_origin(Location::new(1, [Parachain(9999)]));
+
+	let result = GuardWithTrusted::deposit_asset_with_surplus(
+		holding(protected_asset()),
+		&Location::here(),
+		Some(&ctx),
+	);
 	assert!(matches!(result, Err((_, XcmError::NoPermission))));
 	assert_eq!(DEPOSIT_CALLS.load(Ordering::SeqCst), 0);
 }

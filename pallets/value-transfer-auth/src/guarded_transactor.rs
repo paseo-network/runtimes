@@ -66,10 +66,15 @@ where
 		if holding_contains_protected_asset::<ProtectedAssetLocation>(&what) &&
 			block_flag::is_blocked()
 		{
-			let from_trusted_origin = context
-				.and_then(|c| c.origin.as_ref())
-				.map(|o| TrustedSiblings::contains(o))
-				.unwrap_or(false);
+			// A cleared origin (`None`) is the teleport-settlement shape: `InitiateTeleport`
+			// pushes `ClearOrigin` before `DepositAsset`, so by the time we deposit the origin
+			// has been nulled. Provenance was already enforced one instruction earlier at
+			// `ReceiveTeleportedAsset` by `IsTeleporter`/`ExternalAssetFromAssetHub`, so we permit
+			// the settled inflow. A `Some(untrusted)` origin is still rejected.
+			let from_trusted_origin = match context.and_then(|c| c.origin.as_ref()) {
+				Some(o) => TrustedSiblings::contains(o),
+				None => true,
+			};
 			if !from_trusted_origin {
 				return Err((what, XcmError::NoPermission));
 			}
@@ -86,10 +91,13 @@ where
 		if holding_contains_protected_asset::<ProtectedAssetLocation>(&what) &&
 			block_flag::is_blocked()
 		{
-			let from_trusted_origin = context
-				.and_then(|c| c.origin.as_ref())
-				.map(|o| TrustedSiblings::contains(o))
-				.unwrap_or(false);
+			// Mirror of `deposit_asset`: permit a cleared (`None`) origin, which is the
+			// post-`ClearOrigin` teleport-settlement shape whose provenance was already checked at
+			// `ReceiveTeleportedAsset`; still reject a `Some(untrusted)` origin.
+			let from_trusted_origin = match context.and_then(|c| c.origin.as_ref()) {
+				Some(o) => TrustedSiblings::contains(o),
+				None => true,
+			};
 			if !from_trusted_origin {
 				return Err((what, XcmError::NoPermission));
 			}
