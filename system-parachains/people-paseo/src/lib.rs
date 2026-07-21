@@ -176,7 +176,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: Cow::Borrowed("people-paseo"),
 	impl_name: Cow::Borrowed("people-paseo"),
 	authoring_version: 1,
-	spec_version: 2_004_001,
+	spec_version: 2_004_002,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -220,7 +220,8 @@ parameter_types! {
 		})
 		.avg_block_initialization(AVERAGE_ON_INITIALIZE_RATIO)
 		.build_or_panic();
-	pub const SS58Prefix: u8 = 0;
+	/// Paseo's address format, shared with the relay chain and the other Paseo system chains.
+	pub const SS58Prefix: u8 = 42;
 }
 
 #[derive_impl(frame_system::config_preludes::ParaChainDefaultConfig as frame_system::DefaultConfig)]
