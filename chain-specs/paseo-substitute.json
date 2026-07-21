@@ -8,8 +8,8 @@
   "telemetryEndpoints": null,
   "protocolId": "pad",
   "properties": {
-    "ss58Format": "42",
-    "tokenDecimals": "10",
+    "ss58Format": 42,
+    "tokenDecimals": 10,
     "tokenSymbol": "PAS"
   },
   "codeSubstitutes": {},

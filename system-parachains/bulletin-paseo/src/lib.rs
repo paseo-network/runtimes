@@ -304,7 +304,7 @@ parameter_types! {
 		.build_or_panic();
 	/// 42 (generic Substrate), matching the Paseo relay chain rather than the sibling system
 	/// parachains (which use 0).
-	pub const SS58Prefix: u8 = 42;
+	pub const SS58Prefix: u8 = paseo_runtime_constants::SS58_PREFIX;
 }
 
 // Configure FRAME pallets to include in runtime.

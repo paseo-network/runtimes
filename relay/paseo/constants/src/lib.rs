@@ -20,6 +20,13 @@ extern crate alloc;
 
 pub mod weights;
 
+/// The address format used across the whole Paseo network.
+///
+/// The relay chain and every system chain share it, so that an account is displayed the same way
+/// wherever it is used. Runtimes must not redefine it: wire `frame_system::Config::SS58Prefix` to
+/// this constant.
+pub const SS58_PREFIX: u8 = 42;
+
 /// Generates `call_can_change_sudo`, the recursive guard used by the `SafeSudo` proxy type.
 ///
 /// `SafeSudo` behaves like `Any` but must never let a (possibly nested) call change or remove the

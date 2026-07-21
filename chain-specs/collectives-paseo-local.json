@@ -6,8 +6,8 @@
   "telemetryEndpoints": null,
   "protocolId": "col-pas",
   "properties": {
-    "ss58Format": "0",
-    "tokenDecimals": "10",
+    "ss58Format": 42,
+    "tokenDecimals": 10,
     "tokenSymbol": "PAS"
   },
   "codeSubstitutes": {},

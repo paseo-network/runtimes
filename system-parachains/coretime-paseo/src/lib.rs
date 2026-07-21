@@ -167,7 +167,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: Cow::Borrowed("coretime-paseo"),
 	impl_name: Cow::Borrowed("coretime-paseo"),
 	authoring_version: 1,
-	spec_version: 2_003_001,
+	spec_version: 2_003_002,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 0,
@@ -207,7 +207,7 @@ parameter_types! {
 		})
 		.avg_block_initialization(AVERAGE_ON_INITIALIZE_RATIO)
 		.build_or_panic();
-	pub const SS58Prefix: u8 = 0;
+	pub const SS58Prefix: u8 = paseo_runtime_constants::SS58_PREFIX;
 }
 
 /// Filter:
