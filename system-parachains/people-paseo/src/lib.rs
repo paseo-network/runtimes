@@ -220,8 +220,7 @@ parameter_types! {
 		})
 		.avg_block_initialization(AVERAGE_ON_INITIALIZE_RATIO)
 		.build_or_panic();
-	/// Paseo's address format, shared with the relay chain and the other Paseo system chains.
-	pub const SS58Prefix: u8 = 42;
+	pub const SS58Prefix: u8 = paseo_runtime_constants::SS58_PREFIX;
 }
 
 #[derive_impl(frame_system::config_preludes::ParaChainDefaultConfig as frame_system::DefaultConfig)]

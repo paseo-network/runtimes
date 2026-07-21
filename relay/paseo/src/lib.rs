@@ -188,7 +188,7 @@ pub fn native_version() -> NativeVersion {
 
 parameter_types! {
 	pub const Version: RuntimeVersion = VERSION;
-	pub const SS58Prefix: u8 = 42;
+	pub const SS58Prefix: u8 = paseo_runtime_constants::SS58_PREFIX;
 }
 
 /// Pallets that are blocked for user calls after the AHM.
