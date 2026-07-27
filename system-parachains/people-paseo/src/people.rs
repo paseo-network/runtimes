@@ -794,15 +794,22 @@ impl indiv_pallet_game::Config for Runtime {
 	>;
 	type DefaultPlayDeposit = PlayDepositDefault;
 	type TicketSignature = MultiSignature;
-	type MaxGameSchedules = ConstU32<12>;
+	// Weekly game cadence on devnet: 26 lets a single `schedule_games` sudo call queue
+	// ~6 months ahead, so the top-up keeper runs at most twice a year.
+	type MaxGameSchedules = ConstU32<26>;
 	type MaxAttendanceHistoryDepth = ConstU32<12>;
 	type DefaultPhaseDurations = GamePhaseDurations;
 	type AccountSignature = Signature;
 	type PlayerStatementLimit = PlayerStatementLimit;
 	type PeopleVoteWeight = ConstUint<2>;
 	type CandidateVoteWeight = ConstUint<1>;
-	// This is for the testnet, the value must be at least 2 in production.
-	type MinGroupSize = ConstUint<0>;
+	// Production-realistic minimum: a group must hold at least 2 players for mutual
+	// verification to mean anything. Kept at the production floor (not 0) so devnet games
+	// exercise the same grouping behaviour as mainnet. Note: with a low active-player count
+	// this can leave weekly games unable to form a valid group — the DummyDim-recognized
+	// cohort is externally recognized and immune, so only the organic game-onboarding path
+	// is affected.
+	type MinGroupSize = ConstUint<2>;
 	type AirdropAssetId = <Runtime as pallet_assets::Config>::AssetId;
 	type AirdropAssetBalance = Balance;
 	type Airdrop = Airdrop;
