@@ -139,7 +139,6 @@ use frame_system::{
 	pallet_prelude::BlockNumberFor,
 	EnsureRoot, EnsureSigned, EnsureSignedBy,
 };
-use indiv_pallet_value_transfer_auth::extension::AuthorizeValueTransfer;
 use indiv_precompile_personhood::PersonhoodCheck;
 use pallet_asset_conversion_precompiles::AssetConversion as AssetConversionPrecompile;
 use pallet_assets_precompiles::{ForeignAssetId, ForeignIdConfig, InlineIdConfig, ERC20};
@@ -202,10 +201,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	impl_name: Cow::Borrowed("asset-hub-paseo"),
 	spec_name: Cow::Borrowed("asset-hub-paseo"),
 	authoring_version: 1,
-	spec_version: 2_004_002,
+	spec_version: 2_004_003,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 16,
+	transaction_version: 17,
 	system_version: 1,
 };
 
@@ -2462,19 +2461,7 @@ pub type BlockId = generic::BlockId<Block>;
 pub type TxExtension = cumulus_pallet_weight_reclaim::StorageWeightReclaim<
 	Runtime,
 	(
-		// Origin modifiers
-		(
-			AuthorizeValueTransfer<
-				Runtime,
-				paseo_runtime_constants::ValueTransferAuthorizationPubkey,
-			>,
-			frame_system::AuthorizeCall<Runtime>,
-			indiv_pallet_pgas::AsPgas<Runtime>,
-			indiv_pallet_alias_accounts::AsRingAlias<Runtime>,
-			indiv_pallet_dotns_gateway::AsDotnsGateway<Runtime>,
-		),
-		// General checks and operations
-		indiv_pallet_origin_restriction::RestrictOrigin<Runtime>,
+		frame_system::AuthorizeCall<Runtime>,
 		frame_system::CheckNonZeroSender<Runtime>,
 		frame_system::CheckSpecVersion<Runtime>,
 		frame_system::CheckTxVersion<Runtime>,
@@ -2505,17 +2492,7 @@ impl pallet_revive::evm::runtime::EthExtra for EthExtraImpl {
 
 	fn get_eth_extension(nonce: u32, tip: Balance) -> Self::ExtensionV0 {
 		(
-			(
-				AuthorizeValueTransfer::<
-					Runtime,
-					paseo_runtime_constants::ValueTransferAuthorizationPubkey,
-				>::default(),
-				frame_system::AuthorizeCall::<Runtime>::new(),
-				indiv_pallet_pgas::AsPgas::<Runtime>::new(None),
-				indiv_pallet_alias_accounts::AsRingAlias::<Runtime>::new(None),
-				indiv_pallet_dotns_gateway::AsDotnsGateway::<Runtime>::new(None),
-			),
-			indiv_pallet_origin_restriction::RestrictOrigin::<Runtime>::new(true),
+			frame_system::AuthorizeCall::<Runtime>::new(),
 			frame_system::CheckNonZeroSender::<Runtime>::new(),
 			frame_system::CheckSpecVersion::<Runtime>::new(),
 			frame_system::CheckTxVersion::<Runtime>::new(),
@@ -2550,17 +2527,7 @@ where
 {
 	fn create_extension() -> Self::Extension {
 		TxExtension::from((
-			(
-				AuthorizeValueTransfer::<
-					Runtime,
-					paseo_runtime_constants::ValueTransferAuthorizationPubkey,
-				>::default(),
-				frame_system::AuthorizeCall::<Runtime>::new(),
-				indiv_pallet_pgas::AsPgas::<Runtime>::new(None),
-				indiv_pallet_alias_accounts::AsRingAlias::<Runtime>::new(None),
-				indiv_pallet_dotns_gateway::AsDotnsGateway::<Runtime>::new(None),
-			),
-			indiv_pallet_origin_restriction::RestrictOrigin::<Runtime>::new(true),
+			frame_system::AuthorizeCall::<Runtime>::new(),
 			frame_system::CheckNonZeroSender::<Runtime>::new(),
 			frame_system::CheckSpecVersion::<Runtime>::new(),
 			frame_system::CheckTxVersion::<Runtime>::new(),
