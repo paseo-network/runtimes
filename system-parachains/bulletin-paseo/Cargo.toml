@@ -47,6 +47,7 @@ pallet-bulletin-transaction-storage = { workspace = true }
 pallet-bulletin-transaction-storage-runtime-api = { workspace = true }
 pallet-bulletin-hop-promotion = { workspace = true }
 bulletin-pallets-common = { workspace = true }
+bulletin-transaction-storage-primitives = { workspace = true }
 sp-api = { workspace = true }
 sp-block-builder = { workspace = true }
 sp-consensus-aura = { workspace = true }
@@ -95,7 +96,6 @@ system-parachains-constants = { workspace = true }
 [dev-dependencies]
 parachains-runtimes-test-utils = { workspace = true, default-features = true }
 sp-io = { workspace = true }
-bulletin-transaction-storage-primitives = { workspace = true }
 
 [build-dependencies]
 substrate-wasm-builder = { optional = true, workspace = true, default-features = true }

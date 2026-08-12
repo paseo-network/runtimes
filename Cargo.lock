@@ -2149,7 +2149,7 @@ dependencies = [
 [[package]]
 name = "bulletin-pallets-common"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-bulletin-chain?tag=v0.0.22-paseo#d324478553ee66aace9dd98825618cf8008ebb70"
+source = "git+https://github.com/paritytech/polkadot-bulletin-chain?tag=v0.0.23-paseo#0305c765441a404480f612a53a0d99cd3d71f161"
 dependencies = [
  "pallet-utility",
  "parity-scale-codec",
@@ -2239,7 +2239,7 @@ dependencies = [
 [[package]]
 name = "bulletin-transaction-storage-primitives"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-bulletin-chain?tag=v0.0.22-paseo#d324478553ee66aace9dd98825618cf8008ebb70"
+source = "git+https://github.com/paritytech/polkadot-bulletin-chain?tag=v0.0.23-paseo#0305c765441a404480f612a53a0d99cd3d71f161"
 dependencies = [
  "cid",
  "parity-scale-codec",
@@ -4188,7 +4188,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -5445,7 +5445,7 @@ dependencies = [
  "hyper 1.8.1",
  "libc",
  "pin-project-lite",
- "socket2 0.5.10",
+ "socket2 0.6.2",
  "tokio",
  "tower-service",
  "tracing",
@@ -7847,7 +7847,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -8569,12 +8569,11 @@ dependencies = [
 [[package]]
 name = "pallet-bulletin-data-renewal"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-bulletin-chain?tag=v0.0.22-paseo#d324478553ee66aace9dd98825618cf8008ebb70"
+source = "git+https://github.com/paritytech/polkadot-bulletin-chain?tag=v0.0.23-paseo#0305c765441a404480f612a53a0d99cd3d71f161"
 dependencies = [
  "array-bytes 6.2.3",
  "bulletin-transaction-storage-primitives",
  "pallet-bulletin-transaction-storage",
- "pallet-bulletin-transaction-storage-runtime-api",
  "parity-scale-codec",
  "polkadot-sdk-frame",
  "scale-info",
@@ -8584,7 +8583,7 @@ dependencies = [
 [[package]]
 name = "pallet-bulletin-hop-promotion"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-bulletin-chain?tag=v0.0.22-paseo#d324478553ee66aace9dd98825618cf8008ebb70"
+source = "git+https://github.com/paritytech/polkadot-bulletin-chain?tag=v0.0.23-paseo#0305c765441a404480f612a53a0d99cd3d71f161"
 dependencies = [
  "bulletin-transaction-storage-primitives",
  "frame-support",
@@ -8602,7 +8601,7 @@ dependencies = [
 [[package]]
 name = "pallet-bulletin-transaction-storage"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-bulletin-chain?tag=v0.0.22-paseo#d324478553ee66aace9dd98825618cf8008ebb70"
+source = "git+https://github.com/paritytech/polkadot-bulletin-chain?tag=v0.0.23-paseo#0305c765441a404480f612a53a0d99cd3d71f161"
 dependencies = [
  "array-bytes 6.2.3",
  "bulletin-transaction-storage-primitives",
@@ -8618,7 +8617,7 @@ dependencies = [
 [[package]]
 name = "pallet-bulletin-transaction-storage-runtime-api"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-bulletin-chain?tag=v0.0.22-paseo#d324478553ee66aace9dd98825618cf8008ebb70"
+source = "git+https://github.com/paritytech/polkadot-bulletin-chain?tag=v0.0.23-paseo#0305c765441a404480f612a53a0d99cd3d71f161"
 dependencies = [
  "bulletin-transaction-storage-primitives",
  "parity-scale-codec",
@@ -11560,7 +11559,7 @@ dependencies = [
  "quinn-udp",
  "rustc-hash 2.1.1",
  "rustls",
- "socket2 0.5.10",
+ "socket2 0.6.2",
  "thiserror 2.0.18",
  "tokio",
  "tracing",
@@ -11597,9 +11596,9 @@ dependencies = [
  "cfg_aliases",
  "libc",
  "once_cell",
- "socket2 0.5.10",
+ "socket2 0.6.2",
  "tracing",
- "windows-sys 0.52.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -12294,7 +12293,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -15591,7 +15590,7 @@ dependencies = [
  "getrandom 0.4.2",
  "once_cell",
  "rustix",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -16903,7 +16902,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.48.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

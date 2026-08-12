@@ -408,12 +408,20 @@ fn renew_one_shot_prepays_bytes_permanent() {
 			assert_ok!(res);
 			assert_ok!(res.unwrap());
 
-			let after = TransactionStorage::account_authorization_extent(who);
+			let after = TransactionStorage::account_authorization_extent(who.clone());
 			assert_eq!(
 				after.extra.bytes_permanent,
 				before.extra.bytes_permanent + data.len() as u64
 			);
 			assert_eq!(after.transactions, before.transactions + 1);
+
+			use pallet_bulletin_transaction_storage_runtime_api::runtime_decl_for_bulletin_transaction_storage_api::BulletinTransactionStorageApiV1;
+			// The runtime API reports that same counter as `bytes_permanent_used`; the
+			// composition lives in `impl_runtime_apis!`, so only a runtime test reaches it.
+			let summary = Runtime::account_authorization(who).expect("authorization is active");
+			assert_eq!(summary.bytes_permanent_used, after.extra.bytes_permanent);
+			assert_eq!(summary.bytes_used, after.bytes);
+			assert_eq!(summary.transactions_used, after.transactions);
 		});
 }
 

@@ -128,9 +128,10 @@ impl pallet_bulletin_transaction_storage::Config for Runtime {
 	type RemoveExpiredPreimageAuthorizationTxParams = RemoveExpiredPreimageAuthorizationTxParams;
 	type RemoveExhaustedAuthorizerTxParams = RemoveExhaustedAuthorizerTxParams;
 	// The two opaque payloads the storage pallet carries on behalf of the renewal pallet: the
-	// per-entry `EntryKind` and the per-authorization `PermanentExtent`. The storage pallet has
-	// no renewal vocabulary of its own — it only stores and resets these.
-	type EntryMeta = pallet_bulletin_data_renewal::EntryKind;
+	// per-entry `EntryKind` (the primitives' stock `RenewMeta` implementor) and the
+	// per-authorization `PermanentExtent`. The storage pallet has no renewal vocabulary of its
+	// own — it only stores and resets these.
+	type EntryMeta = bulletin_transaction_storage_primitives::EntryKind;
 	type AuthorizationExtra = pallet_bulletin_data_renewal::PermanentExtent;
 	type OnObsoleteTransactions = crate::DataRenewal;
 	#[cfg(feature = "runtime-benchmarks")]
