@@ -13,6 +13,7 @@ use bulletin_transaction_storage_primitives::cids::{calculate_cid, CidConfig, Ha
 use frame_support::{
 	assert_err, assert_ok, dispatch::GetDispatchInfo, pallet_prelude::Hooks, traits::Get,
 };
+use pallet_bulletin_data_renewal::{Call as DataRenewalCall, WeightInfo as _};
 use pallet_bulletin_transaction_storage::{
 	extension::{AllowanceBasedPriority, ALLOWANCE_PRIORITY_BOOST},
 	AuthorizationExtent, AuthorizationScope, Call as TxStorageCall, Config as TxStorageConfig,
@@ -79,9 +80,13 @@ fn construct_extrinsic(
 		pallet_skip_feeless_payment::SkipCheckIfFeeless::from(
 			pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(0u128),
 		),
-		pallet_bulletin_transaction_storage::extension::ValidateStorageCalls::<
+		pallet_bulletin_transaction_storage::extension::ValidateAuthorizedCalls::<
 			Runtime,
 			bulletin_paseo_runtime::storage::StorageCallInspector,
+			(
+				pallet_bulletin_transaction_storage::extension::StorageLeaves<Runtime>,
+				pallet_bulletin_data_renewal::extension::RenewalLeaves<Runtime>,
+			),
 		>::default(),
 		pallet_bulletin_transaction_storage::extension::AllowanceBasedPriority::<Runtime>::default(
 		),
@@ -159,7 +164,7 @@ fn transaction_storage_runtime_sizes() {
 				TransactionStorage::account_authorization_extent(who.clone()),
 				AuthorizationExtent {
 					bytes: 0,
-					bytes_permanent: 0,
+					extra: pallet_bulletin_data_renewal::PermanentExtent { bytes_permanent: 0 },
 					bytes_allowance: total_bytes,
 					transactions: 0,
 					transactions_allowance: 0,
@@ -185,7 +190,7 @@ fn transaction_storage_runtime_sizes() {
 				TransactionStorage::account_authorization_extent(who.clone()),
 				AuthorizationExtent {
 					bytes: total_bytes,
-					bytes_permanent: 0,
+					extra: pallet_bulletin_data_renewal::PermanentExtent { bytes_permanent: 0 },
 					bytes_allowance: total_bytes,
 					transactions: 6,
 					transactions_allowance: 0,
@@ -210,7 +215,7 @@ fn transaction_storage_runtime_sizes() {
 				TransactionStorage::account_authorization_extent(who.clone()),
 				AuthorizationExtent {
 					bytes: total_bytes,
-					bytes_permanent: 0,
+					extra: pallet_bulletin_data_renewal::PermanentExtent { bytes_permanent: 0 },
 					bytes_allowance: total_bytes + oversized,
 					transactions: 6,
 					transactions_allowance: 0,
@@ -254,7 +259,7 @@ fn transaction_storage_max_throughput_per_block() {
 				TransactionStorage::account_authorization_extent(who.clone()),
 				AuthorizationExtent {
 					bytes: 0,
-					bytes_permanent: 0,
+					extra: pallet_bulletin_data_renewal::PermanentExtent { bytes_permanent: 0 },
 					bytes_allowance: (NUM_TRANSACTIONS as u64 + 1) * TRANSACTION_SIZE,
 					transactions: 0,
 					transactions_allowance: 0,
@@ -294,7 +299,7 @@ fn transaction_storage_max_throughput_per_block() {
 				TransactionStorage::account_authorization_extent(who.clone()),
 				AuthorizationExtent {
 					bytes: NUM_TRANSACTIONS as u64 * TRANSACTION_SIZE,
-					bytes_permanent: 0,
+					extra: pallet_bulletin_data_renewal::PermanentExtent { bytes_permanent: 0 },
 					bytes_allowance: (NUM_TRANSACTIONS as u64 + 1) * TRANSACTION_SIZE,
 					transactions: NUM_TRANSACTIONS,
 					transactions_allowance: 0,
@@ -339,10 +344,9 @@ fn authorized_storage_transactions_are_for_free() {
 			advance_block();
 
 			// Renew should also work without funding (feeless).
-			let renew_call =
-				RuntimeCall::TransactionStorage(TxStorageCall::<Runtime>::force_renew {
-					entry: TransactionRef::Position { block: stored_block, index: 0 },
-				});
+			let renew_call = RuntimeCall::DataRenewal(DataRenewalCall::<Runtime>::force_renew {
+				entry: TransactionRef::Position { block: stored_block, index: 0 },
+			});
 			let res = construct_and_apply_extrinsic(Some(account.pair()), renew_call);
 			assert_ok!(res);
 			assert_ok!(res.unwrap());
@@ -354,7 +358,7 @@ fn authorized_storage_transactions_are_for_free() {
 			// free thanks to `paid: true`; subsequent cycles charge per-cycle.
 			let extent_before = TransactionStorage::account_authorization_extent(who.clone());
 			let enable_call =
-				RuntimeCall::TransactionStorage(TxStorageCall::<Runtime>::enable_auto_renew {
+				RuntimeCall::DataRenewal(DataRenewalCall::<Runtime>::enable_auto_renew {
 					content_hash,
 				});
 			let res = construct_and_apply_extrinsic(Some(account.pair()), enable_call);
@@ -364,8 +368,8 @@ fn authorized_storage_transactions_are_for_free() {
 			assert_eq!(extent_after.transactions, extent_before.transactions + 1);
 			assert_eq!(extent_after.bytes, extent_before.bytes);
 			assert_eq!(
-				extent_after.bytes_permanent,
-				extent_before.bytes_permanent + data.len() as u64,
+				extent_after.extra.bytes_permanent,
+				extent_before.extra.bytes_permanent + data.len() as u64,
 			);
 		});
 }
@@ -397,16 +401,27 @@ fn renew_one_shot_prepays_bytes_permanent() {
 			advance_block();
 
 			let before = TransactionStorage::account_authorization_extent(who.clone());
-			let renew_call = RuntimeCall::TransactionStorage(TxStorageCall::<Runtime>::renew {
+			let renew_call = RuntimeCall::DataRenewal(DataRenewalCall::<Runtime>::renew {
 				entry: TransactionRef::ContentHash(content_hash),
 			});
 			let res = construct_and_apply_extrinsic(Some(account.pair()), renew_call);
 			assert_ok!(res);
 			assert_ok!(res.unwrap());
 
-			let after = TransactionStorage::account_authorization_extent(who);
-			assert_eq!(after.bytes_permanent, before.bytes_permanent + data.len() as u64);
+			let after = TransactionStorage::account_authorization_extent(who.clone());
+			assert_eq!(
+				after.extra.bytes_permanent,
+				before.extra.bytes_permanent + data.len() as u64
+			);
 			assert_eq!(after.transactions, before.transactions + 1);
+
+			use pallet_bulletin_transaction_storage_runtime_api::runtime_decl_for_bulletin_transaction_storage_api::BulletinTransactionStorageApiV1;
+			// The runtime API reports that same counter as `bytes_permanent_used`; the
+			// composition lives in `impl_runtime_apis!`, so only a runtime test reaches it.
+			let summary = Runtime::account_authorization(who).expect("authorization is active");
+			assert_eq!(summary.bytes_permanent_used, after.extra.bytes_permanent);
+			assert_eq!(summary.bytes_used, after.bytes);
+			assert_eq!(summary.transactions_used, after.transactions);
 		});
 }
 
@@ -473,7 +488,7 @@ fn allowance_based_priority_works() {
 			assert_eq!(allowance_based_priority(origin.clone(), &store), 0);
 
 			// `renew` carries `Origin::Authorized` too, but must not be boosted.
-			let renew = RuntimeCall::TransactionStorage(TxStorageCall::<Runtime>::force_renew {
+			let renew = RuntimeCall::DataRenewal(DataRenewalCall::<Runtime>::force_renew {
 				entry: TransactionRef::Position { block: 1, index: 0 },
 			});
 			assert_eq!(allowance_based_priority(origin, &renew), 0);
@@ -501,7 +516,7 @@ fn store_with_cid_config_works() {
 			runtime::TransactionStorage::account_authorization_extent(who.clone()),
 			AuthorizationExtent {
 				bytes: 0,
-				bytes_permanent: 0,
+				extra: pallet_bulletin_data_renewal::PermanentExtent { bytes_permanent: 0 },
 				bytes_allowance: 3 * total_bytes,
 				transactions: 0,
 				transactions_allowance: 0,
@@ -1001,14 +1016,46 @@ fn allowlisted_parachain_can_authorize_storage_with_transact() {
 		})
 }
 
+/// Promotion must lose to both `store` and renewals; only the runtime sees all three.
+#[test]
+fn promote_priority_is_below_store_and_renew() {
+	let promote =
+		<Runtime as pallet_bulletin_hop_promotion::Config>::PromoteTxParams::get().priority;
+	let store = <Runtime as TxStorageConfig>::StoreTxParams::get().priority;
+	let renew = <Runtime as pallet_bulletin_data_renewal::Config>::RenewTxParams::get().priority;
+	assert!(promote < store, "promote ({promote}) must be below store priority ({store})");
+	assert!(promote < renew, "promote ({promote}) must be below renew priority ({renew})");
+}
+
+/// Both tag on the bare content hash, and no pallet sees the other's params — the storage
+/// pallet's `integrity_test` covers every other pair.
+#[test]
+fn renew_and_promote_tag_prefixes_differ() {
+	pallet_bulletin_transaction_storage::assert_distinct_tag_prefixes(&[
+		("RenewTxParams", <Runtime as pallet_bulletin_data_renewal::Config>::RenewTxParams::get()),
+		(
+			"PromoteTxParams",
+			<Runtime as pallet_bulletin_hop_promotion::Config>::PromoteTxParams::get(),
+		),
+	]);
+}
+
 /// See [`pallet_bulletin_transaction_storage::ensure_weight_sanity`].
 #[test]
 fn transaction_storage_weight_sanity() {
+	// Collator-side PoV cap: default 85% of max_pov_size.
+	// See cumulus/client/consensus/aura/src/collators/slot_based/block_builder_task.rs
+	const POV_PERCENT: Option<u64> = Some(85);
+	// Mandatory on the same worst-case block as the storage pallet's own mandatory work.
+	let renewal_drain =
+		<Runtime as pallet_bulletin_data_renewal::Config>::WeightInfo::process_pending_renewals(
+			<Runtime as TxStorageConfig>::MaxBlockTransactions::get(),
+		);
 	pallet_bulletin_transaction_storage::ensure_weight_sanity::<Runtime>(
-		// Collator-side PoV cap: default 85% of max_pov_size.
-		// See cumulus/client/consensus/aura/src/collators/slot_based/block_builder_task.rs
-		Some(85),
+		POV_PERCENT,
+		renewal_drain,
 	);
+	pallet_bulletin_data_renewal::ensure_weight_sanity::<Runtime>(POV_PERCENT);
 }
 
 // ============================================================================
@@ -1181,7 +1228,7 @@ fn authorized_wrapped_store_rejected() {
 				TransactionStorage::account_authorization_extent(who),
 				AuthorizationExtent {
 					bytes: data.len() as u64,
-					bytes_permanent: 0,
+					extra: pallet_bulletin_data_renewal::PermanentExtent { bytes_permanent: 0 },
 					bytes_allowance: 4 * data.len() as u64,
 					transactions: 1,
 					transactions_allowance: 0,
@@ -1241,7 +1288,7 @@ fn batch_store_with_mixed_preimage_and_account_auth_rejected() {
 				TransactionStorage::preimage_authorization_extent(content_hash_a),
 				AuthorizationExtent {
 					bytes: 0,
-					bytes_permanent: 0,
+					extra: pallet_bulletin_data_renewal::PermanentExtent { bytes_permanent: 0 },
 					bytes_allowance: 100,
 					transactions: 0,
 					transactions_allowance: 1,
@@ -1252,7 +1299,7 @@ fn batch_store_with_mixed_preimage_and_account_auth_rejected() {
 				TransactionStorage::account_authorization_extent(who),
 				AuthorizationExtent {
 					bytes: 0,
-					bytes_permanent: 0,
+					extra: pallet_bulletin_data_renewal::PermanentExtent { bytes_permanent: 0 },
 					bytes_allowance: 200,
 					transactions: 0,
 					transactions_allowance: 0,
@@ -1305,7 +1352,7 @@ fn preimage_authorized_storage_transactions_work() {
 				TransactionStorage::preimage_authorization_extent(content_hash),
 				AuthorizationExtent {
 					bytes: 24,
-					bytes_permanent: 0,
+					extra: pallet_bulletin_data_renewal::PermanentExtent { bytes_permanent: 0 },
 					bytes_allowance: 24,
 					transactions: 1,
 					transactions_allowance: 1,
@@ -1349,7 +1396,7 @@ fn signed_store_prefers_preimage_authorization_over_account() {
 				TransactionStorage::preimage_authorization_extent(content_hash),
 				AuthorizationExtent {
 					bytes: 100,
-					bytes_permanent: 0,
+					extra: pallet_bulletin_data_renewal::PermanentExtent { bytes_permanent: 0 },
 					bytes_allowance: 100,
 					transactions: 1,
 					transactions_allowance: 1,
@@ -1360,7 +1407,7 @@ fn signed_store_prefers_preimage_authorization_over_account() {
 				TransactionStorage::account_authorization_extent(who),
 				AuthorizationExtent {
 					bytes: 0,
-					bytes_permanent: 0,
+					extra: pallet_bulletin_data_renewal::PermanentExtent { bytes_permanent: 0 },
 					bytes_allowance: 500,
 					transactions: 0,
 					transactions_allowance: 0,
@@ -1411,7 +1458,7 @@ fn renew_must_be_direct_extrinsic() {
 
 		advance_block();
 
-		let renew_call = RuntimeCall::TransactionStorage(TxStorageCall::<Runtime>::force_renew {
+		let renew_call = RuntimeCall::DataRenewal(DataRenewalCall::<Runtime>::force_renew {
 			entry: TransactionRef::Position { block: stored_block, index: 0 },
 		});
 
@@ -1421,7 +1468,7 @@ fn renew_must_be_direct_extrinsic() {
 			TransactionStorage::account_authorization_extent(who.clone()),
 			AuthorizationExtent {
 				bytes: 100,
-				bytes_permanent: 100,
+				extra: pallet_bulletin_data_renewal::PermanentExtent { bytes_permanent: 100 },
 				bytes_allowance: 100,
 				transactions: 2,
 				transactions_allowance: 0,
@@ -1487,7 +1534,7 @@ fn wrapped_authorize_account_requires_authorizer_origin() {
 				TransactionStorage::account_authorization_extent(who),
 				AuthorizationExtent {
 					bytes: 0,
-					bytes_permanent: 0,
+					extra: pallet_bulletin_data_renewal::PermanentExtent { bytes_permanent: 0 },
 					bytes_allowance: 0,
 					transactions: 0,
 					transactions_allowance: 0,
@@ -1534,7 +1581,7 @@ fn wrapped_authorize_account_succeeds() {
 			TransactionStorage::account_authorization_extent(target.clone()),
 			AuthorizationExtent {
 				bytes: 0,
-				bytes_permanent: 0,
+				extra: pallet_bulletin_data_renewal::PermanentExtent { bytes_permanent: 0 },
 				bytes_allowance: 10 * 1024,
 				transactions: 0,
 				transactions_allowance: 10,
@@ -1605,7 +1652,7 @@ fn mixed_batch_store_and_authorize_rejected() {
 				TransactionStorage::account_authorization_extent(who),
 				AuthorizationExtent {
 					bytes: 0,
-					bytes_permanent: 0,
+					extra: pallet_bulletin_data_renewal::PermanentExtent { bytes_permanent: 0 },
 					bytes_allowance: data.len() as u64,
 					transactions: 0,
 					transactions_allowance: 0,
@@ -1654,7 +1701,7 @@ fn mixed_batch_store_and_non_storage_call_rejected() {
 				TransactionStorage::account_authorization_extent(who),
 				AuthorizationExtent {
 					bytes: 0,
-					bytes_permanent: 0,
+					extra: pallet_bulletin_data_renewal::PermanentExtent { bytes_permanent: 0 },
 					bytes_allowance: data.len() as u64,
 					transactions: 0,
 					transactions_allowance: 0,
@@ -1732,7 +1779,7 @@ fn sudo_store_works_for_sudo_key_holder() {
 			TransactionStorage::account_authorization_extent(who),
 			AuthorizationExtent {
 				bytes: 0,
-				bytes_permanent: 0,
+				extra: pallet_bulletin_data_renewal::PermanentExtent { bytes_permanent: 0 },
 				bytes_allowance: 0,
 				transactions: 0,
 				transactions_allowance: 0,
@@ -1771,7 +1818,7 @@ fn xcm_transact_store_is_blocked() {
 				TransactionStorage::account_authorization_extent(who.clone()),
 				AuthorizationExtent {
 					bytes: 0,
-					bytes_permanent: 0,
+					extra: pallet_bulletin_data_renewal::PermanentExtent { bytes_permanent: 0 },
 					bytes_allowance: 0,
 					transactions: 0,
 					transactions_allowance: 0,
@@ -1809,7 +1856,7 @@ fn xcm_transact_store_is_blocked() {
 				TransactionStorage::account_authorization_extent(who),
 				AuthorizationExtent {
 					bytes: 0,
-					bytes_permanent: 0,
+					extra: pallet_bulletin_data_renewal::PermanentExtent { bytes_permanent: 0 },
 					bytes_allowance: 0,
 					transactions: 0,
 					transactions_allowance: 0,
@@ -1866,7 +1913,7 @@ fn xcm_transact_wrapped_store_is_blocked() {
 				TransactionStorage::account_authorization_extent(who),
 				AuthorizationExtent {
 					bytes: 0,
-					bytes_permanent: 0,
+					extra: pallet_bulletin_data_renewal::PermanentExtent { bytes_permanent: 0 },
 					bytes_allowance: 0,
 					transactions: 0,
 					transactions_allowance: 0,
@@ -1890,7 +1937,7 @@ fn xcm_transact_authorize_account_works() {
 				TransactionStorage::account_authorization_extent(target.clone()),
 				AuthorizationExtent {
 					bytes: 0,
-					bytes_permanent: 0,
+					extra: pallet_bulletin_data_renewal::PermanentExtent { bytes_permanent: 0 },
 					bytes_allowance: 0,
 					transactions: 0,
 					transactions_allowance: 0,
@@ -1926,7 +1973,7 @@ fn xcm_transact_authorize_account_works() {
 				TransactionStorage::account_authorization_extent(target),
 				AuthorizationExtent {
 					bytes: 0,
-					bytes_permanent: 0,
+					extra: pallet_bulletin_data_renewal::PermanentExtent { bytes_permanent: 0 },
 					bytes_allowance: 1024,
 					transactions: 0,
 					transactions_allowance: 0,
@@ -1960,7 +2007,7 @@ fn xcm_transact_authorize_account_from_asset_hub_contract() {
 
 	let zero = AuthorizationExtent {
 		bytes: 0,
-		bytes_permanent: 0,
+		extra: pallet_bulletin_data_renewal::PermanentExtent { bytes_permanent: 0 },
 		bytes_allowance: 0,
 		transactions: 0,
 		transactions_allowance: 0,
@@ -2074,7 +2121,7 @@ fn sudo_round_trips_authorizer_membership() {
 			TransactionStorage::account_authorization_extent(target.to_account_id()),
 			AuthorizationExtent {
 				bytes: 0,
-				bytes_permanent: 0,
+				extra: pallet_bulletin_data_renewal::PermanentExtent { bytes_permanent: 0 },
 				bytes_allowance: 1024,
 				transactions: 0,
 				transactions_allowance: 5,
