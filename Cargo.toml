@@ -105,12 +105,12 @@ collectives-paseo-runtime = { path = "system-parachains/collectives-paseo" }
 collectives-paseo-runtime-constants = { path = "system-parachains/collectives-paseo/constants" }
 bulletin-paseo-runtime = { path = "system-parachains/bulletin-paseo", default-features = false }
 
-bulletin-pallets-common = { git = "https://github.com/paritytech/polkadot-bulletin-chain", tag = "v0.0.23-paseo", default-features = false }
-bulletin-transaction-storage-primitives = { git = "https://github.com/paritytech/polkadot-bulletin-chain", tag = "v0.0.23-paseo", default-features = false }
-pallet-bulletin-data-renewal = { git = "https://github.com/paritytech/polkadot-bulletin-chain", tag = "v0.0.23-paseo", default-features = false }
-pallet-bulletin-hop-promotion = { git = "https://github.com/paritytech/polkadot-bulletin-chain", tag = "v0.0.23-paseo", default-features = false }
-pallet-bulletin-transaction-storage = { git = "https://github.com/paritytech/polkadot-bulletin-chain", tag = "v0.0.23-paseo", default-features = false }
-pallet-bulletin-transaction-storage-runtime-api = { git = "https://github.com/paritytech/polkadot-bulletin-chain", tag = "v0.0.23-paseo", default-features = false }
+bulletin-pallets-common = { git = "https://github.com/paritytech/polkadot-bulletin-chain", tag = "v0.0.24-paseo", default-features = false }
+bulletin-transaction-storage-primitives = { git = "https://github.com/paritytech/polkadot-bulletin-chain", tag = "v0.0.24-paseo", default-features = false }
+pallet-bulletin-data-renewal = { git = "https://github.com/paritytech/polkadot-bulletin-chain", tag = "v0.0.24-paseo", default-features = false }
+pallet-bulletin-hop-promotion = { git = "https://github.com/paritytech/polkadot-bulletin-chain", tag = "v0.0.24-paseo", default-features = false }
+pallet-bulletin-transaction-storage = { git = "https://github.com/paritytech/polkadot-bulletin-chain", tag = "v0.0.24-paseo", default-features = false }
+pallet-bulletin-transaction-storage-runtime-api = { git = "https://github.com/paritytech/polkadot-bulletin-chain", tag = "v0.0.24-paseo", default-features = false }
 
 # Polkadot SDK
 bp-bridge-hub-paseo = { path = "system-parachains/bridge-hub-paseo/primitives", default-features = false }

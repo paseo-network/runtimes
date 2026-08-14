@@ -2149,7 +2149,7 @@ dependencies = [
 [[package]]
 name = "bulletin-pallets-common"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-bulletin-chain?tag=v0.0.23-paseo#0305c765441a404480f612a53a0d99cd3d71f161"
+source = "git+https://github.com/paritytech/polkadot-bulletin-chain?tag=v0.0.24-paseo#7521cbf705b71fe6d26b9df44fe90c9c5dbb88c9"
 dependencies = [
  "pallet-utility",
  "parity-scale-codec",
@@ -2239,7 +2239,7 @@ dependencies = [
 [[package]]
 name = "bulletin-transaction-storage-primitives"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-bulletin-chain?tag=v0.0.23-paseo#0305c765441a404480f612a53a0d99cd3d71f161"
+source = "git+https://github.com/paritytech/polkadot-bulletin-chain?tag=v0.0.24-paseo#7521cbf705b71fe6d26b9df44fe90c9c5dbb88c9"
 dependencies = [
  "cid",
  "parity-scale-codec",
@@ -8569,7 +8569,7 @@ dependencies = [
 [[package]]
 name = "pallet-bulletin-data-renewal"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-bulletin-chain?tag=v0.0.23-paseo#0305c765441a404480f612a53a0d99cd3d71f161"
+source = "git+https://github.com/paritytech/polkadot-bulletin-chain?tag=v0.0.24-paseo#7521cbf705b71fe6d26b9df44fe90c9c5dbb88c9"
 dependencies = [
  "array-bytes 6.2.3",
  "bulletin-transaction-storage-primitives",
@@ -8583,7 +8583,7 @@ dependencies = [
 [[package]]
 name = "pallet-bulletin-hop-promotion"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-bulletin-chain?tag=v0.0.23-paseo#0305c765441a404480f612a53a0d99cd3d71f161"
+source = "git+https://github.com/paritytech/polkadot-bulletin-chain?tag=v0.0.24-paseo#7521cbf705b71fe6d26b9df44fe90c9c5dbb88c9"
 dependencies = [
  "bulletin-transaction-storage-primitives",
  "frame-support",
@@ -8601,7 +8601,7 @@ dependencies = [
 [[package]]
 name = "pallet-bulletin-transaction-storage"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-bulletin-chain?tag=v0.0.23-paseo#0305c765441a404480f612a53a0d99cd3d71f161"
+source = "git+https://github.com/paritytech/polkadot-bulletin-chain?tag=v0.0.24-paseo#7521cbf705b71fe6d26b9df44fe90c9c5dbb88c9"
 dependencies = [
  "array-bytes 6.2.3",
  "bulletin-transaction-storage-primitives",
@@ -8617,7 +8617,7 @@ dependencies = [
 [[package]]
 name = "pallet-bulletin-transaction-storage-runtime-api"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-bulletin-chain?tag=v0.0.23-paseo#0305c765441a404480f612a53a0d99cd3d71f161"
+source = "git+https://github.com/paritytech/polkadot-bulletin-chain?tag=v0.0.24-paseo#7521cbf705b71fe6d26b9df44fe90c9c5dbb88c9"
 dependencies = [
  "bulletin-transaction-storage-primitives",
  "parity-scale-codec",

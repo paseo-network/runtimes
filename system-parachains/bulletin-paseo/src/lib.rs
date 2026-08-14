@@ -140,8 +140,9 @@ pub mod migrations {
 	/// Unreleased migrations. Add new ones here:
 	///
 	/// `RelocateFromTransactionStorage` is the one-shot move of `Renewals`,
-	/// `PendingAutoRenewals` and `PermanentStorageUsed` out of the `TransactionStorage`
-	/// prefix and into the new `DataRenewal` pallet's. `Authorizations` is deliberately
+	/// `PendingAutoRenewals` (landing as `PendingRenewals`) and `PermanentStorageUsed` out
+	/// of the `TransactionStorage` prefix and into the new `DataRenewal` pallet's. The
+	/// source key literals keep their pre-split names. `Authorizations` is deliberately
 	/// untouched: `AuthorizationExtent::extra` occupies the slot the pre-split
 	/// `bytes_permanent` field had, so existing values already decode as the new layout.
 	pub type Unreleased =
