@@ -36,9 +36,7 @@ use sp_runtime::{
 	BuildStorage,
 };
 use std::sync::Arc;
-use verifiable::{
-	Alias, AliasVec, BatchProofItem, Entropy, Error as VerifiableError, GenerateVerifiable,
-};
+use verifiable::{Alias, AliasVec, Entropy, Error as VerifiableError, GenerateVerifiable};
 use xcm::v5::{Assets, Location, SendError, SendResult, SendXcm, Xcm, XcmHash};
 
 use crate::types::NotifierEndpoint;
@@ -75,13 +73,15 @@ parameter_types! {
 	pub const SelfParaId: u32 = 1000;
 	pub const MaxMissingRootsPerCollection: u32 = 255;
 	pub const MaxDeletedRingsPerCollection: u32 = 100;
-	pub const MaxRingRootsPerCollection: u32 = 100;
+	pub const MaxGapScanPerBatch: u32 = 32;
+	pub const PurgePageSize: u32 = 100;
 	pub const MaxCollections: u32 = 10;
 	pub const ReplayCooldownSeconds: u64 = 60;
 	pub const MaxUpdatesPerBatch: u32 = 10;
 	pub const ReplayWarningThreshold: u32 = 5;
 	pub const ReplayAbandonThreshold: u32 = 10;
 	pub const MaxRecentRootsPerRing: u32 = 2;
+	pub const OldRootRetentionDuration: u64 = 600;
 	pub const OffchainWorkerInterval: u64 = 1;
 }
 
@@ -159,6 +159,10 @@ pub fn set_time_secs(secs: u64) {
 	TIME.with(|t| *t.borrow_mut() = Duration::from_secs(secs));
 }
 
+pub fn now_secs() -> u64 {
+	TIME.with(|t| t.borrow().as_secs())
+}
+
 // ========== CreateAuthorizedTransaction ==========
 
 impl<C> CreateTransactionBase<C> for Test
@@ -199,7 +203,8 @@ impl crate::Config for Test {
 	type SelfParaId = SelfParaId;
 	type MaxMissingRootsPerCollection = MaxMissingRootsPerCollection;
 	type MaxDeletedRingsPerCollection = MaxDeletedRingsPerCollection;
-	type MaxRingRootsPerCollection = MaxRingRootsPerCollection;
+	type MaxGapScanPerBatch = MaxGapScanPerBatch;
+	type PurgePageSize = PurgePageSize;
 	type MaxUpdatesPerBatch = MaxUpdatesPerBatch;
 	type EnsureNotifierOrigin = MockEnsureNotifierOrigin;
 	type EnsureTerminationOrigin = frame_system::EnsureRoot<u64>;
@@ -209,6 +214,7 @@ impl crate::Config for Test {
 	type ReplayWarningThreshold = ReplayWarningThreshold;
 	type ReplayAbandonThreshold = ReplayAbandonThreshold;
 	type MaxRecentRootsPerRing = MaxRecentRootsPerRing;
+	type OldRootRetentionDuration = OldRootRetentionDuration;
 	type OffchainWorkerInterval = ConstU64<1>;
 }
 
@@ -327,19 +333,6 @@ impl GenerateVerifiable for TestVerifiable {
 		} else {
 			Err(VerifiableError::VerificationFailed)
 		}
-	}
-
-	fn batch_validate(
-		capacity: Self::Config,
-		members: &Self::Members,
-		proofs: &[BatchProofItem<Self::Proof>],
-	) -> Result<Vec<Alias>, VerifiableError> {
-		proofs
-			.iter()
-			.map(|item| {
-				Self::validate(capacity, &item.proof, members, &item.context, &item.message)
-			})
-			.collect()
 	}
 
 	fn sign(secret: &Self::Secret, message: &[u8]) -> Result<Self::Signature, VerifiableError> {
