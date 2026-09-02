@@ -14,10 +14,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{mock::*, *};
+use crate::{
+	extension::{AsCoinage, AsCoinageInfo},
+	mock::*,
+	*,
+};
 use codec::Encode;
 use frame_support::{assert_err, assert_ok};
-use sp_runtime::{transaction_validity::TransactionSource, DispatchError};
+use frame_system::AuthorizeCall;
+use sp_runtime::{
+	testing::UintAuthorityId, transaction_validity::TransactionSource, DispatchError,
+};
 use verifiable::GenerateVerifiable;
 
 /// Helper to build a load_recycler_with_coin extrinsic.
@@ -82,14 +89,20 @@ fn load_recycler_member_key_used_invalid() {
 
 		// 1. First user loads successfully with `member`
 		let user1 = 1;
-		CoinsByOwner::<Test>::insert(user1, Coin { value: 0, age: 0 });
+		CoinsByOwner::<Test>::insert(
+			user1,
+			Coin { instance_id: TEST_INSTANCE_ID, value: 0, age: 0 },
+		);
 		let proof1 = CryptoOf::<Test>::sign(&secret, &user1.encode()).unwrap();
 		let ext1 = build_load_ext(user1, member, proof1, true);
 		assert_eq!(Executive::apply_extrinsic(ext1), Ok(Ok(())));
 
 		// 2. Second user tries to load with the same `member`
 		let user2 = 2;
-		CoinsByOwner::<Test>::insert(user2, Coin { value: 0, age: 0 });
+		CoinsByOwner::<Test>::insert(
+			user2,
+			Coin { instance_id: TEST_INSTANCE_ID, value: 0, age: 0 },
+		);
 		// Proof matches user2 and secret, but member key is already in recycler system
 		let proof2 = CryptoOf::<Test>::sign(&secret, &user2.encode()).unwrap();
 		let ext2 = build_load_ext(user2, member, proof2, true);
@@ -102,7 +115,10 @@ fn load_recycler_member_key_used_invalid() {
 fn load_recycler_proof_invalid() {
 	new_test_ext().execute_with(|| {
 		let signer = 1;
-		CoinsByOwner::<Test>::insert(signer, Coin { value: 0, age: 0 });
+		CoinsByOwner::<Test>::insert(
+			signer,
+			Coin { instance_id: TEST_INSTANCE_ID, value: 0, age: 0 },
+		);
 
 		let secret = get_secret(1);
 		let member = CryptoOf::<Test>::member_from_secret(&secret);
@@ -129,7 +145,7 @@ fn load_new_recycler_success() {
 		System::set_block_number(1);
 		let signer = 1;
 		let value = 0;
-		CoinsByOwner::<Test>::insert(signer, Coin { value, age: 0 });
+		CoinsByOwner::<Test>::insert(signer, Coin { instance_id: TEST_INSTANCE_ID, value, age: 0 });
 
 		let secret = get_secret(1);
 		let member = CryptoOf::<Test>::member_from_secret(&secret);
@@ -137,20 +153,23 @@ fn load_new_recycler_success() {
 
 		let ext = build_load_ext(signer, member, proof, true);
 
-		// Ensure no recycler collection exists yet for this value
-		assert!(!RecyclerCollectionCreated::<Test>::contains_key(value));
+		// Recycler collection exists from instance creation
+		assert!(RecyclerCollectionCreated::<Test>::contains_key(TEST_INSTANCE_ID, value));
+
+		// No member mapping yet
+		assert!(!RecyclersCoinToRecycler::<Test>::contains_key(member));
 
 		assert_eq!(Executive::apply_extrinsic(ext), Ok(Ok(())));
-
-		// Check recycler collection created
-		assert!(RecyclerCollectionCreated::<Test>::contains_key(value));
 
 		// Check member mapping
 		assert!(RecyclersCoinToRecycler::<Test>::contains_key(member));
 
 		// Coin removed from owner
 		assert!(!CoinsByOwner::<Test>::contains_key(signer));
-		System::assert_has_event(crate::Event::<Test>::RecyclerLoadedWithCoin { value }.into());
+		System::assert_has_event(
+			crate::Event::<Test>::RecyclerLoadedWithCoin { instance_id: TEST_INSTANCE_ID, value }
+				.into(),
+		);
 	});
 }
 
@@ -161,7 +180,10 @@ fn load_existing_recycler_success() {
 
 		// 1. Create recycler with first user
 		let signer1 = 1;
-		CoinsByOwner::<Test>::insert(signer1, Coin { value, age: 0 });
+		CoinsByOwner::<Test>::insert(
+			signer1,
+			Coin { instance_id: TEST_INSTANCE_ID, value, age: 0 },
+		);
 		let secret1 = get_secret(1);
 		let member1 = CryptoOf::<Test>::member_from_secret(&secret1);
 		let proof1 = CryptoOf::<Test>::sign(&secret1, &signer1.encode()).unwrap();
@@ -171,7 +193,10 @@ fn load_existing_recycler_success() {
 
 		// 2. Load with second user into EXISTING recycler
 		let signer2 = 2;
-		CoinsByOwner::<Test>::insert(signer2, Coin { value, age: 0 });
+		CoinsByOwner::<Test>::insert(
+			signer2,
+			Coin { instance_id: TEST_INSTANCE_ID, value, age: 0 },
+		);
 		let secret2 = get_secret(2);
 		let member2 = CryptoOf::<Test>::member_from_secret(&secret2);
 		let proof2 = CryptoOf::<Test>::sign(&secret2, &signer2.encode()).unwrap();
@@ -186,6 +211,43 @@ fn load_existing_recycler_success() {
 }
 
 #[test]
+fn sponsored_load_with_coin_requires_and_charges_the_load_deposit() {
+	new_test_ext().execute_with(|| {
+		let instance_id = setup_sponsored_instance();
+		set_load_deposit(NATIVE_DEPOSIT_ID, 10);
+
+		let signer = 1u64;
+		CoinsByOwner::<Test>::insert(signer, Coin { instance_id, value: 0, age: 0 });
+		let secret = get_secret(1);
+		let member = CryptoOf::<Test>::member_from_secret(&secret);
+		let proof = CryptoOf::<Test>::sign(&secret, &signer.encode()).unwrap();
+		let build = |call: crate::Call<Test>| {
+			let info = Some(AsCoinageInfo::AsCoin);
+			let extension = (AuthorizeCall::<Test>::new(), AsCoinage::<Test>::new(info));
+			Extrinsic::new_signed(call.into(), signer, UintAuthorityId(signer), extension)
+		};
+		let call = crate::Call::<Test>::load_recycler_with_coin {
+			member_key: member,
+			proof_of_ownership: proof,
+		};
+
+		// An unfunded pot cannot collateralize the load: the transaction is invalid and the
+		// coin is not consumed.
+		assert_invalid(build(call.clone()), CustomInvalidity::PotCannotCoverLoadDeposit);
+		assert!(CoinsByOwner::<Test>::contains_key(signer));
+
+		// Funding the pot makes the same transaction valid, and dispatch takes the deposit
+		// from the pot.
+		fund_pot(instance_id, NATIVE_DEPOSIT_ID, 100);
+		let free_before = pot_free(instance_id, NATIVE_DEPOSIT_ID);
+		assert_eq!(Executive::apply_extrinsic(build(call)), Ok(Ok(())));
+		assert_eq!(pot_held(instance_id, NATIVE_DEPOSIT_ID), 10);
+		assert_eq!(free_before - pot_free(instance_id, NATIVE_DEPOSIT_ID), 10);
+		check_load_deposit_invariant(instance_id, 1);
+	});
+}
+
+#[test]
 fn load_recycler_full_trigger_new_success() {
 	new_test_ext().execute_with(|| {
 		let value = 0;
@@ -195,7 +257,10 @@ fn load_recycler_full_trigger_new_success() {
 		// Fill the recycler to its capacity
 		for i in 0..ring_capacity {
 			let signer = 1000 + i as u64;
-			CoinsByOwner::<Test>::insert(signer, Coin { value, age: 0 });
+			CoinsByOwner::<Test>::insert(
+				signer,
+				Coin { instance_id: TEST_INSTANCE_ID, value, age: 0 },
+			);
 
 			let secret = get_unique_secret();
 			let member = CryptoOf::<Test>::member_from_secret(&secret);
@@ -206,11 +271,14 @@ fn load_recycler_full_trigger_new_success() {
 		}
 
 		// Collection should exist
-		assert!(RecyclerCollectionCreated::<Test>::contains_key(value));
+		assert!(RecyclerCollectionCreated::<Test>::contains_key(TEST_INSTANCE_ID, value));
 
 		// Load one more coin -> should go into the next ring
 		let signer_new = 2000;
-		CoinsByOwner::<Test>::insert(signer_new, Coin { value, age: 0 });
+		CoinsByOwner::<Test>::insert(
+			signer_new,
+			Coin { instance_id: TEST_INSTANCE_ID, value, age: 0 },
+		);
 		let secret_new = get_unique_secret();
 		let member_new = CryptoOf::<Test>::member_from_secret(&secret_new);
 		let proof_new = CryptoOf::<Test>::sign(&secret_new, &signer_new.encode()).unwrap();

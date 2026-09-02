@@ -17,7 +17,10 @@
 use crate::{pallet::BigEndianPeriod, *};
 use alloc::vec;
 use frame_support::traits::UnixTime;
-use indiv_support::traits::{AppendOnlyMembers, MembershipProver, RingMode};
+use indiv_support::{
+	traits::{AppendOnlyMembers, MembershipProver, RingMode},
+	tx_priority,
+};
 use sp_runtime::{
 	transaction_validity::{InvalidTransaction, TransactionValidityError, ValidTransaction},
 	DispatchError,
@@ -60,7 +63,7 @@ impl<T: Config> PaidTknManager<T> {
 
 		let identifier = Pallet::<T>::paid_token_collection_identifier(period);
 		T::MemberService::create_collection(
-			T::CollectionOwner::get(),
+			Pallet::<T>::paid_token_collection_owner(),
 			&identifier,
 			PAID_UNLOAD_TOKEN_ONBOARDING_SIZE,
 			RingMode::AppendOnly,
@@ -81,8 +84,8 @@ impl<T: Config> PaidTknManager<T> {
 
 	/// Add a member key to the paid unload token system.
 	///
-	/// Verifies the proof of ownership, ensures the member key is not already used, computes
-	/// the current time period, ensures the collection exists, and delegates to
+	/// Ensures the member key is valid and not already used, then verifies the proof of ownership.
+	/// It computes the current time period, ensures the collection exists, and delegates to
 	/// `Config::MemberService::add_members`. The on-poll proactive path creates the
 	/// collection ahead of time, while this remains as a fallback.
 	pub fn add_member(
@@ -90,16 +93,16 @@ impl<T: Config> PaidTknManager<T> {
 		member: MemberOf<T>,
 		proof_of_ownership: <CryptoOf<T> as GenerateVerifiable>::Signature,
 	) -> DispatchResult {
-		ensure!(
-			CryptoOf::<T>::verify_signature(&proof_of_ownership, &caller.encode()[..], &member),
-			Error::<T>::InvalidProofOfOwnership
-		);
 		if pallet::PaidUnloadTokenMembers::<T>::contains_key(&member) {
 			return Err(Error::<T>::MemberKeyAlreadyUsed.into());
 		}
 		if !CryptoOf::<T>::is_member_valid(&member) {
 			return Err(Error::<T>::InvalidMemberKey.into());
 		}
+		ensure!(
+			CryptoOf::<T>::verify_signature(&proof_of_ownership, &caller.encode()[..], &member),
+			Error::<T>::InvalidProofOfOwnership
+		);
 
 		let period = Self::current_period();
 
@@ -160,6 +163,7 @@ impl<T: Config> PaidTknManager<T> {
 
 		let validity = ValidTransaction::with_tag_prefix("coinage:clean-paid-token-ring")
 			.and_provides((period, ring_index))
+			.priority(tx_priority::CLEANUP)
 			.into();
 		Ok((validity, Weight::zero()))
 	}
@@ -223,6 +227,7 @@ impl<T: Config> PaidTknManager<T> {
 
 		let validity = ValidTransaction::with_tag_prefix("coinage:delete-paid-token-collection")
 			.and_provides(period)
+			.priority(tx_priority::CLEANUP)
 			.into();
 		Ok((validity, Weight::zero()))
 	}
@@ -234,7 +239,10 @@ impl<T: Config> PaidTknManager<T> {
 	pub fn delete_collection_unchecked(period: Period) -> DispatchResult {
 		let identifier = Pallet::<T>::paid_token_collection_identifier(period);
 
-		T::MemberService::delete_collection(T::CollectionOwner::get(), &identifier)?;
+		T::MemberService::delete_collection(
+			Pallet::<T>::paid_token_collection_owner(),
+			&identifier,
+		)?;
 
 		pallet::PaidTokenCollectionsCreated::<T>::remove(BigEndianPeriod::from(period));
 		pallet::PaidUnloadTokenNextRingToClean::<T>::remove(BigEndianPeriod::from(period));
@@ -253,7 +261,7 @@ impl<T: Config> PaidTknManager<T> {
 	/// Validate the proof for the consumption of a paid unload token.
 	///
 	/// This checks that the collection has not expired, constructs the period-specific context,
-	/// delegates proof verification to `Config::MemberService::verify_membership_at_rev`, and
+	/// delegates proof verification to `T::MemberService::verify_membership`, and
 	/// checks that the alias has not already been consumed.
 	pub fn validate_token_consumption_proof(
 		period: Period,
@@ -282,7 +290,7 @@ impl<T: Config> PaidTknManager<T> {
 			c
 		};
 
-		let result = T::MemberService::verify_membership_at_rev(
+		let result = T::MemberService::verify_membership(
 			&identifier,
 			proof,
 			ring_index,
@@ -323,6 +331,7 @@ impl<T: Config> PaidTknManager<T> {
 		let validity =
 			ValidTransaction::with_tag_prefix(pallet::CLEAN_PAID_UNLOAD_TOKEN_DUST_TX_TAG_PREFIX)
 				.and_provides(first.0)
+				.priority(tx_priority::CLEANUP)
 				.into();
 		Ok((validity, Weight::zero()))
 	}

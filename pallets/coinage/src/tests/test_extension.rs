@@ -17,7 +17,7 @@
 use crate::{
 	extension::{AsCoinage, Pre},
 	mock::*,
-	pallet::{CoinValueToAssetAmountError, CustomInvalidity},
+	pallet::{CustomInvalidity, DenominationToAssetAmountError},
 	*,
 };
 use codec::Encode;
@@ -29,14 +29,14 @@ use verifiable::GenerateVerifiable;
 fn failed_coin_extrinsic_restores_coin() {
 	// When a coin extrinsic fails dispatch, the coin consumed in prepare should be restored.
 	new_test_ext().execute_with(|| {
-		let value: CoinValue = 0; // exponent 0 → 1000 underlying units
-		let coin = Coin { value, age: 0 };
+		let value: Denomination = 0; // exponent 0 → 1000 underlying units
+		let coin = Coin { instance_id: TEST_INSTANCE_ID, value, age: 0 };
 		let coin_id = 1;
 		let current_block = frame_system::Pallet::<Test>::block_number();
 		let expected_lock_until =
 			current_block.saturating_add(get_u64::<<Test as Config>::CoinFailureLockPeriod>());
 
-		assert_eq!(TotalValueOfDestroyedCoins::<Test>::get(), 0);
+		assert_eq!(TotalValueOfDestroyedCoins::<Test>::get(TEST_INSTANCE_ID), 0);
 		assert!(!CoinsByOwner::<Test>::contains_key(coin_id));
 
 		let pre = Pre::<Test>::UsingCoin { coin_id, coin };
@@ -47,11 +47,14 @@ fn failed_coin_extrinsic_restores_coin() {
 		let result = AsCoinage::<Test>::post_dispatch_details(pre, &info, &post_info, 0, &err);
 		assert_ok!(result);
 
-		assert_eq!(TotalValueOfDestroyedCoins::<Test>::get(), 0);
-		assert_eq!(CoinsByOwner::<Test>::get(coin_id), Some(Coin { value, age: 0 }));
+		assert_eq!(TotalValueOfDestroyedCoins::<Test>::get(TEST_INSTANCE_ID), 0);
+		assert_eq!(
+			CoinsByOwner::<Test>::get(coin_id),
+			Some(Coin { instance_id: TEST_INSTANCE_ID, value, age: 0 })
+		);
 		assert_eq!(
 			LockedCoins::<Test>::get(coin_id),
-			Some(LockedCoin {
+			Some(LockInfo {
 				reason: LockReason::FailedDispatch { retries: 0 },
 				until: expected_lock_until
 			})
@@ -61,39 +64,18 @@ fn failed_coin_extrinsic_restores_coin() {
 }
 
 #[test]
-fn failed_output_token_extrinsic_tracks_destroyed_value() {
-	// When an output-token extrinsic fails dispatch, the first alias (consumed in prepare)
-	// should have its value tracked in TotalValueOfDestroyedCoins.
-	new_test_ext().execute_with(|| {
-		let fee_recycler_value: CoinValue = 0; // exponent 0 → 1000 underlying units
-
-		assert_eq!(TotalValueOfDestroyedCoins::<Test>::get(), 0);
-
-		let pre = Pre::<Test>::UsingOutputToken { fee_recycler_value };
-		let info = Default::default();
-		let post_info = Default::default();
-		let err = Err(DispatchError::Other("test"));
-
-		let result = AsCoinage::<Test>::post_dispatch_details(pre, &info, &post_info, 0, &err);
-		assert_ok!(result);
-
-		assert_eq!(TotalValueOfDestroyedCoins::<Test>::get(), 1000);
-	});
-}
-
-#[test]
 fn successful_coin_extrinsic_clears_existing_lock() {
 	new_test_ext().execute_with(|| {
 		let coin_id = 1u64;
-		let coin = Coin { value: 0, age: 0 };
+		let coin = Coin { instance_id: TEST_INSTANCE_ID, value: 0, age: 0 };
 
 		LockedCoins::<Test>::insert(
 			coin_id,
-			LockedCoin { reason: LockReason::FailedDispatch { retries: 0 }, until: 100u64 },
+			LockInfo { reason: LockReason::FailedDispatch { retries: 0 }, until: 100u64 },
 		);
 		assert_eq!(
 			LockedCoins::<Test>::get(coin_id),
-			Some(LockedCoin { reason: LockReason::FailedDispatch { retries: 0 }, until: 100u64 })
+			Some(LockInfo { reason: LockReason::FailedDispatch { retries: 0 }, until: 100u64 })
 		);
 
 		let pre = Pre::<Test>::UsingCoin { coin_id, coin };
@@ -117,7 +99,7 @@ fn get_coin_lock_until_returns_none_for_expired_lock() {
 		let current_block = frame_system::Pallet::<Test>::block_number();
 		LockedCoins::<Test>::insert(
 			coin_id,
-			LockedCoin { reason: LockReason::FailedDispatch { retries: 0 }, until: current_block },
+			LockInfo { reason: LockReason::FailedDispatch { retries: 0 }, until: current_block },
 		);
 
 		assert_eq!(Coinage::get_coin_lock_until(coin_id), None);
@@ -125,43 +107,46 @@ fn get_coin_lock_until_returns_none_for_expired_lock() {
 }
 
 #[test]
-fn coin_value_to_asset_amount_valid_values() {
-	// Mock config: UnderlyingAssetUnit=1000, MinimumExponent=-2, MaximumExponent=7
+fn denomination_to_asset_amount_valid_values() {
+	// Mock config: MinimumExponent=-2, MaximumExponent=7
 	new_test_ext().execute_with(|| {
-		assert_eq!(Coinage::coin_value_to_asset_amount(-2), Ok(250)); // 1000 >> 2
-		assert_eq!(Coinage::coin_value_to_asset_amount(-1), Ok(500)); // 1000 >> 1
-		assert_eq!(Coinage::coin_value_to_asset_amount(0), Ok(1000)); // 1000
-		assert_eq!(Coinage::coin_value_to_asset_amount(1), Ok(2000)); // 1000 << 1
-		assert_eq!(Coinage::coin_value_to_asset_amount(2), Ok(4000)); // 1000 << 2
-		assert_eq!(Coinage::coin_value_to_asset_amount(7), Ok(128_000)); // 1000 << 7
+		assert_eq!(Coinage::denomination_to_asset_amount(UNDERLYING_ASSET_UNIT, -2), Ok(250)); // 1000 >> 2
+		assert_eq!(Coinage::denomination_to_asset_amount(UNDERLYING_ASSET_UNIT, -1), Ok(500)); // 1000 >> 1
+		assert_eq!(Coinage::denomination_to_asset_amount(UNDERLYING_ASSET_UNIT, 0), Ok(1000)); // 1000
+		assert_eq!(Coinage::denomination_to_asset_amount(UNDERLYING_ASSET_UNIT, 1), Ok(2000)); // 1000 << 1
+		assert_eq!(Coinage::denomination_to_asset_amount(UNDERLYING_ASSET_UNIT, 2), Ok(4000)); // 1000 << 2
+		assert_eq!(Coinage::denomination_to_asset_amount(UNDERLYING_ASSET_UNIT, 7), Ok(128_000)); // 1000 << 7
 	});
 }
 
 #[test]
-fn coin_value_to_asset_amount_all_default_exponents() {
+fn denomination_to_asset_amount_all_default_exponents() {
 	// With the default mock config (MinimumExponent=-2, MaximumExponent=7),
 	// every exponent must convert losslessly.
 	new_test_ext().execute_with(|| {
-		let min = <Test as crate::Config>::MinimumExponent::get();
-		let max = <Test as crate::Config>::MaximumExponent::get();
-		let unit = <<Test as crate::Config>::UnderlyingAssetUnit as sp_core::Get<u64>>::get();
+		let min_exp = <Test as crate::Config>::MinimumExponent::get();
+		let max_exp = <Test as crate::Config>::MaximumExponent::get();
+		let asset_unit = UNDERLYING_ASSET_UNIT;
 
-		for value in min..=max {
-			let amount = Coinage::coin_value_to_asset_amount(value)
-				.unwrap_or_else(|e| panic!("coin value {value} should convert, got {e:?}"));
-			assert!(amount > 0, "coin value {value} must produce a non-zero amount");
+		for value in min_exp..=max_exp {
+			let amount = Coinage::denomination_to_asset_amount(asset_unit, value)
+				.unwrap_or_else(|e| panic!("denomination {value} should convert, got {e:?}"));
+			assert!(amount > 0, "denomination {value} must produce a non-zero amount");
 
-			// Verify the amount matches the expected power-of-2 scaling of the unit.
-			let expected =
-				if value < 0 { unit >> value.unsigned_abs() as u32 } else { unit << value as u32 };
-			assert_eq!(amount, expected, "coin value {value}: got {amount}, expected {expected}");
+			// Verify the amount matches the expected power-of-2 scaling of the asset unit.
+			let expected = if value < 0 {
+				asset_unit >> value.unsigned_abs() as u32
+			} else {
+				asset_unit << value as u32
+			};
+			assert_eq!(amount, expected, "denomination {value}: got {amount}, expected {expected}");
 		}
 	});
 }
 
 #[test]
-fn coin_value_to_asset_amount_rejects_lossy_exponents() {
-	// UnderlyingAssetUnit=1000: can be divided by 2 exactly 3 times (1000 → 500 → 250 → 125).
+fn denomination_to_asset_amount_rejects_lossy_exponents() {
+	// UNDERLYING_ASSET_UNIT=1000: can be divided by 2 exactly 3 times (1000 → 500 → 250 → 125).
 	// The 4th division loses precision (125 / 2 = 62.5, truncated to 62).
 	new_test_ext().execute_with(|| {
 		// Widen the allowed range to -10 so we can test exponents that would
@@ -170,14 +155,14 @@ fn coin_value_to_asset_amount_rejects_lossy_exponents() {
 		// lossless. Exponents -4 through -10 lose precision.
 		MinimumExponent::set(&-10);
 		for value in -10..=-3 {
-			let result = Coinage::coin_value_to_asset_amount(value);
+			let result = Coinage::denomination_to_asset_amount(UNDERLYING_ASSET_UNIT, value);
 			if value >= -3 {
-				assert_eq!(result, Ok(125), "coin value {value} should be lossless");
+				assert_eq!(result, Ok(125), "denomination {value} should be lossless");
 			} else {
 				assert_eq!(
 					result,
-					Err(CoinValueToAssetAmountError::LossyCoinValueConversion),
-					"coin value {value} should be lossy"
+					Err(DenominationToAssetAmountError::LossyDenominationConversion),
+					"denomination {value} should be lossy"
 				);
 			}
 		}
@@ -185,69 +170,69 @@ fn coin_value_to_asset_amount_rejects_lossy_exponents() {
 }
 
 #[test]
-fn coin_value_to_asset_amount_rejects_overwide_shifts() {
+fn denomination_to_asset_amount_rejects_overwide_shifts() {
 	new_test_ext().execute_with(|| {
 		// Allow the full i8 range so we can test shifts that exceed u64's
 		// 64-bit width. These would normally be rejected by the bounds check.
 		MinimumExponent::set(&i8::MIN);
 
-		// Shifts of 64..=128 bits exceed u64 width → CoinValueTooSmall.
+		// Shifts of 64..=128 bits exceed u64 width → DenominationTooSmall.
 		for value in i8::MIN..=-64 {
 			assert_eq!(
-				Coinage::coin_value_to_asset_amount(value),
-				Err(CoinValueToAssetAmountError::CoinValueTooSmall),
-				"coin value {value} should exceed u64 bit width"
+				Coinage::denomination_to_asset_amount(UNDERLYING_ASSET_UNIT, value),
+				Err(DenominationToAssetAmountError::DenominationTooSmall),
+				"denomination {value} should exceed u64 bit width"
 			);
 		}
 
 		// Shift of 63 bits fits in u64 but is lossy for unit=1000.
 		assert_eq!(
-			Coinage::coin_value_to_asset_amount(-63),
-			Err(CoinValueToAssetAmountError::LossyCoinValueConversion),
+			Coinage::denomination_to_asset_amount(UNDERLYING_ASSET_UNIT, -63),
+			Err(DenominationToAssetAmountError::LossyDenominationConversion),
 		);
 	});
 }
 
 #[test]
-fn coin_value_to_asset_amount_out_of_bounds() {
+fn denomination_to_asset_amount_out_of_bounds() {
 	new_test_ext().execute_with(|| {
 		assert_eq!(
-			Coinage::coin_value_to_asset_amount(-3),
-			Err(CoinValueToAssetAmountError::CoinValueOutOfBound)
+			Coinage::denomination_to_asset_amount(UNDERLYING_ASSET_UNIT, -3),
+			Err(DenominationToAssetAmountError::DenominationOutOfBound)
 		);
 		assert_eq!(
-			Coinage::coin_value_to_asset_amount(8),
-			Err(CoinValueToAssetAmountError::CoinValueOutOfBound)
+			Coinage::denomination_to_asset_amount(UNDERLYING_ASSET_UNIT, 8),
+			Err(DenominationToAssetAmountError::DenominationOutOfBound)
 		);
 		assert_eq!(
-			Coinage::coin_value_to_asset_amount(i8::MIN),
-			Err(CoinValueToAssetAmountError::CoinValueOutOfBound)
+			Coinage::denomination_to_asset_amount(UNDERLYING_ASSET_UNIT, i8::MIN),
+			Err(DenominationToAssetAmountError::DenominationOutOfBound)
 		);
 		assert_eq!(
-			Coinage::coin_value_to_asset_amount(i8::MAX),
-			Err(CoinValueToAssetAmountError::CoinValueOutOfBound)
+			Coinage::denomination_to_asset_amount(UNDERLYING_ASSET_UNIT, i8::MAX),
+			Err(DenominationToAssetAmountError::DenominationOutOfBound)
 		);
 	});
 }
 
 #[test]
-fn coin_value_to_asset_amount_i8_min_does_not_panic() {
+fn denomination_to_asset_amount_i8_min_does_not_panic() {
 	new_test_ext().execute_with(|| {
 		// Allow i8::MIN (-128) to pass the bounds check so we can verify
 		// that unsigned_abs() handles it without panicking. The old code
 		// used -value which overflows on -128.
 		MinimumExponent::set(&-128);
 		assert_eq!(
-			Coinage::coin_value_to_asset_amount(i8::MIN),
-			Err(CoinValueToAssetAmountError::CoinValueTooSmall)
+			Coinage::denomination_to_asset_amount(UNDERLYING_ASSET_UNIT, i8::MIN),
+			Err(DenominationToAssetAmountError::DenominationTooSmall)
 		);
 	});
 }
 
-/// Verifies that left-shifting `UnderlyingAssetUnit` by more bits than fit in u64 returns
-/// `CoinValueTooBig` instead of silently truncating.
+/// Verifies that left-shifting `UNDERLYING_ASSET_UNIT` by more bits than fit in u64 returns
+/// `DenominationTooBig` instead of silently truncating.
 #[test]
-fn coin_value_to_asset_amount_rejects_left_shift_overflow() {
+fn denomination_to_asset_amount_rejects_left_shift_overflow() {
 	new_test_ext().execute_with(|| {
 		// With unit=1000, we need ~10 bits. Max safe left-shift is 54 (64 - 10).
 		// A shift of 55 causes overflow: 1000 << 55 needs 65 bits, exceeding u64.
@@ -256,27 +241,27 @@ fn coin_value_to_asset_amount_rejects_left_shift_overflow() {
 		MaximumExponent::set(&60);
 
 		// First verify the math: unit=1000 has 54 leading zeros
-		let unit: u64 = UNDERLYING_ASSET_UNIT;
-		assert_eq!(unit.leading_zeros(), 54, "unit=1000 should have 54 leading zeros");
+		let asset_unit = UNDERLYING_ASSET_UNIT;
+		assert_eq!(asset_unit.leading_zeros(), 54, "unit=1000 should have 54 leading zeros");
 
-		// Shift of 55 should be detected as overflow and return CoinValueTooBig.
+		// Shift of 55 should be detected as overflow and return DenominationTooBig.
 		assert_eq!(
-			Coinage::coin_value_to_asset_amount(55),
-			Err(CoinValueToAssetAmountError::CoinValueTooBig),
+			Coinage::denomination_to_asset_amount(asset_unit, 55),
+			Err(DenominationToAssetAmountError::DenominationTooBig),
 			"Left-shift overflow should be rejected"
 		);
 
 		// Also test shift of 60 (even more overflow)
 		assert_eq!(
-			Coinage::coin_value_to_asset_amount(60),
-			Err(CoinValueToAssetAmountError::CoinValueTooBig),
+			Coinage::denomination_to_asset_amount(asset_unit, 60),
+			Err(DenominationToAssetAmountError::DenominationTooBig),
 			"Left-shift overflow should be rejected"
 		);
 
 		// Shift of 54 should still work (max safe shift)
 		MaximumExponent::set(&54);
 		assert!(
-			Coinage::coin_value_to_asset_amount(54).is_ok(),
+			Coinage::denomination_to_asset_amount(asset_unit, 54).is_ok(),
 			"Max safe shift (54) should succeed"
 		);
 	});
@@ -317,12 +302,15 @@ fn exponential_lock_duration_on_consecutive_failures_and_cleared_on_success() {
 		setup_asset();
 		let coin_owner = ALICE;
 		let dest = BOB;
-		let coin_value: CoinValue = 0;
+		let denomination: Denomination = 0;
 		let base_lock_period = COIN_FAILURE_LOCK_PERIOD;
 
 		// Insert coin directly WITHOUT asset backing - this will cause dispatch to fail
 		// when trying to release/transfer the underlying asset.
-		CoinsByOwner::<Test>::insert(coin_owner, Coin { value: coin_value, age: 0 });
+		CoinsByOwner::<Test>::insert(
+			coin_owner,
+			Coin { instance_id: TEST_INSTANCE_ID, value: denomination, age: 0 },
+		);
 
 		// Initially coin exists and no lock.
 		assert!(CoinsByOwner::<Test>::contains_key(coin_owner));
@@ -339,10 +327,13 @@ fn exponential_lock_duration_on_consecutive_failures_and_cleared_on_success() {
 		assert!(matches!(res, Ok(Err(_))), "Dispatch should fail: {res:?}");
 
 		// Coin is restored and locked with retries=0.
-		assert_eq!(CoinsByOwner::<Test>::get(coin_owner), Some(Coin { value: coin_value, age: 0 }));
+		assert_eq!(
+			CoinsByOwner::<Test>::get(coin_owner),
+			Some(Coin { instance_id: TEST_INSTANCE_ID, value: denomination, age: 0 })
+		);
 		assert_eq!(
 			LockedCoins::<Test>::get(coin_owner),
-			Some(LockedCoin {
+			Some(LockInfo {
 				reason: LockReason::FailedDispatch { retries: 0 },
 				until: first_lock_until
 			})
@@ -370,10 +361,13 @@ fn exponential_lock_duration_on_consecutive_failures_and_cleared_on_success() {
 		assert!(matches!(res, Ok(Err(_))), "Dispatch should fail: {res:?}");
 
 		// Coin is restored and locked with retries=1 (exponential increase).
-		assert_eq!(CoinsByOwner::<Test>::get(coin_owner), Some(Coin { value: coin_value, age: 0 }));
+		assert_eq!(
+			CoinsByOwner::<Test>::get(coin_owner),
+			Some(Coin { instance_id: TEST_INSTANCE_ID, value: denomination, age: 0 })
+		);
 		assert_eq!(
 			LockedCoins::<Test>::get(coin_owner),
-			Some(LockedCoin {
+			Some(LockInfo {
 				reason: LockReason::FailedDispatch { retries: 1 },
 				until: second_lock_until
 			})
@@ -397,6 +391,44 @@ fn exponential_lock_duration_on_consecutive_failures_and_cleared_on_success() {
 		assert!(LockedCoins::<Test>::get(coin_owner).is_none());
 		assert_eq!(Coinage::get_coin_lock_until(coin_owner), None);
 		// Destination received the coin with incremented age.
-		assert_eq!(CoinsByOwner::<Test>::get(dest), Some(Coin { value: coin_value, age: 1 }));
+		assert_eq!(
+			CoinsByOwner::<Test>::get(dest),
+			Some(Coin { instance_id: TEST_INSTANCE_ID, value: denomination, age: 1 })
+		);
+	});
+}
+
+// Each dual-mode unload call charges the component-wise maximum of its two fee-mode paths up
+// front (the fee mode lives in the origin, which the `#[pallet::weight]` annotation cannot see),
+// then refunds down to the mode actually run via `PostDispatchInfo`. This checks the charged
+// worst case is `max(prepaid, from_output)` and dominates each mode, so it is a true upper bound
+// and the two modes genuinely differ (otherwise the refund would be a no-op).
+#[test]
+fn unload_call_charge_is_max_of_modes() {
+	new_test_ext().execute_with(|| {
+		// coins: a = 2 aliases, d = 2 destinations.
+		let (a, d) = (2usize, 2u32);
+		assert_eq!(
+			Coinage::unload_recycler_into_coins_max_weight(a, d),
+			Coinage::unload_recycler_into_coins_prepaid_weight(a, d)
+				.max(Coinage::unload_recycler_into_coins_from_output_weight(a, d)),
+		);
+
+		// external asset: n = 2 aliases. The `_max_weight` helper feeds the annotation.
+		assert_eq!(
+			Coinage::unload_recycler_into_external_asset_max_weight(a),
+			Coinage::unload_recycler_into_external_asset_prepaid_weight(a)
+				.max(Coinage::unload_recycler_into_external_asset_from_output_weight(a)),
+		);
+
+		// loaded_coins: a = 2 aliases, d = 0 loaded_coins.
+		assert_eq!(
+			Coinage::unload_recycler_into_external_asset_and_loaded_coins_max_weight(a, 0),
+			Coinage::unload_recycler_into_external_asset_and_loaded_coins_prepaid_weight(a, 0).max(
+				Coinage::unload_recycler_into_external_asset_and_loaded_coins_from_output_weight(
+					a, 0
+				)
+			),
+		);
 	});
 }
