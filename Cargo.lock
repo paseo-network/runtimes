@@ -6140,6 +6140,7 @@ dependencies = [
  "scale-info",
  "schnorrkel",
  "sp-core",
+ "sp-crypto-hashing",
  "sp-io",
  "sp-keystore",
  "sp-runtime",
