@@ -25,12 +25,12 @@ use verifiable::GenerateVerifiable;
 //
 // Scenario:
 // 1. Fill a recycler ring to capacity and trigger ring building.
-// 2. Unload a few coins, creating entries in `RecyclersUnloaded`.
+// 2. Unload a few coins, creating unloaded entries in `RecyclerAliasStates`.
 // 3. Advance time past the ring's expiration.
 // 4. Automatically trigger `clean_recycler` via offchain worker — this removes the ring and queues
 //    the (value, ring_index) in `RecyclersDusting` for gradual cleanup.
 // 5. Automatically trigger `clean_recycler_dust` via offchain worker — this clears the unloaded
-//    aliases from `RecyclersUnloaded` and removes the entry from `RecyclersDusting`.
+//    aliases from `RecyclerAliasStates` and removes the entry from `RecyclersDusting`.
 //
 // Verifies:
 // - After `clean_recycler`: ring is removed, dusting entry exists, aliases still present.
@@ -52,7 +52,7 @@ fn test_removed_recyclers_rings_dusting() {
 		}
 
 		// Ensure that ring 0 has been built and is marked as immutable
-		let identifier = Coinage::recycler_collection_identifier(value);
+		let identifier = Coinage::recycler_collection_identifier(TEST_INSTANCE_ID, value);
 		let status = <Test as Config>::MemberService::ring_status(&identifier, 0).unwrap();
 		assert_eq!(status.total, ring_capacity);
 		assert!(status.immutable_since.is_some());
@@ -60,7 +60,7 @@ fn test_removed_recyclers_rings_dusting() {
 		let immutable_since = status.immutable_since.unwrap() as u32;
 		let r0_revision = <Test as Config>::MemberService::ring_revision(&identifier, 0).unwrap();
 
-		// 2. Unload a few coins from ring 0 to create "dust" in `RecyclersUnloaded`
+		// 2. Unload a few coins from ring 0 to create "dust" in `RecyclerAliasStates`
 		let dest = 5000u64;
 		let mut aliases = Vec::new();
 
@@ -77,11 +77,13 @@ fn test_removed_recyclers_rings_dusting() {
 		}
 
 		let call = crate::Call::<Test>::unload_recycler_into_external_asset {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: aliases.clone().try_into().unwrap(),
 			value,
 			index: 0,
 			revision: r0_revision,
 			to: dest,
+			max_fee: unload_token_fee_in_asset(),
 		};
 		let ext = build_unload_from_output_ext(call, value, 0, r0_revision, &secrets[0..5]);
 		assert_eq!(Executive::apply_extrinsic(ext), Ok(Ok(())));
@@ -96,11 +98,13 @@ fn test_removed_recyclers_rings_dusting() {
 		let build_stale_unload_ext = || {
 			build_unload_from_output_ext(
 				crate::Call::<Test>::unload_recycler_into_external_asset {
+					instance_id: TEST_INSTANCE_ID,
 					aliases: bounded_vec![stale_alias],
 					value,
 					index: 0,
 					revision: r0_revision,
 					to: dest + 1,
+					max_fee: unload_token_fee_in_asset(),
 				},
 				value,
 				0,
@@ -110,7 +114,10 @@ fn test_removed_recyclers_rings_dusting() {
 		};
 
 		for alias in &aliases {
-			assert!(RecyclersUnloaded::<Test>::contains_key((value, 0u32, *alias)));
+			assert!(matches!(
+				RecyclerAliasStates::<Test>::get((TEST_INSTANCE_ID, value, 0u32, *alias)),
+				Some(AliasState::Unloaded),
+			));
 		}
 
 		// Verify that RecyclersCoinToRecycler entries exist for all ring 0 members
@@ -132,16 +139,26 @@ fn test_removed_recyclers_rings_dusting() {
 			<Test as Config>::MemberService::is_revision_valid(&identifier, 0, r0_revision,),
 			"the old recycler revision should still be retained by members at expiry time"
 		);
-		assert!(!RecyclerManager::<Test>::validate_recycler_revision(value, 0, r0_revision));
+		assert!(!RecyclerManager::<Test>::validate_recycler_revision(
+			TEST_INSTANCE_ID,
+			value,
+			0,
+			r0_revision
+		));
 		assert_invalid(build_stale_unload_ext(), CustomInvalidity::InvalidRecyclerRevision);
 
 		// 4. Run offchain worker, which should trigger `clean_recycler`
 		advance_block();
 
 		// Check that the ring was removed and added to `RecyclersDusting` queue
-		assert_eq!(RecyclersLastRemovedRingIndex::<Test>::get(value), Some(0));
-		assert!(RecyclersDusting::<Test>::contains_key((value, 0u32)));
-		assert!(!RecyclerManager::<Test>::validate_recycler_revision(value, 0, r0_revision));
+		assert_eq!(RecyclersLastRemovedRingIndex::<Test>::get(TEST_INSTANCE_ID, value), Some(0));
+		assert!(RecyclersDusting::<Test>::contains_key((TEST_INSTANCE_ID, value, 0u32)));
+		assert!(!RecyclerManager::<Test>::validate_recycler_revision(
+			TEST_INSTANCE_ID,
+			value,
+			0,
+			r0_revision
+		));
 
 		// Verify that RecyclersCoinToRecycler entries for ring 0 members have been cleaned
 		for member in &r0_members {
@@ -150,18 +167,25 @@ fn test_removed_recyclers_rings_dusting() {
 
 		// Verify that the unloaded aliases have NOT been removed yet (dusting handles it)
 		for alias in &aliases {
-			assert!(RecyclersUnloaded::<Test>::contains_key((value, 0u32, *alias)));
+			assert!(matches!(
+				RecyclerAliasStates::<Test>::get((TEST_INSTANCE_ID, value, 0u32, *alias)),
+				Some(AliasState::Unloaded),
+			));
 		}
 
-		// Verify TotalValueOfDestroyedCoins accounts for remaining (non-unloaded) coins
-		let unit = Coinage::coin_value_to_asset_amount(value).unwrap();
-		let expected_destroyed = unit * (ring_capacity - 5) as u64; // 767 total - 5 unloaded
-		assert_eq!(TotalValueOfDestroyedCoins::<Test>::get(), expected_destroyed);
+		// The remaining (non-unloaded) coins are archived, not destroyed.
+		assert_eq!(TotalValueOfDestroyedCoins::<Test>::get(TEST_INSTANCE_ID), 0);
+		assert_eq!(
+			RecyclersArchives::<Test>::get((TEST_INSTANCE_ID, value, 0u32))
+				.unwrap()
+				.remaining,
+			ring_capacity - 5,
+		);
 		System::assert_has_event(
 			crate::Event::<Test>::RecyclerCleaned {
+				instance_id: TEST_INSTANCE_ID,
 				value,
 				remaining_coins: ring_capacity - 5,
-				destroyed_amount: expected_destroyed,
 			}
 			.into(),
 		);
@@ -170,12 +194,92 @@ fn test_removed_recyclers_rings_dusting() {
 		advance_block();
 
 		// Check that `RecyclersDusting` queue for this ring is cleared
-		assert!(!RecyclersDusting::<Test>::contains_key((value, 0u32)));
+		assert!(!RecyclersDusting::<Test>::contains_key((TEST_INSTANCE_ID, value, 0u32)));
 
 		// Verify that all unloaded aliases for this ring have been removed
 		for alias in &aliases {
-			assert!(!RecyclersUnloaded::<Test>::contains_key((value, 0u32, *alias)));
+			assert!(!matches!(
+				RecyclerAliasStates::<Test>::get((TEST_INSTANCE_ID, value, 0u32, *alias)),
+				Some(AliasState::Unloaded),
+			));
 		}
+		System::assert_has_event(crate::Event::<Test>::RecyclerDustCleaned.into());
+	});
+}
+
+#[test]
+fn test_removed_recycler_ring_with_only_locked_aliases_dusting() {
+	new_test_ext().execute_with(|| {
+		setup_balances();
+
+		let value = 0;
+		let ring_capacity = R2E10_RING_CAPACITY;
+
+		let (secrets, _index, _revision) = setup_recycler(value, ring_capacity + 1, 0);
+
+		for _ in 0..10 {
+			Members::process_maintenance();
+		}
+
+		let identifier = Coinage::recycler_collection_identifier(TEST_INSTANCE_ID, value);
+		let status = <Test as Config>::MemberService::ring_status(&identifier, 0).unwrap();
+		assert_eq!(status.total, ring_capacity);
+		assert!(status.immutable_since.is_some());
+
+		// Seed the removed ring with one leftover failed-dispatch lock and no unloaded aliases.
+		// This exercises the "locked aliases are also recycler dust" case directly.
+		let immutable_since = status.immutable_since.unwrap() as u32;
+		let expiration = get_u32::<<Test as crate::Config>::RecyclerExpirationTime>();
+		let alias = CryptoOf::<Test>::alias_in_context(
+			&secrets[0],
+			crate::pallet::UNLOADING_RECYCLER_CONTEXT.as_ref(),
+		)
+		.unwrap();
+		RecyclerAliasStates::<Test>::insert(
+			(TEST_INSTANCE_ID, value, 0u32, alias),
+			AliasState::Locked(LockInfo {
+				reason: LockReason::FailedDispatch { retries: 0 },
+				until: u64::MAX,
+			}),
+		);
+
+		let r0_members: Vec<_> = secrets[..ring_capacity as usize]
+			.iter()
+			.map(CryptoOf::<Test>::member_from_secret)
+			.collect();
+
+		// The first maintenance block removes the expired ring itself.
+		advance_until_time(immutable_since + expiration);
+		advance_block();
+
+		// Ring removal should clear the reverse member mapping immediately.
+		for member in &r0_members {
+			assert!(!RecyclersCoinToRecycler::<Test>::contains_key(member));
+		}
+
+		// No aliases were unloaded, so all coins remain recoverable: the ring is archived and
+		// nothing is destroyed.
+		assert_eq!(TotalValueOfDestroyedCoins::<Test>::get(TEST_INSTANCE_ID), 0);
+		System::assert_has_event(
+			crate::Event::<Test>::RecyclerCleaned {
+				instance_id: TEST_INSTANCE_ID,
+				value,
+				remaining_coins: ring_capacity,
+			}
+			.into(),
+		);
+		assert!(RecyclersArchives::<Test>::contains_key((TEST_INSTANCE_ID, value, 0u32)));
+		// The key point of this test: ring cleanup should only queue leftover alias locks for dust
+		// cleanup, not delete them immediately in the same step.
+		assert!(
+			super::get_recycler_alias_lock_until(value, 0, alias).is_some(),
+			"ring cleanup should defer alias-lock cleanup to the dust cleaner"
+		);
+
+		// A later dust-cleanup step removes the leftover alias lock.
+		advance_block();
+
+		assert_eq!(super::get_recycler_alias_lock_until(value, 0, alias), None);
 		System::assert_has_event(crate::Event::<Test>::RecyclerDustCleaned.into());
 	});
 }
@@ -259,6 +363,7 @@ fn test_paid_unload_token_dusting_flow() {
 			)
 			.unwrap();
 			let call = crate::Call::<Test>::unload_recycler_into_coin {
+				instance_id: TEST_INSTANCE_ID,
 				aliases: bounded_vec![alias],
 				value,
 				index: r_idx,

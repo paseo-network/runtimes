@@ -21,6 +21,7 @@ use frame_system::AuthorizeCall;
 use indiv_support::traits::AppendOnlyMembers;
 use sp_runtime::{
 	bounded_vec, testing::UintAuthorityId, transaction_validity::TransactionSource, DispatchError,
+	TokenError,
 };
 use verifiable::GenerateVerifiable;
 
@@ -32,8 +33,10 @@ fn build_ext(
 	let extension = (AuthorizeCall::<Test>::new(), AsCoinage::<Test>::new(None));
 	Extrinsic::new_signed(
 		crate::Call::pay_for_recycler_unload_fee_token_with_external_asset {
+			instance_id: TEST_INSTANCE_ID,
 			member_key,
 			proof_of_ownership,
+			max_fee: unload_token_fee_in_asset(),
 		}
 		.into(),
 		signer,
@@ -57,8 +60,10 @@ fn wrong_origin_fail() {
 		assert_noop!(
 			Coinage::pay_for_recycler_unload_fee_token_with_external_asset(
 				RuntimeOrigin::none(),
+				TEST_INSTANCE_ID,
 				member,
-				proof
+				proof,
+				unload_token_fee_in_asset()
 			),
 			DispatchError::BadOrigin
 		);
@@ -109,6 +114,107 @@ fn wrong_proof_of_ownership_fail() {
 	});
 }
 
+/// The conversion of the caller's asset is bounded by `max_fee`. This call is dispatched without
+/// an extension check on the bound, so the bound is enforced in the dispatch itself.
+#[test]
+fn max_fee_below_the_converted_fee_fails() {
+	new_test_ext().execute_with(|| {
+		System::set_block_number(1);
+		setup_asset();
+		let signer = 1;
+		fund_external_asset(signer, 1000);
+
+		let secret = get_secret(1);
+		let member = CryptoOf::<Test>::member_from_secret(&secret);
+		let proof = CryptoOf::<Test>::sign(&secret, &signer.encode()).unwrap();
+
+		assert_noop!(
+			Coinage::pay_for_recycler_unload_fee_token_with_external_asset(
+				RuntimeOrigin::signed(signer),
+				TEST_INSTANCE_ID,
+				member,
+				proof,
+				unload_token_fee_in_asset() - 1
+			),
+			Error::<Test>::FeeExceedsMaxFee
+		);
+	});
+}
+
+/// Paying with the asset needs a conversion into the native fee. Where none is available, the call
+/// says so instead of charging something it could not price, and the caller can still buy the token
+/// with the native currency.
+#[test]
+fn fee_conversion_unavailable_fails() {
+	new_test_ext().execute_with(|| {
+		System::set_block_number(1);
+		setup_asset();
+		let signer = 1;
+		fund_external_asset(signer, 1000);
+
+		let secret = get_secret(1);
+		let member = CryptoOf::<Test>::member_from_secret(&secret);
+		let proof = CryptoOf::<Test>::sign(&secret, &signer.encode()).unwrap();
+
+		// No quote is available from the very first one on.
+		set_fee_conversion_unavailable_at(Some(0));
+
+		assert_noop!(
+			Coinage::pay_for_recycler_unload_fee_token_with_external_asset(
+				RuntimeOrigin::signed(signer),
+				TEST_INSTANCE_ID,
+				member,
+				proof,
+				1_000
+			),
+			Error::<Test>::CannotConvertAssetToNative
+		);
+		assert!(!PaidUnloadTokenMembers::<Test>::contains_key(member));
+
+		set_fee_conversion_unavailable_at(None);
+	});
+}
+
+/// The conversion keeps the payer's asset account alive, so the fee cannot be paid out of the
+/// asset's minimum balance: a signer holding exactly the fee has to top up before they can pay.
+#[test]
+fn fee_cannot_take_the_signer_below_the_asset_minimum_balance() {
+	new_test_ext().execute_with(|| {
+		System::set_block_number(1);
+		setup_asset();
+		let signer = 1;
+		let fee = Coinage::quote_paid_unload_token_fee_in_asset(TEST_INSTANCE_ID).unwrap();
+		let min_balance = Assets::minimum_balance(TEST_ASSET_ID);
+		fund_external_asset(signer, fee);
+
+		let secret = get_secret(1);
+		let member = CryptoOf::<Test>::member_from_secret(&secret);
+		let proof = CryptoOf::<Test>::sign(&secret, &signer.encode()).unwrap();
+
+		assert_noop!(
+			Coinage::pay_for_recycler_unload_fee_token_with_external_asset(
+				RuntimeOrigin::signed(signer),
+				TEST_INSTANCE_ID,
+				member,
+				proof,
+				fee
+			),
+			TokenError::NotExpendable
+		);
+
+		// With the minimum balance on top of the fee, the account survives the payment.
+		fund_external_asset(signer, min_balance);
+		assert_ok!(Coinage::pay_for_recycler_unload_fee_token_with_external_asset(
+			RuntimeOrigin::signed(signer),
+			TEST_INSTANCE_ID,
+			member,
+			proof,
+			fee
+		));
+		assert_eq!(Assets::balance(TEST_ASSET_ID, signer), min_balance);
+	});
+}
+
 #[test]
 fn success_accounting() {
 	new_test_ext().execute_with(|| {
@@ -118,10 +224,11 @@ fn success_accounting() {
 		let initial_bal = 1000;
 		fund_external_asset(signer, initial_bal);
 
-		let fee = Coinage::paid_unload_token_fee_in_asset().ok().unwrap();
+		let fee = Coinage::quote_paid_unload_token_fee_in_asset(TEST_INSTANCE_ID).unwrap();
 		let fee_dest = get_u64::<<Test as Config>::FeeDestination>();
 		let asset_id = TEST_ASSET_ID;
-		let dest_initial = Assets::balance(asset_id, fee_dest);
+		let market_initial = Assets::balance(asset_id, MOCK_MARKET);
+		let dest_native_initial = Balances::free_balance(fee_dest);
 
 		let secret = get_secret(1);
 		let member = CryptoOf::<Test>::member_from_secret(&secret);
@@ -131,10 +238,19 @@ fn success_accounting() {
 		assert_eq!(Executive::apply_extrinsic(ext), Ok(Ok(())));
 
 		assert_eq!(Assets::balance(asset_id, signer), initial_bal - fee);
-		assert_eq!(Assets::balance(asset_id, fee_dest), dest_initial + fee);
+		// The signer's asset went to the market, and the fee destination was paid in native.
+		assert_eq!(Assets::balance(asset_id, MOCK_MARKET), market_initial + fee);
+		assert_eq!(
+			Balances::free_balance(fee_dest) - dest_native_initial,
+			Coinage::get_paid_unload_token_fee_in_native()
+		);
 		System::assert_has_event(
-			crate::Event::<Test>::PaidUnloadTokenRegisteredWithExternalAsset { who: signer, fee }
-				.into(),
+			crate::Event::<Test>::PaidUnloadTokenRegisteredWithExternalAsset {
+				instance_id: TEST_INSTANCE_ID,
+				who: signer,
+				fee,
+			}
+			.into(),
 		);
 	});
 }
@@ -172,11 +288,13 @@ fn success_token_is_usable_in_unload_call() {
 		)
 		.unwrap()];
 		let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_external_asset {
+			instance_id: TEST_INSTANCE_ID,
 			aliases,
 			value: val,
 			index: r_idx,
 			revision: r_rev,
 			to: dest,
+			max_fee: 0,
 		});
 
 		let inherited = ((0u8, &call), (), ());
@@ -185,7 +303,7 @@ fn success_token_is_usable_in_unload_call() {
 		let r_com = CryptoOf::<Test>::open(
 			recycler_ring_size(),
 			&CryptoOf::<Test>::member_from_secret(&recycler_secrets[0]),
-			Coinage::get_recycler_members(val, r_idx).into_iter(),
+			Coinage::get_recycler_members(TEST_INSTANCE_ID, val, r_idx).into_iter(),
 		)
 		.unwrap();
 		let (r_proof, _) = CryptoOf::<Test>::create(
@@ -327,11 +445,13 @@ fn success_with_previous_revision() {
 		)
 		.unwrap()];
 		let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_external_asset {
+			instance_id: TEST_INSTANCE_ID,
 			aliases,
 			value: val,
 			index: r_idx,
 			revision: r_rev,
 			to: dest,
+			max_fee: 0,
 		});
 
 		let inherited = ((0u8, &call), (), ());
@@ -340,7 +460,7 @@ fn success_with_previous_revision() {
 		let r_com = CryptoOf::<Test>::open(
 			recycler_ring_size(),
 			&CryptoOf::<Test>::member_from_secret(&recycler_secrets[0]),
-			Coinage::get_recycler_members(val, r_idx).into_iter(),
+			Coinage::get_recycler_members(TEST_INSTANCE_ID, val, r_idx).into_iter(),
 		)
 		.unwrap();
 		let (r_proof, _) = CryptoOf::<Test>::create(

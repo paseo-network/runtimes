@@ -21,7 +21,7 @@ use sp_runtime::{transaction_validity::TransactionSource, DispatchError};
 /// Helper to build a split extrinsic.
 pub fn build_split_ext(
 	signer: u64,
-	split_into: Vec<(CoinValue, Vec<u64>)>,
+	split_into: Vec<(Denomination, Vec<u64>)>,
 	as_coin: bool,
 ) -> Extrinsic {
 	let split_into = split_into
@@ -72,7 +72,10 @@ fn split_coin_max_age_invalid() {
 		let signer = 1;
 		let max_age = get_u16::<<Test as Config>::MaximumAge>();
 		// Insert coin with max age.
-		CoinsByOwner::<Test>::insert(signer, Coin { value: 1, age: max_age });
+		CoinsByOwner::<Test>::insert(
+			signer,
+			Coin { instance_id: TEST_INSTANCE_ID, value: 1, age: max_age },
+		);
 
 		let ext = build_split_ext(signer, vec![(0, vec![2, 3])], true);
 		assert_invalid(ext, CustomInvalidity::CoinTooOld);
@@ -83,7 +86,10 @@ fn split_coin_max_age_invalid() {
 fn split_into_value_too_big_invalid() {
 	new_test_ext().execute_with(|| {
 		let signer = 1;
-		CoinsByOwner::<Test>::insert(signer, Coin { value: 1, age: 0 });
+		CoinsByOwner::<Test>::insert(
+			signer,
+			Coin { instance_id: TEST_INSTANCE_ID, value: 1, age: 0 },
+		);
 
 		let max_exponent = <Test as Config>::MaximumExponent::get();
 
@@ -97,7 +103,10 @@ fn split_into_value_too_big_invalid() {
 fn split_into_value_too_small_invalid() {
 	new_test_ext().execute_with(|| {
 		let signer = 1;
-		CoinsByOwner::<Test>::insert(signer, Coin { value: 1, age: 0 });
+		CoinsByOwner::<Test>::insert(
+			signer,
+			Coin { instance_id: TEST_INSTANCE_ID, value: 1, age: 0 },
+		);
 
 		let min_exponent = <Test as Config>::MinimumExponent::get();
 
@@ -112,8 +121,38 @@ fn split_dest_has_coin_invalid() {
 	new_test_ext().execute_with(|| {
 		let signer = 1;
 		let dest = 2;
-		CoinsByOwner::<Test>::insert(signer, Coin { value: 1, age: 0 });
-		CoinsByOwner::<Test>::insert(dest, Coin { value: 0, age: 0 });
+		CoinsByOwner::<Test>::insert(
+			signer,
+			Coin { instance_id: TEST_INSTANCE_ID, value: 1, age: 0 },
+		);
+		CoinsByOwner::<Test>::insert(
+			dest,
+			Coin { instance_id: TEST_INSTANCE_ID, value: 0, age: 0 },
+		);
+
+		let ext = build_split_ext(signer, vec![(0, vec![dest])], true);
+		assert_invalid(ext, CustomInvalidity::AddressAlreadyHasCoin);
+	});
+}
+
+#[test]
+fn split_dest_has_coin_in_other_instance_invalid() {
+	new_test_ext().execute_with(|| {
+		let signer = 1;
+		let dest = 2;
+		let other_instance_id = setup_sponsored_instance();
+		assert_ne!(other_instance_id, TEST_INSTANCE_ID);
+
+		CoinsByOwner::<Test>::insert(
+			signer,
+			Coin { instance_id: TEST_INSTANCE_ID, value: 1, age: 0 },
+		);
+
+		// Destination already holds a coin in a different instance.
+		CoinsByOwner::<Test>::insert(
+			dest,
+			Coin { instance_id: other_instance_id, value: 0, age: 0 },
+		);
 
 		let ext = build_split_ext(signer, vec![(0, vec![dest])], true);
 		assert_invalid(ext, CustomInvalidity::AddressAlreadyHasCoin);
@@ -124,7 +163,10 @@ fn split_dest_has_coin_invalid() {
 fn split_sum_mismatch_invalid() {
 	new_test_ext().execute_with(|| {
 		let signer = 1;
-		CoinsByOwner::<Test>::insert(signer, Coin { value: 1, age: 0 });
+		CoinsByOwner::<Test>::insert(
+			signer,
+			Coin { instance_id: TEST_INSTANCE_ID, value: 1, age: 0 },
+		);
 
 		// Coin Value 1 = 8 units (if min=-2).
 		// Split into one Value 0 = 4 units. Mismatch.
@@ -138,7 +180,10 @@ fn split_too_many_outputs_one_value_invalid() {
 	new_test_ext().execute_with(|| {
 		let signer = 1;
 		// High value to accommodate many splits without sum issues first
-		CoinsByOwner::<Test>::insert(signer, Coin { value: 7, age: 0 });
+		CoinsByOwner::<Test>::insert(
+			signer,
+			Coin { instance_id: TEST_INSTANCE_ID, value: 7, age: 0 },
+		);
 
 		let max_split_outputs = get_u32::<<Test as Config>::MaxSplitOutputs>();
 
@@ -161,7 +206,10 @@ fn split_too_many_outputs_one_value_invalid() {
 fn split_too_many_outputs_multiple_values_invalid() {
 	new_test_ext().execute_with(|| {
 		let signer = 1;
-		CoinsByOwner::<Test>::insert(signer, Coin { value: 7, age: 0 });
+		CoinsByOwner::<Test>::insert(
+			signer,
+			Coin { instance_id: TEST_INSTANCE_ID, value: 7, age: 0 },
+		);
 
 		// 20 outputs of val 0, 20 outputs of val 1. Total 40 > 32 (MaxSplitOutputs).
 		let dests1: Vec<u64> = (100..120).collect();
@@ -176,7 +224,10 @@ fn split_too_many_outputs_multiple_values_invalid() {
 fn split_not_sorted_invalid() {
 	new_test_ext().execute_with(|| {
 		let signer = 1;
-		CoinsByOwner::<Test>::insert(signer, Coin { value: 5, age: 0 });
+		CoinsByOwner::<Test>::insert(
+			signer,
+			Coin { instance_id: TEST_INSTANCE_ID, value: 5, age: 0 },
+		);
 
 		// Order: Value 1 then Value 0. Descending.
 		let ext = build_split_ext(signer, vec![(1, vec![2]), (0, vec![3])], true);
@@ -190,7 +241,10 @@ fn split_valid_success() {
 		System::set_block_number(1);
 		let signer = 1;
 		// Value 1.
-		CoinsByOwner::<Test>::insert(signer, Coin { value: 1, age: 0 });
+		CoinsByOwner::<Test>::insert(
+			signer,
+			Coin { instance_id: TEST_INSTANCE_ID, value: 1, age: 0 },
+		);
 
 		// Split 1 -> 0, 0.
 		let dest1 = 2;
@@ -200,9 +254,18 @@ fn split_valid_success() {
 		assert_eq!(Executive::apply_extrinsic(ext), Ok(Ok(())));
 
 		assert!(!CoinsByOwner::<Test>::contains_key(signer));
-		assert_eq!(CoinsByOwner::<Test>::get(dest1).unwrap(), Coin { value: 0, age: 1 });
-		assert_eq!(CoinsByOwner::<Test>::get(dest2).unwrap(), Coin { value: 0, age: 1 });
-		System::assert_has_event(crate::Event::<Test>::CoinSplit { output_count: 2 }.into());
+		assert_eq!(
+			CoinsByOwner::<Test>::get(dest1).unwrap(),
+			Coin { instance_id: TEST_INSTANCE_ID, value: 0, age: 1 }
+		);
+		assert_eq!(
+			CoinsByOwner::<Test>::get(dest2).unwrap(),
+			Coin { instance_id: TEST_INSTANCE_ID, value: 0, age: 1 }
+		);
+		System::assert_has_event(
+			crate::Event::<Test>::CoinSplit { instance_id: TEST_INSTANCE_ID, output_count: 2 }
+				.into(),
+		);
 	});
 }
 
@@ -212,7 +275,10 @@ fn split_edge_cases_high_output_count_and_value_invalid_sum() {
 		let signer = 1;
 		let max_exponent = <Test as Config>::MaximumExponent::get();
 		// Insert coin with MaxExponent.
-		CoinsByOwner::<Test>::insert(signer, Coin { value: max_exponent, age: 0 });
+		CoinsByOwner::<Test>::insert(
+			signer,
+			Coin { instance_id: TEST_INSTANCE_ID, value: max_exponent, age: 0 },
+		);
 
 		assert_eq!(get_u32::<<Test as Config>::MaxSplitOutputs>(), 32);
 
@@ -235,7 +301,10 @@ fn split_duplicate_destination_invalid() {
 		let signer = 1;
 		let dest = 2;
 
-		CoinsByOwner::<Test>::insert(signer, Coin { value: 5, age: 0 });
+		CoinsByOwner::<Test>::insert(
+			signer,
+			Coin { instance_id: TEST_INSTANCE_ID, value: 5, age: 0 },
+		);
 
 		// Duplicate dest in same value list
 		let ext = build_split_ext(signer, vec![(4, vec![dest, dest])], true);
@@ -247,7 +316,10 @@ fn split_duplicate_destination_invalid() {
 		let dest = 2;
 		let other_dest = 3;
 
-		CoinsByOwner::<Test>::insert(signer, Coin { value: 5, age: 0 });
+		CoinsByOwner::<Test>::insert(
+			signer,
+			Coin { instance_id: TEST_INSTANCE_ID, value: 5, age: 0 },
+		);
 
 		// Duplicate dest across different value lists
 		let ext = build_split_ext(signer, vec![(3, vec![dest, other_dest]), (4, vec![dest])], true);
@@ -259,7 +331,10 @@ fn split_duplicate_destination_invalid() {
 fn split_empty_outputs_invalid() {
 	new_test_ext().execute_with(|| {
 		let signer = 1;
-		CoinsByOwner::<Test>::insert(signer, Coin { value: 0, age: 0 });
+		CoinsByOwner::<Test>::insert(
+			signer,
+			Coin { instance_id: TEST_INSTANCE_ID, value: 0, age: 0 },
+		);
 
 		// Empty destination list for a value
 		let ext = build_split_ext(signer, vec![(0, vec![])], true);
@@ -273,7 +348,10 @@ fn split_empty_outputs_invalid() {
 fn split_too_many_outputs_stops_early() {
 	new_test_ext().execute_with(|| {
 		let signer = 1;
-		CoinsByOwner::<Test>::insert(signer, Coin { value: 7, age: 0 });
+		CoinsByOwner::<Test>::insert(
+			signer,
+			Coin { instance_id: TEST_INSTANCE_ID, value: 7, age: 0 },
+		);
 
 		let max_split_outputs = get_u32::<<Test as Config>::MaxSplitOutputs>();
 
@@ -286,7 +364,10 @@ fn split_too_many_outputs_stops_early() {
 
 		let dests: Vec<u64> = (100u64..).take(num_dests).collect();
 		let dest_with_coin = dests[max_split_outputs as usize];
-		CoinsByOwner::<Test>::insert(dest_with_coin, Coin { value: 0, age: 0 });
+		CoinsByOwner::<Test>::insert(
+			dest_with_coin,
+			Coin { instance_id: TEST_INSTANCE_ID, value: 0, age: 0 },
+		);
 
 		let split_into = vec![
 			(-2, dests[0..max_split_outputs as usize].to_vec()),

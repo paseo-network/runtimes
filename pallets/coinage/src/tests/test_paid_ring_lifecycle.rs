@@ -80,8 +80,10 @@ fn paid_ring_lifecycle() {
 		let proof_bob = CryptoOf::<Test>::sign(&secret_bob, &bob.encode()).unwrap();
 
 		let call_bob = crate::Call::pay_for_recycler_unload_fee_token_with_external_asset {
+			instance_id: TEST_INSTANCE_ID,
 			member_key: member_bob,
 			proof_of_ownership: proof_bob,
+			max_fee: unload_token_fee_in_asset(),
 		};
 		let ext_bob = build_signed_ext(bob, crate::Call::from(call_bob));
 		Executive::apply_extrinsic(ext_bob).unwrap().unwrap();
@@ -133,6 +135,7 @@ fn paid_ring_lifecycle() {
 				.unwrap();
 
 		let unload_call = crate::Call::unload_recycler_into_coin {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: bounded_vec![alias],
 			value: coin_val,
 			index: r_idx,
@@ -218,6 +221,7 @@ fn paid_ring_lifecycle() {
 		)
 		.unwrap();
 		let unload_call_3 = crate::Call::unload_recycler_into_coin {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: bounded_vec![alias_3],
 			value: coin_val,
 			index: r_idx_3,
@@ -251,6 +255,7 @@ fn paid_ring_lifecycle() {
 		.unwrap();
 
 		let unload_call_2 = crate::Call::unload_recycler_into_coin {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: bounded_vec![alias_2],
 			value: coin_val,
 			index: r_idx_2,

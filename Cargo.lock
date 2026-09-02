@@ -6193,6 +6193,7 @@ dependencies = [
  "indiv-pallet-members",
  "indiv-support",
  "log",
+ "pallet-asset-conversion",
  "pallet-assets",
  "pallet-assets-holder",
  "pallet-balances",
@@ -6200,8 +6201,11 @@ dependencies = [
  "parking_lot 0.12.5",
  "scale-info",
  "sp-core",
+ "sp-crypto-hashing",
  "sp-io",
  "sp-runtime",
+ "sp-trie",
+ "staging-xcm",
  "verifiable",
 ]
 

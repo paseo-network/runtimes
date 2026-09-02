@@ -80,18 +80,18 @@ fn coin_max_age_fail() {
 }
 
 #[test]
-fn coin_value_too_low_invalid() {
+fn denomination_too_low_invalid() {
 	new_test_ext().execute_with(|| {
 		setup_asset();
 		let signer = 1;
 
-		// Set fee > coin value.
+		// Set fee > denomination.
 		// MinExp = -2 (250 units). Coin Value 0 = 1000 units.
 		// Set Fee = 2000 units.
 		MockPaidUnloadTokenFeeOverride::set(&Some(2000));
 
-		let coin_value = 0;
-		create_coin(signer, coin_value, 0);
+		let denomination = 0;
+		create_coin(signer, denomination, 0);
 
 		let secret = get_secret(1);
 		let member = CryptoOf::<Test>::member_from_secret(&secret);
@@ -99,7 +99,7 @@ fn coin_value_too_low_invalid() {
 
 		let ext = build_ext(signer, member, proof, true);
 
-		assert_invalid(ext, CustomInvalidity::CoinValueIsLessThanFee);
+		assert_invalid(ext, CustomInvalidity::CoinAmountBelowFee);
 	});
 }
 
@@ -107,21 +107,21 @@ fn coin_value_too_low_invalid() {
 fn member_key_already_used_fail() {
 	new_test_ext().execute_with(|| {
 		setup_asset();
-		let coin_value = 0;
+		let denomination = 0;
 
 		let secret = get_secret(1);
 		let member = CryptoOf::<Test>::member_from_secret(&secret);
 
 		// 1. First user pays successfully
 		let user1 = 1;
-		create_coin(user1, coin_value, 0);
+		create_coin(user1, denomination, 0);
 		let proof1 = CryptoOf::<Test>::sign(&secret, &user1.encode()).unwrap();
 		let ext1 = build_ext(user1, member, proof1, true);
 		assert_eq!(Executive::apply_extrinsic(ext1), Ok(Ok(())));
 
 		// 2. Second user tries same member key
 		let user2 = 2;
-		create_coin(user2, coin_value, 0);
+		create_coin(user2, denomination, 0);
 		let proof2 = CryptoOf::<Test>::sign(&secret, &user2.encode()).unwrap();
 		let ext2 = build_ext(user2, member, proof2, true);
 
@@ -156,10 +156,11 @@ fn success_accounting_and_usability() {
 		let signer = 1;
 		let fee_dest = get_u64::<<Test as Config>::FeeDestination>();
 		let asset_id = TEST_ASSET_ID;
-		let coin_value = 0; // 1000 units
-		let fee = Coinage::paid_unload_token_fee_in_asset().ok().unwrap(); // 2 units
+		let denomination = 0; // 1000 units
+		let fee = Coinage::quote_paid_unload_token_fee_in_asset(TEST_INSTANCE_ID).unwrap(); // 2 units
+		let fee_dest_native_before = Balances::free_balance(fee_dest);
 
-		create_coin(signer, coin_value, 0);
+		create_coin(signer, denomination, 0);
 
 		let secret = get_secret(1);
 		let member = CryptoOf::<Test>::member_from_secret(&secret);
@@ -168,8 +169,12 @@ fn success_accounting_and_usability() {
 		let ext = build_ext(signer, member, proof, true);
 		assert_eq!(Executive::apply_extrinsic(ext), Ok(Ok(())));
 
-		// 1. Fee Transferred
-		assert_eq!(Assets::balance(asset_id, fee_dest), fee);
+		// 1. Fee converted: the asset went to the market, the native fee to the destination.
+		assert_eq!(Assets::balance(asset_id, MOCK_MARKET), fee);
+		assert_eq!(
+			Balances::free_balance(fee_dest) - fee_dest_native_before,
+			Coinage::get_paid_unload_token_fee_in_native()
+		);
 
 		// 2. Pallet Hold Reduced
 		// Fee is released from hold and transferred. Remainder stays held (burnt).
@@ -178,7 +183,7 @@ fn success_accounting_and_usability() {
 		assert_eq!(on_hold, 1000 - fee);
 
 		// 3. Destroyed Value Tracked
-		assert_eq!(TotalValueOfDestroyedCoins::<Test>::get(), 1000 - fee);
+		assert_eq!(TotalValueOfDestroyedCoins::<Test>::get(TEST_INSTANCE_ID), 1000 - fee);
 
 		// 4. Coin removed
 		assert!(!CoinsByOwner::<Test>::contains_key(signer));
@@ -215,20 +220,25 @@ fn success_accounting_and_usability() {
 			msg.as_ref()
 		));
 		System::assert_has_event(
-			crate::Event::<Test>::PaidUnloadTokenRegisteredWithCoin { fee, destroyed: 1000 - fee }
-				.into(),
+			crate::Event::<Test>::PaidUnloadTokenRegisteredWithCoin {
+				instance_id: TEST_INSTANCE_ID,
+				fee,
+				destroyed: 1000 - fee,
+			}
+			.into(),
 		);
 
 		// 6. Perform Real Unload using the Paid Token
-		let (r_secrets, r_idx, r_rev) = setup_recycler(coin_value, 1, 0);
+		let (r_secrets, r_idx, r_rev) = setup_recycler(denomination, 1, 0);
 		let dest_coin = 2000u64;
 		let alias =
 			CryptoOf::<Test>::alias_in_context(&r_secrets[0], UNLOADING_RECYCLER_CONTEXT.as_ref())
 				.unwrap();
 
 		let unload_call = crate::Call::unload_recycler_into_coin {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: bounded_vec![alias],
-			value: coin_value,
+			value: denomination,
 			index: r_idx,
 			revision: r_rev,
 			to: dest_coin,
@@ -241,7 +251,7 @@ fn success_accounting_and_usability() {
 			revision,
 			period,
 			&r_secrets,
-			coin_value,
+			denomination,
 			r_idx,
 		);
 		assert_eq!(Executive::apply_extrinsic(uxt), Ok(Ok(())));
@@ -254,9 +264,9 @@ fn success_accounting_and_usability() {
 fn success_insert_first_key() {
 	new_test_ext().execute_with(|| {
 		setup_asset();
-		let coin_value = 0;
+		let denomination = 0;
 		let signer = 1;
-		create_coin(signer, coin_value, 0);
+		create_coin(signer, denomination, 0);
 
 		let secret = get_secret(1);
 		let member = CryptoOf::<Test>::member_from_secret(&secret);
@@ -279,15 +289,16 @@ fn success_insert_first_key() {
 		let status = <Test as Config>::MemberService::ring_status(&id, index).unwrap();
 		assert_eq!(status.total, 1);
 		let revision = <Test as Config>::MemberService::ring_revision(&id, index).unwrap();
-		let (recycler_secrets, r_idx, r_rev) = setup_recycler(coin_value, 1, 0);
+		let (recycler_secrets, r_idx, r_rev) = setup_recycler(denomination, 1, 0);
 		let alias = CryptoOf::<Test>::alias_in_context(
 			&recycler_secrets[0],
 			UNLOADING_RECYCLER_CONTEXT.as_ref(),
 		)
 		.unwrap();
 		let unload_call = crate::Call::unload_recycler_into_coin {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: bounded_vec![alias],
-			value: coin_value,
+			value: denomination,
 			index: r_idx,
 			revision: r_rev,
 			to: 2000,
@@ -299,7 +310,7 @@ fn success_insert_first_key() {
 			revision,
 			period,
 			&recycler_secrets,
-			coin_value,
+			denomination,
 			r_idx,
 		);
 		assert_eq!(Executive::apply_extrinsic(uxt), Ok(Ok(())));
@@ -310,13 +321,13 @@ fn success_insert_first_key() {
 fn success_insert_ring_full_creates_new() {
 	new_test_ext().execute_with(|| {
 		setup_asset();
-		let coin_value = 0;
+		let denomination = 0;
 		let ring_size = R2E10_RING_CAPACITY;
 
 		// Fill the ring
 		for i in 0..ring_size {
 			let user = 1000 + i as u64;
-			create_coin(user, coin_value, 0);
+			create_coin(user, denomination, 0);
 
 			let secret = get_unique_secret();
 			let member = CryptoOf::<Test>::member_from_secret(&secret);
@@ -341,7 +352,7 @@ fn success_insert_ring_full_creates_new() {
 
 		// Insert one more (use unique secret since 0..254 are already used)
 		let user = 2000;
-		create_coin(user, coin_value, 0);
+		create_coin(user, denomination, 0);
 		let secret = get_unique_secret();
 		let member = CryptoOf::<Test>::member_from_secret(&secret);
 		let proof = CryptoOf::<Test>::sign(&secret, &user.encode()).unwrap();
@@ -358,15 +369,16 @@ fn success_insert_ring_full_creates_new() {
 
 		// Get revision for the unload
 		let revision = <Test as Config>::MemberService::ring_revision(&id, 1).unwrap();
-		let (recycler_secrets, r_idx, r_rev) = setup_recycler(coin_value, 1, 0);
+		let (recycler_secrets, r_idx, r_rev) = setup_recycler(denomination, 1, 0);
 		let alias = CryptoOf::<Test>::alias_in_context(
 			&recycler_secrets[0],
 			UNLOADING_RECYCLER_CONTEXT.as_ref(),
 		)
 		.unwrap();
 		let unload_call = crate::Call::unload_recycler_into_coin {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: bounded_vec![alias],
-			value: coin_value,
+			value: denomination,
 			index: r_idx,
 			revision: r_rev,
 			to: 3000,
@@ -378,7 +390,7 @@ fn success_insert_ring_full_creates_new() {
 			revision,
 			period,
 			&recycler_secrets,
-			coin_value,
+			denomination,
 			r_idx,
 		);
 		assert_eq!(Executive::apply_extrinsic(uxt), Ok(Ok(())));
@@ -389,11 +401,11 @@ fn success_insert_ring_full_creates_new() {
 fn success_with_previous_revision() {
 	new_test_ext().execute_with(|| {
 		setup_asset();
-		let coin_value = 0;
+		let denomination = 0;
 
 		// 1. Pay for token using a coin
 		let signer = 1;
-		create_coin(signer, coin_value, 0);
+		create_coin(signer, denomination, 0);
 
 		let secret = get_secret(1);
 		let member = CryptoOf::<Test>::member_from_secret(&secret);
@@ -417,7 +429,7 @@ fn success_with_previous_revision() {
 
 		// 3. Add another member and build again (previous_root is set)
 		let signer2 = 2;
-		create_coin(signer2, coin_value, 0);
+		create_coin(signer2, denomination, 0);
 
 		let secret2 = get_secret(2);
 		let member2 = CryptoOf::<Test>::member_from_secret(&secret2);
@@ -463,19 +475,22 @@ fn failed_dispatch_restores_coin() {
 	new_test_ext().execute_with(|| {
 		setup_asset();
 		let signer = 1u64;
-		let coin_value: CoinValue = 0; // Exponent value 0 (equals 1000 underlying units)
+		let denomination: Denomination = 0; // Exponent value 0 (equals 1000 underlying units)
 		let lock_period = get_u64::<<Test as Config>::CoinFailureLockPeriod>();
 		let current_block = frame_system::Pallet::<Test>::block_number();
 		let expected_lock_until = current_block.saturating_add(lock_period);
 
 		// Insert coin directly without held asset backing.
-		CoinsByOwner::<Test>::insert(signer, Coin { value: coin_value, age: 0 });
+		CoinsByOwner::<Test>::insert(
+			signer,
+			Coin { instance_id: TEST_INSTANCE_ID, value: denomination, age: 0 },
+		);
 
 		let secret = get_secret(1);
 		let member = CryptoOf::<Test>::member_from_secret(&secret);
 		let proof = CryptoOf::<Test>::sign(&secret, &signer.encode()).unwrap();
 
-		assert_eq!(TotalValueOfDestroyedCoins::<Test>::get(), 0);
+		assert_eq!(TotalValueOfDestroyedCoins::<Test>::get(TEST_INSTANCE_ID), 0);
 
 		let ext = build_ext(signer, member, proof, true);
 		let result = Executive::apply_extrinsic(ext);
@@ -483,11 +498,14 @@ fn failed_dispatch_restores_coin() {
 		assert!(matches!(result, Ok(Err(_))), "Dispatch should fail: {result:?}");
 
 		// Coin should be restored; no destroyed value should be tracked.
-		assert_eq!(TotalValueOfDestroyedCoins::<Test>::get(), 0);
-		assert_eq!(CoinsByOwner::<Test>::get(signer), Some(Coin { value: coin_value, age: 0 }));
+		assert_eq!(TotalValueOfDestroyedCoins::<Test>::get(TEST_INSTANCE_ID), 0);
+		assert_eq!(
+			CoinsByOwner::<Test>::get(signer),
+			Some(Coin { instance_id: TEST_INSTANCE_ID, value: denomination, age: 0 })
+		);
 		assert_eq!(
 			LockedCoins::<Test>::get(signer),
-			Some(LockedCoin {
+			Some(LockInfo {
 				reason: LockReason::FailedDispatch { retries: 0 },
 				until: expected_lock_until
 			})
@@ -518,45 +536,44 @@ fn failed_dispatch_restores_coin() {
 	});
 }
 
+/// The conversion becoming unavailable between `validate` and the dispatch means something in the
+/// runtime traded on its price in between, which the fee check in validation assumes cannot happen.
+/// The dispatch fails, and the coin, consumed in `prepare`, is restored and locked in
+/// `post_dispatch` like on any other failed dispatch.
 #[test]
 fn fee_conversion_failure_after_prepare_restores_and_locks_coin() {
-	// Simulates the scenario where `paid_unload_token_fee_in_asset()` succeeds during
-	// validation (tx pool) but fails during dispatch (different block). The coin is consumed
-	// in `prepare`, then restored and locked in `post_dispatch`.
-	//
-	// Flow: validate (conversion call 0 → ok) → prepare (coin taken) →
-	//       dispatch (conversion call 1 → fail) → post_dispatch (coin restored + locked)
 	new_test_ext().execute_with(|| {
 		setup_asset();
 		let signer = 1u64;
-		let coin_value: CoinValue = 0; // Exponent value 0 (equals 1000 underlying units)
-		create_coin(signer, coin_value, 0);
-		let current_block = frame_system::Pallet::<Test>::block_number();
+		let denomination: Denomination = 0; // Exponent value 0 (equals 1000 underlying units)
+		create_coin(signer, denomination, 0);
 		let expected_lock_until =
-			current_block.saturating_add(get_u64::<<Test as Config>::CoinFailureLockPeriod>());
+			MockTime::now().as_secs() + get_u64::<<Test as Config>::CoinFailureLockPeriod>();
 
 		let secret = get_secret(1);
 		let member = CryptoOf::<Test>::member_from_secret(&secret);
 		let proof = CryptoOf::<Test>::sign(&secret, &signer.encode()).unwrap();
 
-		assert_eq!(TotalValueOfDestroyedCoins::<Test>::get(), 0);
+		assert_eq!(TotalValueOfDestroyedCoins::<Test>::get(TEST_INSTANCE_ID), 0);
 
-		// Make the conversion fail on the 2nd call (index 1 = dispatch).
-		// Call 0 (validate) succeeds, call 1 (dispatch) fails.
-		set_conversion_to_asset_fail_at(Some(1));
+		// Quote 0 (validate) succeeds, quote 1 (dispatch) does not.
+		set_fee_conversion_unavailable_at(Some(1));
 
 		let ext = build_ext(signer, member, proof, true);
 		let result = Executive::apply_extrinsic(ext);
 
-		// Dispatch fails because fee conversion fails.
-		assert!(matches!(result, Ok(Err(_))), "Dispatch should fail: {result:?}");
+		// Dispatch fails because the fee can no longer be priced.
+		assert_eq!(result, Ok(Err(Error::<Test>::CannotConvertAssetToNative.into())));
 
 		// Coin was consumed in prepare, then restored and locked in post_dispatch.
-		assert_eq!(TotalValueOfDestroyedCoins::<Test>::get(), 0);
-		assert_eq!(CoinsByOwner::<Test>::get(signer), Some(Coin { value: coin_value, age: 0 }));
+		assert_eq!(TotalValueOfDestroyedCoins::<Test>::get(TEST_INSTANCE_ID), 0);
+		assert_eq!(
+			CoinsByOwner::<Test>::get(signer),
+			Some(Coin { instance_id: TEST_INSTANCE_ID, value: denomination, age: 0 })
+		);
 		assert_eq!(
 			LockedCoins::<Test>::get(signer),
-			Some(LockedCoin {
+			Some(LockInfo {
 				reason: LockReason::FailedDispatch { retries: 0 },
 				until: expected_lock_until
 			})
@@ -569,6 +586,86 @@ fn fee_conversion_failure_after_prepare_restores_and_locks_coin() {
 		assert_invalid(ext_locked, CustomInvalidity::CoinTemporarilyLocked);
 
 		// Reset
-		set_conversion_to_asset_fail_at(None);
+		set_fee_conversion_unavailable_at(None);
+	});
+}
+
+/// The other way the price can move: the quote is still available, it has just grown past the
+/// coin's value. The coin comes from the origin, so the caller cannot have changed it since
+/// validation priced the fee against it. The dispatch fails and, as above, the coin is restored
+/// and locked.
+#[test]
+fn quote_above_the_coin_value_during_dispatch_restores_and_locks_coin() {
+	new_test_ext().execute_with(|| {
+		setup_asset();
+		let signer = 1u64;
+		let denomination: Denomination = 0; // Exponent value 0 (equals 1000 underlying units)
+		create_coin(signer, denomination, 0);
+		let expected_lock_until =
+			MockTime::now().as_secs() + get_u64::<<Test as Config>::CoinFailureLockPeriod>();
+
+		let secret = get_secret(1);
+		let member = CryptoOf::<Test>::member_from_secret(&secret);
+		let proof = CryptoOf::<Test>::sign(&secret, &signer.encode()).unwrap();
+
+		// Quote 0 (validate) prices the fee below the coin's 1000 units, quote 1 (dispatch) above
+		// it.
+		set_fee_conversion_quote_surcharge_at(Some((1, 1000)));
+
+		let ext = build_ext(signer, member, proof, true);
+		let result = Executive::apply_extrinsic(ext);
+
+		// Dispatch fails because the coin is no longer worth the fee.
+		assert_eq!(result, Ok(Err(Error::<Test>::CoinAmountBelowFee.into())));
+
+		// Coin was consumed in prepare, then restored and locked in post_dispatch.
+		assert_eq!(TotalValueOfDestroyedCoins::<Test>::get(TEST_INSTANCE_ID), 0);
+		assert_eq!(
+			CoinsByOwner::<Test>::get(signer),
+			Some(Coin { instance_id: TEST_INSTANCE_ID, value: denomination, age: 0 })
+		);
+		assert_eq!(
+			LockedCoins::<Test>::get(signer),
+			Some(LockInfo {
+				reason: LockReason::FailedDispatch { retries: 0 },
+				until: expected_lock_until
+			})
+		);
+
+		// Reset
+		set_fee_conversion_quote_surcharge_at(None);
+	});
+}
+
+/// The counterpart of the test above: when the conversion is already unavailable at validation
+/// time, the transaction is rejected by the pool instead of being dispatched and failing.
+#[test]
+fn fee_conversion_unavailable_during_validation_is_invalid() {
+	new_test_ext().execute_with(|| {
+		setup_asset();
+		let signer = 1u64;
+		let denomination: Denomination = 0; // Exponent value 0 (equals 1000 underlying units)
+		create_coin(signer, denomination, 0);
+
+		let secret = get_secret(1);
+		let member = CryptoOf::<Test>::member_from_secret(&secret);
+		let proof = CryptoOf::<Test>::sign(&secret, &signer.encode()).unwrap();
+
+		// Fail from the very first quote on, so validation itself cannot price the fee.
+		set_fee_conversion_unavailable_at(Some(0));
+
+		let ext = build_ext(signer, member, proof, true);
+		assert_invalid(ext, CustomInvalidity::CannotConvertAssetToNative);
+
+		// The coin is untouched: the transaction never reached `prepare`.
+		assert_eq!(
+			CoinsByOwner::<Test>::get(signer),
+			Some(Coin { instance_id: TEST_INSTANCE_ID, value: denomination, age: 0 })
+		);
+		assert_eq!(LockedCoins::<Test>::get(signer), None);
+		assert_eq!(TotalValueOfDestroyedCoins::<Test>::get(TEST_INSTANCE_ID), 0);
+
+		// Reset
+		set_fee_conversion_unavailable_at(None);
 	});
 }

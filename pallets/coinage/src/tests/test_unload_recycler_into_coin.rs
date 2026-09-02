@@ -33,7 +33,7 @@ fn build_unload_ext(
 	period: u32,
 	counter: u32,
 	recycler_secrets: &[Secret],
-	value: CoinValue,
+	value: Denomination,
 	index: u32,
 	bad_proof: bool,
 	people_alias_override: Option<Alias>,
@@ -47,7 +47,7 @@ fn build_unload_ext(
 
 	// 2. Generate Alias Proofs (must be created before the people proof)
 	let mut alias_proofs_vec = Vec::new();
-	let ring_members = Coinage::get_recycler_members(value, index);
+	let ring_members = Coinage::get_recycler_members(TEST_INSTANCE_ID, value, index);
 
 	for secret in recycler_secrets {
 		let member = CryptoOf::<Test>::member_from_secret(secret);
@@ -99,8 +99,11 @@ fn build_unload_ext(
 	let context = crate::pallet::free_unload_token_context(period, counter);
 	// Use explicit alias or default. Different alias = different user.
 	let people_alias = people_alias_override.unwrap_or([0u8; 32]);
-	let people_proof =
-		PeopleProof { context: context.to_vec(), msg: intent_msg.to_vec(), alias: people_alias };
+	let people_proof = MembershipProof {
+		context: context.to_vec(),
+		msg: intent_msg.to_vec(),
+		alias: people_alias,
+	};
 
 	let info =
 		AsCoinageInfo::AsUnloadTokenPeople { proof: people_proof, period, counter, alias_proofs };
@@ -113,6 +116,7 @@ fn build_unload_ext(
 fn bad_origin_fail() {
 	new_test_ext().execute_with(|| {
 		let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coin {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: BoundedVec::new(),
 			value: 0,
 			index: 0,
@@ -141,6 +145,7 @@ fn invalid_alias_proof_fail() {
 		.unwrap()];
 
 		let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coin {
+			instance_id: TEST_INSTANCE_ID,
 			aliases,
 			value: 0,
 			index,
@@ -170,6 +175,7 @@ fn outdated_revision_invalid() {
 
 		// Use wrong revision
 		let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coin {
+			instance_id: TEST_INSTANCE_ID,
 			aliases,
 			value: 0,
 			index,
@@ -196,6 +202,7 @@ fn recycler_not_exist_invalid() {
 		// Use wrong index
 		let wrong_index = index + 1;
 		let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coin {
+			instance_id: TEST_INSTANCE_ID,
 			aliases,
 			value: 0,
 			index: wrong_index,
@@ -221,6 +228,7 @@ fn alias_already_used_fail() {
 
 		// First unload success. User 1.
 		let call1 = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coin {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: aliases.clone(),
 			value: 0,
 			index,
@@ -234,6 +242,7 @@ fn alias_already_used_fail() {
 		// Must use a different People alias (User 2) to pass the UnloadTokenConsumed check in
 		// validation.
 		let call2 = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coin {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: aliases.clone(),
 			value: 0,
 			index,
@@ -249,7 +258,7 @@ fn alias_already_used_fail() {
 }
 
 #[test]
-fn duplicate_alias_in_single_tx_fails() {
+fn duplicate_alias_in_single_tx_fails_before_verifying_proofs() {
 	new_test_ext().execute_with(|| {
 		let (secrets, index, revision) = setup_recycler(0, 2, 0);
 		let repeated_secret = secrets[0].clone();
@@ -260,6 +269,7 @@ fn duplicate_alias_in_single_tx_fails() {
 		.unwrap();
 
 		let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coin {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: bounded_vec![repeated_alias, repeated_alias],
 			value: 0,
 			index,
@@ -267,8 +277,9 @@ fn duplicate_alias_in_single_tx_fails() {
 			to: 1,
 		});
 
-		// Use the same proof source twice so both proofs are individually valid
-		// but map to the same alias within one transaction.
+		// The proof batch is invalid. `RecyclerAlreadyUnloaded` proves duplicate aliases are
+		// rejected before the batch verifier runs, which would otherwise return
+		// `InvalidAliasProof`.
 		let ext = build_unload_ext(
 			call,
 			0,
@@ -276,7 +287,7 @@ fn duplicate_alias_in_single_tx_fails() {
 			&[repeated_secret.clone(), repeated_secret],
 			0,
 			index,
-			false,
+			true,
 			None,
 		);
 
@@ -298,6 +309,7 @@ fn proof_alias_mismatch_fail() {
 		.unwrap();
 
 		let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coin {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: bounded_vec![wrong_alias],
 			value: 0,
 			index,
@@ -328,9 +340,13 @@ fn dest_already_used_invalid() {
 
 		let dest = 1;
 		// Destination already has coin
-		CoinsByOwner::<Test>::insert(dest, Coin { value: 0, age: 0 });
+		CoinsByOwner::<Test>::insert(
+			dest,
+			Coin { instance_id: TEST_INSTANCE_ID, value: 0, age: 0 },
+		);
 
 		let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coin {
+			instance_id: TEST_INSTANCE_ID,
 			aliases,
 			value: 0,
 			index,
@@ -358,6 +374,7 @@ fn result_too_big_fail() {
 
 		// Consolidate 2 coins of MaxExponent -> MaxExponent + 1 (Too big)
 		let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coin {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: aliases.try_into().unwrap(),
 			value: max_exp,
 			index,
@@ -365,7 +382,9 @@ fn result_too_big_fail() {
 			to: 1,
 		});
 
-		let ext = build_unload_ext(call, 0, 0, &secrets, max_exp, index, false, None);
+		// The proof batch is invalid. `ConsolidationTooBig` proves the result is checked before the
+		// batch verifier runs, which would otherwise return `InvalidAliasProof`.
+		let ext = build_unload_ext(call, 0, 0, &secrets, max_exp, index, true, None);
 		let res = Executive::apply_extrinsic(ext);
 		assert_ok!(res.as_ref());
 		assert_err!(res.unwrap(), Error::<Test>::ConsolidationTooBig);
@@ -385,6 +404,7 @@ fn not_power_of_two_fail() {
 		}
 
 		let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coin {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: aliases.try_into().unwrap(),
 			value: 0,
 			index,
@@ -406,6 +426,7 @@ fn empty_aliases_fail() {
 		let (_secrets, index, revision) = setup_recycler(0, 1, 0);
 
 		let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coin {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: BoundedVec::new(),
 			value: 0,
 			index,
@@ -435,6 +456,7 @@ fn success_one() {
 
 		let dest = 1;
 		let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coin {
+			instance_id: TEST_INSTANCE_ID,
 			aliases,
 			value: 0,
 			index,
@@ -446,15 +468,19 @@ fn success_one() {
 		assert_eq!(Executive::apply_extrinsic(ext), Ok(Ok(())));
 
 		let coin = CoinsByOwner::<Test>::get(dest).unwrap();
-		assert_eq!(coin, Coin { value: 0, age: 0 });
+		assert_eq!(coin, Coin { instance_id: TEST_INSTANCE_ID, value: 0, age: 0 });
 
 		// Verify alias was recorded as unloaded
 		let alias =
 			CryptoOf::<Test>::alias_in_context(&secret, UNLOADING_RECYCLER_CONTEXT.as_ref())
 				.unwrap();
-		assert!(RecyclersUnloaded::<Test>::contains_key((0i8, index, alias)));
+		assert!(matches!(
+			RecyclerAliasStates::<Test>::get((TEST_INSTANCE_ID, 0i8, index, alias)),
+			Some(AliasState::Unloaded),
+		));
 		System::assert_has_event(
 			crate::Event::<Test>::RecyclerUnloadedIntoCoin {
+				instance_id: TEST_INSTANCE_ID,
 				to: dest,
 				input_value: 0,
 				output_value: 0,
@@ -479,6 +505,7 @@ fn success_many() {
 
 		let dest = 1;
 		let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coin {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: aliases.try_into().unwrap(),
 			value: 0,
 			index,
@@ -491,13 +518,16 @@ fn success_many() {
 
 		let coin = CoinsByOwner::<Test>::get(dest).unwrap();
 		// 4 inputs of value 0 -> value 0 + log2(4) = 2
-		assert_eq!(coin, Coin { value: 2, age: 0 });
+		assert_eq!(coin, Coin { instance_id: TEST_INSTANCE_ID, value: 2, age: 0 });
 
 		// Verify all aliases were recorded as unloaded
 		for s in &secrets {
 			let alias =
 				CryptoOf::<Test>::alias_in_context(s, UNLOADING_RECYCLER_CONTEXT.as_ref()).unwrap();
-			assert!(RecyclersUnloaded::<Test>::contains_key((0i8, index, alias)));
+			assert!(matches!(
+				RecyclerAliasStates::<Test>::get((TEST_INSTANCE_ID, 0i8, index, alias)),
+				Some(AliasState::Unloaded),
+			));
 		}
 	});
 }
@@ -522,6 +552,7 @@ fn success_max_consolidation() {
 
 		let dest = 1;
 		let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coin {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: aliases.try_into().unwrap(),
 			value: base_value,
 			index,
@@ -533,13 +564,16 @@ fn success_max_consolidation() {
 		assert_eq!(Executive::apply_extrinsic(ext), Ok(Ok(())));
 
 		let coin = CoinsByOwner::<Test>::get(dest).unwrap();
-		assert_eq!(coin, Coin { value: result_value, age: 0 });
+		assert_eq!(coin, Coin { instance_id: TEST_INSTANCE_ID, value: result_value, age: 0 });
 
 		// Verify all aliases were recorded as unloaded
 		for s in &secrets {
 			let alias =
 				CryptoOf::<Test>::alias_in_context(s, UNLOADING_RECYCLER_CONTEXT.as_ref()).unwrap();
-			assert!(RecyclersUnloaded::<Test>::contains_key((base_value, index, alias)));
+			assert!(matches!(
+				RecyclerAliasStates::<Test>::get((TEST_INSTANCE_ID, base_value, index, alias)),
+				Some(AliasState::Unloaded),
+			));
 		}
 	});
 }
@@ -559,12 +593,12 @@ fn success_with_previous_revision() {
 		.unwrap()];
 
 		// Capture the original ring members before rotating the root.
-		let ring_members_v1 = Coinage::get_recycler_members(0, index);
+		let ring_members_v1 = Coinage::get_recycler_members(TEST_INSTANCE_ID, 0, index);
 
 		// Step 2: Add another recycler member through the pallet API and rebuild.
 		let extra_user = 20_000u64;
 		let asset_id = TEST_ASSET_ID;
-		let amount = Coinage::coin_value_to_asset_amount(0).unwrap();
+		let amount = Coinage::denomination_to_asset_amount(UNDERLYING_ASSET_UNIT, 0).unwrap();
 		let new_secret = get_secret(100);
 		let new_member = CryptoOf::<Test>::member_from_secret(&new_secret);
 		let new_member_proof = CryptoOf::<Test>::sign(&new_secret, &extra_user.encode()).unwrap();
@@ -572,6 +606,7 @@ fn success_with_previous_revision() {
 		assert_ok!(Assets::mint(RuntimeOrigin::signed(ALICE), asset_id, extra_user, amount));
 		assert_ok!(Coinage::load_recycler_with_external_asset(
 			RuntimeOrigin::signed(extra_user),
+			TEST_INSTANCE_ID,
 			crate::pallet::CodecPreservation::Expendable,
 			0,
 			new_member,
@@ -579,7 +614,7 @@ fn success_with_previous_revision() {
 		));
 		Members::process_maintenance();
 
-		let identifier = Coinage::recycler_collection_identifier(0);
+		let identifier = Coinage::recycler_collection_identifier(TEST_INSTANCE_ID, 0);
 		let new_revision =
 			<Test as Config>::MemberService::ring_revision(&identifier, index).unwrap();
 		assert!(new_revision > revision, "revision should increase after rebuild");
@@ -587,6 +622,7 @@ fn success_with_previous_revision() {
 		// Step 3: Use proof generated against the old revision.
 		let dest = 1;
 		let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coin {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: aliases.clone(),
 			value: 0,
 			index,
@@ -618,8 +654,11 @@ fn success_with_previous_revision() {
 		);
 
 		let context = crate::pallet::free_unload_token_context(0, 0);
-		let people_proof =
-			PeopleProof { context: context.to_vec(), msg: intent_msg.to_vec(), alias: [0u8; 32] };
+		let people_proof = MembershipProof {
+			context: context.to_vec(),
+			msg: intent_msg.to_vec(),
+			alias: [0u8; 32],
+		};
 
 		let info = AsCoinageInfo::AsUnloadTokenPeople {
 			proof: people_proof,
@@ -633,8 +672,11 @@ fn success_with_previous_revision() {
 		assert_eq!(Executive::apply_extrinsic(ext), Ok(Ok(())));
 
 		let coin = CoinsByOwner::<Test>::get(dest).unwrap();
-		assert_eq!(coin, Coin { value: 0, age: 0 });
-		assert!(RecyclersUnloaded::<Test>::contains_key((0i8, index, aliases[0])));
+		assert_eq!(coin, Coin { instance_id: TEST_INSTANCE_ID, value: 0, age: 0 });
+		assert!(matches!(
+			RecyclerAliasStates::<Test>::get((TEST_INSTANCE_ID, 0i8, index, aliases[0])),
+			Some(AliasState::Unloaded),
+		));
 	});
 }
 
@@ -662,6 +704,7 @@ fn success_unload_from_full_recycler() {
 
 		let dest = 1;
 		let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coin {
+			instance_id: TEST_INSTANCE_ID,
 			aliases,
 			value: 0,
 			index,
@@ -675,12 +718,77 @@ fn success_unload_from_full_recycler() {
 
 		// Verify unload succeeded
 		let coin = CoinsByOwner::<Test>::get(dest).unwrap();
-		assert_eq!(coin, Coin { value: 0, age: 0 });
+		assert_eq!(coin, Coin { instance_id: TEST_INSTANCE_ID, value: 0, age: 0 });
 
 		// Verify alias was recorded as unloaded
 		let alias =
 			CryptoOf::<Test>::alias_in_context(&secret, UNLOADING_RECYCLER_CONTEXT.as_ref())
 				.unwrap();
-		assert!(RecyclersUnloaded::<Test>::contains_key((0i8, index, alias)));
+		assert!(matches!(
+			RecyclerAliasStates::<Test>::get((TEST_INSTANCE_ID, 0i8, index, alias)),
+			Some(AliasState::Unloaded),
+		));
 	});
+}
+
+/// Sponsored-instance settle flow of `unload_recycler_into_coin` through the given prepaid
+/// unload-token extension flavor: unloading releases the key's deposit, and after a switch to
+/// sufficient the remaining sponsored-loaded key still unloads while settling nothing.
+fn sponsored_unload_into_coin_settles(make_variant: impl FnOnce() -> UnloadTokenVariant) {
+	new_test_ext().execute_with(|| {
+		System::set_block_number(1);
+		let variant = make_variant();
+		let (instance_id, secrets, index, revision) = setup_sponsored_recycler(10, 100, 2, 0);
+		assert_eq!(pot_held(instance_id, NATIVE_DEPOSIT_ID), 20);
+
+		// Unloading one key releases its deposit to the pot's free balance.
+		let call = crate::Call::<Test>::unload_recycler_into_coin {
+			instance_id,
+			aliases: bounded_vec![recycler_alias(&secrets[0])],
+			value: 0,
+			index,
+			revision,
+			to: 9_101,
+		};
+		let free_before = pot_free(instance_id, NATIVE_DEPOSIT_ID);
+		let ext = variant.build_ext(instance_id, call, &secrets[0..1], 0, index, revision, 0);
+		assert_eq!(Executive::apply_extrinsic(ext), Ok(Ok(())));
+		assert_eq!(pot_held(instance_id, NATIVE_DEPOSIT_ID), 10);
+		assert_eq!(pot_free(instance_id, NATIVE_DEPOSIT_ID), free_before + 10);
+		check_load_deposit_invariant(instance_id, 1);
+
+		// Switching to sufficient releases the remaining deposit; the other key, loaded while
+		// the instance was sponsored, still unloads and settles nothing.
+		assert_ok!(Coinage::make_instance_sufficient(RuntimeOrigin::root(), instance_id));
+		assert_eq!(pot_held(instance_id, NATIVE_DEPOSIT_ID), 0);
+		let free_after_switch = pot_free(instance_id, NATIVE_DEPOSIT_ID);
+		let call = crate::Call::<Test>::unload_recycler_into_coin {
+			instance_id,
+			aliases: bounded_vec![recycler_alias(&secrets[1])],
+			value: 0,
+			index,
+			revision,
+			to: 9_102,
+		};
+		let ext = variant.build_ext(instance_id, call, &secrets[1..2], 0, index, revision, 1);
+		assert_eq!(Executive::apply_extrinsic(ext), Ok(Ok(())));
+		assert!(CoinsByOwner::<Test>::contains_key(9_102));
+		assert_eq!(pot_held(instance_id, NATIVE_DEPOSIT_ID), 0);
+		assert_eq!(pot_free(instance_id, NATIVE_DEPOSIT_ID), free_after_switch);
+	});
+}
+
+#[test]
+fn sponsored_unload_into_coin_settles_the_load_deposit_people_token() {
+	sponsored_unload_into_coin_settles(|| UnloadTokenVariant::People);
+}
+
+#[test]
+fn sponsored_unload_into_coin_settles_the_load_deposit_lite_people_token() {
+	sponsored_unload_into_coin_settles(|| UnloadTokenVariant::LitePeople);
+}
+
+#[test]
+fn sponsored_unload_into_coin_settles_the_load_deposit_paid_token() {
+	sponsored_unload_into_coin_settles(|| paid_unload_token_variant(2));
 }

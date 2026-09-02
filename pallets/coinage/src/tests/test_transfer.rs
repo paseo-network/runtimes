@@ -64,9 +64,39 @@ fn transfer_dest_has_coin_invalid() {
 		let signer = 1;
 		let dest = 2;
 		// Signer has a coin.
-		CoinsByOwner::<Test>::insert(signer, Coin { value: 1, age: 0 });
+		CoinsByOwner::<Test>::insert(
+			signer,
+			Coin { instance_id: TEST_INSTANCE_ID, value: 1, age: 0 },
+		);
 		// Destination already has a coin.
-		CoinsByOwner::<Test>::insert(dest, Coin { value: 2, age: 5 });
+		CoinsByOwner::<Test>::insert(
+			dest,
+			Coin { instance_id: TEST_INSTANCE_ID, value: 2, age: 5 },
+		);
+
+		let ext = build_transfer_ext(signer, dest, true);
+		assert_invalid(ext, CustomInvalidity::AddressAlreadyHasCoin);
+	});
+}
+
+#[test]
+fn transfer_dest_has_coin_in_other_instance_invalid() {
+	new_test_ext().execute_with(|| {
+		let signer = 1;
+		let dest = 2;
+		let other_instance_id = setup_sponsored_instance();
+		assert_ne!(other_instance_id, TEST_INSTANCE_ID);
+
+		CoinsByOwner::<Test>::insert(
+			signer,
+			Coin { instance_id: TEST_INSTANCE_ID, value: 1, age: 0 },
+		);
+
+		// Destination already holds a coin in a different instance.
+		CoinsByOwner::<Test>::insert(
+			dest,
+			Coin { instance_id: other_instance_id, value: 2, age: 5 },
+		);
 
 		let ext = build_transfer_ext(signer, dest, true);
 		assert_invalid(ext, CustomInvalidity::AddressAlreadyHasCoin);
@@ -80,7 +110,10 @@ fn transfer_coin_max_age_invalid() {
 		let dest = 2;
 		let max_age = get_u16::<<Test as Config>::MaximumAge>();
 		// Insert coin with max age.
-		CoinsByOwner::<Test>::insert(signer, Coin { value: 1, age: max_age });
+		CoinsByOwner::<Test>::insert(
+			signer,
+			Coin { instance_id: TEST_INSTANCE_ID, value: 1, age: max_age },
+		);
 
 		let ext = build_transfer_ext(signer, dest, true);
 		assert_invalid(ext, CustomInvalidity::CoinTooOld);
@@ -96,7 +129,10 @@ fn transfer_valid_success() {
 		let initial_age = 10;
 		let value = 1;
 		// Insert a valid coin for signer.
-		CoinsByOwner::<Test>::insert(signer, Coin { value, age: initial_age });
+		CoinsByOwner::<Test>::insert(
+			signer,
+			Coin { instance_id: TEST_INSTANCE_ID, value, age: initial_age },
+		);
 
 		let ext = build_transfer_ext(signer, dest, true);
 
@@ -108,12 +144,17 @@ fn transfer_valid_success() {
 		let dest_coin = CoinsByOwner::<Test>::get(dest).expect("Dest should have received coin");
 		assert_eq!(
 			dest_coin,
-			Coin { value, age: initial_age + 1 },
+			Coin { instance_id: TEST_INSTANCE_ID, value, age: initial_age + 1 },
 			"Coin should have same value and age + 1"
 		);
 		System::assert_has_event(
-			crate::Event::<Test>::CoinTransferred { to: dest, value, new_age: initial_age + 1 }
-				.into(),
+			crate::Event::<Test>::CoinTransferred {
+				instance_id: TEST_INSTANCE_ID,
+				to: dest,
+				value,
+				new_age: initial_age + 1,
+			}
+			.into(),
 		);
 	});
 }

@@ -17,7 +17,7 @@
 //! Tests for `MinimumExponentForOutputUnloadFee` configuration parameter.
 //!
 //! These tests verify the behavior of `AsUnloadTokenFromOutput` extension validation
-//! with respect to the minimum fee coin value requirement.
+//! with respect to the minimum fee denomination requirement.
 
 use crate::{mock::*, *};
 use frame_support::{traits::fungibles::Inspect, BoundedVec};
@@ -34,10 +34,10 @@ fn validation_succeeds_when_fee_recycler_value_equals_minimum() {
 	new_test_ext().execute_with(|| {
 		setup_balances();
 
-		// Set minimum to 0, then use coin value 0 (== minimum)
+		// Set minimum to 0, then use denomination 0 (== minimum)
 		MinimumExponentForOutputUnloadFee::set(&0);
 
-		let value: CoinValue = 0; // $1 coin, equals MinimumExponentForOutputUnloadFee
+		let value: Denomination = 0; // $1 coin, equals MinimumExponentForOutputUnloadFee
 		let dest = CHARLIE;
 
 		let (secrets, index, revision) = setup_recycler(value, 2, 0);
@@ -54,11 +54,13 @@ fn validation_succeeds_when_fee_recycler_value_equals_minimum() {
 
 		// Build call and extrinsic
 		let call = crate::Call::<Test>::unload_recycler_into_external_asset {
+			instance_id: TEST_INSTANCE_ID,
 			aliases,
 			value,
 			index,
 			revision,
 			to: dest,
+			max_fee: unload_token_fee_in_asset(),
 		};
 		let ext = build_unload_from_output_ext(call, value, index, revision, &secrets[0..1]);
 
@@ -78,10 +80,10 @@ fn validation_succeeds_when_fee_recycler_value_greater_than_minimum() {
 	new_test_ext().execute_with(|| {
 		setup_balances();
 
-		// Set minimum to -2, then use coin value 0 (> minimum)
+		// Set minimum to -2, then use denomination 0 (> minimum)
 		MinimumExponentForOutputUnloadFee::set(&-2);
 
-		let value: CoinValue = 0; // $1 coin, greater than MinimumExponentForOutputUnloadFee (-2)
+		let value: Denomination = 0; // $1 coin, greater than MinimumExponentForOutputUnloadFee (-2)
 		let dest = CHARLIE;
 
 		let (secrets, index, revision) = setup_recycler(value, 2, 0);
@@ -98,11 +100,13 @@ fn validation_succeeds_when_fee_recycler_value_greater_than_minimum() {
 
 		// Build call and extrinsic
 		let call = crate::Call::<Test>::unload_recycler_into_external_asset {
+			instance_id: TEST_INSTANCE_ID,
 			aliases,
 			value,
 			index,
 			revision,
 			to: dest,
+			max_fee: unload_token_fee_in_asset(),
 		};
 		let ext = build_unload_from_output_ext(call, value, index, revision, &secrets[0..1]);
 
@@ -122,10 +126,10 @@ fn validation_fails_with_fee_recycler_coin_too_small() {
 	new_test_ext().execute_with(|| {
 		setup_balances();
 
-		// Set minimum to 0, then try to use coin value -2 (< minimum)
+		// Set minimum to 0, then try to use denomination -2 (< minimum)
 		MinimumExponentForOutputUnloadFee::set(&0);
 
-		let value: CoinValue = -2; // $0.25 coin, less than MinimumExponentForOutputUnloadFee (0)
+		let value: Denomination = -2; // $0.25 coin, less than MinimumExponentForOutputUnloadFee (0)
 		let dest = CHARLIE;
 
 		let (secrets, index, revision) = setup_recycler(value, 2, 0);
@@ -140,11 +144,13 @@ fn validation_fails_with_fee_recycler_coin_too_small() {
 
 		// Build call and extrinsic
 		let call = crate::Call::<Test>::unload_recycler_into_external_asset {
+			instance_id: TEST_INSTANCE_ID,
 			aliases,
 			value,
 			index,
 			revision,
 			to: dest,
+			max_fee: unload_token_fee_in_asset(),
 		};
 		let ext = build_unload_from_output_ext(call, value, index, revision, &secrets[0..1]);
 
@@ -154,26 +160,27 @@ fn validation_fails_with_fee_recycler_coin_too_small() {
 }
 
 // ============================================================================
-// Spam penalty test
+// Failed-dispatch lock test
 // ============================================================================
 
 #[test]
-fn failed_call_keeps_first_alias_marked_as_unloaded_spam_penalty() {
+fn failed_call_locks_first_alias_instead_of_destroying_it() {
 	// Test that if the `unload_recycler_into_external_asset` call fails
-	// (e.g., total unloaded amount < fee), the first alias remains marked as
-	// unloaded (spam penalty).
+	// (e.g., total unloaded amount < fee), the first alias is preserved behind a temporary
+	// failed-dispatch lock instead of being consumed permanently.
 	new_test_ext().execute_with(|| {
 		setup_balances();
 
-		// Set fee higher than the coin value to cause failure
-		MockPaidUnloadTokenFeeOverride::set(&Some(2000)); // Fee = 2000, coin = 1000
-
-		let value: CoinValue = 0; // $1 coin = 1000 underlying units
+		let value: Denomination = 0; // $1 coin = 1000 underlying units
 		let dest = CHARLIE;
+		let max_fee = unload_token_fee_in_asset();
+		// Force a dispatch-time failure: validation quotes the conversion and accepts the call,
+		// then the swap takes more of the asset than the quote bounding it allowed.
+		set_fee_conversion_swap_surcharge(1);
 
 		let (secrets, index, revision) = setup_recycler(value, 2, 0);
 
-		// Get alias for the call
+		// Use a real recycler alias so the extension follows the normal reserve-on-prepare path.
 		let alias = CryptoOf::<Test>::alias_in_context(
 			&secrets[0],
 			crate::pallet::UNLOADING_RECYCLER_CONTEXT.as_ref(),
@@ -183,40 +190,69 @@ fn failed_call_keeps_first_alias_marked_as_unloaded_spam_penalty() {
 
 		// Verify alias is not marked as unloaded before
 		assert!(
-			!RecyclersUnloaded::<Test>::contains_key((value, index, alias)),
+			!matches!(
+				RecyclerAliasStates::<Test>::get((TEST_INSTANCE_ID, value, index, alias)),
+				Some(AliasState::Unloaded),
+			),
 			"Alias should not be marked as unloaded before the extrinsic"
 		);
 
-		assert_eq!(TotalValueOfDestroyedCoins::<Test>::get(), 0);
+		assert_eq!(TotalValueOfDestroyedCoins::<Test>::get(TEST_INSTANCE_ID), 0);
 
 		// Build call and extrinsic
 		let call = crate::Call::<Test>::unload_recycler_into_external_asset {
+			instance_id: TEST_INSTANCE_ID,
 			aliases,
 			value,
 			index,
 			revision,
 			to: dest,
+			max_fee,
 		};
 		let ext = build_unload_from_output_ext(call, value, index, revision, &secrets[0..1]);
 
-		// Apply the extrinsic - dispatch should fail (fee > coin value)
+		// Apply the extrinsic - dispatch should fail (the conversion is gone by then)
 		let result = Executive::apply_extrinsic(ext);
 		// The extrinsic validates successfully but dispatch fails
 		assert!(matches!(result, Ok(Err(_))), "Dispatch should fail: {result:?}");
 
-		// Verify first alias remains marked as unloaded (spam penalty applied in prepare)
+		// The failed call must roll back the temporary "unloaded" marker so the alias is not
+		// treated as permanently spent.
 		assert!(
-			RecyclersUnloaded::<Test>::contains_key((value, index, alias)),
-			"First alias should remain marked as unloaded as spam penalty"
+			!matches!(
+				RecyclerAliasStates::<Test>::get((TEST_INSTANCE_ID, value, index, alias)),
+				Some(AliasState::Unloaded),
+			),
+			"First alias should be restored after failed dispatch"
 		);
+		// Instead of being destroyed, the alias is parked behind a retry lock for a while.
+		let lock_until = super::get_recycler_alias_lock_until(value, index, alias)
+			.expect("failed dispatch should lock the first alias");
+		assert_eq!(TotalValueOfDestroyedCoins::<Test>::get(TEST_INSTANCE_ID), 0);
 
-		// Verify destroyed value is tracked (post_dispatch penalty)
-		// fee_recycler_value=0 -> 1000 underlying units
-		assert_eq!(
-			TotalValueOfDestroyedCoins::<Test>::get(),
-			1000,
-			"Destroyed coin value should be tracked"
+		// A second submission with the same alias should now be rejected during validation until
+		// the lock expires, with the market back in line so the lock is what rejects it.
+		set_fee_conversion_swap_surcharge(0);
+		let ext_locked = build_unload_from_output_ext(
+			crate::Call::<Test>::unload_recycler_into_external_asset {
+				instance_id: TEST_INSTANCE_ID,
+				aliases: BoundedVec::try_from(vec![alias]).unwrap(),
+				value,
+				index,
+				revision,
+				to: dest,
+				max_fee,
+			},
+			value,
+			index,
+			revision,
+			&secrets[0..1],
 		);
+		assert_invalid(ext_locked, CustomInvalidity::AliasTemporarilyLocked);
+
+		// Once the timeout passes the alias becomes usable again.
+		advance_until_time(lock_until as u32);
+		assert_eq!(super::get_recycler_alias_lock_until(value, index, alias), None);
 	});
 }
 
@@ -250,7 +286,7 @@ fn successful_unload_deducts_fee_from_combined_output_amount() {
 	// Test successful `unload_recycler_into_external_asset` with `FromOutput` fee,
 	// ensuring the unload token fee is properly deducted from the combined output amount.
 	//
-	// Scenario: First coin value (250) is higher than the unload token fee (2). Verifies
+	// Scenario: First denomination (250) is higher than the unload token fee (2). Verifies
 	// that only the unload token fee amount is deducted, not the entire first coin.
 	new_test_ext().execute_with(|| {
 		System::set_block_number(1);
@@ -260,7 +296,7 @@ fn successful_unload_deducts_fee_from_combined_output_amount() {
 		MinimumExponentForOutputUnloadFee::set(&-2);
 		MockPaidUnloadTokenFeeOverride::set(&Some(2));
 
-		let value: CoinValue = -2; // $0.25 coin = 250 underlying units each
+		let value: Denomination = -2; // $0.25 coin = 250 underlying units each
 		let dest = CHARLIE;
 
 		// Setup recycler with 4 members
@@ -291,15 +327,17 @@ fn successful_unload_deducts_fee_from_combined_output_amount() {
 		let aliases = BoundedVec::try_from(vec![alias0, alias1, alias2, alias3]).unwrap();
 
 		let charlie_external_asset_before = AssetsWithHolder::balance(10, &dest);
-		let fee_dest_before = AssetsWithHolder::balance(10, &FEE_DESTINATION);
+		let market_before = AssetsWithHolder::balance(10, &MOCK_MARKET);
 
 		// Build call and extrinsic with all 4 aliases
 		let call = crate::Call::<Test>::unload_recycler_into_external_asset {
+			instance_id: TEST_INSTANCE_ID,
 			aliases,
 			value,
 			index,
 			revision,
 			to: dest,
+			max_fee: unload_token_fee_in_asset(),
 		};
 		let ext = build_unload_from_output_ext(call, value, index, revision, &secrets[0..4]);
 
@@ -310,18 +348,23 @@ fn successful_unload_deducts_fee_from_combined_output_amount() {
 		// Fee = 2 units
 		// Charlie should receive: 1000 - 2 = 998 units
 		let charlie_external_asset_after = AssetsWithHolder::balance(10, &dest);
-		let fee_dest_after = AssetsWithHolder::balance(10, &FEE_DESTINATION);
+		let market_after = AssetsWithHolder::balance(10, &MOCK_MARKET);
 
 		assert_eq!(
 			charlie_external_asset_after - charlie_external_asset_before,
 			998,
 			"Charlie should receive total output minus fee"
 		);
-		assert_eq!(fee_dest_after - fee_dest_before, 2, "Fee destination should receive the fee");
+		assert_eq!(
+			market_after - market_before,
+			2,
+			"The market should receive the asset the fee cost"
+		);
 
 		// Verify the event shows correct values
 		System::assert_has_event(
 			crate::Event::<Test>::RecyclerUnloadedIntoExternalAsset {
+				instance_id: TEST_INSTANCE_ID,
 				to: dest,
 				value,
 				input_count: 4,
@@ -336,7 +379,7 @@ fn successful_unload_deducts_fee_from_combined_output_amount() {
 fn fee_deducted_from_total_not_first_coin() {
 	// Test that unload token fee is deducted from total combined output, not just the first coin.
 	//
-	// Scenario: First coin value (250) is lower than the unload token fee (300). Verifies that
+	// Scenario: First denomination (250) is lower than the unload token fee (300). Verifies that
 	// multiple coins are consolidated and the unload token fee is deducted from the total.
 	new_test_ext().execute_with(|| {
 		System::set_block_number(1);
@@ -346,7 +389,7 @@ fn fee_deducted_from_total_not_first_coin() {
 		MinimumExponentForOutputUnloadFee::set(&-2);
 		MockPaidUnloadTokenFeeOverride::set(&Some(300)); // Fee = 300 units (> single coin of 250)
 
-		let value: CoinValue = -2; // $0.25 coin = 250 underlying units each
+		let value: Denomination = -2; // $0.25 coin = 250 underlying units each
 		let dest = CHARLIE;
 
 		// Setup recycler with 3 members
@@ -374,21 +417,23 @@ fn fee_deducted_from_total_not_first_coin() {
 		let aliases = BoundedVec::try_from(vec![alias0, alias1, alias2]).unwrap();
 
 		let charlie_external_asset_before = AssetsWithHolder::balance(10, &dest);
-		let fee_dest_before = AssetsWithHolder::balance(10, &FEE_DESTINATION);
+		let market_before = AssetsWithHolder::balance(10, &MOCK_MARKET);
 
 		let call = crate::Call::<Test>::unload_recycler_into_external_asset {
+			instance_id: TEST_INSTANCE_ID,
 			aliases,
 			value,
 			index,
 			revision,
 			to: dest,
+			max_fee: unload_token_fee_in_asset(),
 		};
 		let ext = build_unload_from_output_ext(call, value, index, revision, &secrets[0..3]);
 
 		Executive::apply_extrinsic(ext).expect("valid").expect("successful");
 
 		let charlie_external_asset_after = AssetsWithHolder::balance(10, &dest);
-		let fee_dest_after = AssetsWithHolder::balance(10, &FEE_DESTINATION);
+		let market_after = AssetsWithHolder::balance(10, &MOCK_MARKET);
 
 		// First coin alone (250) cannot cover the fee (300).
 		// But with combined output (750), we get 750 - 300 = 450.
@@ -398,10 +443,15 @@ fn fee_deducted_from_total_not_first_coin() {
 			450,
 			"Charlie should receive combined output minus fee (3*250 - 300 = 450)"
 		);
-		assert_eq!(fee_dest_after - fee_dest_before, 300, "Fee destination should receive the fee");
+		assert_eq!(
+			market_after - market_before,
+			300,
+			"The market should receive the asset the fee cost"
+		);
 
 		System::assert_has_event(
 			crate::Event::<Test>::RecyclerUnloadedIntoExternalAsset {
+				instance_id: TEST_INSTANCE_ID,
 				to: dest,
 				value,
 				input_count: 3,

@@ -23,12 +23,11 @@ use frame_support::{
 	DefaultNoBound, EqNoBound, PartialEqNoBound,
 };
 use frame_system::{CheckNonce, ValidNonceInfo};
+use indiv_support::tx_priority;
 use scale_info::TypeInfo;
-use sp_core::{blake2_256, twox_64};
+use sp_crypto_hashing::{blake2_256, twox_64};
 use sp_runtime::{
-	traits::{
-		DispatchInfoOf, PostDispatchInfoOf, Saturating, TransactionExtension, ValidateResult,
-	},
+	traits::{DispatchInfoOf, PostDispatchInfoOf, TransactionExtension, ValidateResult},
 	transaction_validity::{InvalidTransaction, TransactionValidityError, ValidTransaction},
 };
 
@@ -54,17 +53,25 @@ use sp_runtime::{
 pub enum AsCoinageInfo<T: Config + Send + Sync> {
 	/// Transmute the signed origin into [Origin::Coin] for the calls: [Call::split],
 	/// [Call::transfer], [Call::load_recycler_with_coin].
+	///
+	/// The calls are validated exhaustively in the extension: every condition outside the user's
+	/// control is checked, so the call can only fail if the user explicitly misconstructs it.
+	/// On failure the coin is locked temporarily, with a quadratic backoff.
+	///
+	/// Coin authorization is not nonce-based, so the transaction stays replayable while the coin
+	/// lives. The caller must send a mortal transaction that expires before the
+	/// [`Config::CoinFailureLockPeriod`] to avoid replay.
 	AsCoin,
 	/// Transmute the None origin into [Origin::UnloadToken] for the calls:
 	/// [Call::unload_recycler_into_coin], [Call::unload_recycler_into_external_asset],
-	/// [Call::unload_recycler_into_external_asset_and_vouchers], and
+	/// [Call::unload_recycler_into_external_asset_and_loaded_coins], and
 	/// [Call::unload_recycler_into_coins].
 	AsUnloadTokenPeople {
 		/// The proof of personhood, proving the message
 		/// `alias_proofs.encode() ++ inherited_implication` hashed with blake2_256 in the
 		/// context: `"pop:polkadot.net/coinftk" ++ period ++ counter` with period and counter
 		/// as LE-encoded unsigned 32-bit integers.
-		proof: <T::PeopleProof as ValidateProof>::Proof,
+		proof: <T::MembershipProof as ValidateProof>::Proof,
 		/// The period of the unload token.
 		period: Period,
 		/// The counter of the unload token.
@@ -78,14 +85,14 @@ pub enum AsCoinageInfo<T: Config + Send + Sync> {
 	},
 	/// Transmute the None origin into [Origin::UnloadToken] for the calls:
 	/// [Call::unload_recycler_into_coin], [Call::unload_recycler_into_external_asset],
-	/// [Call::unload_recycler_into_external_asset_and_vouchers], and
+	/// [Call::unload_recycler_into_external_asset_and_loaded_coins], and
 	/// [Call::unload_recycler_into_coins].
 	AsUnloadTokenLitePeople {
 		/// The proof of lite personhood, proving the message
 		/// `alias_proofs.encode() ++ inherited_implication` hashed with blake2_256 in the
 		/// context: `"pop:polkadot.net/coinftk" ++ period ++ counter` with period and counter
 		/// as LE-encoded unsigned 32-bit integers.
-		proof: <T::LitePeopleProof as ValidateProof>::Proof,
+		proof: <T::MembershipProof as ValidateProof>::Proof,
 		/// The period of the unload token.
 		period: Period,
 		/// The counter of the unload token.
@@ -99,7 +106,7 @@ pub enum AsCoinageInfo<T: Config + Send + Sync> {
 	},
 	/// Transmute the None origin into [Origin::UnloadToken] for the calls:
 	/// [Call::unload_recycler_into_coin], [Call::unload_recycler_into_external_asset],
-	/// [Call::unload_recycler_into_external_asset_and_vouchers], and
+	/// [Call::unload_recycler_into_external_asset_and_loaded_coins], and
 	/// [Call::unload_recycler_into_coins].
 	AsUnloadTokenPaid {
 		/// The proof from the paid unload token ring, proving the message
@@ -122,28 +129,32 @@ pub enum AsCoinageInfo<T: Config + Send + Sync> {
 	},
 	/// Transmute the None origin into [Origin::UnloadToken] with [UnloadFee::FromOutput] for the
 	/// calls [Call::unload_recycler_into_external_asset],
-	/// [Call::unload_recycler_into_external_asset_and_vouchers], and
+	/// [Call::unload_recycler_into_external_asset_and_loaded_coins], and
 	/// [Call::unload_recycler_into_coins].
 	/// The fee is deducted from the unloaded assets.
 	///
-	/// If the transaction fails then the first alias is consumed as penalty.
+	/// If the transaction fails then the first alias is temporarily locked as penalty.
 	///
 	/// The first alias proof is validated in the extension for spam protection and marked as
-	/// unloaded (penalty if call fails). The coin value for this first alias
+	/// unloaded (penalty if call fails). The denomination for this first alias
 	/// (`fee_recycler_value`) must be at least [Config::MinimumExponentForOutputUnloadFee] to
 	/// cover the weight of a failed unload, but doesn't need to cover the full unload token fee
 	/// (which is deducted from the total output). The call skips re-validation for the first
 	/// alias, only checking that it matches the `first_alias` from the origin.
 	AsUnloadTokenFromOutput {
-		/// The coin value of the recycler for the first alias (fee coin).
-		fee_recycler_value: CoinValue,
+		/// The denomination of the recycler for the first alias (fee coin).
+		fee_recycler_value: Denomination,
 		/// The recycler index for the first alias.
 		fee_recycler_index: RingIndex,
 		/// The recycler revision for the first alias.
 		fee_recycler_revision: RevisionIndex,
+		/// Monotonic retry counter for failed-dispatch retries of the fee alias.
+		retry_counter: u8,
 		/// All alias proofs including the first one.
-		/// The first proof signs `alias_proofs[1..].encode() ++ inherited_implication` hashed
-		/// with blake2_256 in the context: `"pop:polkadot.network/coinrecyclr"`.
+		/// The first proof signs `alias_proofs[1..].encode() ++ retry_counter.encode() ++
+		/// inherited_implication` hashed with blake2_256 in the context:
+		/// `"pop:polkadot.network/coinrecyclr"`.
+		/// `retry_counter` must match the next failed-dispatch retry expected for the fee alias.
 		/// It is validated in the extension for spam protection, ensuring the other proofs
 		/// cannot be tampered with.
 		/// The remaining proofs sign `inherited_implication` hashed with blake2_256 in the
@@ -182,6 +193,31 @@ impl<T: Config + Send + Sync> AsCoinage<T> {
 		Self(explicit)
 	}
 
+	// Apply the pallet's "quadratic" retry lock: each repeated failed dispatch doubles the
+	// base lock period, making rapid retries increasingly expensive.
+	fn failed_dispatch_lock(previous: Option<LockInfo>) -> LockInfo {
+		let new_retries = previous.map(Self::next_failed_dispatch_retry).unwrap_or(0);
+
+		Self::failed_dispatch_lock_with_retries(new_retries)
+	}
+
+	fn next_failed_dispatch_retry(previous: LockInfo) -> u8 {
+		match previous.reason {
+			LockReason::FailedDispatch { retries } => retries.saturating_add(1),
+		}
+	}
+
+	fn failed_dispatch_lock_with_retries(retries: u8) -> LockInfo {
+		let base_lock = T::CoinFailureLockPeriod::get();
+		let lock_duration = 2u64.saturating_pow(u32::from(retries)).saturating_mul(base_lock);
+		let current_time = T::UnixTime::now().as_secs();
+
+		LockInfo {
+			reason: LockReason::FailedDispatch { retries },
+			until: current_time.saturating_add(lock_duration),
+		}
+	}
+
 	/// Calculate validation parameters `(revision_checks, output_checks)` for unload calls.
 	/// Used by `validate_unload_calls` weight calculation.
 	fn unload_call_validation_params(
@@ -194,10 +230,10 @@ impl<T: Config + Send + Sync> AsCoinage<T> {
 					split_into.iter().map(|(_, dests)| dests.len() as u32).sum();
 				(1, destinations)
 			},
-			Some(Call::<T>::unload_recycler_into_external_asset_and_vouchers {
-				new_vouchers,
+			Some(Call::<T>::unload_recycler_into_external_asset_and_loaded_coins {
+				loaded_coins,
 				..
-			}) => (1, new_vouchers.len() as u32),
+			}) => (1, loaded_coins.len() as u32),
 			Some(Call::<T>::unload_recycler_into_external_asset { .. }) => (1, 0),
 			// Default for unknown/invalid calls - will fail validation anyway
 			_ => (1, 0),
@@ -230,9 +266,11 @@ pub enum Val<T: Config + Send + Sync> {
 	},
 	/// Using output token - first alias validated, fee coin covers fee.
 	UsingOutputToken {
+		instance_id: InstanceId,
 		first_alias: Alias,
-		fee_recycler_value: CoinValue,
+		fee_recycler_value: Denomination,
 		fee_recycler_index: RingIndex,
+		retry_counter: u8,
 	},
 	/// Using the infallible unpaid extension. All checks passed in validate; prepare will
 	/// commit the nonce.
@@ -252,9 +290,14 @@ pub enum Pre<T: Config + Send + Sync> {
 	},
 	UsingFreeToken,
 	UsingPaidToken,
-	/// Using output token - first alias marked as unloaded in prepare (penalty if call fails).
+	/// Using output token - first alias reserved in prepare and either consumed on success or
+	/// temporarily locked on failure.
 	UsingOutputToken {
-		fee_recycler_value: CoinValue,
+		instance_id: InstanceId,
+		first_alias: Alias,
+		fee_recycler_value: Denomination,
+		fee_recycler_index: RingIndex,
+		retry_counter: u8,
 	},
 	/// Using the infallible unpaid extension.
 	UsingInfallibleUnpaidSigned,
@@ -282,6 +325,8 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 					T::WeightInfo::as_none_tx_ext_unload_recyclers_into_external_asset_non_anonymous(
 						inputs.len() as u32,
 					),
+				Some(Call::<T>::unload_archived_recycler_into_external_asset { .. }) =>
+					T::WeightInfo::as_none_tx_ext_unload_archived_recycler_into_external_asset(),
 				_ => T::WeightInfo::as_none_tx_ext_others(),
 			},
 			Some(AsCoinageInfo::AsCoin) => match call.is_sub_type() {
@@ -320,21 +365,11 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 				T::WeightInfo::as_unload_token_from_output_tx_ext()
 					.saturating_add(T::WeightInfo::validate_unload_calls(r, d))
 			},
-			Some(AsCoinageInfo::InfallibleUnpaidSigned { .. }) => {
-				// `n × as_infallible_unpaid_tx_ext()` is a safe over-estimate for the batch
-				// case: the single-item benchmark folds in once-per-tx work (the
-				// `reducible_balance` reads and the `CheckNonce` read/write) that the batch
-				// validator only does once regardless of `n`. Multiplying by `n` therefore
-				// charges those reads/writes `n` times when only one happens. Per-item work
-				// (member-key lookup + signature verification) is correctly scaled. If this
-				// over-charge ever matters, split the benchmark into a fixed overhead and a
-				// per-item increment, or add a dedicated `_batch(n)` benchmark.
-				let n = match call.is_sub_type() {
-					Some(Call::<T>::load_recycler_with_external_asset_unpaid_batch { items }) =>
-						(items.len() as u64).max(1),
-					_ => 1,
-				};
-				T::WeightInfo::as_infallible_unpaid_tx_ext().saturating_mul(n)
+			Some(AsCoinageInfo::InfallibleUnpaidSigned { .. }) => match call.is_sub_type() {
+				Some(Call::<T>::load_recycler_with_external_asset_unpaid_batch {
+					items, ..
+				}) => T::WeightInfo::as_infallible_unpaid_tx_ext_batch(items.len() as u32),
+				_ => T::WeightInfo::as_infallible_unpaid_tx_ext(),
 			},
 		}
 	}
@@ -349,24 +384,14 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 		inherited_implication: &impl Encode,
 		_source: TransactionSource,
 	) -> ValidateResult<Self::Val, <T as frame_system::Config>::RuntimeCall> {
-		// Global gate: reject every Coinage call (top-level) when the underlying asset id
-		// is unset. `set_underlying_asset_id` is exempt — otherwise pallet could never
-		// be brought online. Nested calls dispatched via utility/proxy/multisig
-		// bypass this and are caught by the dispatch-handler's `Self::underlying_asset_id()`
-		// lookup as a fallback.
-		if let Some(coinage_call) = call.is_sub_type() {
-			if !matches!(coinage_call, Call::<T>::set_underlying_asset_id { .. }) &&
-				!UnderlyingAssetId::<T>::exists()
-			{
-				return Err(CustomInvalidity::AssetIdNotSet.into());
-			}
-		}
-
 		match &self.0 {
 			None => {
-				// For signed non-anonymous unload calls, validate recycler revisions early
-				// to protect users from paying fees when proofs are outdated.
-				Pallet::<T>::validate_non_anonymous_unload_calls_revisions(call)?;
+				// For signed unload calls, validate state-dependent arguments early (recycler
+				// revisions, archived recycler roots) to protect users from paying fees when
+				// their transaction was built against outdated chain state.
+				Pallet::<T>::validate_signed_unload_calls(call)?;
+				// Extension not in use by this transaction: pass through with default validity. The
+				// effective priority comes from whichever extension authorizes the call.
 				Ok((ValidTransaction::default(), Val::NotUsing, origin))
 			},
 			Some(AsCoinageInfo::AsCoin) => {
@@ -396,7 +421,7 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 					},
 					Some(Call::<T>::load_recycler_with_coin { member_key, proof_of_ownership }) => {
 						Pallet::<T>::validate_load_recycler_with_coin(
-							&coin,
+							coin.instance_id,
 							&coin_id,
 							member_key,
 							proof_of_ownership,
@@ -419,8 +444,10 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 				}
 
 				let provides = twox_64(&("operate", &coin_id).encode()[..]);
-				let validity =
-					ValidTransaction::with_tag_prefix("Coinage:coin").and_provides(provides).into();
+				let validity = ValidTransaction::with_tag_prefix("Coinage:coin")
+					.and_provides(provides)
+					.priority(tx_priority::USER_DEFAULT)
+					.into();
 				origin.set_caller_from(Origin::Coin { coin_id: coin_id.clone(), coin });
 				Ok((validity, Val::UsingCoin { coin_id }, origin))
 			},
@@ -431,21 +458,27 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 				if !current_periods.contains(period) {
 					return Err(CustomInvalidity::InvalidUnloadTokenPeriod.into());
 				}
-				let limit = Pallet::<T>::free_unload_token_limit_for_people()?;
+				let limit = Pallet::<T>::free_unload_token_limit_for_people();
 				if *counter >= limit {
 					return Err(CustomInvalidity::UnloadTokenCounterOutOfRange.into());
 				}
 				let context = free_unload_token_context(*period, *counter);
 				let proven_msg = inherited_implication.using_encoded(blake2_256);
 				let intent_msg = (alias_proofs, inherited_implication).using_encoded(blake2_256);
-				let alias = T::PeopleProof::validate_proof(proof, &context, &intent_msg)
-					.map_err(|_| CustomInvalidity::InvalidUnloadTokenProof)?;
+				let alias = T::MembershipProof::validate_proof(
+					indiv_support::traits::PEOPLE_IDENTIFIER,
+					proof,
+					&context,
+					&intent_msg,
+				)
+				.map_err(|_| CustomInvalidity::InvalidUnloadTokenProof)?;
 				if ConsumedFreeUnloadTokens::<T>::contains_key(period, alias) {
 					return Err(CustomInvalidity::UnloadTokenAlreadyConsumed.into());
 				}
 
 				let validity = ValidTransaction::with_tag_prefix("Coinage:ppl-unload-token")
 					.and_provides(alias)
+					.priority(tx_priority::USER_DEFAULT)
 					.into();
 				origin.set_caller_from(Origin::UnloadToken {
 					alias_proofs: alias_proofs.clone(),
@@ -474,21 +507,27 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 				if !current_periods.contains(period) {
 					return Err(CustomInvalidity::InvalidUnloadTokenPeriod.into());
 				}
-				let limit = Pallet::<T>::free_unload_token_limit_for_lite_people()?;
+				let limit = Pallet::<T>::free_unload_token_limit_for_lite_people();
 				if *counter >= limit {
 					return Err(CustomInvalidity::UnloadTokenCounterOutOfRange.into());
 				}
 				let context = free_unload_token_context(*period, *counter);
 				let proven_msg = inherited_implication.using_encoded(blake2_256);
 				let intent_msg = (alias_proofs, inherited_implication).using_encoded(blake2_256);
-				let alias = T::LitePeopleProof::validate_proof(proof, &context, &intent_msg)
-					.map_err(|_| CustomInvalidity::InvalidUnloadTokenProof)?;
+				let alias = T::MembershipProof::validate_proof(
+					indiv_support::traits::PEOPLE_LITE_IDENTIFIER,
+					proof,
+					&context,
+					&intent_msg,
+				)
+				.map_err(|_| CustomInvalidity::InvalidUnloadTokenProof)?;
 				if ConsumedFreeUnloadTokens::<T>::contains_key(period, alias) {
 					return Err(CustomInvalidity::UnloadTokenAlreadyConsumed.into());
 				}
 
 				let validity = ValidTransaction::with_tag_prefix("Coinage:liteppl-unload-token")
 					.and_provides(alias)
+					.priority(tx_priority::USER_DEFAULT)
 					.into();
 				origin.set_caller_from(Origin::UnloadToken {
 					alias_proofs: alias_proofs.clone(),
@@ -526,6 +565,7 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 
 				let validity = ValidTransaction::with_tag_prefix("Coinage:paid-unload-token")
 					.and_provides((period, paid_token_ring_index, alias))
+					.priority(tx_priority::USER_DEFAULT)
 					.into();
 
 				origin.set_caller_from(Origin::UnloadToken {
@@ -547,11 +587,12 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 				fee_recycler_value,
 				fee_recycler_index,
 				fee_recycler_revision,
+				retry_counter,
 				alias_proofs,
 			}) => {
 				// Validate unload call (FromOutput mode: only allows supported output-bearing
 				// unloads).
-				Pallet::<T>::validate_unload_calls(
+				let instance_id = Pallet::<T>::validate_unload_calls(
 					call,
 					UnloadFee::FromOutput {
 						fee_recycler_value: *fee_recycler_value,
@@ -565,6 +606,7 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 
 				// Validate fee recycler revision
 				if !RecyclerManager::<T>::validate_recycler_revision(
+					instance_id,
 					*fee_recycler_value,
 					*fee_recycler_index,
 					*fee_recycler_revision,
@@ -583,15 +625,28 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 
 				// Validate the first alias proof for spam protection. It proves the full intent.
 				let proven_msg = inherited_implication.using_encoded(blake2_256);
-				let intent_msg =
-					(&alias_proofs[1..], inherited_implication).using_encoded(blake2_256);
+				let intent_msg = (&alias_proofs[1..], retry_counter, inherited_implication)
+					.using_encoded(blake2_256);
 				let first_alias = RecyclerManager::<T>::validate_alias_proof(
+					instance_id,
 					*fee_recycler_value,
 					*fee_recycler_index,
 					*fee_recycler_revision,
 					first_alias_proof,
 					&intent_msg,
 				)?;
+				let expected_retry_counter = match RecyclerAliasStates::<T>::get((
+					instance_id,
+					*fee_recycler_value,
+					*fee_recycler_index,
+					first_alias,
+				)) {
+					Some(AliasState::Locked(locked)) => Self::next_failed_dispatch_retry(locked),
+					_ => 0,
+				};
+				if *retry_counter != expected_retry_counter {
+					return Err(CustomInvalidity::AliasTemporarilyLocked.into());
+				}
 
 				// Validate that the first alias in the call matches the one from the proof.
 				//
@@ -605,7 +660,13 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 				}
 
 				let validity = ValidTransaction::with_tag_prefix("Coinage:output-unload-token")
-					.and_provides((fee_recycler_value, fee_recycler_index, first_alias))
+					.and_provides((
+						instance_id,
+						fee_recycler_value,
+						fee_recycler_index,
+						first_alias,
+					))
+					.priority(tx_priority::USER_DEFAULT)
 					.into();
 
 				origin.set_caller_from(Origin::UnloadToken {
@@ -619,9 +680,11 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 				Ok((
 					validity,
 					Val::UsingOutputToken {
+						instance_id,
 						first_alias,
 						fee_recycler_value: *fee_recycler_value,
 						fee_recycler_index: *fee_recycler_index,
+						retry_counter: *retry_counter,
 					},
 					origin,
 				))
@@ -637,12 +700,14 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 				let member_keys: Vec<&MemberOf<T>> = match call.is_sub_type() {
 					Some(Call::<T>::load_recycler_with_external_asset_unpaid {
 						preservation,
+						instance_id,
 						value,
 						member_key,
 						proof_of_ownership,
 					}) => {
 						Pallet::<T>::validate_load_recycler_with_external_asset_unpaid(
 							&who,
+							*instance_id,
 							*preservation,
 							*value,
 							member_key,
@@ -650,10 +715,14 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 						)?;
 						alloc::vec![member_key]
 					},
-					Some(Call::<T>::load_recycler_with_external_asset_unpaid_batch { items }) =>
-						Pallet::<T>::validate_load_recycler_with_external_asset_unpaid_batch(
-							&who, items,
-						)?,
+					Some(Call::<T>::load_recycler_with_external_asset_unpaid_batch {
+						instance_id,
+						items,
+					}) => Pallet::<T>::validate_load_recycler_with_external_asset_unpaid_batch(
+						&who,
+						*instance_id,
+						items,
+					)?,
 					_ => return Err(CustomInvalidity::InvalidCall.into()),
 				};
 
@@ -665,7 +734,12 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 				for member_key in &member_keys {
 					provides.push(("Coinage:infallible-unpaid-load", member_key).encode());
 				}
-				let validity = ValidTransaction { requires, provides, ..Default::default() };
+				let validity = ValidTransaction {
+					requires,
+					provides,
+					priority: tx_priority::USER_DEFAULT,
+					..Default::default()
+				};
 
 				origin.set_caller_from(Origin::InfallibleUnpaidSigned { who: who.clone() });
 				Ok((validity, Val::UsingInfallibleUnpaidSigned { who, nonce: *nonce }, origin))
@@ -708,14 +782,27 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 				PaidTknManager::<T>::mark_token_consumed(period, ring_index, token);
 				Pre::UsingPaidToken
 			},
-			Val::UsingOutputToken { first_alias, fee_recycler_value, fee_recycler_index } => {
-				// Mark first alias as unloaded (penalty if call fails)
+			Val::UsingOutputToken {
+				instance_id,
+				first_alias,
+				fee_recycler_value,
+				fee_recycler_index,
+				retry_counter,
+			} => {
+				// Mark first alias as unloaded to reserve it against concurrent use in the block.
 				RecyclerManager::<T>::mark_alias_unloaded(
+					instance_id,
 					fee_recycler_value,
 					fee_recycler_index,
 					first_alias,
 				);
-				Pre::UsingOutputToken { fee_recycler_value }
+				Pre::UsingOutputToken {
+					instance_id,
+					first_alias,
+					fee_recycler_value,
+					fee_recycler_index,
+					retry_counter,
+				}
 			},
 			Val::UsingInfallibleUnpaidSigned { who, nonce } => {
 				CheckNonce::<T>::prepare_nonce_for_account(&who, nonce)?;
@@ -737,31 +824,9 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 			Pre::NotUsing => Ok(Weight::zero()),
 			Pre::UsingCoin { coin_id, coin } => {
 				if result.is_err() {
+					let previous_lock = LockedCoins::<T>::get(&coin_id);
+					LockedCoins::<T>::insert(&coin_id, Self::failed_dispatch_lock(previous_lock));
 					CoinsByOwner::<T>::insert(&coin_id, coin);
-
-					// Get the new retries count: 0 on first failure, incremented on subsequent
-					// failures.
-					let new_retries = LockedCoins::<T>::get(&coin_id)
-						.and_then(|locked| match locked.reason {
-							LockReason::FailedDispatch { retries } =>
-								Some(retries.saturating_add(1)),
-						})
-						.unwrap_or(0);
-
-					// Calculate exponential lock time: 2^retries * lock_period.
-					let base_lock = T::CoinFailureLockPeriod::get();
-					let lock_duration =
-						2u64.saturating_pow(u32::from(new_retries)).saturating_mul(base_lock);
-
-					let current_time = T::UnixTime::now().as_secs();
-					let lock_until = current_time.saturating_add(lock_duration);
-					LockedCoins::<T>::insert(
-						&coin_id,
-						LockedCoin {
-							reason: LockReason::FailedDispatch { retries: new_retries },
-							until: lock_until,
-						},
-					);
 				} else {
 					LockedCoins::<T>::remove(&coin_id);
 				}
@@ -769,16 +834,30 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 			},
 			Pre::UsingFreeToken => Ok(Weight::zero()),
 			Pre::UsingPaidToken => Ok(Weight::zero()),
-			Pre::UsingOutputToken { fee_recycler_value } => {
+			Pre::UsingOutputToken {
+				instance_id,
+				first_alias,
+				fee_recycler_value,
+				fee_recycler_index,
+				retry_counter,
+			} => {
 				if result.is_err() {
-					if let Ok(underlying_value) =
-						Pallet::<T>::coin_value_to_asset_amount(fee_recycler_value)
-							.defensive_proof("coinage: valid coin can always be converted")
-					{
-						TotalValueOfDestroyedCoins::<T>::mutate(|v| {
-							*v = v.saturating_add(underlying_value)
-						});
-					}
+					RecyclerManager::<T>::mark_unloaded_alias_locked(
+						instance_id,
+						fee_recycler_value,
+						fee_recycler_index,
+						first_alias,
+						Self::failed_dispatch_lock_with_retries(retry_counter),
+					);
+				} else {
+					// The premark from `prepare` persists; emit the event only now that the
+					// unload is final (see `RecyclerManager::mark_alias_unloaded`).
+					Pallet::<T>::deposit_event(Event::RecyclerAliasUnloaded {
+						instance_id,
+						value: fee_recycler_value,
+						ring_index: fee_recycler_index,
+						alias: first_alias,
+					});
 				}
 				Ok(Weight::zero())
 			},
