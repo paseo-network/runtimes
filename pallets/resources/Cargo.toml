@@ -22,6 +22,7 @@ frame-support = { workspace = true }
 frame-system = { workspace = true }
 log = { workspace = true }
 sp-core = { workspace = true }
+sp-crypto-hashing = { workspace = true }
 sp-io = { workspace = true }
 sp-runtime = { workspace = true }
 sp-statement-store = { workspace = true }
@@ -36,6 +37,7 @@ indiv-pallet-members = { workspace = true }
 verifiable = { workspace = true, features = ["mock"] }
 parking_lot = { workspace = true }
 frame-executive = { workspace = true }
+pallet-balances = { workspace = true }
 
 [features]
 default = ["std"]
@@ -51,8 +53,10 @@ std = [
 	"indiv-pallet-people/std",
 	"indiv-support/std",
 	"log/std",
+	"pallet-balances/std",
 	"scale-info/std",
 	"sp-core/std",
+	"sp-crypto-hashing/std",
 	"sp-io/std",
 	"sp-runtime/std",
 	"sp-statement-store/std",
@@ -67,6 +71,7 @@ runtime-benchmarks = [
 	"indiv-pallet-people-lite/runtime-benchmarks",
 	"indiv-pallet-people/runtime-benchmarks",
 	"indiv-support/runtime-benchmarks",
+	"pallet-balances/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 ]
 try-runtime = [
@@ -77,5 +82,6 @@ try-runtime = [
 	"indiv-pallet-members/try-runtime",
 	"indiv-pallet-people-lite/try-runtime",
 	"indiv-pallet-people/try-runtime",
+	"pallet-balances/try-runtime",
 	"sp-runtime/try-runtime",
 ]

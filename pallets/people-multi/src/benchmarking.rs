@@ -561,7 +561,7 @@ mod benches {
 		let (proof, _alias) = create_ring_proof::<T>(secret, public, &context[..], &msg);
 
 		let ext =
-			AsPerson::new(Some(AsPersonInfo::<T>::AsPersonalAliasWithProof(proof, 0, context)));
+			AsPerson::new(Some(AsPersonInfo::<T>::AsPersonalAliasWithProof(proof, 0, 0, context)));
 		let info = call.get_dispatch_info();
 		let post_info = PostDispatchInfo {
 			actual_weight: Some(Weight::from_parts(10, 0)),
@@ -714,7 +714,11 @@ mod benches {
 			.expect("create must succeed");
 
 		let ext = AsPerson::new(Some(AsPersonInfo::<T>::AsPersonalAliasWithAccountRevised(
-			nonce, proof, 0, context,
+			nonce,
+			proof,
+			0,
+			new_revision,
+			context,
 		)));
 		let info = call.get_dispatch_info();
 		let post_info = PostDispatchInfo {

@@ -29,6 +29,7 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 pub mod benchmarking;
 pub mod extension;
+pub mod migration;
 pub mod types;
 pub mod weights;
 pub use pallet::*;
@@ -43,10 +44,14 @@ use frame_support::{
 	},
 	traits::{EnsureOriginWithArg, IsSubType, OriginTrait},
 };
-use indiv_support::traits::{
-	AddOnlyPeopleTrait, AppendOnlyMembers, CleanUpAlias, Context, ContextualAlias, CountedMembers,
-	FlexibleMembers, Identifier, MembershipProver, PeopleTrait, PersonalId, RevisedAlias,
-	RevisedContextualAlias, RingExponent, RingIndex, RingMode, PEOPLE_IDENTIFIER,
+use indiv_support::{
+	traits::{
+		AddOnlyPeopleTrait, AppendOnlyMembers, CleanUpAlias, Context, ContextualAlias,
+		CountedMembers, FlexibleMembers, Identifier, MembershipProver, PeopleTrait, PersonalId,
+		RevisedAlias, RevisedContextualAlias, RingExponent, RingIndex, RingMode, PEOPLE_IDENTIFIER,
+	},
+	tx_priority,
+	weight_budget::OcwWeightBudget,
 };
 use scale_info::TypeInfo;
 use sp_runtime::{
@@ -406,6 +411,14 @@ pub mod pallet {
 				!T::StaleAliasCleanupInterval::get().is_zero(),
 				"StaleAliasCleanupInterval must not be zero"
 			);
+
+			// `clean_up_stale_aliases` is submitted by the offchain worker as an authorized
+			// transaction bounded by `MAX_BULK_CLEANUP` aliases. If its worst-case weight
+			// exceeds Normal.max_extrinsic, it is silently dropped and the cleanup flow stalls.
+			let worst_case = T::WeightInfo::clean_up_stale_alias(MAX_BULK_CLEANUP)
+				.saturating_add(T::WeightInfo::authorize_clean_up_stale_alias(MAX_BULK_CLEANUP));
+			OcwWeightBudget::from_normal_max::<T>()
+				.assert_fits("clean_up_stale_aliases", worst_case);
 		}
 	}
 
@@ -442,6 +455,16 @@ pub mod pallet {
 		/// `call_valid_at + account_setup_time_tolerance`.
 		/// `account_setup_time_tolerance` is a constant available in the metadata.
 		///
+		/// This call is authorized through the `AsPersonalAliasWithProof` variant of the `AsPerson`
+		/// transaction extension, which provides no nonce-based replay protection. Replay is only
+		/// prevented for as long as the alias still points at the account this call sets. As soon
+		/// as the alias is pointed at a different account (by another `set_alias_account`), this
+		/// call becomes replayable again until its validity period elapses. Consequently, if 2
+		/// such transactions setting 2 different accounts have overlapping validity periods, they
+		/// can be replayed against each other indefinitely for the duration of the overlap. To
+		/// avoid this, the caller must not have 2 such transactions alive (within their validity
+		/// period) at the same time.
+		///
 		/// Parameters:
 		/// - `account`: The account to set the alias for.
 		/// - `call_valid_at`: The block number when the call becomes valid.
@@ -466,7 +489,7 @@ pub mod pallet {
 			let old_rev_ca = old_account.as_ref().and_then(AccountToAlias::<T>::get);
 
 			let needs_revision = old_rev_ca.is_some_and(|old_rev_ca| {
-				old_rev_ca.revision != rev_ca.revision || old_rev_ca.ring != rev_ca.ring
+				old_rev_ca.ring != rev_ca.ring || old_rev_ca.revision < rev_ca.revision
 			});
 
 			// Ensure it changes the account associated, or it needs revision.
@@ -610,20 +633,7 @@ pub mod pallet {
 		#[pallet::weight_of_authorize(T::WeightInfo::authorize_create_people_collection())]
 		pub fn create_people_collection(origin: OriginFor<T>) -> DispatchResult {
 			ensure_authorized(origin)?;
-
-			T::MemberService::create_collection(
-				T::CollectionOwner::get(),
-				PEOPLE_MEMBER_IDENTIFIER,
-				PEOPLE_ONBOARDING_SIZE,
-				RingMode::Flexible,
-				T::RingExponent::get(),
-				Some(T::SelfInclusionDelay::get()),
-			)?;
-
-			PeopleCollectionCreated::<T>::put(true);
-			Self::deposit_event(Event::<T>::CollectionCreated);
-
-			Ok(())
+			Self::do_create_people_collection()
 		}
 
 		/// Remove stale alias <-> account mappings.
@@ -730,6 +740,7 @@ pub mod pallet {
 				.and_provides("stale-alias-cleanup")
 				.longevity(5)
 				.propagate(false)
+				.priority(tx_priority::CLEANUP)
 				.into();
 
 			Ok((validity, Weight::zero()))
@@ -747,8 +758,32 @@ pub mod pallet {
 			}
 			let validity = ValidTransaction::with_tag_prefix("pallet-people")
 				.and_provides("create_people_collection")
+				// Bootstrap transaction: ring building and member onboarding cannot
+				// proceed until the people collection exists, so it must be included
+				// before any other protocol work.
+				.priority(tx_priority::PROTOCOL_LIVENESS)
 				.into();
 			Ok((validity, Weight::zero()))
+		}
+
+		/// Create the people collection and emit [`Event::CollectionCreated`].
+		///
+		/// Shared between the [`Call::create_people_collection`] extrinsic and the
+		/// [`migration::CreatePeopleCollection`] runtime upgrade.
+		pub fn do_create_people_collection() -> DispatchResult {
+			T::MemberService::create_collection(
+				T::CollectionOwner::get(),
+				PEOPLE_MEMBER_IDENTIFIER,
+				PEOPLE_ONBOARDING_SIZE,
+				RingMode::Flexible,
+				T::RingExponent::get(),
+				Some(T::SelfInclusionDelay::get()),
+			)?;
+
+			PeopleCollectionCreated::<T>::put(true);
+			Self::deposit_event(Event::<T>::CollectionCreated);
+
+			Ok(())
 		}
 
 		fn derivative_call(
@@ -896,16 +931,39 @@ pub mod pallet {
 
 		#[cfg(feature = "runtime-benchmarks")]
 		fn initialize_people_collection() {
-			T::MemberService::create_collection(
-				T::CollectionOwner::get(),
-				PEOPLE_MEMBER_IDENTIFIER,
-				PEOPLE_ONBOARDING_SIZE,
-				RingMode::Flexible,
-				T::RingExponent::get(),
-				Some(T::SelfInclusionDelay::get()),
-			)
-			.expect("couldn't create the people collection in the member service");
-			PeopleCollectionCreated::<T>::put(true);
+			// The genesis preset may already have created it.
+			if PeopleCollectionCreated::<T>::get() {
+				return;
+			}
+			Self::do_create_people_collection()
+				.expect("couldn't create the people collection in the member service");
+		}
+	}
+
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T: Config> {
+		/// Whether to create the people collection at genesis.
+		///
+		/// Chains that start from genesis need this, since
+		/// [`migration::CreatePeopleCollection`] only runs on an actual runtime upgrade.
+		pub create_collection: bool,
+		#[serde(skip)]
+		pub _phantom: core::marker::PhantomData<T>,
+	}
+
+	impl<T: Config> Default for GenesisConfig<T> {
+		fn default() -> Self {
+			Self { create_collection: false, _phantom: Default::default() }
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
+		fn build(&self) {
+			if self.create_collection {
+				Pallet::<T>::do_create_people_collection()
+					.expect("couldn't create the people collection at genesis");
+			}
 		}
 	}
 
@@ -914,9 +972,9 @@ pub mod pallet {
 			let mut keys = vec![];
 			for personal_id in suspensions {
 				let mut record = People::<T>::get(personal_id).ok_or(Error::<T>::NotPerson)?;
-				if let Some(account) = record.account {
-					AccountToPersonalId::<T>::remove(account);
-					record.account = None;
+				if let Some(account) = record.account.take() {
+					AccountToPersonalId::<T>::remove(&account);
+					frame_system::Pallet::<T>::dec_sufficients(&account);
 				}
 				People::<T>::insert(personal_id, &record);
 				keys.push(record.key);

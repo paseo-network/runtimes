@@ -36,6 +36,8 @@ pub type SignatureOf<T> = <CryptoOf<T> as GenerateVerifiable>::Signature;
 pub enum RecognitionMethod<Account> {
 	/// User has a unique device, corroborated by the attester.
 	UniqueDevice(Account),
+	/// User paid the registration fee without a unique-device attestation.
+	Fee,
 	// Voucher(PersonalId)
 }
 

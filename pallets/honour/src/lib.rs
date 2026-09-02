@@ -309,7 +309,7 @@ pub mod pallet {
 		) -> Result<VoteAliases, Error<T>> {
 			let contexts = vote.get_contexts();
 
-			let aliases = T::MemberService::verify_membership_multi_context_at_rev(
+			let aliases = T::MemberService::verify_membership_multi_context(
 				PEOPLE_IDENTIFIER,
 				proof,
 				ring_index,

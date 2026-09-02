@@ -22,8 +22,8 @@ use alloc::vec::Vec;
 use core::{cell::RefCell, ops::Range};
 use frame_support::{derive_impl, parameter_types};
 use indiv_support::traits::{
-	BatchProofItem, Context, ContextualAlias, Identifier, MembershipMultiProver, MembershipProver,
-	RevisedContextualAlias, RevisionIndex, RingExponent, RingIndex, PEOPLE_IDENTIFIER,
+	Context, ContextualAlias, Identifier, MembershipMultiProver, MembershipProver, RevisionIndex,
+	RingExponent, RingIndex, RingMembershipProof, PEOPLE_IDENTIFIER,
 };
 use sp_core::{ConstU16, ConstU64, H256};
 use sp_runtime::{
@@ -129,16 +129,6 @@ impl MembershipProver for MockMemberService {
 		_identifier: &Identifier,
 		_proof: &<Self::Crypto as GenerateVerifiable>::Proof,
 		_ring_index: RingIndex,
-		_context: Context,
-		_msg: &[u8],
-	) -> Result<RevisedContextualAlias, DispatchError> {
-		unimplemented!("not used by honour tests")
-	}
-
-	fn verify_membership_at_rev(
-		_identifier: &Identifier,
-		_proof: &<Self::Crypto as GenerateVerifiable>::Proof,
-		_ring_index: RingIndex,
 		_revision: RevisionIndex,
 		_context: Context,
 		_msg: &[u8],
@@ -149,16 +139,8 @@ impl MembershipProver for MockMemberService {
 	fn verify_memberships_in_ring(
 		_identifier: &Identifier,
 		_ring_index: RingIndex,
-		_items: &[BatchProofItem<<Self::Crypto as GenerateVerifiable>::Proof>],
-	) -> Result<Vec<RevisedContextualAlias>, DispatchError> {
-		unimplemented!("not used by honour tests")
-	}
-
-	fn verify_memberships_in_ring_at_rev(
-		_identifier: &Identifier,
-		_ring_index: RingIndex,
 		_revision: RevisionIndex,
-		_items: &[BatchProofItem<<Self::Crypto as GenerateVerifiable>::Proof>],
+		_items: &[RingMembershipProof<<Self::Crypto as GenerateVerifiable>::Proof>],
 	) -> Result<Vec<ContextualAlias>, DispatchError> {
 		unimplemented!("not used by honour tests")
 	}
@@ -182,20 +164,15 @@ impl MembershipProver for MockMemberService {
 	) -> Option<u64> {
 		None
 	}
+
+	fn old_root_retention() -> u64 {
+		// This mock keeps no root history, so nothing is ever superseded.
+		0
+	}
 }
 
 impl MembershipMultiProver for MockMemberService {
 	fn verify_membership_multi_context(
-		_identifier: &Identifier,
-		_proof: &<Self::Crypto as GenerateVerifiable>::Proof,
-		_ring_index: RingIndex,
-		_contexts: &[Context],
-		_msg: &[u8],
-	) -> Result<Vec<RevisedContextualAlias>, DispatchError> {
-		unimplemented!("not used by honour tests")
-	}
-
-	fn verify_membership_multi_context_at_rev(
 		identifier: &Identifier,
 		proof: &<Self::Crypto as GenerateVerifiable>::Proof,
 		ring_index: RingIndex,

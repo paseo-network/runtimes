@@ -24,13 +24,18 @@
 use crate::*;
 use codec::{Decode, DecodeWithMemTracking, Encode};
 use frame_support::{
-	ensure, pallet_prelude::Weight, traits::OriginTrait, CloneNoBound, DebugNoBound, EqNoBound,
-	PartialEqNoBound,
+	ensure,
+	pallet_prelude::Weight,
+	traits::{Contains, OriginTrait},
+	CloneNoBound, DebugNoBound, EqNoBound, PartialEqNoBound,
 };
 use frame_system::{CheckNonce, ValidNonceInfo};
-use indiv_support::traits::{Context, MembershipProver, RevisedContextualAlias, RingIndex};
+use indiv_support::{
+	traits::{Context, MembershipProver, RevisedContextualAlias, RevisionIndex, RingIndex},
+	tx_priority,
+};
 use scale_info::TypeInfo;
-use sp_core::{blake2_256, twox_64};
+use sp_crypto_hashing::{blake2_256, twox_64};
 use sp_runtime::{
 	traits::{DispatchInfoOf, TransactionExtension, ValidateResult},
 	transaction_validity::{
@@ -70,9 +75,18 @@ pub enum PeopleLiteAuthData<Nonce, Proof> {
 	/// Authenticate using an already-established alias account.
 	AsLiteAliasWithAccount(Nonce),
 	/// Establish an alias <-> account mapping using a proof and no signed identity.
-	AsLiteAliasWithProof(Proof, RingIndex, Context),
+	///
+	/// This can only dispatch the call `set_alias_account`.
+	///
+	/// Replay is only protected against resetting the same account during the tolerance period
+	/// after the call's `valid_at_block` parameter. If 2 transactions that set 2 different
+	/// accounts are sent for an overlapping validity period, then those 2 transactions can be
+	/// replayed indefinitely for the duration of the overlapping period (the first transaction
+	/// undoes the replay protection of the second and vice versa). To avoid this, the caller must
+	/// not craft 2 such transactions whose validity periods overlap.
+	AsLiteAliasWithProof(Proof, RingIndex, RevisionIndex, Context),
 	/// Refresh a stale alias binding with a fresh proof while authenticating with the old account.
-	AsLiteAliasWithAccountRevised(Nonce, Proof, RingIndex, Context),
+	AsLiteAliasWithAccountRevised(Nonce, Proof, RingIndex, RevisionIndex, Context),
 }
 #[allow(type_alias_bounds)]
 pub type PeopleLiteAuthDataOf<T: Config> = PeopleLiteAuthData<T::Nonce, ProofOf<T>>;
@@ -150,6 +164,9 @@ impl<T: Config> TransactionExtension<RuntimeCallOf<T>> for PeopleLiteAuth<T> {
 				// Validate the nonce.
 				let ValidNonceInfo { requires, provides } =
 					CheckNonce::<T>::validate_nonce_for_account(&who, *nonce)?;
+				// Fee-paying account path (authenticated by signed account + nonce): deliberately
+				// keeps the default priority so it is ordered by the normal fee-based priority.
+				// lint:allow-default-priority
 				let validity = ValidTransaction { requires, provides, ..Default::default() };
 
 				origin.set_caller_from(Origin::LitePerson(who.clone()));
@@ -171,12 +188,20 @@ impl<T: Config> TransactionExtension<RuntimeCallOf<T>> for PeopleLiteAuth<T> {
 
 				let ValidNonceInfo { requires, provides } =
 					CheckNonce::<T>::validate_nonce_for_account(&who, *nonce)?;
+				// Fee-paying account path (authenticated by signed account + nonce): deliberately
+				// keeps the default priority so it is ordered by the normal fee-based priority.
+				// lint:allow-default-priority
 				let validity = ValidTransaction { requires, provides, ..Default::default() };
 
 				origin.set_caller_from(Origin::LiteAlias(rev_ca));
 				Ok((validity, PeopleLiteAuthVal::AsLiteAliasWithAccount(who, *nonce), origin))
 			},
-			Some(PeopleLiteAuthData::AsLiteAliasWithProof(proof, ring_index, context)) => {
+			Some(PeopleLiteAuthData::AsLiteAliasWithProof(
+				proof,
+				ring_index,
+				revision,
+				context,
+			)) => {
 				ensure!(
 					matches!(origin.as_system_ref(), Some(frame_system::RawOrigin::None)),
 					InvalidTransaction::BadSigner
@@ -188,7 +213,7 @@ impl<T: Config> TransactionExtension<RuntimeCallOf<T>> for PeopleLiteAuth<T> {
 					return Err(InvalidTransaction::Call.into());
 				};
 
-				ensure!(context == LITE_PEOPLE_AUTH_CONTEXT, InvalidTransaction::Call);
+				ensure!(T::AccountContexts::contains(context), InvalidTransaction::Call);
 
 				let current_block = frame_system::Pallet::<T>::block_number();
 				if current_block < *valid_at_block {
@@ -200,24 +225,32 @@ impl<T: Config> TransactionExtension<RuntimeCallOf<T>> for PeopleLiteAuth<T> {
 				}
 
 				let msg = inherited_implication.using_encoded(blake2_256);
-				let validated_rev_ca = T::MemberService::verify_membership(
+				let validated_ca = T::MemberService::verify_membership(
 					LITE_PEOPLE_MEMBER_IDENTIFIER,
 					proof,
 					*ring_index,
+					*revision,
 					*context,
 					&msg[..],
 				)
 				.map_err(|_| InvalidTransaction::BadProof)?;
+				let validated_rev_ca = RevisedContextualAlias {
+					revision: *revision,
+					ring: *ring_index,
+					ca: validated_ca,
+				};
 
 				if AccountToAlias::<T>::get(account)
-					.is_some_and(|stored_rev_ca| stored_rev_ca == validated_rev_ca)
+					.is_some_and(|stored_rev_ca| stored_rev_ca.supersedes(&validated_rev_ca))
 				{
 					return Err(InvalidTransaction::Stale.into());
 				}
 
 				let provides = twox_64(&("setup", &validated_rev_ca, &account).encode()[..]);
-				let valid_transaction =
-					ValidTransaction::with_tag_prefix("PLite:Alias").and_provides(provides).into();
+				let valid_transaction = ValidTransaction::with_tag_prefix("PLite:Alias")
+					.and_provides(provides)
+					.priority(tx_priority::USER_DEFAULT)
+					.into();
 
 				origin.set_caller_from(Origin::LiteAlias(validated_rev_ca));
 				Ok((valid_transaction, PeopleLiteAuthVal::AsLiteAliasWithProof, origin))
@@ -226,6 +259,7 @@ impl<T: Config> TransactionExtension<RuntimeCallOf<T>> for PeopleLiteAuth<T> {
 				nonce,
 				proof,
 				ring_index,
+				revision,
 				context,
 			)) => {
 				let Some(frame_system::Origin::<T>::Signed(who)) = origin.as_system_ref().cloned()
@@ -235,17 +269,23 @@ impl<T: Config> TransactionExtension<RuntimeCallOf<T>> for PeopleLiteAuth<T> {
 
 				let old_rev_ca =
 					AccountToAlias::<T>::get(&who).ok_or(CustomError::NoAliasBinding)?;
-				ensure!(context == LITE_PEOPLE_AUTH_CONTEXT, InvalidTransaction::Call);
+				ensure!(T::AccountContexts::contains(context), InvalidTransaction::Call);
 
 				let msg = (inherited_implication, "revise", &who, nonce).using_encoded(blake2_256);
-				let validated_rev_ca = T::MemberService::verify_membership(
+				let validated_ca = T::MemberService::verify_membership(
 					LITE_PEOPLE_MEMBER_IDENTIFIER,
 					proof,
 					*ring_index,
+					*revision,
 					*context,
 					&msg[..],
 				)
 				.map_err(|_| CustomError::InvalidProof)?;
+				let validated_rev_ca = RevisedContextualAlias {
+					revision: *revision,
+					ring: *ring_index,
+					ca: validated_ca,
+				};
 				if validated_rev_ca.ca.alias != old_rev_ca.ca.alias ||
 					validated_rev_ca.ca.context != old_rev_ca.ca.context
 				{
@@ -254,6 +294,9 @@ impl<T: Config> TransactionExtension<RuntimeCallOf<T>> for PeopleLiteAuth<T> {
 
 				let ValidNonceInfo { requires, provides } =
 					CheckNonce::<T>::validate_nonce_for_account(&who, *nonce)?;
+				// Fee-paying account path (authenticated by signed account + nonce): deliberately
+				// keeps the default priority so it is ordered by the normal fee-based priority.
+				// lint:allow-default-priority
 				let validity = ValidTransaction { requires, provides, ..Default::default() };
 
 				origin.set_caller_from(Origin::LiteAlias(validated_rev_ca.clone()));
@@ -263,6 +306,8 @@ impl<T: Config> TransactionExtension<RuntimeCallOf<T>> for PeopleLiteAuth<T> {
 					origin,
 				))
 			},
+			// Extension not in use by this transaction: pass through with default validity. The
+			// effective priority comes from whichever extension authorizes the call.
 			None => Ok((ValidTransaction::default(), PeopleLiteAuthVal::None, origin)),
 		}
 	}
