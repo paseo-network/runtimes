@@ -155,6 +155,25 @@ pub type Unreleased = (
 	MigrateBountyAccountAssets,
 	// Create the PGAS asset (id 2_000_000_000) used by the individuality pallets.
 	indiv_pallet_pgas::migration::CreatePgasAsset<Runtime>,
+	// PCF-authored, and the first `VersionedMigration` in this repo — see the pallet's
+	// `migration.rs` for the full write-up.
+	//
+	// individuality v0.3.1 breaks `MembersSubscriber` (index 97) storage in three ways at once,
+	// none of which upstream migrates because upstream's `next-asset-hub-paseo` genesis-es the
+	// v0.3.x shape:
+	//   1. `RingRoots` gains a leading `Generation` key, orphaning all 3 live roots;
+	//   2. `RingCollectionState` gains `next_scan_index` MID-STRUCT, so both live 10-byte values
+	//      fail to decode and `ValueQuery` silently substitutes `Default`;
+	//   3. the forced `verifiable` bump (git rev 93464a6 -> crates.io 0.3.0) reshapes the ring
+	//      commitment itself from 768 to 288 bytes, dropping a leading 480-byte KZG verifier
+	//      key. Item 3 is NOT in INDIVIDUALITY_MIGRATIONS_DESIGN.md §3, and it is why that
+	//      document's "copy the value bytes verbatim" instruction must not be followed.
+	//
+	// `Subscription` is `Active` and `ProcessingState.last_processed_sequence` is in the low
+	// thousands: this pallet is live and mid-stream. Untreated, every ring-proof-gated call on
+	// AssetHub breaks. Single-block: 3 `RingRoots` entries (8 records) and 2
+	// `RingCollectionStates` — see the pallet migration's doc comment for why not an MBM.
+	indiv_pallet_members_subscriber::migration::MigrateV0ToV1<Runtime>,
 );
 
 /// Migrations/checks that do not need to be versioned and can run on every update.

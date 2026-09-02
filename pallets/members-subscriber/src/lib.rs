@@ -39,6 +39,7 @@ use alloc::{collections::BTreeSet, vec, vec::Vec};
 
 #[cfg(feature = "runtime-benchmarks")]
 pub mod benchmarking;
+pub mod migration;
 pub mod types;
 pub mod weights;
 
@@ -81,7 +82,21 @@ pub mod pallet {
 	/// transaction pool.
 	const TX_LONGEVITY: u64 = 3;
 
+	/// PASEO-LOCAL DEVIATION from individuality v0.3.1.
+	///
+	/// Upstream ships this pallet with no storage version, because upstream's
+	/// `next-asset-hub-paseo` genesis-es the v0.3.x storage shape and never has to migrate into
+	/// it. Paseo does: `asset-hub-paseo` has been running the pre-v0.3 shape since spec
+	/// `2_004_002`, with live `RingRoots` and `RingCollectionStates`. Declaring a version is what
+	/// lets [`migration::MigrateV0ToV1`] be a `VersionedMigration` and therefore self-guarding —
+	/// the migration is NOT idempotent-by-accident and must never run twice.
+	///
+	/// Keep this at `1` until a further storage change lands; bump it in lockstep with a new
+	/// `VersionedMigration` in `migration.rs`.
+	pub const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+
 	#[pallet::pallet]
+	#[pallet::storage_version(STORAGE_VERSION)]
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]

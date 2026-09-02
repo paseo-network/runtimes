@@ -1943,7 +1943,24 @@ impl indiv_pallet_members_subscriber::Config for Runtime {
 	type SelfParaId = MembersSubscriberSelfParaId;
 	type MaxMissingRootsPerCollection = ConstU32<255>;
 	type MaxDeletedRingsPerCollection = ConstU32<100>;
-	type MaxRingRootsPerCollection = ConstU32<100>;
+	// individuality v0.3.1 replaced `MaxRingRootsPerCollection` with the three constants below.
+	//
+	// `MaxGapScanPerBatch` MUST exceed `MaxUpdatesPerBatch` (10, set further down), otherwise the
+	// gap-scan cursor advances no faster than the ring-index frontier and never catches up.
+	// 100 keeps the old `MaxRingRootsPerCollection` figure as the per-batch scan budget, which is
+	// 10x the batch size.
+	type MaxGapScanPerBatch = ConstU32<100>;
+	// Entries removed per `purge_stale_ring_roots` call. Stale prefixes only appear after a
+	// `clear_all_ring_data`, i.e. a notifier re-initialisation; there are none today
+	// (`CurrentGeneration` is pinned at 0 by `MigrateV0ToV1`). Sized to bound one page's weight.
+	type PurgePageSize = ConstU32<20>;
+	// How long a superseded root keeps verifying, measured from its successor's source time.
+	// 6 hours: long enough that a proof built against the root a client last saw still verifies
+	// across a notifier update, short enough to bound how long a member removed from a ring can
+	// keep proving membership. Interacts with `MaxRecentRootsPerRing` (3) — a root can also be
+	// evicted from the sliding window before this elapses.
+	// NOTE: seconds, not blocks — do not reach for the `HOURS` block constant here.
+	type OldRootRetentionDuration = ConstU64<21_600>;
 	type EnsureNotifierOrigin = EnsureNotifierSibling;
 	type EnsureTerminationOrigin = EitherOfDiverse<EnsureRoot<AccountId>, EnsureNotifierSibling>;
 	type MaxCollections = ConstU32<10>;
