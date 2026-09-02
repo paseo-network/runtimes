@@ -28,18 +28,15 @@ use alloc::vec;
 use frame_benchmarking::v2::*;
 use frame_support::{
 	assert_ok,
-	pallet_prelude::Get,
+	pallet_prelude::{Authorize, Get},
 	traits::{
 		fungible::{Mutate, MutateHold},
-		OnPoll, UnfilteredDispatchable, UnixTime,
+		OnPoll, UnixTime,
 	},
-	weights::WeightMeter,
+	weights::{Weight, WeightMeter},
 };
 use indiv_support::traits::{CountedMembers, Judgement, Truth};
-// TODO: remove once mob-rule migrates to `#[pallet::authorize]` (deadline April 2027).
-// See https://github.com/paritytech/polkadot-sdk/issues/2415.
-#[allow(deprecated)]
-use sp_runtime::traits::ValidateUnsigned;
+use sp_runtime::transaction_validity::TransactionSource;
 
 pub trait BenchmarkHelper<T: Config> {
 	/// Sets a valid time for benchmarks (moves away from genesis block).
@@ -95,7 +92,7 @@ mod benches {
 		Ok(())
 	}
 
-	// Includes the cost of `ValidateUnsigned::pre_dispatch`
+	// Benchmarks the call.
 	#[benchmark]
 	fn close_case() -> Result<(), BenchmarkError> {
 		T::BenchmarkHelper::set_valid_time();
@@ -105,15 +102,8 @@ mod benches {
 
 		assert!(RipeCases::<T>::contains_key(case_index));
 
-		let call = Call::<T>::close_case { case_index };
-
-		#[block]
-		{
-			#[allow(deprecated)]
-			<Pallet<T> as ValidateUnsigned>::pre_dispatch(&call)
-				.expect("pre-dispatch must succeed");
-			call.dispatch_bypass_filter(RawOrigin::None.into())?;
-		}
+		#[extrinsic_call]
+		_(frame_system::RawOrigin::Authorized, case_index, Weight::MAX);
 
 		assert!(!RipeCases::<T>::contains_key(case_index));
 		assert!(DoneCases::<T>::contains_key(case_index));
@@ -125,7 +115,6 @@ mod benches {
 	}
 
 	// Worst case: Contempt vote against a non-Contempt verdict triggers the penalty branch.
-	// Includes `ValidateUnsigned::pre_dispatch`.
 	#[benchmark]
 	fn clean_vote() -> Result<(), BenchmarkError> {
 		T::BenchmarkHelper::set_valid_time();
@@ -138,15 +127,8 @@ mod benches {
 		assert!(Votes::<T>::contains_key(case_index, PERSON_0_ALIAS));
 		assert!(!VotingPenalties::<T>::contains_key(PERSON_0_ALIAS));
 
-		let call = Call::<T>::clean_vote { case_index, voter: PERSON_0_ALIAS };
-
-		#[block]
-		{
-			#[allow(deprecated)]
-			<Pallet<T> as ValidateUnsigned>::pre_dispatch(&call)
-				.expect("pre-dispatch must succeed");
-			call.dispatch_bypass_filter(RawOrigin::None.into())?;
-		}
+		#[extrinsic_call]
+		_(frame_system::RawOrigin::Authorized, case_index, PERSON_0_ALIAS);
 
 		assert!(!Votes::<T>::contains_key(case_index, PERSON_0_ALIAS));
 		assert!(VotingPenalties::<T>::contains_key(PERSON_0_ALIAS));
@@ -155,7 +137,7 @@ mod benches {
 		Ok(())
 	}
 
-	// Includes the cost of `ValidateUnsigned::pre_dispatch`
+	// Benchmarks the call.
 	#[benchmark]
 	fn reap_case() -> Result<(), BenchmarkError> {
 		T::BenchmarkHelper::set_valid_time();
@@ -167,15 +149,8 @@ mod benches {
 
 		assert!(DoneCases::<T>::contains_key(case_index));
 
-		let call = Call::<T>::reap_case { case_index };
-
-		#[block]
-		{
-			#[allow(deprecated)]
-			<Pallet<T> as ValidateUnsigned>::pre_dispatch(&call)
-				.expect("pre-dispatch must succeed");
-			call.dispatch_bypass_filter(RawOrigin::None.into())?;
-		}
+		#[extrinsic_call]
+		_(frame_system::RawOrigin::Authorized, case_index);
 
 		assert!(!DoneCases::<T>::contains_key(case_index));
 		assert_last_event::<T>(Event::CaseRemoved { case_index }.into());
@@ -194,7 +169,7 @@ mod benches {
 		assert!(OpenCases::<T>::contains_key(case_index));
 
 		#[extrinsic_call]
-		_(RawOrigin::Root, case_index, verdict);
+		_(RawOrigin::Root, case_index, verdict, Weight::MAX);
 
 		assert!(!OpenCases::<T>::contains_key(case_index));
 		assert!(DoneCases::<T>::contains_key(case_index));
@@ -450,7 +425,7 @@ mod benches {
 		Ok(())
 	}
 
-	// Includes the cost of `ValidateUnsigned::pre_dispatch`
+	// Benchmarks the call.
 	#[benchmark]
 	fn force_ripen_case() -> Result<(), BenchmarkError> {
 		T::BenchmarkHelper::setup_currency();
@@ -467,17 +442,96 @@ mod benches {
 			OpenCases::<T>::insert(case_index, case);
 		}
 
+		#[extrinsic_call]
+		_(frame_system::RawOrigin::Authorized, case_index);
+
+		assert!(RipeCases::<T>::contains_key(case_index));
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn authorize_close_case() -> Result<(), BenchmarkError> {
+		T::BenchmarkHelper::set_valid_time();
+		T::BenchmarkHelper::setup_currency();
+
+		let case_index = helpers::create_ripe_case::<T>();
+		let case = RipeCases::<T>::get(case_index).unwrap();
+		let max_callback_weight = Pallet::<T>::callback_weight(
+			case_index,
+			&case.details.callback,
+			case.details.context,
+			case.verdict,
+		);
+		let call = Call::<T>::close_case { case_index, max_callback_weight };
+
+		#[block]
+		{
+			call.authorize(TransactionSource::InBlock)
+				.ok_or("Call must give some authorization")??;
+		}
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn authorize_clean_vote() -> Result<(), BenchmarkError> {
+		T::BenchmarkHelper::set_valid_time();
+		T::BenchmarkHelper::setup_currency();
+
+		let case_index = helpers::create_done_case::<T>(vec![PERSON_0_ALIAS], 0);
+		Votes::<T>::insert(case_index, PERSON_0_ALIAS, Judgement::Contempt);
+		let call = Call::<T>::clean_vote { case_index, voter: PERSON_0_ALIAS };
+
+		#[block]
+		{
+			call.authorize(TransactionSource::InBlock)
+				.ok_or("Call must give some authorization")??;
+		}
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn authorize_reap_case() -> Result<(), BenchmarkError> {
+		T::BenchmarkHelper::set_valid_time();
+		T::BenchmarkHelper::setup_currency();
+		let now = T::Clock::now().as_secs();
+		let max_claim_duration = T::MaxVoteClaimDuration::get();
+		let old_time = now.saturating_sub(max_claim_duration + 3600);
+		let case_index = helpers::create_done_case::<T>(vec![], old_time);
+		let call = Call::<T>::reap_case { case_index };
+
+		#[block]
+		{
+			call.authorize(TransactionSource::InBlock)
+				.ok_or("Call must give some authorization")??;
+		}
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn authorize_force_ripen_case() -> Result<(), BenchmarkError> {
+		T::BenchmarkHelper::setup_currency();
+		T::BenchmarkHelper::set_valid_time();
+		ActiveSince::<T>::put(0);
+
+		let case_index = helpers::create_voting_case::<T>();
+		if let Some(mut case) = OpenCases::<T>::get(case_index) {
+			let now = T::Clock::now().as_secs();
+			let max_voting_duration = T::MaxVotingDuration::get() as u64;
+			case.since = now.saturating_sub(max_voting_duration + 3600);
+			OpenCases::<T>::insert(case_index, case);
+		}
+
 		let call = Call::<T>::force_ripen_case { case_index };
 
 		#[block]
 		{
-			#[allow(deprecated)]
-			<Pallet<T> as ValidateUnsigned>::pre_dispatch(&call)
-				.expect("pre-dispatch must succeed");
-			call.dispatch_bypass_filter(RawOrigin::None.into())?;
+			call.authorize(TransactionSource::InBlock)
+				.ok_or("Call must give some authorization")??;
 		}
-
-		assert!(RipeCases::<T>::contains_key(case_index));
 
 		Ok(())
 	}
