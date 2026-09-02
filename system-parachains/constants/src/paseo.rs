@@ -160,3 +160,32 @@ pub mod locations {
 		}
 	}
 }
+
+/// Constants for the Individuality (Proof-of-Personhood) subsystem.
+pub mod individuality {
+	/// The network suffix spliced into every Individuality product context.
+	///
+	/// Product contexts are derived as
+	/// `blake2_256("product/" ++ product_name ++ "." ++ NETWORK_SUFFIX ++ "/" ++ suffix)`
+	/// (`indiv_support::context::build_product_context`), and the resulting ring-VRF context
+	/// determines the *alias* — the pseudonym — a person derives for a product. It therefore has
+	/// to be identical on every chain in the set: if Asset Hub and People disagree, the personhood
+	/// namespace splits and the same human derives different aliases on each chain.
+	///
+	/// It lives here, rather than in each runtime, so the value is stated once and can be changed
+	/// in one place. Changing it is not free: aliases are ring-VRF outputs, so a new alias cannot
+	/// be computed from an old one and no migration can carry existing aliases across a change.
+	///
+	/// Upstream Individuality defaults this to `b"paseo"`. Paseo uses `dot`, matching the dotNS
+	/// TLD that names on these chains are actually registered under.
+	///
+	/// # Never write a leading dot
+	///
+	/// `build_product_context` pushes the `.` separator itself and then splices this value
+	/// verbatim, so `b".dot"` would hash `peopl..dot`. The Android client concatenates the same
+	/// way and would agree; the iOS client strips a leading dot and would not. The result is a
+	/// silent, per-alias mismatch on one client only, with two of the three implementations
+	/// agreeing that nothing is wrong. `SeedNetworkSuffix`'s `post_upgrade` rejects a leading dot
+	/// for exactly this reason.
+	pub const NETWORK_SUFFIX: &[u8] = b"dot";
+}
