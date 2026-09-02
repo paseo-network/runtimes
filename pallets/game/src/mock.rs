@@ -562,8 +562,8 @@ parameter_types! {
 }
 
 thread_local! {
-	pub(crate) static AIRDROP_RANDOMNESS: RefCell<Option<[u8; 32]>> =
-		const { RefCell::new(Some([42u8; 32])) };
+	pub(crate) static AIRDROP_RANDOMNESS: RefCell<Option<([u8; 32], u32)>> =
+		const { RefCell::new(Some(([42u8; 32], 1))) };
 	pub(crate) static AIRDROP_ACCOUNT_TO_PUBLIC:
 		RefCell<alloc::collections::BTreeMap<AccountId32, sp_core::sr25519::Public>> =
 		const { RefCell::new(alloc::collections::BTreeMap::new()) };
@@ -585,13 +585,39 @@ impl sp_runtime::traits::TryConvert<AccountId32, sp_core::sr25519::Public> for A
 }
 
 pub struct MockAirdropRandomness;
-impl indiv_support::traits::CurrentBlockRandomness for MockAirdropRandomness {
-	fn randomness() -> Option<[u8; 32]> {
+impl indiv_support::traits::MomentRandomness<u32> for MockAirdropRandomness {
+	fn randomness() -> Option<([u8; 32], u32)> {
 		AIRDROP_RANDOMNESS.with(|r| *r.borrow())
 	}
 
+	fn current_moment() -> u32 {
+		AIRDROP_RANDOMNESS.with(|r| r.borrow().map_or(0, |(_, moment)| moment))
+	}
+
 	#[cfg(feature = "runtime-benchmarks")]
-	fn setup_randomness() {}
+	fn set_randomness(randomness: [u8; 32], moment: u32) {
+		AIRDROP_RANDOMNESS.with(|r| *r.borrow_mut() = Some((randomness, moment)));
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn set_current_moment(moment: u32) {
+		AIRDROP_RANDOMNESS.with(|r| {
+			let mut r = r.borrow_mut();
+			let value = r.map_or([0u8; 32], |(value, _)| value);
+			*r = Some((value, moment));
+		});
+	}
+}
+
+/// Advance the mock airdrop randomness by one block, so a draw awaiting entropy sees a
+/// value produced after registration closed.
+pub fn advance_airdrop_randomness() {
+	AIRDROP_RANDOMNESS.with(|r| {
+		let mut r = r.borrow_mut();
+		if let Some((value, block_number)) = *r {
+			*r = Some((value, block_number + 1));
+		}
+	});
 }
 
 /// Mock membership service.
@@ -600,21 +626,6 @@ impl indiv_support::traits::MembershipProver for MockAirdropMemberService {
 	type Crypto = Mock;
 
 	fn verify_membership(
-		_identifier: &indiv_support::traits::Identifier,
-		_proof: &<Mock as GenerateVerifiable>::Proof,
-		_ring_index: indiv_support::traits::RingIndex,
-		context: indiv_support::traits::Context,
-		msg: &[u8],
-	) -> Result<indiv_support::traits::RevisedContextualAlias, DispatchError> {
-		let alias = alias_from_message(msg);
-		Ok(indiv_support::traits::RevisedContextualAlias {
-			revision: 0,
-			ring: 0,
-			ca: indiv_support::traits::ContextualAlias { context, alias },
-		})
-	}
-
-	fn verify_membership_at_rev(
 		_identifier: &indiv_support::traits::Identifier,
 		_proof: &<Mock as GenerateVerifiable>::Proof,
 		_ring_index: indiv_support::traits::RingIndex,
@@ -629,16 +640,10 @@ impl indiv_support::traits::MembershipProver for MockAirdropMemberService {
 	fn verify_memberships_in_ring(
 		_identifier: &indiv_support::traits::Identifier,
 		_ring_index: indiv_support::traits::RingIndex,
-		_items: &[verifiable::BatchProofItem<<Mock as GenerateVerifiable>::Proof>],
-	) -> Result<Vec<indiv_support::traits::RevisedContextualAlias>, DispatchError> {
-		unimplemented!()
-	}
-
-	fn verify_memberships_in_ring_at_rev(
-		_identifier: &indiv_support::traits::Identifier,
-		_ring_index: indiv_support::traits::RingIndex,
 		_revision: indiv_support::traits::RevisionIndex,
-		_items: &[verifiable::BatchProofItem<<Mock as GenerateVerifiable>::Proof>],
+		_items: &[indiv_support::traits::RingMembershipProof<
+			<Mock as GenerateVerifiable>::Proof,
+		>],
 	) -> Result<Vec<indiv_support::traits::ContextualAlias>, DispatchError> {
 		unimplemented!()
 	}
@@ -664,6 +669,11 @@ impl indiv_support::traits::MembershipProver for MockAirdropMemberService {
 		_revision: indiv_support::traits::RevisionIndex,
 	) -> Option<u64> {
 		None
+	}
+
+	fn old_root_retention() -> u64 {
+		// This mock keeps no root history, so nothing is ever superseded.
+		0
 	}
 }
 

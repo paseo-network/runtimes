@@ -5465,6 +5465,7 @@ mod airdrop {
 					effective_winners: 1,
 					claimed: 0,
 				},
+				source: None,
 			},
 		);
 		AirdropWinners::<Test>::insert(event_id, &registrant, BigEndianU256::from([0u8; 32]));
@@ -6244,6 +6245,15 @@ mod airdrop {
 					Duration::from_secs(GameTimes::<Test>::game_play_time(&schedule) as u64)
 			});
 			assert_ok!(indiv_pallet_airdrop::Pallet::<Test>::close_registration_authorized(
+				frame_system::RawOrigin::Authorized.into(),
+				event_id,
+				0,
+			));
+			// v0.3.1's airdrop inserts an `AwaitingEntropy` step between closing registration
+			// and drawing: the draw only proceeds on randomness whose moment is strictly past
+			// the moment registration closed at. Advance the mock source, then capture.
+			advance_airdrop_randomness();
+			assert_ok!(indiv_pallet_airdrop::Pallet::<Test>::capture_entropy_authorized(
 				frame_system::RawOrigin::Authorized.into(),
 				event_id,
 				0,

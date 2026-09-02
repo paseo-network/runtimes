@@ -215,6 +215,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 			encoded_chunk_page_hashes: vec![(RingExponent::R2e9.exponent(), vec![page_hash])],
 			..Default::default()
 		},
+		..Default::default()
 	}
 	.build_storage()
 	.unwrap()

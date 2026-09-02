@@ -196,8 +196,31 @@ impl Config for Test {
 	type BenchmarkHelper = BenchHelper;
 }
 
+parameter_types! {
+	// Mirrors `indiv-pallet-people-lite`'s own v0.3.1 mock (`pallets/people-lite/src/mock.rs`),
+	// which is the closest thing to an authoritative binding for these items: this pallet is a
+	// permanent Paseo fork and has no upstream mock to copy from.
+	//
+	// The fee is typed `u32` because this mock's `pallet_balances::Config::Balance` is `u32`
+	// (people-lite's own mock uses `u64`). Nothing in `tests.rs` registers a lite person by
+	// paying the fee, so neither the pot nor the amount is load-bearing here.
+	pub const LitePeoplePotId: PalletId = PalletId(*b"plitefee");
+	pub storage LitePersonRegistrationFee: u32 = 10;
+	// The value is upstream's mock value, NOT the runtime's. The Paseo runtimes must bind
+	// `Suffix` to the `dot` suffix carried by `indiv-pallet-network-suffix`; see that pallet's
+	// `migration` module for why it is `dot` and never `.dot`. No test here asserts on a
+	// suffix-derived context.
+	pub LiteNetworkSuffix: indiv_support::context::ProductContextNetworkSuffix =
+		b"paseo".to_vec().try_into().expect("network suffix fits");
+}
+
 impl indiv_pallet_people_lite::Config for Test {
 	type WeightInfo = ();
+	type Currency = Balances;
+	type PotId = LitePeoplePotId;
+	type RegistrationFee = LitePersonRegistrationFee;
+	type Suffix = LiteNetworkSuffix;
+	type AccountContexts = TestAccountContexts;
 	type AttestationAllowanceManager = EnsureRoot<Self::AccountId>;
 	type MemberService = MembersPallet;
 	type CollectionOwner = PeopleCollectionOwner;
@@ -413,13 +436,32 @@ parameter_types! {
 
 pub type AssetsWithHolder = indiv_support::fungibles::CombineAssetsWithHolder<Assets, AssetsHolder>;
 
+/// Type-level stub for `indiv_pallet_airdrop::Config::Randomness`.
+///
+/// `indiv-support` v0.3.1 replaces `CurrentBlockRandomness` (`Option<[u8; 32]>`) with
+/// `MomentRandomness<Moment>`, which pairs each value with the moment it became publicly
+/// determinable. This mock keeps the previous stub's character — a constant value that no test
+/// ever reads — and pairs it with a constant moment.
+///
+/// `Airdrop` is in this mock runtime only because `indiv_pallet_game::Config` requires it; this
+/// pallet's test suite (`tests.rs`) never opens or draws an airdrop event. A test that did draw
+/// would need a moment that advances past the registration-close commitment, as
+/// `indiv-pallet-game`'s own mock does with its `advance_airdrop_randomness` helper.
 pub struct MockAirdropRandomness;
-impl indiv_support::traits::CurrentBlockRandomness for MockAirdropRandomness {
-	fn randomness() -> Option<[u8; 32]> {
-		Some([0u8; 32])
+impl indiv_support::traits::MomentRandomness<u32> for MockAirdropRandomness {
+	fn randomness() -> Option<([u8; 32], u32)> {
+		Some(([0u8; 32], 0))
 	}
+
+	fn current_moment() -> u32 {
+		0
+	}
+
 	#[cfg(feature = "runtime-benchmarks")]
-	fn setup_randomness() {}
+	fn set_randomness(_randomness: [u8; 32], _moment: u32) {}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn set_current_moment(_moment: u32) {}
 }
 
 pub struct AccountToPub;
@@ -1019,6 +1061,17 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 		},
 		assets: Default::default(),
 		pallet_xcm: Default::default(),
+		// v0.3.1 gives `people-multi` and `people-lite` a genesis config whose only field is
+		// `create_collection`, defaulting to `false`. `false` is deliberate here, not merely
+		// convenient: this pallet's whole job is to create those collections during the
+		// migration, and its tests assert on that path. Creating them at genesis instead would
+		// make the tests assert against an already-initialised chain.
+		//
+		// Listed explicitly rather than via `..Default::default()`, matching the rest of this
+		// initializer: this pallet is a permanent Paseo fork with no upstream, so a compile
+		// error on the next pallet that gains genesis state is the notification we want.
+		people_pallet: Default::default(),
+		people_lite: Default::default(),
 	}
 	.build_storage()
 	.unwrap()
