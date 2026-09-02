@@ -300,6 +300,20 @@ pub mod v1 {
 			// block, never against a documented literal. The live figures moved while this was
 			// being written (`used` 155,976,700 -> 155,781,116, `at_block` 5,742,601 ->
 			// 5,743,625), which is exactly why nothing here is hard-coded.
+			// A zero provider block number on a live chain means the STATE THIS RAN AGAINST is
+			// missing `ParachainSystem::LastRelayChainBlockNumber`, not that the relay is at
+			// genesis. Both chains read ~892,000 during this work. If a try-runtime snapshot was
+			// scraped without the `ParachainSystem` prefix, the migration would rebase every
+			// stamp to 0 and `post_upgrade` would happily agree, because it checks against the
+			// same zero. Fail here instead — this is a harness problem, and it is invisible
+			// downstream.
+			ensure!(
+				!now.is_zero(),
+				"origin-restriction: BlockNumberProvider returned 0 — the state under test is \
+				 almost certainly missing ParachainSystem::LastRelayChainBlockNumber. Re-scrape \
+				 with the ParachainSystem prefix included."
+			);
+
 			let mut captured: Vec<(Vec<u8>, u128, u128)> = Vec::new();
 			let mut stale_clock = 0u32;
 			let mut already_plausible = 0u32;
@@ -654,6 +668,23 @@ mod tests {
 			let state = MigrateV0ToV1::<crate::mock::Test>::pre_upgrade().expect("pre_upgrade");
 			MigrateV0ToV1::<crate::mock::Test>::on_runtime_upgrade();
 			MigrateV0ToV1::<crate::mock::Test>::post_upgrade(state).expect("post_upgrade");
+		});
+	}
+
+	#[cfg(feature = "try-runtime")]
+	#[test]
+	fn pre_upgrade_refuses_a_state_with_no_relay_block_number() {
+		// Guards against a try-runtime snapshot scraped without the `ParachainSystem` prefix:
+		// every stamp would be rebased to 0 and post_upgrade would agree, silently.
+		new_test_ext().execute_with(|| {
+			StorageVersion::new(0).put::<crate::Pallet<crate::mock::Test>>();
+			MockRelayBlockNumberProvider::set_block_number(0);
+			Usages::<crate::mock::Test>::insert(
+				&RuntimeRestrictedEntity::A,
+				Usage { used: 1, at_block: 9_000_000 },
+			);
+
+			assert!(MigrateV0ToV1::<crate::mock::Test>::pre_upgrade().is_err());
 		});
 	}
 
