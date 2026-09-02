@@ -17,7 +17,7 @@
 //! Resources-origin transaction extension.
 
 use crate::{
-	types::{FriendRequestReference, MembershipCollection, ProofOf},
+	types::{MembershipCollection, NotificationReference, ProofOf},
 	weights::WeightInfo as _,
 	Config, Origin, Pallet,
 };
@@ -32,9 +32,12 @@ use frame_support::{
 };
 use indiv_pallet_people::PEOPLE_MEMBER_IDENTIFIER;
 use indiv_pallet_people_lite::LITE_PEOPLE_MEMBER_IDENTIFIER;
-use indiv_support::traits::{MembershipProver, RevisionIndex, RingIndex};
+use indiv_support::{
+	traits::{MembershipProver, RevisionIndex, RingIndex},
+	tx_priority,
+};
 use scale_info::TypeInfo;
-use sp_core::twox_64;
+use sp_crypto_hashing::twox_64;
 use sp_runtime::{
 	traits::{DispatchInfoOf, TransactionExtension, ValidateResult},
 	transaction_validity::{InvalidTransaction, TransactionValidityError, ValidTransaction},
@@ -44,19 +47,19 @@ use sp_runtime::{
 /// Custom invalidity reasons for the `AsResources` transaction extension.
 #[repr(u8)]
 pub enum CustomValidity {
-	/// The friend request period is outside the accepted current/grace window.
-	InvalidFriendRequestPeriod = 220,
-	/// The friend request sequence is above the collection-specific slot limit.
-	InvalidFriendRequestSequence = 221,
+	/// The notification period is outside the accepted current window.
+	InvalidNotificationPeriod = 220,
+	/// The notification sequence is above the collection-specific slot limit.
+	InvalidNotificationSequence = 221,
 	/// The requested expired username reservation is not removable.
 	InvalidExpiredUsernameReservationRemoval = 222,
 	/// The requested demotion is not currently valid.
 	InvalidPersonDemotion = 223,
-	/// The requested friend request cleanup is not currently valid.
-	InvalidExpiredFriendRequestCleanup = 224,
-	/// The alias or account is already registered for a friend request slot.
-	FriendRequestRegistrationConflict = 225,
-	/// The statement store period is outside the accepted current/grace window.
+	/// The requested notification cleanup is not currently valid.
+	InvalidExpiredNotificationCleanup = 224,
+	/// The alias or account is already registered for a notification slot.
+	NotificationRegistrationConflict = 225,
+	/// The statement store period is outside the accepted current window.
 	InvalidStmtStorePeriod = 226,
 	/// The statement store sequence is above the collection-specific slot limit.
 	InvalidStmtStoreSequence = 227,
@@ -82,40 +85,42 @@ impl From<CustomValidity> for TransactionValidityError {
 	}
 }
 
-/// Information required to dispatch the friend request registration call as an anonymous alias.
+/// Information required to dispatch the notification registration call as an anonymous alias.
 #[derive(
 	Encode, Decode, TypeInfo, EqNoBound, CloneNoBound, PartialEqNoBound, DecodeWithMemTracking,
 )]
 #[scale_info(skip_type_params(T))]
 pub enum AsResourcesInfo<T: Config> {
-	/// Validate the friend request registration proof for the anonymous alias.
+	/// Validate the notification registration proof for the anonymous alias.
 	///
 	/// This variant can only be used with
-	/// `Call::set_friend_request_statement_account_for_sequence`.
+	/// `Call::set_notification_statement_account_for_sequence`.
 	///
 	/// Proof construction:
 	/// - the proof must be valid for the people member collection (`PEOPLE_MEMBER_IDENTIFIER`),
 	/// - `ring_index` must point to the ring used to create the proof,
+	/// - `revision` must be the ring revision the proof was built against,
 	/// - the proof context is derived on-chain from the call payload using
-	///   `Pallet::<T>::friend_request_context(reference)`,
+	///   `Pallet::<T>::notification_context(reference)`,
 	/// - the proof message must be `blake2_256(scale_encode(inherited_implication))`.
 	///
-	/// See [`AsResourcesInfo::RegisterFriendRequestForCollection`] for the collection-aware form.
-	RegisterFriendRequestWithProof(ProofOf<T>, RingIndex),
-	/// Validate a friend request registration proof for a member collection.
+	/// See [`AsResourcesInfo::RegisterNotificationForCollection`] for the collection-aware form.
+	RegisterNotificationWithProof(ProofOf<T>, RingIndex, RevisionIndex),
+	/// Validate a notification registration proof for a member collection.
 	///
 	/// This variant can only be used with
-	/// `Call::set_friend_request_statement_account_for_sequence`.
+	/// `Call::set_notification_statement_account_for_sequence`.
 	///
 	/// Proof construction:
 	/// - `collection` selects which member collection the proof targets:
 	///   [`MembershipCollection::People`] uses `PEOPLE_MEMBER_IDENTIFIER`,
 	///   [`MembershipCollection::LitePeople`] uses `LITE_PEOPLE_MEMBER_IDENTIFIER`,
 	/// - `ring_index` must point to the ring used to create the proof,
+	/// - `revision` must be the ring revision the proof was built against,
 	/// - the proof context is derived on-chain from the call payload using
-	///   `Pallet::<T>::friend_request_context(reference)`,
+	///   `Pallet::<T>::notification_context(reference)`,
 	/// - the proof message must be `blake2_256(scale_encode(inherited_implication))`.
-	RegisterFriendRequestForCollection(ProofOf<T>, RingIndex, MembershipCollection),
+	RegisterNotificationForCollection(ProofOf<T>, RingIndex, RevisionIndex, MembershipCollection),
 	/// Validate a statement store allowance claim proof for a member collection.
 	///
 	/// This variant can only be used with `Call::set_statement_store_account`.
@@ -125,10 +130,11 @@ pub enum AsResourcesInfo<T: Config> {
 	///   [`MembershipCollection::People`] uses `PEOPLE_MEMBER_IDENTIFIER`,
 	///   [`MembershipCollection::LitePeople`] uses `LITE_PEOPLE_MEMBER_IDENTIFIER`,
 	/// - `ring_index` must point to the ring used to create the proof,
+	/// - `revision` must be the ring revision the proof was built against,
 	/// - the proof context is derived on-chain from the call payload using
 	///   `Pallet::<T>::stmt_store_slot_context(period, seq)`,
 	/// - the proof message must be `blake2_256(scale_encode(inherited_implication))`.
-	RegisterStatementStoreAllowance(ProofOf<T>, RingIndex, MembershipCollection),
+	RegisterStatementStoreAllowance(ProofOf<T>, RingIndex, RevisionIndex, MembershipCollection),
 	/// Validate a long-term storage claim proof for a member collection.
 	///
 	/// This variant can only be used with `Call::claim_long_term_storage`.
@@ -147,9 +153,9 @@ pub enum AsResourcesInfo<T: Config> {
 	ClaimLongTermStorage(ProofOf<T>, RingIndex, RevisionIndex, MembershipCollection),
 }
 
-/// Extension to validate friend request registration proofs and transmute the origin into
-/// `resources::Origin::FriendRequestAlias` generated from
-/// `Pallet::<T>::friend_request_context(reference)`.
+/// Extension to validate notification registration proofs and transmute the origin into
+/// `resources::Origin::NotificationAlias` generated from
+/// `Pallet::<T>::notification_context(reference)`.
 #[derive(
 	Encode,
 	Decode,
@@ -176,12 +182,13 @@ impl<T: Config> AsResources<T> {
 }
 
 impl<T: Config> AsResources<T> {
-	fn validate_friend_request(
+	fn validate_notification(
 		origin: <T as frame_system::Config>::RuntimeOrigin,
 		call: &<T as frame_system::Config>::RuntimeCall,
 		inherited_implication: &impl Encode,
 		proof: &ProofOf<T>,
 		ring_index: RingIndex,
+		revision: RevisionIndex,
 		collection: &MembershipCollection,
 	) -> ValidateResult<(), <T as frame_system::Config>::RuntimeCall> {
 		ensure!(
@@ -189,7 +196,7 @@ impl<T: Config> AsResources<T> {
 			InvalidTransaction::BadSigner
 		);
 
-		let Some(crate::Call::<T>::set_friend_request_statement_account_for_sequence {
+		let Some(crate::Call::<T>::set_notification_statement_account_for_sequence {
 			reference,
 			account_id,
 		}) = call.is_sub_type()
@@ -197,17 +204,17 @@ impl<T: Config> AsResources<T> {
 			return Err(InvalidTransaction::Call.into());
 		};
 
-		Pallet::<T>::validate_friend_request_period(reference.period)
-			.map_err(|_| CustomValidity::InvalidFriendRequestPeriod)?;
+		Pallet::<T>::validate_notification_period(reference.period)
+			.map_err(|_| CustomValidity::InvalidNotificationPeriod)?;
 
 		match collection {
-			MembershipCollection::People => Pallet::<T>::validate_friend_request_seq(reference.seq),
+			MembershipCollection::People => Pallet::<T>::validate_notification_seq(reference.seq),
 			MembershipCollection::LitePeople =>
-				Pallet::<T>::validate_lite_friend_request_seq(reference.seq),
+				Pallet::<T>::validate_lite_notification_seq(reference.seq),
 		}
-		.map_err(|_| CustomValidity::InvalidFriendRequestSequence)?;
+		.map_err(|_| CustomValidity::InvalidNotificationSequence)?;
 
-		let context = Pallet::<T>::friend_request_context(FriendRequestReference {
+		let context = Pallet::<T>::notification_context(NotificationReference {
 			period: reference.period,
 			seq: reference.seq,
 		});
@@ -218,22 +225,28 @@ impl<T: Config> AsResources<T> {
 			MembershipCollection::LitePeople => *LITE_PEOPLE_MEMBER_IDENTIFIER,
 		};
 
-		let validated_rev_ca =
-			T::MemberService::verify_membership(&identifier, proof, ring_index, context, &msg[..])
-				.map_err(|_| InvalidTransaction::BadProof)?;
+		let validated_ca = T::MemberService::verify_membership(
+			&identifier,
+			proof,
+			ring_index,
+			revision,
+			context,
+			&msg[..],
+		)
+		.map_err(|_| InvalidTransaction::BadProof)?;
 
-		Pallet::<T>::validate_friend_request_registration(validated_rev_ca.ca.alias, account_id)
-			.map_err(|_| CustomValidity::FriendRequestRegistrationConflict)?;
+		Pallet::<T>::validate_notification_registration(validated_ca.alias, account_id)
+			.map_err(|_| CustomValidity::NotificationRegistrationConflict)?;
 
-		// Deduplicate by the friend request slot itself so a user cannot queue many
+		// Deduplicate by the notification slot itself so a user cannot queue many
 		// unsigned variants for the same `(alias, period, seq)` by only changing the
 		// statement account.
-		let provides =
-			twox_64(&("friend request-slot", validated_rev_ca.ca.alias, context).encode());
-		let validity =
-			ValidTransaction::with_tag_prefix("Res:FriendRequest").and_provides(provides);
+		let provides = twox_64(&("notification-slot", validated_ca.alias, context).encode());
+		let validity = ValidTransaction::with_tag_prefix("Res:Notification")
+			.and_provides(provides)
+			.priority(tx_priority::USER_DEFAULT);
 
-		let local_origin = Origin::FriendRequestAlias(validated_rev_ca.ca.alias);
+		let local_origin = Origin::NotificationAlias(validated_ca.alias);
 		let mut origin = origin;
 		origin.set_caller_from(local_origin);
 
@@ -246,6 +259,7 @@ impl<T: Config> AsResources<T> {
 		inherited_implication: &impl Encode,
 		proof: &ProofOf<T>,
 		ring_index: RingIndex,
+		revision: RevisionIndex,
 		collection: &MembershipCollection,
 	) -> ValidateResult<(), <T as frame_system::Config>::RuntimeCall> {
 		ensure!(
@@ -274,11 +288,17 @@ impl<T: Config> AsResources<T> {
 		let context = Pallet::<T>::stmt_store_slot_context(*period, *seq);
 		let msg = inherited_implication.using_encoded(sp_io::hashing::blake2_256);
 
-		let validated_rev_ca =
-			T::MemberService::verify_membership(&identifier, proof, ring_index, context, &msg[..])
-				.map_err(|_| InvalidTransaction::BadProof)?;
+		let validated_ca = T::MemberService::verify_membership(
+			&identifier,
+			proof,
+			ring_index,
+			revision,
+			context,
+			&msg[..],
+		)
+		.map_err(|_| InvalidTransaction::BadProof)?;
 
-		let alias = validated_rev_ca.ca.alias;
+		let alias = validated_ca.alias;
 		let period_key = indiv_support::utils::BigEndianU32::from(*period);
 
 		// If an entry already exists, ensure the replacement cooldown has elapsed.
@@ -295,8 +315,9 @@ impl<T: Config> AsResources<T> {
 		// Deduplicate by (alias, period, seq) so a user cannot queue many unsigned variants
 		// for the same slot by only changing the target account.
 		let provides = twox_64(&("stmt-store-slot", alias, context).encode());
-		let validity =
-			ValidTransaction::with_tag_prefix("Res:StmtStoreSlot").and_provides(provides);
+		let validity = ValidTransaction::with_tag_prefix("Res:StmtStoreSlot")
+			.and_provides(provides)
+			.priority(tx_priority::USER_DEFAULT);
 
 		let local_origin = Origin::StmtStoreAlias(alias);
 		let mut origin = origin;
@@ -341,7 +362,7 @@ impl<T: Config> AsResources<T> {
 			MembershipCollection::LitePeople => *LITE_PEOPLE_MEMBER_IDENTIFIER,
 		};
 
-		let validated_ca = T::MemberService::verify_membership_at_rev(
+		let validated_ca = T::MemberService::verify_membership(
 			&identifier,
 			proof,
 			ring_index,
@@ -360,8 +381,9 @@ impl<T: Config> AsResources<T> {
 		);
 
 		let provides = twox_64(&("lts-claim", validated_ca.alias, context).encode());
-		let validity =
-			ValidTransaction::with_tag_prefix("Res:LongTermStorage").and_provides(provides);
+		let validity = ValidTransaction::with_tag_prefix("Res:LongTermStorage")
+			.and_provides(provides)
+			.priority(tx_priority::USER_DEFAULT);
 
 		let local_origin = Origin::LongTermStorageClaim(validated_ca.alias, *collection);
 		let mut origin = origin;
@@ -379,9 +401,9 @@ impl<T: Config> TransactionExtension<<T as frame_system::Config>::RuntimeCall> f
 
 	fn weight(&self, _call: &<T as frame_system::Config>::RuntimeCall) -> Weight {
 		match self.0 {
-			Some(AsResourcesInfo::RegisterFriendRequestWithProof(..)) =>
+			Some(AsResourcesInfo::RegisterNotificationWithProof(..)) =>
 				<T as Config>::WeightInfo::as_register_with_proof_tx_ext(),
-			Some(AsResourcesInfo::RegisterFriendRequestForCollection(..)) =>
+			Some(AsResourcesInfo::RegisterNotificationForCollection(..)) =>
 				<T as Config>::WeightInfo::as_register_for_collection_tx_ext(),
 			Some(AsResourcesInfo::RegisterStatementStoreAllowance(..)) =>
 				<T as Config>::WeightInfo::as_stmt_store_allowance_tx_ext(),
@@ -402,30 +424,34 @@ impl<T: Config> TransactionExtension<<T as frame_system::Config>::RuntimeCall> f
 		_source: TransactionSource,
 	) -> ValidateResult<Self::Val, <T as frame_system::Config>::RuntimeCall> {
 		match &self.0 {
-			Some(AsResourcesInfo::RegisterFriendRequestWithProof(proof, ring_index)) =>
-				Self::validate_friend_request(
+			Some(AsResourcesInfo::RegisterNotificationWithProof(proof, ring_index, revision)) =>
+				Self::validate_notification(
 					origin,
 					call,
 					inherited_implication,
 					proof,
 					*ring_index,
+					*revision,
 					&MembershipCollection::People,
 				),
-			Some(AsResourcesInfo::RegisterFriendRequestForCollection(
+			Some(AsResourcesInfo::RegisterNotificationForCollection(
 				proof,
 				ring_index,
+				revision,
 				collection,
-			)) => Self::validate_friend_request(
+			)) => Self::validate_notification(
 				origin,
 				call,
 				inherited_implication,
 				proof,
 				*ring_index,
+				*revision,
 				collection,
 			),
 			Some(AsResourcesInfo::RegisterStatementStoreAllowance(
 				proof,
 				ring_index,
+				revision,
 				collection,
 			)) => Self::validate_stmt_store_slot(
 				origin,
@@ -433,6 +459,7 @@ impl<T: Config> TransactionExtension<<T as frame_system::Config>::RuntimeCall> f
 				inherited_implication,
 				proof,
 				*ring_index,
+				*revision,
 				collection,
 			),
 			Some(AsResourcesInfo::ClaimLongTermStorage(
@@ -449,6 +476,8 @@ impl<T: Config> TransactionExtension<<T as frame_system::Config>::RuntimeCall> f
 				*revision,
 				collection,
 			),
+			// Extension not in use by this transaction: pass through with default validity. The
+			// effective priority comes from whichever extension authorizes the call.
 			None => Ok((ValidTransaction::default(), (), origin)),
 		}
 	}

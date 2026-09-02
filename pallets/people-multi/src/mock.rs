@@ -444,6 +444,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 			encoded_chunk_page_hashes: page_hashes,
 			..Default::default()
 		},
+		..Default::default()
 	}
 	.build_storage()
 	.unwrap()
@@ -489,6 +490,16 @@ pub fn exec_tx(
 	tx_ext: TransactionExtension,
 	call: impl Into<RuntimeCall>,
 ) -> Result<(), TransactionExecutionError> {
+	exec_tx_post(who, tx_ext, call).map(|_| ())
+}
+
+/// Like [`exec_tx`] but returns the post-dispatch info so tests can assert whether fees were
+/// charged.
+pub fn exec_tx_post(
+	who: Option<u64>,
+	tx_ext: TransactionExtension,
+	call: impl Into<RuntimeCall>,
+) -> Result<frame_support::dispatch::PostDispatchInfo, TransactionExecutionError> {
 	let tx = match who {
 		Some(who) => UncheckedExtrinsic::new_signed(call.into(), who, UintAuthorityId(who), tx_ext),
 		None => UncheckedExtrinsic::new_transaction(call.into(), tx_ext),
@@ -505,9 +516,9 @@ pub fn exec_tx(
 	})
 	.unwrap()?;
 	// Finally, apply the extrinsic.
-	checked.apply::<Test>(&info, len)??;
+	let post_info = checked.apply::<Test>(&info, len)??;
 
-	Ok(())
+	Ok(post_info)
 }
 
 pub fn exec_as_alias_tx(
@@ -555,6 +566,8 @@ pub fn exec_as_alias_with_updated_revision_tx(
 			nonce,
 			proof,
 			ring_index,
+			Members::ring_revision(PEOPLE_MEMBER_IDENTIFIER, ring_index)
+				.expect("people ring revision missing"),
 			rev_ca.ca.context,
 		))),
 		frame_system::CheckNonce::from(0),
@@ -609,7 +622,11 @@ pub fn setup_alias_account(
 		MockCrypto::create(commitment, secret, &context, &msg).expect("proof creation failed");
 	let tx_ext = (
 		AsPerson::<Test>::new(Some(AsPersonInfo::AsPersonalAliasWithProof(
-			proof, ring_index, context,
+			proof,
+			ring_index,
+			Members::ring_revision(PEOPLE_MEMBER_IDENTIFIER, ring_index)
+				.expect("people ring revision missing"),
+			context,
 		))),
 		other_tx_ext.0,
 	);

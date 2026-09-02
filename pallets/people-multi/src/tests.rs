@@ -21,7 +21,11 @@ use crate::{
 	*,
 };
 use frame_support::{
-	assert_noop, assert_ok, dispatch::Pays, pallet_prelude::Authorize, traits::Get, BoundedVec,
+	assert_noop, assert_ok,
+	dispatch::Pays,
+	pallet_prelude::Authorize,
+	traits::{Get, OnRuntimeUpgrade, UnixTime},
+	BoundedVec,
 };
 use indiv_pallet_members::RingMode;
 use indiv_support::traits::RingExponent;
@@ -851,6 +855,48 @@ mod suspensions {
 			);
 		});
 	}
+
+	#[test]
+	fn suspending_person_releases_account_sufficients() {
+		TestExt::new().execute_with(|| {
+			assert_ok!(Members::create_collection(
+				0,
+				PEOPLE_MEMBER_IDENTIFIER,
+				1,
+				RingMode::Flexible,
+				RingExponent::R2e9,
+				None,
+			));
+
+			generate_people_with_index(0, 9);
+			Members::process_maintenance();
+
+			// A person associated with an account
+			let person_id = 0;
+			let account_id = 42;
+			let sufficients_before = frame_system::Account::<Test>::get(account_id).sufficients;
+
+			let id_origin = RuntimeOrigin::from(PeopleOrigin::PersonalIdentity(person_id));
+			assert_ok!(PeoplePallet::set_personal_id_account(id_origin, account_id, 0));
+			assert_eq!(
+				frame_system::Account::<Test>::get(account_id).sufficients,
+				sufficients_before + 1
+			);
+
+			// The person becomes suspended
+			assert_ok!(PeoplePallet::start_people_set_mutation_session());
+			assert_ok!(PeoplePallet::suspend_personhood(&[person_id]));
+			assert_ok!(PeoplePallet::end_people_set_mutation_session());
+
+			// The suspension releases the sufficient reference taken by
+			// `set_personal_id_account` together with the account mapping, so the account can
+			// be reaped.
+			assert_eq!(
+				frame_system::Account::<Test>::get(account_id).sufficients,
+				sufficients_before
+			);
+		});
+	}
 }
 
 #[test]
@@ -1159,6 +1205,85 @@ fn resetting_alias_account_for_new_revision_is_refunded() {
 	});
 }
 
+#[test]
+fn free_replay_spam_via_revision_toggle_is_rejected() {
+	new_test_ext().execute_with(|| {
+		const EXTENSION_VERSION: u8 = 0;
+		assert_ok!(Members::create_collection(
+			0,
+			PEOPLE_MEMBER_IDENTIFIER,
+			1,
+			RingMode::Flexible,
+			RingExponent::R2e9,
+			None,
+		));
+
+		let alice_sec = MockCrypto::new_secret([1u8; 32]);
+		let alice_pub = MockCrypto::member_from_secret(&alice_sec);
+		let alice_index = PeoplePallet::reserve_new_id();
+		PeoplePallet::recognize_personhood(alice_index, Some(alice_pub)).unwrap();
+		Members::process_maintenance();
+		assert_eq!(
+			indiv_pallet_members::Root::<Test>::get(PEOPLE_MEMBER_IDENTIFIER, 0)
+				.unwrap()
+				.revision,
+			0
+		);
+
+		let account: u64 = 10;
+		let call = RuntimeCall::PeoplePallet(crate::Call::set_alias_account {
+			account,
+			call_valid_at: System::block_number(),
+		});
+		let other_tx_ext = (frame_system::CheckNonce::<Test>::from(0),);
+		let msg =
+			(&EXTENSION_VERSION, &call, &other_tx_ext).using_encoded(sp_io::hashing::blake2_256);
+		let commitment = MockCrypto::open((), &alice_pub, Some(alice_pub).into_iter()).unwrap();
+		let (proof, alias_value) =
+			MockCrypto::create(commitment, &alice_sec, &MOCK_CONTEXT, &msg).unwrap();
+		let alias = ContextualAlias { context: MOCK_CONTEXT, alias: alias_value };
+
+		let tx_ext_at_rev = |revision: u32| {
+			(
+				AsPerson::<Test>::new(Some(AsPersonInfo::AsPersonalAliasWithProof(
+					proof.clone(),
+					0,
+					revision,
+					MOCK_CONTEXT,
+				))),
+				other_tx_ext.0.clone(),
+			)
+		};
+
+		let post = exec_tx_post(None, tx_ext_at_rev(0), call.clone()).unwrap();
+		assert_eq!(post.pays_fee, Pays::No);
+		assert_eq!(
+			AccountToAlias::<Test>::get(account),
+			Some(RevisedContextualAlias { revision: 0, ring: 0, ca: alias.clone() })
+		);
+
+		assert_noop!(exec_tx(None, tx_ext_at_rev(0), call.clone()), InvalidTransaction::Stale);
+
+		let root = indiv_pallet_members::Root::<Test>::get(PEOPLE_MEMBER_IDENTIFIER, 0).unwrap();
+		indiv_pallet_members::OldRoots::<Test>::insert(
+			(PEOPLE_MEMBER_IDENTIFIER, 0u32, indiv_support::utils::BigEndianU32::from(0u32)),
+			indiv_pallet_members::OldRoot {
+				root: root.root.clone(),
+				archived_at: MockTime::now().as_secs(),
+			},
+		);
+		indiv_pallet_members::Root::<Test>::mutate(PEOPLE_MEMBER_IDENTIFIER, 0, |r| {
+			r.as_mut().unwrap().revision = 1
+		});
+
+		let post = exec_tx_post(None, tx_ext_at_rev(1), call.clone()).unwrap();
+		assert_eq!(post.pays_fee, Pays::No);
+		assert_eq!(AccountToAlias::<Test>::get(account).unwrap().revision, 1);
+
+		assert_noop!(exec_tx(None, tx_ext_at_rev(0), call), InvalidTransaction::Stale);
+	});
+}
+
 // The below tests demonstrate replay protection for identity-based transactions in this pallet.
 // Unlike standard extrinsics, replay protection here is NOT enforced solely by account nonce.
 // Instead, the extrinsic (set_personal_id_account) uses a time tolerance window: the same
@@ -1298,6 +1423,7 @@ fn replay_protection_for_alias() {
 			let tx_ext = (
 				AsPerson::<Test>::new(Some(AsPersonInfo::AsPersonalAliasWithProof(
 					proof,
+					0,
 					0,
 					MOCK_CONTEXT,
 				))),
@@ -1606,6 +1732,7 @@ fn set_alias_account_fails_for_invalid_context_in_extension() {
 			AsPerson::<Test>::new(Some(AsPersonInfo::AsPersonalAliasWithProof(
 				proof,
 				0,
+				0,
 				invalid_context,
 			))),
 			other_tx_ext.0,
@@ -1662,6 +1789,36 @@ mod create_people_collection {
 			let result =
 				PeoplePallet::authorize_create_people_collection(TransactionSource::InBlock);
 			assert!(result.is_err());
+		});
+	}
+
+	#[test]
+	fn migration_creates_collection() {
+		TestExt::new().execute_with(|| {
+			System::set_block_number(1);
+			assert!(!PeopleCollectionCreated::<Test>::get());
+
+			crate::migration::CreatePeopleCollection::<Test>::on_runtime_upgrade();
+
+			assert!(PeopleCollectionCreated::<Test>::get());
+			assert!(Members::ring_status(PEOPLE_MEMBER_IDENTIFIER, 0).is_some());
+			assert!(System::events()
+				.iter()
+				.any(|e| matches!(e.event, RuntimeEvent::PeoplePallet(Event::CollectionCreated))));
+		});
+	}
+
+	#[test]
+	fn migration_rerun_is_a_no_op() {
+		TestExt::new().execute_with(|| {
+			System::set_block_number(1);
+			crate::migration::CreatePeopleCollection::<Test>::on_runtime_upgrade();
+			let events = System::events().len();
+
+			crate::migration::CreatePeopleCollection::<Test>::on_runtime_upgrade();
+
+			assert!(PeopleCollectionCreated::<Test>::get());
+			assert_eq!(System::events().len(), events);
 		});
 	}
 }
@@ -2094,6 +2251,14 @@ fn old_revision_alias_is_not_stale_and_can_be_revised() {
 		// After revision update, the alias revision matches the current ring revision.
 		let updated_rev_ca = AccountToAlias::<Test>::get(alias_account).unwrap();
 		assert_eq!(updated_rev_ca.revision, 1);
+	});
+}
+
+/// Verify that the default mock configuration passes all integrity checks.
+#[test]
+fn integrity_test_passes() {
+	new_test_ext().execute_with(|| {
+		<crate::Pallet<Test> as frame_support::traits::Hooks<u64>>::integrity_test();
 	});
 }
 

@@ -27,7 +27,7 @@ pub type SignatureOf<T> =
 pub type ProofOf<T> =
 	<<<T as Config>::MemberService as MembershipProver>::Crypto as GenerateVerifiable>::Proof;
 
-/// Friend request period and sequence used to identify a registration slot.
+/// Notification period and sequence used to identify an allowance claim.
 #[derive(
 	Encode,
 	Decode,
@@ -40,22 +40,22 @@ pub type ProofOf<T> =
 	TypeInfo,
 	MaxEncodedLen,
 )]
-pub struct FriendRequestReference {
-	/// Period used in the friend request context.
+pub struct NotificationReference {
+	/// Period used in the notification context.
 	pub period: u32,
-	/// Sequence used in the friend request context.
+	/// Sequence used in the notification context.
 	pub seq: u8,
 }
 
-/// Friend request statement account registration bound to an anonymous alias.
+/// Notification statement account registration bound to an anonymous alias.
 #[derive(
 	Encode, Decode, DecodeWithMemTracking, Clone, PartialEq, Eq, Debug, TypeInfo, MaxEncodedLen,
 )]
-pub struct FriendRequestRegistration<Account> {
+pub struct NotificationRegistration<Account> {
 	/// Statement account granted temporary allowance.
 	pub account_id: Account,
-	/// Friend request slot used in the registration context.
-	pub reference: FriendRequestReference,
+	/// Notification slot used in the registration context.
+	pub reference: NotificationReference,
 }
 
 /// Value stored per anonymous statement store allowance entry.
