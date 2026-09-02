@@ -15,7 +15,7 @@
 // limitations under the License.
 
 use core::marker::PhantomData;
-use frame_support::traits::fungibles;
+use frame_support::traits::{fungibles, AccountTouch};
 
 /// A type to define a combined fungibles implementation from an asset and a holder.
 ///
@@ -374,6 +374,26 @@ where
 	}
 }
 
+impl<AccountId, A, H> AccountTouch<A::AssetId, AccountId> for CombineAssetsWithHolder<A, H>
+where
+	A: fungibles::Inspect<AccountId> + AccountTouch<A::AssetId, AccountId>,
+{
+	type Balance = <A as AccountTouch<A::AssetId, AccountId>>::Balance;
+	fn deposit_required(asset: A::AssetId) -> Self::Balance {
+		A::deposit_required(asset)
+	}
+	fn should_touch(asset: A::AssetId, who: &AccountId) -> bool {
+		A::should_touch(asset, who)
+	}
+	fn touch(
+		asset: A::AssetId,
+		who: &AccountId,
+		depositor: &AccountId,
+	) -> sp_runtime::DispatchResult {
+		A::touch(asset, who, depositor)
+	}
+}
+
 impl<AccountId, A, H> fungibles::Create<AccountId> for CombineAssetsWithHolder<A, H>
 where
 	A: fungibles::Create<AccountId>,
@@ -451,5 +471,19 @@ where
 	}
 	fn done_withdraw(asset: Self::AssetId, who: &AccountId, amount: Self::Balance) {
 		A::done_withdraw(asset, who, amount)
+	}
+}
+
+impl<AccountId, A, H> fungibles::Refund<AccountId> for CombineAssetsWithHolder<A, H>
+where
+	A: fungibles::Refund<AccountId>,
+{
+	type AssetId = A::AssetId;
+	type Balance = A::Balance;
+	fn deposit_held(id: Self::AssetId, who: AccountId) -> Option<(AccountId, Self::Balance)> {
+		A::deposit_held(id, who)
+	}
+	fn refund(id: Self::AssetId, who: AccountId) -> sp_runtime::DispatchResult {
+		A::refund(id, who)
 	}
 }

@@ -23,9 +23,7 @@ use frame_support::{CloneNoBound, EqNoBound, Parameter, PartialEqNoBound};
 use scale_info::TypeInfo;
 use sp_core::ConstU32;
 use sp_runtime::{traits::Member, BoundedVec, DispatchError, DispatchResult, Weight};
-use verifiable::{
-	ring::ark_vrf::suites::bandersnatch::BandersnatchSha512Ell2, BatchProofItem, GenerateVerifiable,
-};
+use verifiable::{ring::ark_vrf::suites::bandersnatch::BandersnatchSha512Ell2, GenerateVerifiable};
 
 /// Identity of personhood.
 ///
@@ -437,14 +435,57 @@ pub struct RevisedContextualAlias {
 	pub ca: ContextualAlias,
 }
 
+impl RevisedContextualAlias {
+	/// Whether `self` is at least as recent as `other` for the same alias and ring.
+	pub fn supersedes(&self, other: &Self) -> bool {
+		self.ca == other.ca && self.ring == other.ring && self.revision >= other.revision
+	}
+}
+
+/// A single membership proof to batch-verify within a ring.
+///
+/// The ring (its configuration and members set) is selected by the verifier via
+/// `(identifier, ring_index, revision)` and shared across the whole batch, so each item only
+/// carries the proof together with the context and message it was created for. The verifier
+/// fills in the ring information before delegating to the crypto batch verifier.
+#[derive(Clone)]
+pub struct RingMembershipProof<Proof> {
+	/// The ring VRF proof to validate.
+	pub proof: Proof,
+	/// The context under which the proof was created.
+	pub context: Vec<u8>,
+	/// The message that was signed.
+	pub message: Vec<u8>,
+}
+
+/// An abstract interface defining the proof type and the validation method for a membership
+/// proof, bound to a collection identifier, a context, and a message, and resulting with the
+/// alias of the prover inside the context.
+///
+/// This lets proof consumers (e.g. `pallet-coinage`) stay generic over the concrete proof type
+/// while proof providers (e.g. `pallet-people`) supply both the type and its validation.
+pub trait ValidateProof {
+	/// The type of the proof to be validated.
+	type Proof;
+
+	/// Validate the given proof of membership in the collection identified by `identifier`
+	/// against the context and the message. Return the alias of the prover if the proof is
+	/// valid.
+	#[allow(clippy::result_unit_err)]
+	fn validate_proof(
+		identifier: &Identifier,
+		proof: &Self::Proof,
+		context: &Context,
+		msg: &[u8],
+	) -> Result<Alias, ()>;
+}
+
 /// Verify ring membership proofs against a collection's rings.
 ///
-/// Implementors expose both single and batch verification, as well as
-/// revision-aware variants that accept proofs built against an older root
-/// still retained by the implementation (e.g. during a grace period or within
-/// a sliding window of recent roots). [`Self::ring_revision`] and
-/// [`Self::is_revision_valid`] let callers discover which revisions are
-/// currently accepted.
+/// Implementors expose revision-aware single and batch verification for proofs built against the
+/// current root or an older root still retained by the implementation (e.g. during a grace period
+/// or within a sliding window of recent roots). [`Self::ring_revision`] and
+/// [`Self::is_revision_valid`] let callers discover which revisions are currently accepted.
 pub trait MembershipProver {
 	type Crypto: GenerateVerifiable<
 		Member: Parameter + MaxEncodedLen,
@@ -452,14 +493,6 @@ pub trait MembershipProver {
 		Signature: Parameter + Send + Sync,
 	>;
 
-	/// Check whether the provided proof is valid for a member of a particular collection.
-	fn verify_membership(
-		identifier: &Identifier,
-		proof: &<Self::Crypto as GenerateVerifiable>::Proof,
-		ring_index: RingIndex,
-		context: Context,
-		msg: &[u8],
-	) -> Result<RevisedContextualAlias, DispatchError>;
 	/// Check whether the provided proof is valid for a member at a specific revision.
 	///
 	/// This allows verification against old roots that are retained during the grace period.
@@ -468,7 +501,7 @@ pub trait MembershipProver {
 	///
 	/// Revisions from deleted collections and removed rings are instantly expired and will
 	/// fail verification.
-	fn verify_membership_at_rev(
+	fn verify_membership(
 		identifier: &Identifier,
 		proof: &<Self::Crypto as GenerateVerifiable>::Proof,
 		ring_index: RingIndex,
@@ -476,27 +509,9 @@ pub trait MembershipProver {
 		context: Context,
 		msg: &[u8],
 	) -> Result<ContextualAlias, DispatchError>;
-	/// Batch-verify multiple membership proofs against one ring in a collection.
-	///
-	/// Each item in `items` carries a proof together with the message and context it was created
-	/// for. The returned vector preserves input order exactly: the i-th element corresponds to the
-	/// i-th input item.
-	///
-	/// The implementation loads collection metadata and the ring root **once** for the whole
-	/// batch, then delegates to the crypto batch verifier.
-	///
-	/// The verifier may aggregate proofs internally for speed. On failure, it reports only that
-	/// the batch is invalid and does not identify which individual proof failed.
-	fn verify_memberships_in_ring(
-		identifier: &Identifier,
-		ring_index: RingIndex,
-		items: &[BatchProofItem<<Self::Crypto as GenerateVerifiable>::Proof>],
-	) -> Result<Vec<RevisedContextualAlias>, DispatchError>;
 	/// Batch-verify multiple membership proofs against a specific revision of a ring's root.
 	///
-	/// Combines the batch verification of [`Self::verify_memberships_in_ring`] with the
-	/// revision-aware root lookup of [`Self::verify_membership_at_rev`].
-	///
+	/// Combines batch verification with revision-aware root lookup.
 	/// This allows verification against old roots that are retained during the grace period.
 	/// If the revision matches the current root, it verifies against the current root.
 	/// Otherwise, it looks up the root for old revisions.
@@ -507,11 +522,17 @@ pub trait MembershipProver {
 	/// Each item in `items` carries a proof together with the message and context it was created
 	/// for. The returned vector preserves input order exactly: the i-th element corresponds to the
 	/// i-th input item.
-	fn verify_memberships_in_ring_at_rev(
+	///
+	/// The implementation loads collection metadata and the selected ring root once for the whole
+	/// batch, then delegates to the crypto batch verifier.
+	///
+	/// The verifier may aggregate proofs internally for speed. On failure, it reports only that
+	/// the batch is invalid and does not identify which individual proof failed.
+	fn verify_memberships_in_ring(
 		identifier: &Identifier,
 		ring_index: RingIndex,
 		revision: RevisionIndex,
-		items: &[BatchProofItem<<Self::Crypto as GenerateVerifiable>::Proof>],
+		items: &[RingMembershipProof<<Self::Crypto as GenerateVerifiable>::Proof>],
 	) -> Result<Vec<ContextualAlias>, DispatchError>;
 	/// Query the current revision of a particular ring.
 	///
@@ -532,12 +553,33 @@ pub trait MembershipProver {
 	/// Returns the unix timestamp in seconds at which the given revision was committed on
 	/// the source chain.
 	///
-	/// Returns `None` if the collection, ring, or revision is not currently retained.
+	/// Returns `None` if the collection, ring, or revision is not retained. An implementation that
+	/// dates a revision only once a successor supersedes it also returns `None` for the current
+	/// revision.
 	fn revision_source_time(
 		identifier: &Identifier,
 		ring_index: RingIndex,
 		revision: RevisionIndex,
 	) -> Option<u64>;
+	/// Returns the source time of the ring's newest root, which is when the ring last changed.
+	///
+	/// `None` means nothing dates the ring: it has no root, or the implementation does not date
+	/// the current revision. It never means the ring is gone, so a caller needs a fallback.
+	///
+	/// The default pairs [`Self::ring_revision`] with [`Self::revision_source_time`]. Override it
+	/// where the current root's time lives in separate storage, otherwise it returns `None` for
+	/// every ring.
+	fn latest_root_source_time(identifier: &Identifier, ring_index: RingIndex) -> Option<u64> {
+		let revision = Self::ring_revision(identifier, ring_index)?;
+		Self::revision_source_time(identifier, ring_index, revision)
+	}
+	/// How long, in seconds, a superseded revision keeps verifying once its successor is
+	/// committed.
+	///
+	/// Measured from the successor's source time, the same reference
+	/// [`Self::latest_root_source_time`] returns, so a caller can compare its own retention
+	/// against this one directly. Return zero only if superseded revisions stop verifying at once.
+	fn old_root_retention() -> u64;
 }
 
 /// Multi-context membership proof verification.
@@ -545,17 +587,8 @@ pub trait MembershipProver {
 /// A single proof carries multiple aliases, corresponding 1:1 to the `contexts`. A valid proof is
 /// guaranteed to have been created by a single ring member.
 pub trait MembershipMultiProver: MembershipProver {
-	/// Verify a multi-context proof against the current sliding window of recent roots.
-	fn verify_membership_multi_context(
-		identifier: &Identifier,
-		proof: &<Self::Crypto as GenerateVerifiable>::Proof,
-		ring_index: RingIndex,
-		contexts: &[Context],
-		msg: &[u8],
-	) -> Result<Vec<RevisedContextualAlias>, DispatchError>;
-
 	/// Verify a multi-context proof against a specific revision.
-	fn verify_membership_multi_context_at_rev(
+	fn verify_membership_multi_context(
 		identifier: &Identifier,
 		proof: &<Self::Crypto as GenerateVerifiable>::Proof,
 		ring_index: RingIndex,
@@ -599,7 +632,7 @@ pub trait AppendOnlyMembers: MembershipProver {
 	/// top-most ring will result in an error.
 	///
 	/// Once a ring is removed, its revisions are instantly expired and all verification functions
-	/// (`verify_membership_at_rev`, `verify_memberships_in_ring_at_rev`, `is_revision_valid`)
+	/// (`verify_membership`, `verify_memberships_in_ring`, `is_revision_valid`)
 	/// will reject proofs against them, even if the old roots are still retained in storage.
 	fn remove_ring(identifier: &Identifier, ring_index: RingIndex) -> DispatchResult;
 	/// Query the status of a particular ring.
@@ -626,33 +659,36 @@ pub trait AppendOnlyMembers: MembershipProver {
 		-> DispatchResult;
 }
 
-/// Provides relay-chain per-block randomness. Used wherever a winner check would be
-/// vulnerable to grinding under the public, slowly-rotating epoch randomness.
+/// A trait that is able to provide randomness paired with the moment it was produced.
 ///
-/// The primary source is the relay chain per-block randomness
-/// (`CURRENT_BLOCK_RANDOMNESS`). Per-block randomness is required because users may
-/// have partial control over their account ID or alias and the winner threshold can
-/// be low: any source that is fixed and public ahead of time (e.g.
-/// `ONE_EPOCH_AGO_RANDOMNESS`, which only rotates each BABE epoch) lets a user grind
-/// an account / alias / submission time that wins under the known value.
+/// The moment is expressed in the implementation's own clock, e.g. a relay chain block
+/// number.
 ///
-/// The tradeoff is that a collator scheduled to build at relay parent N can choose
-/// silence, forcing the parachain to use relay parent N+1's randomness instead, at
-/// the cost of the rewards that slot would have paid them. Each reroll costs one
-/// block of rewards and only affects the slots that collator was assigned, so the
-/// attack is bounded and metered on-chain.
-///
-/// Returns `None` when no usable randomness is available; callers must skip the
-/// action (e.g. opening a prize pool, finalizing a scratch reward) rather than
-/// substitute a predictable value.
-pub trait CurrentBlockRandomness {
-	/// Returns randomness for winner selection.
-	fn randomness() -> Option<[u8; 32]>;
+/// The returned randomness should only be used to distinguish commitments made
+/// before it became determinable. To do so, ensure no further commitments may be made,
+/// record [`Self::current_moment`] after the last commitment, and regularly call
+/// [`Self::randomness`] until it returns a randomness with a moment strictly greater than the
+/// recorded one: such randomness was provably not determinable by anyone when the commitments
+/// closed.
+pub trait MomentRandomness<Moment> {
+	/// Get the latest randomness, along with the moment since when it was determinable
+	/// by chain observers.
+	///
+	/// Returns `None` when no randomness has ever been available; callers must skip or
+	/// defer the action (e.g. opening a prize pool) rather than substitute a predictable
+	/// value.
+	fn randomness() -> Option<([u8; 32], Moment)>;
 
-	/// Set up relay state so that `randomness()` returns a valid value. Used in
-	/// benchmark setup.
+	/// The moment to record when closing commitments and later compare with randomness' moment.
+	fn current_moment() -> Moment;
+
+	/// Set the randomness and the moment it was produced at. Used in benchmark setup.
 	#[cfg(feature = "runtime-benchmarks")]
-	fn setup_randomness();
+	fn set_randomness(randomness: [u8; 32], moment: Moment);
+
+	/// Set the moment returned by [`Self::current_moment`]. Used in benchmark setup.
+	#[cfg(feature = "runtime-benchmarks")]
+	fn set_current_moment(moment: Moment);
 }
 
 /// Trait to add and remove members.
@@ -849,7 +885,7 @@ pub enum Statement {
 	/// particular place on somebody's body.
 	///
 	/// The particular tattoo is that which is defined by `design`. The place on the body it must
-	/// exist is TODO.
+	/// exist is yet to be specified — see TODO(paritytech/individuality#1118).
 	///
 	/// The statement comes with `evidence` to provide a hint of what evidence should be considered
 	/// in the decision making. This may not be comprehensive.
@@ -889,6 +925,12 @@ pub struct Callback<Params, RuntimeCall> {
 impl<Params: Encode, RuntimeCall: Decode> Callback<Params, RuntimeCall> {
 	pub const fn from_parts(pallet_index: u8, call_index: u8) -> Self {
 		Self { pallet_index, call_index, phantom: PhantomData }
+	}
+	pub const fn pallet_index(&self) -> u8 {
+		self.pallet_index
+	}
+	pub const fn call_index(&self) -> u8 {
+		self.call_index
 	}
 	pub fn curry(&self, args: Params) -> Result<RuntimeCall, codec::Error> {
 		(self.pallet_index, self.call_index, args).using_encoded(|mut d| Decode::decode(&mut d))

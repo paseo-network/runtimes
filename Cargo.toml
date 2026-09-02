@@ -35,7 +35,16 @@ len_zero = { level = "allow", priority = 2 }
 [workspace.dependencies]
 
 # ---- Individuality (proof-of-personhood) external deps ----
-verifiable = { git = "https://github.com/paritytech/verifiable", rev = "93464a69a9aeb0db5d392aae5963ca1d8b5d6fa5", default-features = false, version = "*" }
+# `verifiable` moves from the git rev to crates.io 0.3.0. The version number goes DOWN
+# (the git rev self-reports 0.5.0) but 0.3.0 is 42 commits NEWER: the maintainers reset the
+# dev version for the first crates.io release (`6a2cad6 "Set version to 0.3"`).
+# The move is FORCED, not optional: individuality v0.3.1's `pallets/members` does not compile
+# against the git rev (`BatchProofItem` gained two generics and `batch_validate` changed arity).
+# Ring builder-params are byte-identical across the two revisions, so `ChunkPageHashesInitialization`
+# still no-ops over People's existing chunk page hashes.
+# ⚠ The stored `Members`/`MembersCommitment` shape is NOT identical (768 B -> 288 B); that is a
+# storage-migration concern handled per-pallet, not a pin concern.
+verifiable = { version = "0.3.0", default-features = false }
 alloy-core = { version = "1.2.1", default-features = false }
 ethereum-standards = { version = "0.1.3", default-features = false }
 bounded-collections = { version = "0.3.2", default-features = false }
@@ -50,6 +59,22 @@ sp-statement-store = { version = "26.0.0", default-features = false }
 pallet-assets-freezer = { version = "0.16.0", default-features = false }
 pallet-verify-signature = { version = "0.11.0", default-features = false }
 pallet-pgas-allowance = { version = "0.3.0", default-features = false }
+# needed by the individuality pallets from v0.3.x on (all `sp_core::blake2_256` call sites moved here)
+sp-crypto-hashing = { version = "0.1.0", default-features = false }
+# ---- arkworks / EC host-call split, required by `support/src/crypto*` from v0.3.x on ----
+# ⚠ `sp-crypto-ec-utils` is NOT frame-independent: it tracks `sp-runtime-interface`.
+#      0.21.1 -> sp-runtime-interface ^35  (this workspace, polkadot-sdk 2603)
+#      0.23.0 -> sp-runtime-interface ^37  (individuality's own pin, polkadot-sdk 2606)
+#   Taking upstream's 0.23.0 would drag sp-runtime-interface 37 into the graph and manufacture
+#   the very SDK conflict this port is designed to avoid. Pin 0.21.1.
+sp-crypto-ec-utils = { version = "0.21.1", default-features = false }
+ark-bls12-381-ext = { version = "0.6", default-features = false }
+ark-ec = { version = "0.6", default-features = false }
+ark-ed-on-bls12-381-bandersnatch-ext = { version = "0.6", default-features = false }
+ark-ff = { version = "0.6", default-features = false }
+ark-scale = { version = "0.0.14", default-features = false }
+getrandom = { version = "0.2", default-features = false }
+spin = { version = "0.9", default-features = false, features = ["once"] }
 
 # ---- Individuality (proof-of-personhood) local crates ----
 indiv-support = { path = "support", default-features = false }
