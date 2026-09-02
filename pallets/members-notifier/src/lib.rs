@@ -64,6 +64,8 @@ extern crate alloc;
 #[cfg(feature = "runtime-benchmarks")]
 pub mod benchmarking;
 pub mod migration;
+/// PASEO-LOCAL. Does not exist upstream — see the module documentation.
+pub mod migration_paseo;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
@@ -115,7 +117,21 @@ pub mod pallet {
 		SaturatedConversion, Saturating,
 	};
 
+	/// PASEO-LOCAL DEVIATION from individuality v0.3.1.
+	///
+	/// Upstream ships this pallet with no storage version, because upstream's `next-people-paseo`
+	/// is launched from a genesis preset: it starts with no subscribers, so an empty
+	/// `SubscribedCollections` is CORRECT there and nothing has to be seeded. `people-paseo`
+	/// starts with AssetHub (para 1000) already subscribed, so an empty `SubscribedCollections`
+	/// is a silent outage. Declaring a version is what lets
+	/// [`migration_paseo::MigrateV0ToV1`] be a `VersionedMigration`.
+	///
+	/// Keep this at `1` until a further storage change lands; bump it in lockstep with a new
+	/// `VersionedMigration`.
+	pub const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+
 	#[pallet::pallet]
+	#[pallet::storage_version(STORAGE_VERSION)]
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
@@ -1298,7 +1314,11 @@ pub mod pallet {
 		/// Because all we need to store in `SubscribedCollections` are collections having any (>0)
 		/// subscribers, then the map stores no count. Because of that, it has to be rebuilt every
 		/// time there's a change in subscriptions.
-		fn rebuild_subscribed_collections() {
+		// PASEO-LOCAL DEVIATION from individuality v0.3.1: `pub(crate)` instead of private, so
+		// that `migration_paseo::v1::SeedSubscribedCollections` can call the very function the
+		// runtime uses. Seeding the map by any other route would be a second implementation of
+		// this rule, and the two could drift.
+		pub(crate) fn rebuild_subscribed_collections() {
 			let _ = SubscribedCollections::<T>::clear(Self::max_subscribed_collections(), None);
 			for (_, info) in Subscribers::<T>::iter() {
 				for (identifier, _) in info.collections.iter() {
@@ -1308,7 +1328,9 @@ pub mod pallet {
 		}
 
 		/// Exact upper bound on `SubscribedCollections` entries.
-		fn max_subscribed_collections() -> u32 {
+		// PASEO-LOCAL DEVIATION: `pub(crate)` so the migration can weigh the `clear` that
+		// `rebuild_subscribed_collections` performs. Body unchanged.
+		pub(crate) fn max_subscribed_collections() -> u32 {
 			T::MaxSubscribers::get().saturating_mul(T::MaxCollectionsPerSubscriber::get())
 		}
 
