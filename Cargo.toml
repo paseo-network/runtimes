@@ -35,7 +35,15 @@ len_zero = { level = "allow", priority = 2 }
 [workspace.dependencies]
 
 # ---- Individuality (proof-of-personhood) external deps ----
-verifiable = { git = "https://github.com/paritytech/verifiable", rev = "93464a69a9aeb0db5d392aae5963ca1d8b5d6fa5", default-features = false, version = "*" }
+# NOTE (PCF, individuality v0.3.1 port): moved off the git rev `93464a6` (which self-reports
+# version 0.5.0) onto crates.io 0.3.0. Despite the lower version number, crates.io 0.3.0 is 42
+# commits NEWER — the maintainers reset the dev version down for the first public release.
+# The move is FORCED: individuality v0.3.x `pallets/members` and `pallets/members-subscriber`
+# do not compile against the git rev (`BatchProofItem` gained `config`/`members` fields and
+# `batch_validate` gained two parameters). Builder params / ring SRS blobs are byte-identical
+# across the two revisions, so chunk page hashes and ring verifier keys are unaffected.
+# See guides/_recon/INDIVIDUALITY_STAGE0_RESULT.md §5.
+verifiable = { version = "0.3.0", default-features = false }
 alloy-core = { version = "1.2.1", default-features = false }
 ethereum-standards = { version = "0.1.3", default-features = false }
 bounded-collections = { version = "0.3.2", default-features = false }

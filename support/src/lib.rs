@@ -25,6 +25,8 @@ pub mod labels;
 pub mod members_notifier_subscriber;
 pub mod pgas;
 pub mod traits;
+pub mod tx_priority;
+pub mod weight_budget;
 
 pub mod utils {
 	use alloc::vec::Vec;
