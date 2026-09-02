@@ -51,7 +51,21 @@ fn coinage_call_requires_value_transfer_auth(call: &indiv_pallet_coinage::Call<R
 		Call::pay_for_recycler_unload_fee_token_with_coin { .. } |
 		Call::pay_for_recycler_unload_fee_token_with_native { .. } |
 		Call::pay_for_recycler_unload_fee_token_with_external_asset { .. } |
-		Call::unload_recycler_into_external_asset_and_vouchers { .. } |
+		// v0.3.1, call index 9. REPLACES `unload_recycler_into_external_asset_and_vouchers`,
+		// which held the SAME index and was also gated here. Same class: it unloads a holder's
+		// coin value out to the external asset.
+		Call::unload_recycler_into_external_asset_and_loaded_coins { .. } |
+		// v0.3.1, call index 17. Unloads value out of an archived recycler to the external
+		// asset; signed by the holder, spends coin-denominated value.
+		Call::unload_archived_recycler_into_external_asset { .. } |
+		// v0.3.1, call index 19. Signed (`SponsorOrigin`), and its optional `initial_funding`
+		// moves an arbitrary `(currency, amount)` out of the creator's balance -- which may be
+		// the protected asset. Gated.
+		Call::create_sponsored_instance { .. } |
+		// v0.3.1, call index 20. Moves an arbitrary currency from the signer into a pot.
+		Call::fund_pot { .. } |
+		// v0.3.1, call index 21. Pays an arbitrary currency out of a pot to the signer.
+		Call::withdraw_pot_funds { .. } |
 		Call::unload_recycler_into_external_asset_non_anonymous { .. } |
 		Call::unload_recyclers_into_external_asset_non_anonymous { .. } |
 		Call::unload_recycler_into_coins { .. } |
@@ -63,8 +77,15 @@ fn coinage_call_requires_value_transfer_auth(call: &indiv_pallet_coinage::Call<R
 		Call::load_recycler_with_external_asset { .. } |
 		Call::load_recycler_with_external_asset_unpaid { .. } |
 		Call::load_recycler_with_external_asset_unpaid_batch { .. } |
-		// Governance/admin configuration of the pallet's underlying asset; not a value transfer.
-		Call::set_underlying_asset_id { .. } |
+		// Admin-only (`AdminOrigin`, wired to `EnsureRoot`) instance configuration. No holder
+		// value moves and the caller cannot direct funds to itself.
+		Call::create_sufficient_instance { .. } |
+		Call::make_instance_sufficient { .. } |
+		Call::make_instance_sponsored { .. } |
+		// Permissionless, but it only re-prices an instance's own load collateral: value moves
+		// between the pot's free balance and its holds, never out to a caller-chosen account.
+		// The signer is not a beneficiary, so the value-transfer gate does not apply.
+		Call::collapse_load_deposits { .. } |
 		// Permissionless/authorized housekeeping that only reclaims expired or dust state. These
 		// touch no holder's coin value (and several are authorized, not signed by a holder).
 		Call::clean_recycler { .. } |

@@ -1564,9 +1564,133 @@ impl indiv_pallet_coinage::BenchmarkHelper<Runtime> for CoinageBenchHelper {
 	}
 }
 
+/// Union of the native balance and the chain's assets, so a coinage instance can be denominated
+/// in the native token as well as in an asset. Mirrors upstream's `NativeAndAssets`.
+///
+/// Required by v0.3.1: `Config::Fungibles` now has to cover whatever `NativeAssetKind` names,
+/// because the fee paths short-circuit to a plain `Fungibles::transfer` when an instance's asset
+/// IS the native one. With the old assets-only binding that transfer could not be performed.
+pub type NativeAndAssets = frame_support::traits::fungible::UnionOf<
+	Balances,
+	AssetsWithHolder,
+	assets_common::local_and_foreign_assets::TargetFromLeft<crate::xcm_config::RelayLocation, Location>,
+	Location,
+	AccountId,
+>;
+
+/// PASEO-LOCAL. `indiv_pallet_coinage::Config::FeeConversion` at individuality v0.3.1 requires
+/// `pallet_asset_conversion::{Swap, QuotePrice}` — an AMM. Paseo's People chain has NO
+/// `pallet-asset-conversion` and no `PoolAssets` instance (confirmed against live People
+/// metadata: the runtime has `AssetRate` at index 13 and no AMM at all). Upstream's
+/// `next-people-paseo` carries one at indices 18/19; Paseo does not.
+///
+/// Coinage only ever reaches `FeeConversion` when a coin instance's asset is NOT the native
+/// asset: both `quote_asset_for_native_fee` and `charge_asset_and_transfer_native` short-circuit
+/// to a plain transfer when `asset_id == NativeAssetKind::get()`.
+///
+/// So this adapter FAILS CLOSED. `quote_price_*` returns `None`, which is the trait's documented
+/// "the pool does not exist" answer and which coinage already turns into
+/// `FeeConversionError::Unavailable` / `CannotConvertAssetToNative`. Swaps return an error and
+/// move no funds.
+///
+/// Consequences, stated plainly:
+///   * native-denominated instances — unaffected, the AMM is never consulted;
+///   * non-native instances — paid-unload fee paths fail LOUDLY with a clear error.
+///
+/// This is deliberately NOT an `AssetRate`-backed shim. `Swap` moves real funds; backing it with
+/// a governance-set rate and no liquidity would either mint or lose value silently. A loud
+/// failure is the only safe placeholder.
+///
+/// REQUIRED BEFORE ENACTMENT — one of:
+///   (a) confirm the coinage migration maps every existing coin to a NATIVE-denominated
+///       instance, in which case this adapter is never reached and can stay; or
+///   (b) adopt `pallet-asset-conversion` + a `PoolAssets` instance (upstream's People indices
+///       18 and 19, both confirmed free on Paseo) AND seed the native/CASH pool with liquidity.
+///       An AMM with no pool fails exactly like this adapter does.
+/// The coinage migration is owned by another agent; this choice is theirs to close.
+pub struct CoinageFeeConversion;
+
+impl pallet_asset_conversion::QuotePrice for CoinageFeeConversion {
+	type Balance = Balance;
+	type AssetKind = Location;
+
+	fn quote_price_tokens_for_exact_tokens(
+		_asset1: Self::AssetKind,
+		_asset2: Self::AssetKind,
+		_amount: Self::Balance,
+		_include_fee: bool,
+	) -> Option<Self::Balance> {
+		None
+	}
+
+	fn quote_price_exact_tokens_for_tokens(
+		_asset1: Self::AssetKind,
+		_asset2: Self::AssetKind,
+		_amount: Self::Balance,
+		_include_fee: bool,
+	) -> Option<Self::Balance> {
+		None
+	}
+}
+
+impl pallet_asset_conversion::Swap<AccountId> for CoinageFeeConversion {
+	type Balance = Balance;
+	type AssetKind = Location;
+
+	fn max_path_len() -> u32 {
+		2
+	}
+
+	fn swap_exact_tokens_for_tokens(
+		_sender: AccountId,
+		_path: alloc::vec::Vec<Self::AssetKind>,
+		_amount_in: Self::Balance,
+		_amount_out_min: Option<Self::Balance>,
+		_send_to: AccountId,
+		_keep_alive: bool,
+	) -> Result<Self::Balance, sp_runtime::DispatchError> {
+		Err(sp_runtime::DispatchError::Other("coinage: no asset-conversion market on Paseo People"))
+	}
+
+	fn swap_tokens_for_exact_tokens(
+		_sender: AccountId,
+		_path: alloc::vec::Vec<Self::AssetKind>,
+		_amount_out: Self::Balance,
+		_amount_in_max: Option<Self::Balance>,
+		_send_to: AccountId,
+		_keep_alive: bool,
+	) -> Result<Self::Balance, sp_runtime::DispatchError> {
+		Err(sp_runtime::DispatchError::Other("coinage: no asset-conversion market on Paseo People"))
+	}
+}
+
+/// Prices the permanent footprint of a sponsored coinage instance.
+pub struct CoinageInstanceCreationPrice;
+impl sp_runtime::traits::Convert<frame_support::traits::Footprint, Balance>
+	for CoinageInstanceCreationPrice
+{
+	fn convert(footprint: frame_support::traits::Footprint) -> Balance {
+		system_para_deposit(footprint.count.saturated_into(), footprint.size.saturated_into())
+	}
+}
+
+parameter_types! {
+	pub const CoinageInstanceCreationHoldReason: RuntimeHoldReason =
+		RuntimeHoldReason::Coinage(indiv_pallet_coinage::HoldReason::InstanceCreationDeposit);
+	pub storage CoinageLoadDeposit: (Location, Balance) =
+		(crate::xcm_config::RelayLocation::get(), system_para_deposit(4, 300));
+	/// POLICY, FLAGGED — DELIBERATELY `false`, WHERE UPSTREAM USES `true`.
+	///
+	/// Gates `create_sponsored_instance`, which is NEW in individuality v0.3.1. Paseo has no
+	/// sponsored instances today because the call did not exist, so `false` is the setting that
+	/// preserves current on-chain behaviour. Setting it `true` at enactment would open
+	/// permissionless instance creation on a live chain in the same block as the upgrade,
+	/// silently and with no extrinsic. Root can turn it on deliberately afterwards.
+	pub storage CoinageEnablePermissionless: bool = false;
+}
+
 impl indiv_pallet_coinage::Config for Runtime {
 	type MemberService = Members;
-	type CollectionOwner = CoinageCollectionOwner;
 	type RecyclerRingExponent = RecyclerRingExponent;
 	type PaidUnloadTokenRingExponent = PaidUnloadTokenRingExponent;
 	type UnixTime = Timestamp;
@@ -1576,28 +1700,55 @@ impl indiv_pallet_coinage::Config for Runtime {
 	type BenchmarkHelper = CoinageBenchHelper;
 	type MaximumAge = ConstU16<16>;
 	type NativeFungible = Balances;
-	type Fungibles = AssetsWithHolder;
-	type UnderlyingAssetIdManager = EnsureRoot<AccountId>;
+	// Widened from `AssetsWithHolder`; see `NativeAndAssets` above.
+	type Fungibles = NativeAndAssets;
+	// Replaces `UnderlyingAssetIdManager`, which was also `EnsureRoot`.
+	type AdminOrigin = EnsureRoot<AccountId>;
+	type SponsorOrigin = frame_system::EnsureSigned<AccountId>;
+	type EnablePermissionless = CoinageEnablePermissionless;
+	type LoadDeposit = CoinageLoadDeposit;
+	type InstanceCreationDeposit = frame_support::traits::fungible::HoldConsideration<
+		AccountId,
+		Balances,
+		CoinageInstanceCreationHoldReason,
+		CoinageInstanceCreationPrice,
+	>;
 	type MinimumExponent = ConstI8<0>;
 	type MaximumExponent = ConstI8<14>;
 	type MinimumExponentForOutputUnloadFee = ConstI8<0>;
 	type MaxSplitOutputs = ConstU32<32>;
 	type MaxConsolidation = ConstU32<64>;
 	type MaxBatchUnpaidLoad = ConstU32<10>;
-	type UnderlyingAssetUnit = ConstUint<{ 10u128.pow(4) }>; // $0.01, the unit is 10^6.
 	type RecyclerExpirationTime = ConstU32<{ 90 * 24 * 60 * 60 }>; // ~3 months
 	type UnloadTokenTimePeriodPeopleLitePeople = ConstU32<{ 24 * 60 * 60 }>; // 1 day
 
-	// Allowance of $2 per time period (fee is dynamic based on multiplier)
-	type UnloadTokenAllowancePerTimePeriodForPeople = ConstU128<{ 200 * 10u128.pow(4) }>;
-	// Allowance of $0.5 per time period (fee is dynamic based on multiplier)
-	type UnloadTokenAllowancePerTimePeriodForLitePeople = ConstU128<{ 50 * 10u128.pow(4) }>;
+	// ####################################################################################
+	// POLICY, FLAGGED — SILENT DENOMINATION CHANGE. DO NOT "RESTORE" THE OLD NUMBERS.
+	//
+	// v0.3.1 changed the bound on these two from `Get<FungiblesBalanceOf>` to
+	// `Get<NativeBalanceOf>`; the pallet doc went from "expressed in the underlying asset" to
+	// "expressed in the native currency". Both are `u128`, so Paseo's old values
+	// (`200 * 10^4` and `50 * 10^4`, i.e. $2.00 and $0.50 against a 10^6-decimal asset) still
+	// COMPILE — they would just mean 0.0002 PAS and 0.00005 PAS, far below any real unload fee,
+	// giving every person and lite person ZERO free unloads with no error anywhere.
+	//
+	// The values below are upstream's. They are NOT a translation of Paseo's old economics:
+	// Paseo's people:lite ratio was 4:1 ($2.00 / $0.50); upstream's is 2:1. Nobody has
+	// calibrated a PAS-denominated free-unload budget for Paseo. MUST be sanity-checked
+	// against the actual native unload fee before enactment.
+	// ####################################################################################
+	// Allowance of 20 whole native tokens per period (fee is dynamic based on multiplier).
+	type UnloadTokenAllowancePerTimePeriodForPeople = ConstU128<{ 20 * UNITS }>;
+	// Allowance of 10 whole native tokens per period (fee is dynamic based on multiplier).
+	type UnloadTokenAllowancePerTimePeriodForLitePeople = ConstU128<{ 10 * UNITS }>;
 	// Bumped temporarily; revisit once the wallet handles `maxFee` and the
 	// "user ran out of free unloads" UX.
 	type MaxFreeUnloadTokensPerTimePeriod = ConstU32<1000>;
-	type LitePeopleProof = LitePeopleProof;
-	type PeopleProof = PeopleProof;
-	type ConversionToAssetBalance = AssetRate;
+	// Replaces the separate `LitePeopleProof` / `PeopleProof` pair.
+	type MembershipProof = People;
+	// See `CoinageFeeConversion`: Paseo People has no AMM, so this fails closed.
+	type FeeConversion = CoinageFeeConversion;
+	type NativeAssetKind = crate::xcm_config::RelayLocation;
 	type WeightToFee = TransactionPayment;
 	type PaidUnloadTokenTimePeriod = ConstU32<{ 3 * 24 * 60 * 60 }>; // 3 days
 	type PaidUnloadTokenRingExpirationTime = ConstU32<{ 4 * 24 * 60 * 60 }>; // 4 days

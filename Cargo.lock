@@ -10919,6 +10919,7 @@ dependencies = [
  "indiv-pallet-value-transfer-auth",
  "indiv-support",
  "log",
+ "pallet-asset-conversion",
  "pallet-asset-rate",
  "pallet-asset-tx-payment",
  "pallet-assets",
