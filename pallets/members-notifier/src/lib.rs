@@ -31,6 +31,16 @@
 //! 4. Subscription ends via a call to `terminate_subscription` on the subscriber that also ends the
 //!    subscription on the notifier side.
 //!
+//! ## Whitelisted subscriptions
+//!
+//! Whitelisted parachains for which anyone may trigger subscription start with
+//! `subscribe_whitelisted`, without going through governance. The collections and the
+//! members-subscriber pallet index come from the whitelist, not from the caller.
+//!
+//! A whitelist entry is one-shot: it is consumed by the first subscription of that parachain,
+//! whether through `subscribe_whitelisted` or governance's `subscribe`. Once a parachain is
+//! unsubscribed, only `ManageOrigin` can subscribe it again.
+//!
 //! ## Updates distribution mechanism
 //!
 //! Updates distribution is handled by an offchain worker that submits authorized transactions.
@@ -53,6 +63,7 @@ extern crate alloc;
 
 #[cfg(feature = "runtime-benchmarks")]
 pub mod benchmarking;
+pub mod migration;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
@@ -69,8 +80,10 @@ use codec::{Encode, MaxEncodedLen};
 use cumulus_primitives_core::{GetChannelInfo, ParaId};
 use frame_support::traits::{EnsureOrigin, Get, GetCallName, UnixTime};
 use frame_system::offchain::{CreateAuthorizedTransaction, SubmitTransaction};
-use indiv_support::traits::{
-	Identifier, OnRingRootChange, RingIndex, RingRootOp, RingRootsProvider,
+use indiv_support::{
+	traits::{Identifier, OnRingRootChange, RingIndex, RingRootOp, RingRootsProvider},
+	tx_priority,
+	weight_budget::OcwWeightBudget,
 };
 use verifiable::GenerateVerifiable;
 use xcm::{opaque::latest::SendXcm, prelude::*};
@@ -182,6 +195,20 @@ pub mod pallet {
 	pub type Subscribers<T: Config> =
 		CountedStorageMap<_, Identity, ParaId, SubscriberInfo<T>, OptionQuery>;
 
+	/// Subscriptions anyone may activate.
+	///
+	/// An entry is consumed the first time the parachain subscribes, through either
+	/// `subscribe_whitelisted` or `subscribe`. Once consumed, only `ManageOrigin` can
+	/// subscribe that parachain again.
+	#[pallet::storage]
+	pub type SubscriptionWhitelist<T: Config> =
+		StorageMap<_, Identity, ParaId, WhitelistedSubscription<T>, OptionQuery>;
+
+	/// Collections at least one subscriber is subscribed to.
+	#[pallet::storage]
+	pub type SubscribedCollections<T: Config> =
+		StorageMap<_, Identity, Identifier, (), OptionQuery>;
+
 	/// Sequence number for sealed batch.
 	/// Incremented when a batch is sealed - ready for distribution.
 	/// Serves as the batch identifier for replay and distribution.
@@ -283,6 +310,62 @@ pub mod pallet {
 		ReplayCooldownActive,
 		/// Replay requested with an empty list of ring root indices.
 		EmptyRingIndices,
+		/// Parachain has no whitelisted subscription left to activate.
+		NotWhitelisted,
+	}
+
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T: Config> {
+		pub subscription_whitelist: Vec<GenesisWhitelistEntry>,
+		#[serde(skip)]
+		pub _phantom: core::marker::PhantomData<T>,
+	}
+
+	impl<T: Config> Default for GenesisConfig<T> {
+		fn default() -> Self {
+			Self { subscription_whitelist: Default::default(), _phantom: Default::default() }
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
+		fn build(&self) {
+			assert!(
+				self.subscription_whitelist.len() <= T::MaxSubscribers::get() as usize,
+				"genesis subscription whitelist holds more parachains than MaxSubscribers",
+			);
+
+			for entry in &self.subscription_whitelist {
+				let para_id = entry.para_id;
+				assert!(
+					!SubscriptionWhitelist::<T>::contains_key(para_id),
+					"duplicate parachain in genesis subscription whitelist: {para_id:?}",
+				);
+				let subscription = match Pallet::<T>::resolve_whitelist_entry(entry) {
+					Ok(subscription) => subscription,
+					Err(WhitelistEntryError::Collections(CollectionOrderViolation::Unsorted)) =>
+						panic!(
+							"genesis subscription whitelist collections for {para_id:?} must be \
+							 sorted by identifier"
+						),
+					Err(WhitelistEntryError::Collections(CollectionOrderViolation::Duplicate)) =>
+						panic!(
+							"genesis subscription whitelist collections for {para_id:?} must be \
+							 without duplicates"
+						),
+					Err(WhitelistEntryError::UnsupportedRingExponent(exponent)) => panic!(
+						"invalid ring exponent {exponent:?} in genesis subscription whitelist \
+						 for {para_id:?}"
+					),
+					Err(WhitelistEntryError::TooManyCollections) => panic!(
+						"genesis subscription whitelist for {para_id:?} holds more collections \
+						 than MaxCollectionsPerSubscriber"
+					),
+				};
+
+				SubscriptionWhitelist::<T>::insert(para_id, subscription);
+			}
+		}
 	}
 
 	/// Call declaration for members-subscriber pallet on subscriber chains.
@@ -325,26 +408,10 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::ManageOrigin::ensure_origin(origin)?;
 
-			ensure!(
-				!Subscribers::<T>::contains_key(subscriber_parachain_id),
-				Error::<T>::AlreadySubscribed
-			);
-			ensure!(
-				Subscribers::<T>::count() < T::MaxSubscribers::get(),
-				Error::<T>::TooManySubscribers
-			);
+			Self::ensure_collection_order(&members_collections)
+				.map_err(|_| Error::<T>::InvalidCollectionsList)?;
 
-			// Strictly ascending order required to guarantee uniqueness.
-			ensure!(
-				members_collections.windows(2).all(|w| w[0].0 < w[1].0),
-				Error::<T>::InvalidCollectionsList
-			);
-
-			Self::register_for_init(subscriber_parachain_id, members_collections, pallet_index)?;
-
-			Self::deposit_event(Event::Subscribed { para_id: subscriber_parachain_id });
-
-			Ok(())
+			Self::do_subscribe(subscriber_parachain_id, members_collections, pallet_index)
 		}
 
 		/// Unsubscribes a parachain.
@@ -395,6 +462,8 @@ pub mod pallet {
 
 			Subscribers::<T>::remove(para_id);
 			PendingInit::<T>::remove(para_id);
+			// After the removal, so a collection no other subscriber holds drops out.
+			Self::rebuild_subscribed_collections();
 
 			// Adjusting the current batch if the subscriber was part of it.
 			if let Some(mut current_batch) = CurrentBatch::<T>::get() {
@@ -535,17 +604,6 @@ pub mod pallet {
 
 			let actual_send_page = page_state.send_page;
 
-			// No subscribers — cleaning up the send buffer without sealing a batch.
-			if Subscribers::<T>::count() == 0 {
-				if actual_send_page == write_page {
-					PageState::<T>::mutate(|s| s.write_page = s.write_page.wrapping_add(1));
-				}
-				Self::cleanup_send_buffer(actual_send_page);
-				return Ok(Some(T::WeightInfo::enqueue_updates(0)).into());
-			}
-
-			let (sequence, source_time) = Self::seal_and_start_batch(actual_send_page, write_page);
-
 			// Collecting changed indices from send page, grouped by collection.
 			let mut actual_count: u32 = 0;
 			let mut changed_indices: BTreeMap<Identifier, Vec<RingIndex>> = BTreeMap::new();
@@ -555,6 +613,20 @@ pub mod pallet {
 				changed_indices.entry(identifier).or_default().push(ring_index);
 				actual_count = actual_count.saturating_add(1);
 			}
+
+			// Dropping updates for collections that lost their last subscriber after the change was
+			// recorded.
+			changed_indices
+				.retain(|identifier, _| SubscribedCollections::<T>::contains_key(identifier));
+
+			// No subscribers or nothing left for any subscriber.
+			// Draining the send buffer without sealing.
+			if Subscribers::<T>::count() == 0 || changed_indices.is_empty() {
+				Self::drain_without_sealing(actual_send_page, write_page);
+				return Ok(Some(T::WeightInfo::enqueue_updates(actual_count)).into());
+			}
+
+			let (sequence, source_time) = Self::seal_and_start_batch(actual_send_page, write_page);
 
 			// Storing sealed batch indices per collection.
 			for (identifier, mut indices) in changed_indices {
@@ -796,6 +868,33 @@ pub mod pallet {
 
 			Ok(().into())
 		}
+
+		/// Registers a whitelisted parachain as a subscriber, using the collections and pallet
+		/// index recorded in the whitelist.
+		///
+		/// The whitelist entry is consumed, so a parachain can be subscribed this way only
+		/// once. After an `unsubscribe`, only `ManageOrigin` can subscribe it again.
+		#[pallet::authorize(|source, subscriber_parachain_id| {
+			Self::authorize_subscribe_whitelisted(source, subscriber_parachain_id)
+		})]
+		#[pallet::call_index(7)]
+		#[pallet::weight(T::WeightInfo::subscribe_whitelisted())]
+		#[pallet::weight_of_authorize(T::WeightInfo::authorize_subscribe_whitelisted())]
+		pub fn subscribe_whitelisted(
+			origin: OriginFor<T>,
+			subscriber_parachain_id: ParaId,
+		) -> DispatchResult {
+			ensure_authorized(origin)?;
+
+			let subscription = SubscriptionWhitelist::<T>::get(subscriber_parachain_id)
+				.ok_or(Error::<T>::NotWhitelisted)?;
+
+			Self::do_subscribe(
+				subscriber_parachain_id,
+				subscription.collections,
+				subscription.pallet_index,
+			)
+		}
 	}
 
 	#[pallet::hooks]
@@ -869,6 +968,11 @@ pub mod pallet {
 			}
 		}
 
+		#[cfg(feature = "try-runtime")]
+		fn try_state(_n: BlockNumberFor<T>) -> Result<(), sp_runtime::TryRuntimeError> {
+			Self::do_try_state()
+		}
+
 		#[cfg(feature = "std")]
 		fn integrity_test() {
 			assert!(
@@ -902,41 +1006,39 @@ pub mod pallet {
 			// otherwise an OCW-submitted authorized transaction is silently
 			// dropped at the transaction-pool level and the whole
 			// flow (init pagination, batch send, etc.) stalls forever.
-			let block_weights = <T as frame_system::Config>::BlockWeights::get();
-			let normal_max = block_weights
-				.per_class
-				.get(DispatchClass::Normal)
-				.max_extrinsic
-				.expect("Normal class must have max_extrinsic configured");
-			let assert_fits = |name: &str, w: Weight| {
-				assert!(
-					w.all_lte(normal_max),
-					"`{name}` worst-case weight {w:?} exceeds Normal max_extrinsic \
-					 {normal_max:?} — lower MaxUpdatesPerBatch or reduce per-item cost",
-				);
-			};
+			let budget = OcwWeightBudget::from_normal_max::<T>();
 
 			let max_n = T::MaxUpdatesPerBatch::get();
-			assert_fits(
+			budget.assert_fits(
 				"request_replay",
 				T::WeightInfo::request_replay(max_n).saturating_add(
 					T::RequestReplayRemoteWeight::get().saturating_mul(max_n.into()),
 				),
 			);
-			assert_fits(
+			budget.assert_fits(
 				"enqueue_updates",
 				T::WeightInfo::enqueue_updates(max_n)
 					.saturating_add(T::WeightInfo::authorize_enqueue_updates()),
 			);
-			assert_fits(
+			budget.assert_fits(
 				"send_batch",
 				T::WeightInfo::send_batch(max_n)
 					.saturating_add(T::WeightInfo::authorize_send_batch()),
 			);
-			assert_fits(
+			budget.assert_fits(
 				"send_init_page",
 				T::WeightInfo::send_init_page(max_n)
 					.saturating_add(T::WeightInfo::authorize_send_init_page()),
+			);
+			budget.assert_fits(
+				"abandon_stuck_batch",
+				T::WeightInfo::abandon_stuck_batch()
+					.saturating_add(T::WeightInfo::authorize_abandon_stuck_batch()),
+			);
+			budget.assert_fits(
+				"subscribe_whitelisted",
+				T::WeightInfo::subscribe_whitelisted()
+					.saturating_add(T::WeightInfo::authorize_subscribe_whitelisted()),
 			);
 		}
 	}
@@ -945,6 +1047,21 @@ pub mod pallet {
 		fn ensure_local_source(source: TransactionSource) -> Result<(), TransactionValidityError> {
 			if !matches!(source, TransactionSource::InBlock | TransactionSource::Local) {
 				return Err(CustomInvalidity::TransactionNotLocal.into());
+			}
+			Ok(())
+		}
+
+		/// Ensures a collections list is ordered by identifier, strictly ascending.
+		pub(crate) fn ensure_collection_order<E>(
+			collections: &[(Identifier, E)],
+		) -> Result<(), CollectionOrderViolation> {
+			for pair in collections.windows(2) {
+				if pair[0].0 == pair[1].0 {
+					return Err(CollectionOrderViolation::Duplicate);
+				}
+				if pair[0].0 > pair[1].0 {
+					return Err(CollectionOrderViolation::Unsorted);
+				}
 			}
 			Ok(())
 		}
@@ -970,7 +1087,8 @@ pub mod pallet {
 
 			let validity = Self::build_local_validity(
 				ValidTransaction::with_tag_prefix("notifier:enqueue")
-					.and_provides(page_state.send_page),
+					.and_provides(page_state.send_page)
+					.priority(Self::local_priority()),
 			);
 			Ok((validity, Weight::zero()))
 		}
@@ -1002,7 +1120,8 @@ pub mod pallet {
 
 			let validity = Self::build_local_validity(
 				ValidTransaction::with_tag_prefix("notifier:send")
-					.and_provides((*sequence, *para_id)),
+					.and_provides((*sequence, *para_id))
+					.priority(Self::local_priority()),
 			);
 			Ok((validity, Weight::zero()))
 		}
@@ -1029,11 +1148,13 @@ pub mod pallet {
 			}
 
 			let validity = Self::build_local_validity(
-				ValidTransaction::with_tag_prefix("notifier:init").and_provides((
-					*para_id,
-					state.current_collection_index,
-					state.after_ring_index,
-				)),
+				ValidTransaction::with_tag_prefix("notifier:init")
+					.and_provides((
+						*para_id,
+						state.current_collection_index,
+						state.after_ring_index,
+					))
+					.priority(Self::local_priority()),
 			);
 			Ok((validity, Weight::zero()))
 		}
@@ -1050,27 +1171,55 @@ pub mod pallet {
 
 			let validity = Self::build_local_validity(
 				ValidTransaction::with_tag_prefix("notifier:abandon")
-					.and_provides(current_batch.sequence),
+					.and_provides(current_batch.sequence)
+					.priority(Self::local_priority()),
 			);
+			Ok((validity, Weight::zero()))
+		}
+
+		/// Validates a permissionless activation of a whitelisted subscription.
+		pub(crate) fn authorize_subscribe_whitelisted(
+			_source: TransactionSource,
+			para_id: &ParaId,
+		) -> Result<(ValidTransaction, Weight), TransactionValidityError> {
+			if !SubscriptionWhitelist::<T>::contains_key(para_id) {
+				return Err(CustomInvalidity::NotWhitelisted.into());
+			}
+			if Subscribers::<T>::contains_key(para_id) {
+				return Err(CustomInvalidity::AlreadySubscribed.into());
+			}
+			if Subscribers::<T>::count() >= T::MaxSubscribers::get() {
+				return Err(CustomInvalidity::TooManySubscribers.into());
+			}
+
+			let validity = ValidTransaction::with_tag_prefix("notifier:whitelisted")
+				.and_provides(*para_id)
+				.priority(tx_priority::USER_DEFAULT)
+				.longevity(TX_LONGEVITY)
+				.build()
+				.expect("tag prefix is not empty; qed");
 			Ok((validity, Weight::zero()))
 		}
 
 		/// Finalizes validity properties shared by all offchain-worker transactions.
 		///
-		/// Priority increases with block height (assigned at validation time) so a fresh
-		/// retry strictly outbids an earlier transaction with the same provides tag that
-		/// may be stranded in the pool, forcing a replacement.
 		/// A finite longevity lets a stranded retry self-evict rather than linger indefinitely.
 		/// Propagation is disabled because peers validate gossiped transactions with a source
 		/// `External`, which fail `ensure_local_source`.
 		fn build_local_validity(builder: ValidTransactionBuilder) -> ValidTransaction {
-			let priority = frame_system::Pallet::<T>::block_number().saturated_into::<u64>();
 			builder
-				.priority(priority)
 				.longevity(TX_LONGEVITY)
 				.propagate(false)
 				.build()
 				.expect("tag prefix is not empty; qed")
+		}
+
+		/// Background-progress priority with a block-height bump so a fresh retry strictly
+		/// outbids an earlier transaction with the same provides tag that may be stranded in the
+		/// pool.
+		fn local_priority() -> u64 {
+			tx_priority::BACKGROUND_PROGRESS
+				.saturating_add(frame_system::Pallet::<T>::block_number().saturated_into::<u64>())
 		}
 
 		/// Fetches ring root updates for a set of changed indices from `RingRootsProvider`.
@@ -1102,6 +1251,65 @@ pub mod pallet {
 			}
 
 			updates
+		}
+
+		/// Drains the send page without sealing a batch, for a page holding nothing any
+		/// subscriber is waiting for. The write page is advanced first so that draining
+		/// cannot push the send page past it.
+		pub(crate) fn drain_without_sealing(send_page: u16, write_page: u16) {
+			if send_page == write_page {
+				PageState::<T>::mutate(|s| s.write_page = s.write_page.wrapping_add(1));
+			}
+			Self::cleanup_send_buffer(send_page);
+		}
+
+		/// Asserts `SubscribedCollections` is exactly the union of every subscriber's
+		/// collections.
+		#[cfg(any(test, feature = "try-runtime"))]
+		pub(crate) fn do_try_state() -> Result<(), sp_runtime::TryRuntimeError> {
+			use alloc::collections::BTreeSet;
+			use sp_runtime::TryRuntimeError;
+
+			let expected = Subscribers::<T>::iter()
+				.flat_map(|(_, info)| {
+					info.collections.iter().map(|(id, _)| *id).collect::<Vec<_>>()
+				})
+				.collect::<BTreeSet<_>>();
+
+			for identifier in &expected {
+				if !SubscribedCollections::<T>::contains_key(identifier) {
+					return Err(TryRuntimeError::Other(
+						"subscribed collection missing from SubscribedCollections",
+					));
+				}
+			}
+			for identifier in SubscribedCollections::<T>::iter_keys() {
+				if !expected.contains(&identifier) {
+					return Err(TryRuntimeError::Other(
+						"SubscribedCollections entry has no subscriber",
+					));
+				}
+			}
+
+			Ok(())
+		}
+
+		/// Recomputes `SubscribedCollections`.
+		/// Because all we need to store in `SubscribedCollections` are collections having any (>0)
+		/// subscribers, then the map stores no count. Because of that, it has to be rebuilt every
+		/// time there's a change in subscriptions.
+		fn rebuild_subscribed_collections() {
+			let _ = SubscribedCollections::<T>::clear(Self::max_subscribed_collections(), None);
+			for (_, info) in Subscribers::<T>::iter() {
+				for (identifier, _) in info.collections.iter() {
+					SubscribedCollections::<T>::insert(identifier, ());
+				}
+			}
+		}
+
+		/// Exact upper bound on `SubscribedCollections` entries.
+		fn max_subscribed_collections() -> u32 {
+			T::MaxSubscribers::get().saturating_mul(T::MaxCollectionsPerSubscriber::get())
 		}
 
 		/// Clears the send page entries, advances send page, and updates last_update_block.
@@ -1237,6 +1445,48 @@ pub mod pallet {
 			)
 		}
 
+		/// Turns a genesis-shaped whitelist entry into the stored form, validating it.
+		pub fn resolve_whitelist_entry(
+			entry: &GenesisWhitelistEntry,
+		) -> Result<WhitelistedSubscription<T>, WhitelistEntryError> {
+			Self::ensure_collection_order(&entry.collections)
+				.map_err(WhitelistEntryError::Collections)?;
+
+			let mut resolved = Vec::with_capacity(entry.collections.len());
+			for (identifier, exponent) in &entry.collections {
+				let ring_exponent = RingExponent::new_from_exponent(*exponent)
+					.map_err(WhitelistEntryError::UnsupportedRingExponent)?;
+				resolved.push((*identifier, ring_exponent));
+			}
+
+			let collections = BoundedVec::try_from(resolved)
+				.map_err(|_| WhitelistEntryError::TooManyCollections)?;
+
+			Ok(WhitelistedSubscription { collections, pallet_index: entry.pallet_index })
+		}
+
+		/// Registers a subscriber and consumes its whitelist entry, if it has one.
+		fn do_subscribe(
+			para_id: ParaId,
+			collections: BoundedVec<(Identifier, RingExponent), T::MaxCollectionsPerSubscriber>,
+			pallet_index: u8,
+		) -> DispatchResult {
+			ensure!(!Subscribers::<T>::contains_key(para_id), Error::<T>::AlreadySubscribed);
+			ensure!(
+				Subscribers::<T>::count() < T::MaxSubscribers::get(),
+				Error::<T>::TooManySubscribers
+			);
+
+			SubscriptionWhitelist::<T>::remove(para_id);
+
+			Self::register_for_init(para_id, collections, pallet_index)?;
+			Self::rebuild_subscribed_collections();
+
+			Self::deposit_event(Event::Subscribed { para_id });
+
+			Ok(())
+		}
+
 		/// Registers a subscriber for initialization.
 		fn register_for_init(
 			para_id: ParaId,
@@ -1330,7 +1580,18 @@ pub mod pallet {
 		/// Clear all batch-related storage.
 		fn clear_batch() {
 			CurrentBatch::<T>::kill();
-			let _ = SealedBatchIndices::<T>::clear(T::MaxCollections::get(), None);
+
+			let cleared = SealedBatchIndices::<T>::clear(T::MaxUpdatesPerBatch::get(), None);
+			if cleared.maybe_cursor.is_some() {
+				log::error!(
+					target: LOG_TARGET,
+					"SealedBatchIndices exceeded MaxUpdatesPerBatch ({}), cleared {} entries \
+					 and more remain",
+					T::MaxUpdatesPerBatch::get(),
+					cleared.unique,
+				);
+			}
+
 			let _ = SubscribersWithCurrentBatch::<T>::clear(T::MaxSubscribers::get(), None);
 		}
 
@@ -1399,6 +1660,11 @@ impl<T: Config> OnRingRootChange<MembersOf<T>> for Pallet<T> {
 		ring_index: RingIndex,
 		_op: RingRootOp<&MembersOf<T>>,
 	) {
+		// Not recording changes that no subscriber asked for.
+		if !SubscribedCollections::<T>::contains_key(identifier) {
+			return;
+		}
+
 		let mut page = PageState::<T>::get().write_page;
 
 		if PendingUpdates::<T>::contains_key((page, identifier, ring_index)) {
@@ -1415,7 +1681,9 @@ impl<T: Config> OnRingRootChange<MembersOf<T>> for Pallet<T> {
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
-	fn bench_setup_worst_case() {
+	fn bench_setup_worst_case(identifier: Identifier) {
+		// Subscribed, so the recording path runs rather than the early return.
+		SubscribedCollections::<T>::insert(identifier, ());
 		let write_page = PageState::<T>::get().write_page;
 		PageUpdatesCount::<T>::insert(write_page, T::MaxUpdatesPerBatch::get());
 	}

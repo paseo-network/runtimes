@@ -6330,6 +6330,7 @@ dependencies = [
  "parity-scale-codec",
  "parking_lot 0.12.5",
  "scale-info",
+ "serde",
  "sp-core",
  "sp-io",
  "sp-runtime",

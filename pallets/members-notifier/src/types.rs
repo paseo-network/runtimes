@@ -87,6 +87,9 @@ pub enum CustomInvalidity {
 	SubscriberNotFound = 205,
 	NoPendingInit = 206,
 	BatchNotStuck = 207,
+	NotWhitelisted = 208,
+	TooManySubscribers = 209,
+	AlreadySubscribed = 210,
 }
 
 impl From<CustomInvalidity> for TransactionValidityError {
@@ -118,6 +121,56 @@ pub struct PendingInitState<T: Config> {
 
 	#[codec(skip)]
 	pub _phantom: PhantomData<T>,
+}
+
+/// Why a collections list is not a strictly ascending set of identifiers.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum CollectionOrderViolation {
+	Unsorted,
+	Duplicate,
+}
+
+/// Why a [`GenesisWhitelistEntry`] cannot be turned into a [`WhitelistedSubscription`].
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum WhitelistEntryError {
+	/// Collections are not a strictly ascending set of identifiers.
+	Collections(CollectionOrderViolation),
+	/// A raw exponent has no `RingExponent` representation.
+	UnsupportedRingExponent(RawRingExponent),
+	/// More collections than `MaxCollectionsPerSubscriber` allows.
+	TooManyCollections,
+}
+
+/// Index of the members-subscriber pallet in a subscriber chain's `construct_runtime!`.
+pub type PalletIndex = u8;
+
+/// A `RingExponent` in its raw form, as genesis config carries it.
+pub type RawRingExponent = u8;
+
+/// One entry of the genesis subscription whitelist: a parachain that anyone may subscribe
+/// once with `subscribe_whitelisted`.
+#[derive(Clone, PartialEq, Eq, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GenesisWhitelistEntry {
+	/// Parachain that may be subscribed permissionlessly.
+	pub para_id: ParaId,
+	/// Collections the parachain subscribes to, with a raw ring exponent for each.
+	///
+	/// Must be sorted by identifier without duplicates; the genesis build rejects the rest.
+	pub collections: Vec<(Identifier, RawRingExponent)>,
+	pub pallet_index: PalletIndex,
+}
+
+/// A subscription seeded at genesis that any signed account may activate once.
+#[derive(
+	CloneNoBound, PartialEqNoBound, EqNoBound, Encode, Decode, DebugNoBound, TypeInfo, MaxEncodedLen,
+)]
+#[scale_info(skip_type_params(T))]
+pub struct WhitelistedSubscription<T: Config> {
+	/// Ring collections the parachain subscribes to (sorted, no duplicates).
+	pub collections: BoundedVec<(Identifier, RingExponent), T::MaxCollectionsPerSubscriber>,
+	/// Pallet index of members-subscriber on the subscriber chain.
+	pub pallet_index: u8,
 }
 
 /// Information about a subscriber parachain.

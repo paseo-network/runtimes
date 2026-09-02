@@ -19,6 +19,16 @@ targets = ["x86_64-unknown-linux-gnu"]
 codec = { workspace = true, features = ["derive"] }
 log = { workspace = true }
 scale-info = { workspace = true, features = ["derive"] }
+# PASEO DEVIATION (the only one in this pallet). Upstream writes `serde = { workspace = true }`,
+# which under individuality's own workspace resolves to
+#   serde = { version = "1.0.214", default-features = false, features = ["alloc", "derive"] }
+# This repo's workspace entry is `serde = { version = "1.0.214" }` — default features ON — because
+# the relay chain and every other system parachain rely on that. Cargo ignores a member-level
+# `default-features = false` when the workspace entry has default features on, so `serde/std` would
+# be enabled unconditionally and the wasm build of this pallet fails with ~1900
+# `can't find crate for std` errors while the native build stays green. Inlining upstream's own
+# resolved pin here reproduces upstream's build exactly without touching the workspace entry.
+serde = { version = "1.0.214", default-features = false, features = ["alloc", "derive"] }
 frame-benchmarking = { workspace = true, optional = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
@@ -53,6 +63,7 @@ std = [
 	"log/std",
 	"pallet-balances/std",
 	"scale-info/std",
+	"serde/std",
 	"sp-core/std",
 	"sp-io/std",
 	"sp-runtime/std",
