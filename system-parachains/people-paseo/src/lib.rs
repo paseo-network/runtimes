@@ -176,10 +176,15 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: Cow::Borrowed("people-paseo"),
 	impl_name: Cow::Borrowed("people-paseo"),
 	authoring_version: 1,
-	spec_version: 2_004_003,
+	spec_version: 2_005_000,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 1,
+	// BUMPED 1 -> 2 for the individuality v0.3.1 port. MANDATORY, not hygiene: coinage call
+	// index 9 KEEPS ITS NUMBER while changing both name and arguments
+	// (`unload_recycler_into_external_asset_and_vouchers` ->
+	// `unload_recycler_into_external_asset_and_loaded_coins`). A signer that did not notice
+	// would build a call that decodes as the wrong extrinsic rather than failing cleanly.
+	transaction_version: 2,
 	system_version: 1,
 };
 

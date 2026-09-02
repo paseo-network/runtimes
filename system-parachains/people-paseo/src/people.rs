@@ -247,12 +247,12 @@ impl Default for IdentityInfo {
 
 use crate::xcm_config;
 use assets_common::local_and_foreign_assets::ForeignAssetReserveData;
-use cumulus_primitives_core::Junction::{GeneralIndex, PalletInstance, Parachain};
+use cumulus_primitives_core::Junction::{PalletInstance, Parachain};
 use frame_support::{
 	pallet_prelude::PhantomData,
 	traits::{
 		fungible::{HoldConsideration, ItemOf},
-		ConstU128, ConstU32, ConstU64, ConstU8, ConstUint, ContainsPair, Get, LinearStoragePrice,
+		ConstU128, ConstU32, ConstU64, ConstUint, ContainsPair, Get, LinearStoragePrice,
 		Randomness,
 	},
 };
@@ -262,14 +262,13 @@ use indiv_pallet_origin_restriction::Allowance;
 use indiv_support::traits::PersonalId;
 use indiv_support::{
 	fungibles::CombineAssetsWithHolder,
-	traits::{Alias, AllocateStorage, Context, RingIndex},
+	traits::{Alias, AllocateStorage, Context},
 	utils::TypedGetToGet,
 };
-use paseo_runtime_constants::system_parachain::ASSET_HUB_ID;
 #[cfg(feature = "runtime-benchmarks")]
 use sp_runtime::BoundedVec;
 use sp_runtime::{
-	traits::{ConstI8, ConstU16, IdentifyAccount},
+	traits::{ConstI8, ConstU16},
 	DispatchResult, MultiSignature, MultiSigner, Percent,
 };
 use sp_statement_store::StatementAllowance;
@@ -1370,55 +1369,13 @@ parameter_types! {
 	pub CoinageCollectionOwner: Location = Location::new(0, [PalletInstance(68)]);
 }
 
-#[derive(
-	Clone, PartialEq, Eq, Debug, Encode, Decode, DecodeWithMemTracking, TypeInfo, MaxEncodedLen,
-)]
-pub struct LitePeopleProof {
-	pub proof: <BandersnatchVrfVerifiable as GenerateVerifiable>::Proof,
-	pub ring: RingIndex,
-}
-impl indiv_pallet_coinage::ValidateProof for LitePeopleProof {
-	type Proof = LitePeopleProof;
-	fn validate_proof(proof: &Self::Proof, context: &[u8], msg: &[u8]) -> Result<Alias, ()> {
-		use indiv_support::traits::MembershipProver;
-		let context_arr: [u8; 32] = context.try_into().map_err(|_| ())?;
-		let result = Members::verify_membership(
-			indiv_pallet_people_lite::LITE_PEOPLE_MEMBER_IDENTIFIER,
-			&proof.proof,
-			proof.ring,
-			context_arr,
-			msg,
-		)
-		.map_err(|_| ())?;
-		Ok(result.ca.alias)
-	}
-}
-
-// TODO: move this in pallet-people
-// Runtime-local full-people proof wrapper for coinage integration
-#[derive(
-	Clone, PartialEq, Eq, Debug, Encode, Decode, DecodeWithMemTracking, TypeInfo, MaxEncodedLen,
-)]
-pub struct PeopleProof {
-	pub proof: <BandersnatchVrfVerifiable as GenerateVerifiable>::Proof,
-	pub ring: RingIndex,
-}
-impl indiv_pallet_coinage::ValidateProof for PeopleProof {
-	type Proof = PeopleProof;
-	fn validate_proof(proof: &Self::Proof, context: &[u8], msg: &[u8]) -> Result<Alias, ()> {
-		use indiv_support::traits::MembershipProver;
-		let context_arr: [u8; 32] = context.try_into().map_err(|_| ())?;
-		let result = Members::verify_membership(
-			indiv_pallet_people::PEOPLE_MEMBER_IDENTIFIER,
-			&proof.proof,
-			proof.ring,
-			context_arr,
-			msg,
-		)
-		.map_err(|_| ())?;
-		Ok(result.ca.alias)
-	}
-}
+// `LitePeopleProof` and `PeopleProof` were DELETED here.
+//
+// They were runtime-local wrappers implementing `indiv_pallet_coinage::ValidateProof`, bound to
+// the pallet's old `LitePeopleProof` / `PeopleProof` config pair. individuality v0.3.1 replaced
+// that pair with a single `Config::MembershipProof`, which this runtime binds to the `People`
+// pallet's own validator. `ValidateProof::validate_proof` also gained a fourth parameter, so
+// these impls no longer match the trait. Upstream has no counterpart to them.
 
 #[cfg(feature = "runtime-benchmarks")]
 pub struct CoinageBenchHelper;
@@ -1670,7 +1627,7 @@ impl sp_runtime::traits::Convert<frame_support::traits::Footprint, Balance>
 	for CoinageInstanceCreationPrice
 {
 	fn convert(footprint: frame_support::traits::Footprint) -> Balance {
-		system_para_deposit(footprint.count.saturated_into(), footprint.size.saturated_into())
+		system_para_deposit(footprint.count as u32, footprint.size as u32)
 	}
 }
 

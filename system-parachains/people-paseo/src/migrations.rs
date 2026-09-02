@@ -26,6 +26,35 @@ use xcm::v5::{Junction::Parachain, Location};
 pub type Unreleased = (
 	cumulus_pallet_xcmp_queue::migration::v6::MigrateV5ToV6<Runtime>,
 	cumulus_pallet_parachain_system::migration::Migration<Runtime>,
+	// ---- individuality v0.3.1 ----
+	//
+	// MANDATORY, and FIRST of the individuality entries. Writes the `NetworkSuffix` key into
+	// state. The pallet's `ValueQuery` default already answers every on-chain read, so nothing
+	// in the runtime needs this -- but `state_getStorage` over an unwritten key returns `null`,
+	// and the Android client reads that key directly and throws on `null`. Ordered first so any
+	// later migration that derives a product context sees a materialised suffix.
+	// Idempotent; never clobbers a suffix governance has changed.
+	indiv_pallet_network_suffix::migration::SeedNetworkSuffix<Runtime>,
+	// Creates the on-chain collections the v0.3.1 people pallets expect. Both are self-guarding
+	// (they no-op when the collection already exists).
+	indiv_pallet_people::migration::CreatePeopleCollection<Runtime>,
+	indiv_pallet_people_lite::migration::CreateLitePeopleCollection<Runtime>,
+	//
+	// ================================================================================
+	// SLOT: coinage migrations. OWNED BY ANOTHER AGENT -- do not write them here.
+	//
+	// Required ordering when they land:
+	//   1. AFTER `SeedNetworkSuffix` above. Coinage aliases are derived from product
+	//      contexts, which splice the network suffix; the suffix must be materialised in
+	//      state before anything reads it back out.
+	//   2. AFTER both collection-creation migrations above. Coinage's recycler and
+	//      paid-unload-token rings hang off the people / lite-people collections, so those
+	//      must exist first.
+	//   3. BEFORE any migration that reads `Instances`. The coinage migration is what
+	//      decides each existing coin's instance and, critically, that instance's
+	//      DENOMINATION -- see `CoinageFeeConversion` in people.rs: if instances end up
+	//      non-native, every paid-unload fee path needs an AMM this chain does not have.
+	// ================================================================================
 );
 
 /// Migrations/checks that do not need to be versioned and can run on every update.
