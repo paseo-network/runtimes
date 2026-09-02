@@ -45,6 +45,8 @@
 mod benchmarking;
 #[cfg(test)]
 mod mock;
+/// PASEO-LOCAL. Does not exist upstream — see the module documentation.
+pub mod migration;
 #[cfg(test)]
 mod tests;
 pub mod weights;
@@ -130,7 +132,21 @@ pub mod pallet {
 	pub(crate) type ProviderBlockNumberFor<T> =
 		<<T as Config>::BlockNumberProvider as BlockNumberProvider>::BlockNumber;
 
+	/// PASEO-LOCAL DEVIATION from individuality v0.3.1.
+	///
+	/// Upstream ships this pallet with no storage version, because upstream's `next-*` runtimes
+	/// are launched from genesis presets and never carry a `Usages` entry stamped on the old
+	/// clock. `people-paseo` does. Declaring a version is what lets
+	/// [`migration::MigrateV0ToV1`] be a `VersionedMigration` and therefore self-guarding — that
+	/// migration is destructive on a second run (it would discard accrued recovery) and must
+	/// never run twice.
+	///
+	/// Keep this at `1` until a further storage change lands; bump it in lockstep with a new
+	/// `VersionedMigration` in `migration.rs`.
+	pub const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+
 	#[pallet::pallet]
+	#[pallet::storage_version(STORAGE_VERSION)]
 	pub struct Pallet<T>(_);
 
 	/// The current usage for each entity.
