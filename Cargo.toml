@@ -91,11 +91,13 @@ indiv-pallet-members = { path = "pallets/members", default-features = false }
 indiv-pallet-members-notifier = { path = "pallets/members-notifier", default-features = false }
 indiv-pallet-members-subscriber = { path = "pallets/members-subscriber", default-features = false }
 indiv-pallet-mob-rule = { path = "pallets/mob-rule", default-features = false }
+indiv-pallet-network-suffix = { path = "pallets/network-suffix", default-features = false }
 indiv-pallet-origin-restriction = { path = "pallets/origin-restriction", default-features = false }
 indiv-pallet-people-lite = { path = "pallets/people-lite", default-features = false }
 indiv-pallet-people = { path = "pallets/people-multi", default-features = false }
 indiv-pallet-pgas = { path = "pallets/pgas", default-features = false }
 indiv-pallet-proof-of-ink = { path = "pallets/proof-of-ink", default-features = false }
+indiv-pallet-relay-randomness = { path = "pallets/relay-randomness", default-features = false }
 indiv-pallet-resources = { path = "pallets/resources", default-features = false }
 indiv-pallet-score = { path = "pallets/score", default-features = false }
 indiv-pallet-storage-initialization = { path = "pallets/storage-initialization", default-features = false }
@@ -405,11 +407,13 @@ members = [
 	"pallets/members-notifier",
 	"pallets/members-subscriber",
 	"pallets/mob-rule",
+	"pallets/network-suffix",
 	"pallets/origin-restriction",
 	"pallets/people-lite",
 	"pallets/people-multi",
 	"pallets/pgas",
 	"pallets/proof-of-ink",
+	"pallets/relay-randomness",
 	"pallets/resources",
 	"pallets/score",
 	"pallets/storage-initialization",

@@ -6379,6 +6379,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "indiv-pallet-network-suffix"
+version = "2.3.1"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "indiv-support",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
 name = "indiv-pallet-origin-restriction"
 version = "2.3.1"
 dependencies = [
@@ -6472,6 +6486,23 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "verifiable",
+]
+
+[[package]]
+name = "indiv-pallet-relay-randomness"
+version = "2.3.1"
+dependencies = [
+ "cumulus-pallet-parachain-system",
+ "cumulus-primitives-core",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "indiv-support",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-io",
+ "sp-runtime",
+ "sp-trie",
 ]
 
 [[package]]
