@@ -46,10 +46,15 @@ use frame_support::{
 	transactional, PalletId,
 };
 use frame_system::{
-	offchain::{CreateInherent, SubmitTransaction},
+	offchain::{CreateAuthorizedTransaction, SubmitTransaction},
 	EnsureSigned,
 };
-use indiv_support::traits::{AddOnlyPeopleTrait, Alias, Context, CountedMembers, PeopleTrait};
+use indiv_support::{
+	context::{build_product_context, personhood},
+	traits::{AddOnlyPeopleTrait, Alias, Context, CountedMembers, PeopleTrait},
+	tx_priority,
+	weight_budget::OcwWeightBudget,
+};
 use sp_runtime::{
 	traits::{AccountIdConversion, Zero},
 	Saturating,
@@ -64,8 +69,6 @@ pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 
-	pub const SCORE_CONTEXT: Context = *b"pop:polkadot.network/score      ";
-
 	/// Upper bound on how many tiers a personhood-threshold schedule may contain.
 	///
 	/// This caps the [`PersonhoodThresholdTiers`] backing
@@ -77,7 +80,15 @@ pub mod pallet {
 
 	/// The maximum value for the personhood threshold and participant score.
 	/// The score is capped at this value.
-	const MAX_PERSONHOOD_THRESHOLD: u32 = 21;
+	const MAX_PERSONHOOD_THRESHOLD: u8 = 21;
+
+	/// Maximum number of participants the offchain worker asks
+	/// [`Pallet::operate_payout_round`] to process per submitted transaction.
+	///
+	/// This is the real production upper bound for the `limit` parameter, and it
+	/// drives the worst-case weight asserted in `integrity_test`. It is
+	/// deliberately smaller than the benchmark's sweep maximum.
+	const OPERATE_PAYOUT_ROUND_LIMIT: u32 = 1000;
 
 	/// Custom error code for unsigned transaction validation indicating the transaction is too
 	/// far in the future.
@@ -135,12 +146,15 @@ pub mod pallet {
 	pub trait Config:
 		frame_system::Config<
 			RuntimeOrigin: From<Origin<Self>> + OriginTrait<PalletsOrigin: TryInto<Origin<Self>>>,
-		> + CreateInherent<Call<Self>>
+		> + CreateAuthorizedTransaction<Call<Self>>
 		+ Send
 		+ Sync
 	{
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
+
+		/// Runtime-wide network suffix used to derive product contexts.
+		type Suffix: Get<indiv_support::context::ProductContextNetworkSuffix>;
 
 		/// Ensure origin is a person.
 		type EnsurePerson: EnsureOriginWithArg<OriginFor<Self>, Context, Success = Alias>
@@ -207,7 +221,7 @@ pub mod pallet {
 		/// The context used for the proofs required to authenticate as a personal alias in score
 		/// pallet.
 		pub fn score_context() -> Context {
-			SCORE_CONTEXT
+			build_product_context(personhood::PRODUCT_NAME, &T::Suffix::get(), personhood::SCORE)
 		}
 	}
 
@@ -218,7 +232,7 @@ pub mod pallet {
 
 	/// The score threshold required to reach personhood.
 	#[pallet::storage]
-	pub type PersonhoodThreshold<T> = StorageValue<_, u32, ValueQuery>;
+	pub type PersonhoodThreshold<T> = StorageValue<_, u8, ValueQuery>;
 
 	/// Runtime-configurable schedule of personhood-threshold tiers, sorted by
 	/// ascending `population_size_threshold`. Each tier specifies the score a
@@ -461,7 +475,7 @@ pub mod pallet {
 		ensure!(!tiers.is_empty(), Error::<T>::PersonhoodScheduleEmpty);
 
 		let mut prev_pop = 0u32;
-		let mut prev_score = 0u32;
+		let mut prev_score = 0u8;
 		for tier in tiers {
 			ensure!(tier.score_threshold > 0, Error::<T>::PersonhoodScoreThresholdZero);
 			ensure!(
@@ -514,8 +528,8 @@ pub mod pallet {
 		/// Performs payout round state machine
 		///
 		/// Transitions the current round to next one if needed. Then, operate all
-		/// active payout rounds for up to 1000 participants, converting the
-		/// accumulated points into credits.
+		/// active payout rounds for up to `OPERATE_PAYOUT_ROUND_LIMIT`
+		/// participants, converting the accumulated points into credits.
 		fn offchain_worker(block_number: BlockNumberFor<T>) {
 			let interval = T::OffchainWorkInterval::get();
 			if interval == 0u32.into() || !(block_number % interval).is_zero() {
@@ -524,7 +538,7 @@ pub mod pallet {
 
 			let current_round_index = CurrentRoundIndex::<T>::get();
 			if Self::validate_transition_round(current_round_index).is_ok() {
-				let res = Self::submit_unsigned_transaction(Call::transition_round {
+				let res = Self::submit_authorized_transaction(Call::transition_round {
 					round_index: current_round_index,
 				});
 				Self::log_offchain_worker_tx_submit_result(res, "transition_round");
@@ -532,9 +546,9 @@ pub mod pallet {
 
 			for (round_index, _) in RoundPayouts::<T>::iter() {
 				if Self::validate_operate_payout_round(round_index).is_ok() {
-					let res = Self::submit_unsigned_transaction(Call::operate_payout_round {
+					let res = Self::submit_authorized_transaction(Call::operate_payout_round {
 						round_index,
-						limit: 1000,
+						limit: OPERATE_PAYOUT_ROUND_LIMIT,
 					});
 					Self::log_offchain_worker_tx_submit_result(res, "operate_payout_round");
 				}
@@ -554,6 +568,24 @@ pub mod pallet {
 				validate_absence_grace_tiers::<T>(&DefaultAbsenceGraceTiers::<T>::get()).is_ok(),
 				"invalid DefaultAbsenceGraceTiers"
 			);
+
+			// `transition_round` and `operate_payout_round` are submitted by the
+			// offchain worker as authorized transactions. If either exceeds
+			// `Normal.max_extrinsic`, it is silently dropped at the
+			// transaction-pool level and the payout state machine stalls forever.
+			let budget = OcwWeightBudget::from_normal_max::<T>();
+
+			budget.assert_fits(
+				"transition_round",
+				T::WeightInfo::transition_round()
+					.saturating_add(T::WeightInfo::authorize_transition_round()),
+			);
+			budget.assert_fits(
+				"operate_payout_round",
+				T::WeightInfo::operate_payout_round(OPERATE_PAYOUT_ROUND_LIMIT).saturating_add(
+					T::WeightInfo::authorize_operate_payout_round(OPERATE_PAYOUT_ROUND_LIMIT),
+				),
+			);
 		}
 	}
 
@@ -561,50 +593,8 @@ pub mod pallet {
 		ValidTransaction::with_tag_prefix("indiv-pallet-score")
 			.and_provides(provides)
 			.propagate(true)
+			.priority(tx_priority::BACKGROUND_PROGRESS)
 			.build()
-	}
-
-	// TODO: Migrate to `#[pallet::authorize]` with `frame_system::AuthorizeCall` before
-	// `ValidateUnsigned` is removed (deadline April 2027). See
-	// https://github.com/paritytech/polkadot-sdk/issues/2415.
-	#[pallet::validate_unsigned]
-	#[allow(deprecated)]
-	#[allow(clippy::let_unit_value)]
-	impl<T: Config> ValidateUnsigned for Pallet<T> {
-		type Call = Call<T>;
-
-		fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
-			match call {
-				Call::transition_round { round_index } => {
-					Self::validate_transition_round(*round_index).map_err(|_| {
-						let current_round_index = CurrentRoundIndex::<T>::get();
-						if *round_index == current_round_index.saturating_add(1) ||
-							*round_index == current_round_index
-						{
-							InvalidTransaction::Future
-						} else if *round_index > current_round_index {
-							InvalidTransaction::Custom(CUSTOM_ERROR_FAR_FUTURE)
-						} else {
-							InvalidTransaction::Stale
-						}
-					})?;
-					build_transaction_validity(("TransitionRound", round_index))
-				},
-				Call::operate_payout_round { round_index, .. } => {
-					Self::validate_operate_payout_round(*round_index).map_err(|_| {
-						if *round_index == CurrentRoundIndex::<T>::get() {
-							InvalidTransaction::Future
-						} else if *round_index > CurrentRoundIndex::<T>::get() {
-							InvalidTransaction::Custom(CUSTOM_ERROR_FAR_FUTURE)
-						} else {
-							InvalidTransaction::Stale
-						}
-					})?;
-					build_transaction_validity(("PayoutRound", round_index))
-				},
-				_ => Err(TransactionValidityError::Invalid(InvalidTransaction::Call)),
-			}
-		}
 	}
 
 	#[pallet::call]
@@ -676,10 +666,11 @@ pub mod pallet {
 		///
 		/// This is a task, and can be called from anybody.
 		#[pallet::call_index(3)]
-		// The weight must include the cost of [ValidateUnsigned::pre_dispatch].
+		#[pallet::authorize(Self::authorize_transition_round)]
 		#[pallet::weight(T::WeightInfo::transition_round())]
+		#[pallet::weight_of_authorize(T::WeightInfo::authorize_transition_round())]
 		pub fn transition_round(origin: OriginFor<T>, round_index: u32) -> DispatchResult {
-			ensure_none(origin)?;
+			ensure_authorized(origin)?;
 
 			Self::validate_transition_round(round_index)
 				.defensive_proof(
@@ -757,14 +748,15 @@ pub mod pallet {
 		/// * round_index: The index of the round to operate.
 		/// * limit: The maximum number of participants to operate in this call.
 		#[pallet::call_index(4)]
-		// The weight must take into account the cost of `ValidateUnsigned::pre_dispatch`.
+		#[pallet::authorize(Self::authorize_operate_payout_round)]
 		#[pallet::weight(T::WeightInfo::operate_payout_round(*limit))]
+		#[pallet::weight_of_authorize(T::WeightInfo::authorize_operate_payout_round(*limit))]
 		pub fn operate_payout_round(
 			origin: OriginFor<T>,
 			round_index: RoundIndex,
 			limit: u32,
 		) -> DispatchResult {
-			ensure_none(origin)?;
+			ensure_authorized(origin)?;
 
 			let mut round = Self::validate_operate_payout_round(round_index)
 				.defensive_proof(
@@ -850,12 +842,12 @@ pub mod pallet {
 					Ok(())
 				},
 				Err(e) => {
-					defensive!("Unexpected error in this round, set the round finished.");
 					log::error!(
 						target: LOG_TARGET,
 						"Unexpected error in operate_payout_round: round: {round_index:?}, error: {e:?}."
 					);
-					RoundPayouts::<T>::remove(round_index);
+					Self::recycle_round_payout(round_index);
+					defensive!("Unexpected error in this round, set the round finished.");
 					Ok(())
 				},
 			}
@@ -882,7 +874,7 @@ pub mod pallet {
 			// Reset streak when they cash out.
 			score.streak.reset_attendance();
 			score.cashed_out = true;
-			Self::award_participant_payout_points(&who, reduction);
+			Self::award_participant_payout_points(&who, u32::from(reduction));
 
 			// Update score.
 			Participants::<T>::insert(&who, score);
@@ -1114,12 +1106,42 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Offboard a participant, e.g. voluntarily leaves or is kicked out for inactivity.
-		pub fn offboard(who: &AccountOrPerson<T::AccountId>) {
+		/// Offboard a participant, suspend recognised people and release unclaimed credit to the
+		/// pot.
+		///
+		/// The participant forfeits their credit when their record is removed. Suspension failures
+		/// return an error, while a failed credit release is logged and does not retain a stale
+		/// entry.
+		pub fn offboard(who: &AccountOrPerson<T::AccountId>) -> DispatchResult {
+			let maybe_recognition = Participants::<T>::get(who).map(|p| p.recognition);
+			if let Some(Recognized(id)) = maybe_recognition {
+				with_storage_layer::<_, DispatchError, _>(|| {
+					T::People::start_people_set_mutation_session()?;
+					T::People::suspend_personhood(&[id])?;
+					T::People::end_people_set_mutation_session()
+				})?;
+			}
+			if let Some(score) = Participants::<T>::take(who) {
+				if !score.credit.is_zero() {
+					let pot = Self::score_pot_id();
+					match T::Currency::release(
+						&HoldReason::Credit.into(),
+						&pot,
+						score.credit,
+						Precision::Exact,
+					) {
+						Ok(released) => defensive_assert!(released == score.credit),
+						Err(error) => log::error!(
+							target: LOG_TARGET,
+							"Failed to release credit hold while offboarding participant: {error:?}."
+						),
+					}
+				}
+			}
 			if let AccountOrPerson::Account(account) = who {
 				frame_system::Pallet::<T>::dec_sufficients(account);
 			}
-			Participants::<T>::remove(who);
+			Ok(())
 		}
 
 		/// Start a new attendance report session.
@@ -1163,6 +1185,9 @@ pub mod pallet {
 		/// `last_attended_game` is pinned to `game_index`; when `false`, `last_attended_game`
 		/// is left unchanged so it continues to point at the participant's most recent
 		/// actual attendance.
+		///
+		/// When suspending a `Recognized` participant fails in [`Config::People`], the
+		/// participant stays recognised.
 		///
 		/// Must be called within attendance report session. Attendance report session is started
 		/// and ended with `start_attendance_report_session` and `end_attendance_report_session`.
@@ -1211,7 +1236,7 @@ pub mod pallet {
 			let acquire_personhood =
 				!score.reached_personhood && score.score >= personhood_threshold;
 
-			let suspend_personhood = !attended &&
+			let mut suspend_personhood = !attended &&
 				score.reached_personhood &&
 				match score.recognition {
 					// Participants never lose personhood once they are externally recognised or
@@ -1232,6 +1257,25 @@ pub mod pallet {
 						window == 0 || misses > allowed_misses || score.score < personhood_threshold,
 				};
 
+			// A `Recognized` participant is suspended in `Config::People` first. With a valid
+			// state, it will not fail but, if it fails however, the participant stays recognised
+			// and keeps their personhood until the next attendance where, if they are absent, the
+			// suspension is retried.
+			if suspend_personhood {
+				if let Recognized(id) = score.recognition {
+					if T::People::suspend_personhood(&[id]).is_ok() {
+						score.recognition = Suspended(id);
+					} else {
+						log::error!(
+							target: LOG_TARGET,
+							"failed to suspend person {id}, the suspension is retried at the \
+							next qualifying absence"
+						);
+						suspend_personhood = false;
+					}
+				}
+			}
+
 			if acquire_personhood {
 				score.reached_personhood = true;
 			} else if suspend_personhood {
@@ -1241,16 +1285,6 @@ pub mod pallet {
 			score.has_ever_reached_personhood |= score.reached_personhood;
 
 			score.cashed_out = false;
-
-			match score.recognition {
-				Recognized(id) =>
-					if suspend_personhood {
-						let _ = T::People::suspend_personhood(&[id])
-							.defensive_proof("indiv-pallet-score: failed to suspend person");
-						score.recognition = Suspended(id);
-					},
-				NotRecognized | Suspended(_) | ExternallyRecognized => (),
-			}
 
 			Participants::<T>::insert(who, &score);
 
@@ -1264,7 +1298,7 @@ pub mod pallet {
 			<EnsureSigned<_> as EnsureOrigin<_>>::try_origin(origin)
 				.map(AccountOrPerson::Account)
 				.or_else(|origin| {
-					T::EnsurePerson::try_origin(origin, &SCORE_CONTEXT)
+					T::EnsurePerson::try_origin(origin, &Self::score_context())
 						.map(AccountOrPerson::Person)
 						.map_err(|_| Error::<T>::BadOriginNotPersonNotSigned.into())
 				})
@@ -1274,7 +1308,7 @@ pub mod pallet {
 		pub fn ensure_signed_or_participant_or_person(
 			origin: OriginFor<T>,
 		) -> Result<AccountOrPerson<T::AccountId>, DispatchError> {
-			T::EnsurePerson::try_origin(origin, &SCORE_CONTEXT)
+			T::EnsurePerson::try_origin(origin, &Self::score_context())
 				.map(AccountOrPerson::Person)
 				.or_else(|origin| {
 					Self::ensure_signed_or_participant(origin)
@@ -1300,10 +1334,10 @@ pub mod pallet {
 
 		/// Ensure the origin is a person.
 		pub fn ensure_person(origin: OriginFor<T>) -> Result<Alias, DispatchError> {
-			Ok(T::EnsurePerson::ensure_origin(origin, &SCORE_CONTEXT)?)
+			Ok(T::EnsurePerson::ensure_origin(origin, &Self::score_context())?)
 		}
 
-		/// Validates the unsigned transaction for [Self::transition_round].
+		/// Validates the authorized transaction for [Self::transition_round].
 		fn validate_transition_round(round_index: u32) -> Result<(), ()> {
 			if round_index != CurrentRoundIndex::<T>::get() {
 				return Err(())
@@ -1324,11 +1358,51 @@ pub mod pallet {
 			}
 		}
 
-		// Validation of the unsigned transaction for the call `operate_payout_round`.
+		// Validation of the authorized transaction for the call `operate_payout_round`.
 		fn validate_operate_payout_round(
 			round_index: RoundIndex,
 		) -> Result<RoundPayout<BalanceOf<T>>, ()> {
 			RoundPayouts::<T>::get(round_index).ok_or(())
+		}
+
+		fn authorize_transition_round(
+			_source: TransactionSource,
+			round_index: &u32,
+		) -> TransactionValidityWithRefund {
+			Self::validate_transition_round(*round_index).map_err(|_| {
+				let current_round_index = CurrentRoundIndex::<T>::get();
+				let invalid = if *round_index == current_round_index.saturating_add(1) ||
+					*round_index == current_round_index
+				{
+					InvalidTransaction::Future
+				} else if *round_index > current_round_index {
+					InvalidTransaction::Custom(CUSTOM_ERROR_FAR_FUTURE)
+				} else {
+					InvalidTransaction::Stale
+				};
+				TransactionValidityError::Invalid(invalid)
+			})?;
+
+			Ok((build_transaction_validity(("TransitionRound", *round_index))?, Weight::zero()))
+		}
+
+		fn authorize_operate_payout_round(
+			_source: TransactionSource,
+			round_index: &RoundIndex,
+			_limit: &u32,
+		) -> TransactionValidityWithRefund {
+			Self::validate_operate_payout_round(*round_index).map_err(|_| {
+				let invalid = if *round_index == CurrentRoundIndex::<T>::get() {
+					InvalidTransaction::Future
+				} else if *round_index > CurrentRoundIndex::<T>::get() {
+					InvalidTransaction::Custom(CUSTOM_ERROR_FAR_FUTURE)
+				} else {
+					InvalidTransaction::Stale
+				};
+				TransactionValidityError::Invalid(invalid)
+			})?;
+
+			Ok((build_transaction_validity(("PayoutRound", *round_index))?, Weight::zero()))
 		}
 
 		fn log_offchain_worker_tx_submit_result(res: Result<(), ()>, operation: &str) {
@@ -1340,8 +1414,8 @@ pub mod pallet {
 			}
 		}
 
-		fn submit_unsigned_transaction(call: Call<T>) -> Result<(), ()> {
-			let xt = T::create_bare(call.into());
+		fn submit_authorized_transaction(call: Call<T>) -> Result<(), ()> {
+			let xt = T::create_authorized_transaction(call.into());
 			SubmitTransaction::<T, Call<T>>::submit_transaction(xt)
 		}
 
@@ -1363,6 +1437,30 @@ pub mod pallet {
 			}
 		}
 
+		/// Remove a payout round and release its remaining payout hold to the pot.
+		///
+		/// A caller can run this after a reverted storage layer. The round is removed if the
+		/// release fails because no other path can release the hold of a started round.
+		pub(crate) fn recycle_round_payout(round_index: RoundIndex) {
+			let Some(round) = RoundPayouts::<T>::take(round_index) else { return };
+			if round.remaining_balance.is_zero() {
+				return
+			}
+
+			let pot = Self::score_pot_id();
+			if let Err(error) = T::Currency::release(
+				&HoldReason::Payout.into(),
+				&pot,
+				round.remaining_balance,
+				Precision::BestEffort,
+			) {
+				log::error!(
+					target: LOG_TARGET,
+					"Failed to recycle the payout hold of round {round_index:?}: {error:?}."
+				);
+			}
+		}
+
 		/// Calculate the personhood threshold based on the number of active people.
 		///
 		/// Reads [`PersonhoodThresholdSchedule`], which defaults to
@@ -1370,7 +1468,7 @@ pub mod pallet {
 		/// guarantees the configured schedule is total (last tier covers
 		/// `u32::MAX`), so the `unwrap_or` defensively catches an empty /
 		/// malformed schedule that somehow bypassed validation.
-		pub(crate) fn calculate_personhood_threshold(active_count: u32) -> u32 {
+		pub(crate) fn calculate_personhood_threshold(active_count: u32) -> u8 {
 			PersonhoodThresholdSchedule::<T>::get()
 				.into_iter()
 				.find(|t| active_count <= t.population_size_threshold)
