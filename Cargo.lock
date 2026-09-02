@@ -6249,6 +6249,7 @@ dependencies = [
 name = "indiv-pallet-game"
 version = "2.3.1"
 dependencies = [
+ "binary-merkle-tree",
  "cumulus-pallet-parachain-system",
  "cumulus-primitives-core",
  "frame-benchmarking",
@@ -6258,6 +6259,7 @@ dependencies = [
  "indiv-pallet-chunks-manager",
  "indiv-pallet-members",
  "indiv-pallet-people",
+ "indiv-pallet-people-lite",
  "indiv-pallet-score",
  "indiv-support",
  "log",
@@ -6265,6 +6267,7 @@ dependencies = [
  "pallet-assets-holder",
  "pallet-balances",
  "parity-scale-codec",
+ "parking_lot 0.12.5",
  "scale-info",
  "sp-api",
  "sp-core",
