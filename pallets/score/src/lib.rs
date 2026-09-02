@@ -23,6 +23,8 @@ extern crate alloc;
 #[cfg(feature = "runtime-benchmarks")]
 pub mod benchmarking;
 mod extension;
+/// PASEO-LOCAL. Does not exist upstream — see the module documentation.
+pub mod migration;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
@@ -94,7 +96,21 @@ pub mod pallet {
 	/// far in the future.
 	const CUSTOM_ERROR_FAR_FUTURE: u8 = 87;
 
+	/// PASEO-LOCAL DEVIATION from individuality v0.3.1.
+	///
+	/// Upstream ships this pallet with no storage version, because upstream's `next-people-paseo`
+	/// is launched from a genesis preset that writes the v0.3.x storage shape directly and never
+	/// has to migrate into it. `people-paseo` does: it has been running the pre-v0.3 shape since
+	/// spec `2_004_003`, with live `Participants` whose `score` and `Streak` are still `u32`.
+	/// Declaring a version is what lets [`migration::MigrateV0ToV1`] be a `VersionedMigration`
+	/// and therefore self-guarding — that migration is not idempotent and must never run twice.
+	///
+	/// Keep this at `1` until a further storage change lands; bump it in lockstep with a new
+	/// `VersionedMigration` in `migration.rs`.
+	pub const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+
 	#[pallet::pallet]
+	#[pallet::storage_version(STORAGE_VERSION)]
 	pub struct Pallet<T>(_);
 
 	/// Default personhood-threshold tiers, used as the storage default for
