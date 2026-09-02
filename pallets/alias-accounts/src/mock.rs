@@ -22,19 +22,30 @@ use alloc::{collections::BTreeMap, vec::Vec};
 use codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
 use core::{cell::RefCell, ops::Range};
 use frame_support::{
-	derive_impl, parameter_types,
+	derive_impl,
+	dispatch::{GetDispatchInfo, PostDispatchInfo},
+	parameter_types,
 	traits::{fungibles::Mutate as _, AsEnsureOriginWithArg},
+	weights::Weight,
 };
 use frame_system::{
 	offchain::{CreateAuthorizedTransaction, CreateTransaction, CreateTransactionBase},
 	AuthorizeCall,
 };
-use indiv_support::traits::{Alias, ContextualAlias, MembershipProver, RevisedContextualAlias};
+use indiv_support::traits::{Alias, ContextualAlias, MembershipProver, RingMembershipProof};
 pub use indiv_support::traits::{Context, Identifier, RevisionIndex, RingExponent, RingIndex};
 use scale_info::TypeInfo;
 use sp_core::ConstU32;
-use sp_runtime::{BoundedVec, BuildStorage, DispatchError};
-use verifiable::{AliasVec, BatchProofItem, Entropy, Error as VerifiableError, GenerateVerifiable};
+use sp_runtime::{
+	offchain::{
+		testing::{PoolState, TestOffchainExt, TestTransactionPoolExt},
+		OffchainDbExt, OffchainWorkerExt, TransactionPoolExt,
+	},
+	traits::{Applyable, Checkable},
+	transaction_validity::TransactionValidityError,
+	BoundedVec, BuildStorage, DispatchError, DispatchErrorWithPostInfo,
+};
+use verifiable::{AliasVec, Entropy, Error as VerifiableError, GenerateVerifiable};
 
 use crate::types::AliasAccountInfo;
 
@@ -69,12 +80,17 @@ impl pallet_assets::Config for Test {
 
 parameter_types! {
 	pub const ProofValidityWindow: u64 = 100;
-	pub const CleanupGracePeriod: u64 = 3600;
+	pub storage MappingRetention: u64 = 86_400;
 	pub const PeopleLiteCollection: Identifier = *crate::PEOPLE_LITE_IDENTIFIER;
 	pub const PeopleLiteRingExp: RingExponent = RingExponent::R2e9;
 	pub const PeopleCollection: Identifier = *crate::PEOPLE_IDENTIFIER;
 	pub const PeopleRingExp: RingExponent = RingExponent::R2e9;
 	pub const PgasAssetId: u32 = 1;
+	pub storage AliasFee: Option<u64> = None;
+	/// Every block, so a test drives one sweep per block it advances.
+	pub storage OffchainWorkerInterval: u64 = 1;
+	/// Small, so a test can fill a batch without seeding dozens of mappings.
+	pub storage MaxStaleAliasBatch: u32 = 4;
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -177,16 +193,6 @@ pub fn push_mock_ring_revision(
 	push_record(identifier, ring_index, MockRingRecord { revision, source_time: now });
 }
 
-/// Appends a new ring root revision with a specific source_time.
-pub fn push_mock_ring_revision_at(
-	identifier: Identifier,
-	ring_index: RingIndex,
-	revision: RevisionIndex,
-	source_time: u64,
-) {
-	push_record(identifier, ring_index, MockRingRecord { revision, source_time });
-}
-
 fn push_record(identifier: Identifier, ring_index: RingIndex, record: MockRingRecord) {
 	MOCK_RING_ROOTS.with(|m| {
 		m.borrow_mut().entry((identifier, ring_index)).or_default().push(record);
@@ -199,11 +205,24 @@ pub fn remove_mock_ring_root(identifier: Identifier, ring_index: RingIndex) {
 	});
 }
 
+/// Retention applied by [`MockMemberService`], mirroring the member service's
+/// `OldRootRetentionDuration`: a superseded revision expires this many seconds after its
+/// successor's source time. The latest revision never expires.
+pub const MOCK_OLD_ROOT_RETENTION: u64 = 3600;
+
 pub struct MockMemberService;
 
 impl MockMemberService {
 	fn ring_records(identifier: &Identifier, ring_index: RingIndex) -> Option<Vec<MockRingRecord>> {
 		MOCK_RING_ROOTS.with(|m| m.borrow().get(&(*identifier, ring_index)).cloned())
+	}
+
+	fn record_is_retained(records: &[MockRingRecord], index: usize) -> bool {
+		let Some(successor) = records.get(index.saturating_add(1)) else {
+			return true;
+		};
+		let now = MOCK_NOW.with(|v| *v.borrow());
+		now < successor.source_time.saturating_add(MOCK_OLD_ROOT_RETENTION)
 	}
 }
 
@@ -211,28 +230,6 @@ impl MembershipProver for MockMemberService {
 	type Crypto = TestVerifiable;
 
 	fn verify_membership(
-		identifier: &Identifier,
-		proof: &<Self::Crypto as GenerateVerifiable>::Proof,
-		ring_index: RingIndex,
-		context: Context,
-		msg: &[u8],
-	) -> Result<RevisedContextualAlias, DispatchError> {
-		if !collection_is_known(identifier) {
-			return Err(DispatchError::Other("mock collection not configured"));
-		}
-		let records = Self::ring_records(identifier, ring_index)
-			.ok_or(DispatchError::Other("mock ring missing"))?;
-		let latest = records.last().ok_or(DispatchError::Other("mock ring empty"))?;
-		let alias = TestVerifiable::validate((), proof, &BoundedVec::new(), &context[..], msg)
-			.map_err(|_| DispatchError::Other("invalid proof"))?;
-		Ok(RevisedContextualAlias {
-			revision: latest.revision,
-			ring: ring_index,
-			ca: ContextualAlias { alias, context },
-		})
-	}
-
-	fn verify_membership_at_rev(
 		identifier: &Identifier,
 		proof: &<Self::Crypto as GenerateVerifiable>::Proof,
 		ring_index: RingIndex,
@@ -245,10 +242,13 @@ impl MembershipProver for MockMemberService {
 		}
 		let records = Self::ring_records(identifier, ring_index)
 			.ok_or(DispatchError::Other("mock ring missing"))?;
-		records
+		let index = records
 			.iter()
-			.find(|r| r.revision == revision)
+			.position(|r| r.revision == revision)
 			.ok_or(DispatchError::Other("mock revision missing"))?;
+		if !Self::record_is_retained(&records, index) {
+			return Err(DispatchError::Other("mock revision expired"));
+		}
 		let alias = TestVerifiable::validate((), proof, &BoundedVec::new(), &context[..], msg)
 			.map_err(|_| DispatchError::Other("invalid proof"))?;
 		Ok(ContextualAlias { alias, context })
@@ -257,16 +257,8 @@ impl MembershipProver for MockMemberService {
 	fn verify_memberships_in_ring(
 		_identifier: &Identifier,
 		_ring_index: RingIndex,
-		_items: &[BatchProofItem<<Self::Crypto as GenerateVerifiable>::Proof>],
-	) -> Result<Vec<RevisedContextualAlias>, DispatchError> {
-		unimplemented!("alias-accounts mock does not use batch verification")
-	}
-
-	fn verify_memberships_in_ring_at_rev(
-		_identifier: &Identifier,
-		_ring_index: RingIndex,
 		_revision: RevisionIndex,
-		_items: &[BatchProofItem<<Self::Crypto as GenerateVerifiable>::Proof>],
+		_items: &[RingMembershipProof<<Self::Crypto as GenerateVerifiable>::Proof>],
 	) -> Result<Vec<ContextualAlias>, DispatchError> {
 		unimplemented!("alias-accounts mock does not use batch verification")
 	}
@@ -280,8 +272,11 @@ impl MembershipProver for MockMemberService {
 		ring_index: RingIndex,
 		revision: RevisionIndex,
 	) -> bool {
-		Self::ring_records(identifier, ring_index)
-			.is_some_and(|rs| rs.iter().any(|r| r.revision == revision))
+		Self::ring_records(identifier, ring_index).is_some_and(|rs| {
+			rs.iter()
+				.position(|r| r.revision == revision)
+				.is_some_and(|index| Self::record_is_retained(&rs, index))
+		})
 	}
 
 	fn revision_source_time(
@@ -293,6 +288,10 @@ impl MembershipProver for MockMemberService {
 			.into_iter()
 			.find(|r| r.revision == revision)
 			.map(|r| r.source_time)
+	}
+
+	fn old_root_retention() -> u64 {
+		MOCK_OLD_ROOT_RETENTION
 	}
 }
 
@@ -451,17 +450,76 @@ where
 
 // ========== Ring Aliases Config ==========
 
+/// Distinct, non-zero weights for the three sweep calls, so a test can tell one call's charge
+/// from another's, and a per-item term so a batch is charged for its size. Every other call
+/// delegates to `()`, the substrate weights the tests used before the split.
+pub struct MockWeightInfo;
+
+impl crate::WeightInfo for MockWeightInfo {
+	fn report_stale_aliases(n: u32) -> Weight {
+		Weight::from_parts(10_000, 100)
+			.saturating_add(Weight::from_parts(1_000, 10).saturating_mul(n.into()))
+	}
+
+	fn authorize_report_stale_aliases(n: u32) -> Weight {
+		Weight::from_parts(1_000, 10)
+			.saturating_add(Weight::from_parts(100, 1).saturating_mul(n.into()))
+	}
+
+	fn retire_stale_aliases(n: u32) -> Weight {
+		Weight::from_parts(30_000, 300)
+			.saturating_add(Weight::from_parts(3_000, 30).saturating_mul(n.into()))
+	}
+
+	fn authorize_retire_stale_aliases(n: u32) -> Weight {
+		Weight::from_parts(3_000, 30)
+			.saturating_add(Weight::from_parts(300, 3).saturating_mul(n.into()))
+	}
+
+	fn clear_stale_alias_reports(n: u32) -> Weight {
+		Weight::from_parts(5_000, 50)
+			.saturating_add(Weight::from_parts(500, 5).saturating_mul(n.into()))
+	}
+
+	fn authorize_clear_stale_alias_reports(n: u32) -> Weight {
+		Weight::from_parts(500, 5)
+			.saturating_add(Weight::from_parts(50, 1).saturating_mul(n.into()))
+	}
+
+	fn set_alias_account() -> Weight {
+		<() as crate::WeightInfo>::set_alias_account()
+	}
+
+	fn unset_alias_account() -> Weight {
+		<() as crate::WeightInfo>::unset_alias_account()
+	}
+
+	fn personhood_info() -> Weight {
+		<() as crate::WeightInfo>::personhood_info()
+	}
+
+	fn personhood_info_by_proof() -> Weight {
+		<() as crate::WeightInfo>::personhood_info_by_proof()
+	}
+
+	fn reprove_alias_account() -> Weight {
+		<() as crate::WeightInfo>::reprove_alias_account()
+	}
+}
+
 impl crate::Config for Test {
-	type WeightInfo = ();
+	type WeightInfo = MockWeightInfo;
 	type MemberService = MockMemberService;
 	type UnixTime = MockUnixTime;
 	type ProofValidityWindow = ProofValidityWindow;
-	type CleanupGracePeriod = CleanupGracePeriod;
+	type MappingRetention = MappingRetention;
 	type PeopleLiteRingExponent = PeopleLiteRingExp;
 	type PeopleRingExponent = PeopleRingExp;
 	type Fungibles = PalletAssets;
 	type PgasAssetId = PgasAssetId;
-	type FeeManagerOrigin = frame_system::EnsureRoot<u64>;
+	type AliasFee = AliasFee;
+	type OffchainWorkerInterval = OffchainWorkerInterval;
+	type MaxStaleAliasBatch = MaxStaleAliasBatch;
 }
 
 // ========== Test Helpers ==========
@@ -469,6 +527,14 @@ impl crate::Config for Test {
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	let t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 	let mut ext = sp_io::TestExternalities::new(t);
+	// The offchain worker submits the sweeps as authorized transactions, so it needs somewhere to
+	// submit them to.
+	let (offchain, _offchain_state) = TestOffchainExt::new();
+	let (pool, pool_state) = TestTransactionPoolExt::new();
+	TRANSACTION_POOL.with_borrow_mut(|slot| *slot = pool_state);
+	ext.register_extension(OffchainDbExt::new(offchain.clone()));
+	ext.register_extension(OffchainWorkerExt::new(offchain));
+	ext.register_extension(TransactionPoolExt::new(pool));
 	ext.execute_with(|| {
 		// Reset thread-local state shared across tests.
 		MOCK_RING_ROOTS.with(|m| m.borrow_mut().clear());
@@ -557,6 +623,10 @@ impl crate::benchmarking::BenchmarkHelper<Test> for Test {
 		}
 	}
 
+	fn set_alias_fee(fee: u64) {
+		AliasFee::set(&Some(fee));
+	}
+
 	fn max_ring_revisions() -> u32 {
 		MAX_MOCK_RING_REVISIONS
 	}
@@ -567,8 +637,51 @@ impl crate::benchmarking::BenchmarkHelper<Test> for Test {
 		MOCK_RING_ROOTS.with(|m| {
 			m.borrow_mut().remove(&(collection, ring));
 		});
-		for i in 0..revisions {
-			push_mock_ring_revision_at(collection, ring, i, source_time);
+		for revision in 0..revisions {
+			push_record(collection, ring, MockRingRecord { revision, source_time });
 		}
 	}
+}
+
+thread_local! {
+	/// The pool the offchain worker submits its sweeps to, replaced by every `new_test_ext`.
+	static TRANSACTION_POOL: core::cell::RefCell<std::sync::Arc<parking_lot::RwLock<PoolState>>> =
+		core::cell::RefCell::new(std::sync::Arc::new(parking_lot::RwLock::new(PoolState {
+			transactions: Vec::new(),
+		})));
+}
+
+/// The calls of the transactions the offchain worker has submitted, without draining them.
+pub fn submitted_calls() -> Vec<RuntimeCall> {
+	TRANSACTION_POOL
+		.with_borrow(|pool| pool.read().transactions.clone())
+		.into_iter()
+		.map(|transaction| {
+			Extrinsic::decode(&mut &transaction[..]).expect("transaction decodes").function
+		})
+		.collect::<Vec<_>>()
+}
+
+/// Empties the transaction pool, so a later assertion only sees fresh submissions.
+pub fn clear_pool() {
+	TRANSACTION_POOL.with_borrow_mut(|pool| pool.write().transactions.clear());
+}
+
+/// Applies `call` as an authorized transaction, the way a block does.
+///
+/// A test that calls the dispatchable directly hands it the `Authorized` origin and skips
+/// `authorize`. This runs the whole pipeline instead, so the sweep is only dispatched if
+/// `authorize` admits it, which is what gates the sweeps on chain.
+pub fn apply_authorized(
+	call: RuntimeCall,
+) -> Result<
+	Result<PostDispatchInfo, DispatchErrorWithPostInfo<PostDispatchInfo>>,
+	TransactionValidityError,
+> {
+	let xt = Extrinsic::new_transaction(call, (AuthorizeCall::new(),));
+	let info = xt.get_dispatch_info();
+	let len = xt.encoded_size();
+	let checked = Checkable::check(xt, &frame_system::ChainContext::<Test>::default())?;
+
+	checked.apply::<Test>(&info, len)
 }

@@ -19,13 +19,15 @@
 use super::*;
 use crate::{
 	pallet::{
-		ProcessingState, RingCollectionExponents, RingCollectionStates, RingRoots, Subscription,
+		CurrentGeneration, ProcessingState, QueuedRingPurge, RingCollectionExponents,
+		RingCollectionStates, RingRoots, Subscription,
 	},
 	types::{
-		Identifier, MembersOf, RingCollectionState, RingIndex, RingRootOp, RingRootUpdate,
-		RingRootUpdatesBatch, SubscriptionStatus,
+		Identifier, MembersOf, RingCollectionState, RingIndex, RingPurgeProgress, RingRootOp,
+		RingRootUpdate, RingRootUpdatesBatch, SubscriptionStatus,
 	},
 };
+use alloc::collections::BTreeMap;
 use frame_benchmarking::{v2::*, BenchmarkError};
 use frame_support::{
 	pallet_prelude::BoundedBTreeMap,
@@ -65,7 +67,37 @@ fn fill_in_ring_roots<T: Config + BenchmarkHelper<T>>(
 			})
 			.expect("within MaxRecentRootsPerRing bound");
 	}
-	RingRoots::<T>::insert(identifier, ring_index, roots);
+	Pallet::<T>::set_current_ring_roots(&identifier, ring_index, roots);
+}
+
+/// Collection state with both bounded sets at capacity.
+fn worst_case_collection_state<T: Config>(
+) -> RingCollectionState<T::MaxMissingRootsPerCollection, T::MaxDeletedRingsPerCollection> {
+	let missing = T::MaxMissingRootsPerCollection::get();
+	let deleted = T::MaxDeletedRingsPerCollection::get();
+	let next_ring_index = missing.saturating_add(deleted);
+
+	RingCollectionState {
+		next_ring_index,
+		missing_indices: (0..missing)
+			.map(|i| (i, 0u32))
+			.collect::<BTreeMap<_, _>>()
+			.try_into()
+			.expect("at capacity"),
+		// Deleted indices sit above the missing ones, so no index is in both sets
+		deleted_indices: (missing..next_ring_index)
+			.collect::<BTreeSet<_>>()
+			.try_into()
+			.expect("at capacity"),
+		..Default::default()
+	}
+}
+
+/// Distinct collection identifier.
+fn bench_identifier(c: u32) -> Identifier {
+	let mut identifier = [0u8; 32];
+	identifier[..4].copy_from_slice(&c.to_le_bytes());
+	identifier
 }
 
 #[benchmarks(where T: BenchmarkHelper<T>)]
@@ -88,6 +120,12 @@ mod benches {
 			BENCH_IDENTIFIER,
 			RingCollectionState { next_ring_index: n, ..Default::default() },
 		);
+
+		// Worst case for the collection bound: the batch adds the last collection that fits,
+		// so the call walks every existing exponent before accepting it.
+		for c in 1..T::MaxCollections::get() {
+			RingCollectionExponents::<T>::insert(bench_identifier(c), RingExponent::R2e9);
+		}
 
 		let mut updates = BoundedVec::new();
 		for i in 0..n {
@@ -125,6 +163,7 @@ mod benches {
 
 		Subscription::<T>::put(SubscriptionStatus::Active { initialized_at_sequence: 1 });
 		ProcessingState::<T>::mutate(|s| s.last_processed_sequence = 1);
+		RingCollectionExponents::<T>::insert(BENCH_IDENTIFIER, RingExponent::R2e9);
 
 		// Pre-populating RingRoots to full capacity
 		for i in 0..n {
@@ -216,27 +255,22 @@ mod benches {
 
 		Subscription::<T>::put(SubscriptionStatus::Active { initialized_at_sequence: 1 });
 
-		// Worst-case: populate all storage that needs clearing across all collections
-		let max_roots = T::MaxRingRootsPerCollection::get();
+		// Worst-case: all collections carry state to clear inline. Ring roots are
+		// marked as stale via the generation bump, so their count does not matter.
 		let max_collections = T::MaxCollections::get();
 
 		for c in 0..max_collections {
-			let mut identifier = [0u8; 32];
-			identifier[..4].copy_from_slice(&c.to_le_bytes());
+			let identifier = bench_identifier(c);
 
-			for i in 0..max_roots {
+			for i in 0..T::MaxUpdatesPerBatch::get() {
 				fill_in_ring_roots::<T>(identifier, i as RingIndex, i);
 			}
 
-			let mut missing = BoundedBTreeMap::<_, _, T::MaxMissingRootsPerCollection>::new();
-			missing.try_insert(0, 0u32).expect("within bounds");
 			RingCollectionStates::<T>::insert(
 				identifier,
 				RingCollectionState {
-					ring_count: max_roots,
-					next_ring_index: max_roots,
-					missing_indices: missing,
-					..Default::default()
+					ring_count: T::MaxUpdatesPerBatch::get(),
+					..worst_case_collection_state::<T>()
 				},
 			);
 			RingCollectionExponents::<T>::insert(identifier, RingExponent::R2e9);
@@ -252,10 +286,83 @@ mod benches {
 		_(SystemOrigin::Root);
 
 		assert_eq!(Subscription::<T>::get(), SubscriptionStatus::Terminated);
-		assert_eq!(RingRoots::<T>::iter().count(), 0);
+		// Ring roots remain physically stored; they are marked as stale though
+		assert!(RingRoots::<T>::iter().count() > 0);
+		assert_eq!(CurrentGeneration::<T>::get(), 1);
+		assert!(QueuedRingPurge::<T>::get().is_some());
 		assert_eq!(RingCollectionStates::<T>::iter().count(), 0);
 		assert_eq!(RingCollectionExponents::<T>::iter().count(), 0);
 		assert_eq!(ProcessingState::<T>::get(), Default::default());
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn clear_ring_data() -> Result<(), BenchmarkError> {
+		T::init();
+
+		// Worst-case: all collections carry state to clear inline
+		for c in 0..T::MaxCollections::get() {
+			let identifier = bench_identifier(c);
+			RingCollectionStates::<T>::insert(
+				identifier,
+				RingCollectionState { ring_count: 1, ..worst_case_collection_state::<T>() },
+			);
+			RingCollectionExponents::<T>::insert(identifier, RingExponent::R2e9);
+		}
+		ProcessingState::<T>::mutate(|s| s.last_processed_sequence = 1);
+
+		#[block]
+		{
+			Pallet::<T>::clear_all_ring_data();
+		}
+
+		assert_eq!(CurrentGeneration::<T>::get(), 1);
+		assert!(QueuedRingPurge::<T>::get().is_some());
+		assert_eq!(RingCollectionStates::<T>::iter().count(), 0);
+		assert_eq!(RingCollectionExponents::<T>::iter().count(), 0);
+		assert_eq!(ProcessingState::<T>::get(), Default::default());
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn purge_stale_ring_roots(
+		n: Linear<1, { T::PurgePageSize::get() }>,
+	) -> Result<(), BenchmarkError> {
+		T::init();
+
+		// Worst-case: every visited entry is stale and removed
+		for i in 0..n {
+			fill_in_ring_roots::<T>(BENCH_IDENTIFIER, i as RingIndex, i);
+		}
+		CurrentGeneration::<T>::put(2);
+		QueuedRingPurge::<T>::put(RingPurgeProgress { generation: 0, page: 0 });
+
+		#[extrinsic_call]
+		_(SystemOrigin::Authorized);
+
+		assert_eq!(RingRoots::<T>::iter().count(), 0);
+		assert_eq!(QueuedRingPurge::<T>::get(), Some(RingPurgeProgress { generation: 1, page: 0 }));
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn authorize_purge_stale_ring_roots() -> Result<(), BenchmarkError> {
+		T::init();
+
+		// Generation 0 is stale only once the live one has moved past it, which is what
+		// `authorize` checks before it accepts the call.
+		CurrentGeneration::<T>::put(1);
+		QueuedRingPurge::<T>::put(RingPurgeProgress { generation: 0, page: 0 });
+
+		let call = Call::<T>::purge_stale_ring_roots {};
+
+		#[block]
+		{
+			call.authorize(TransactionSource::InBlock).unwrap().unwrap();
+		}
 
 		Ok(())
 	}
@@ -362,57 +469,42 @@ mod benches {
 		Ok(())
 	}
 
-	/// Benchmark for the `contains_key` loop in `detect_missing_rings_in_batch`.
-	/// Measures cost of scanning a range of `n` indices.
+	/// Benchmark for the scan loop in `detect_missing_rings_in_batch`.
+	/// Measures cost of scanning a range of `n` indices, swept over the full per-batch
+	/// scan cap since the extrinsics charge up to `MaxGapScanPerBatch` indices.
 	#[benchmark]
 	fn detect_missing_in_range(
-		n: Linear<1, { T::MaxUpdatesPerBatch::get() }>,
+		n: Linear<1, { T::MaxGapScanPerBatch::get() }>,
 	) -> Result<(), BenchmarkError> {
 		T::init();
 
 		Subscription::<T>::put(SubscriptionStatus::Active { initialized_at_sequence: 1 });
 		ProcessingState::<T>::mutate(|s| s.last_processed_sequence = 1);
 
-		// Pre-populate some ring roots so contains_key lookups are realistic
-		for i in 0..n {
-			fill_in_ring_roots::<T>(BENCH_IDENTIFIER, i as RingIndex, i);
-		}
-
+		// Every index is a gap.
 		RingCollectionStates::<T>::insert(
 			BENCH_IDENTIFIER,
-			RingCollectionState { ring_count: n, next_ring_index: n, ..Default::default() },
+			RingCollectionState { ring_count: 0, next_ring_index: n, ..Default::default() },
 		);
 
-		// Batch extends the range by n, triggering scan of n new indices
-		let mut updates = BoundedVec::new();
-		updates
-			.try_push(RingRootUpdate::<T> {
-				ring_index: n,
-				op: RingRootOp::Built { revision: 1, root: T::mock_ring_root(n + 100) },
-			})
-			.expect("updates ok");
-
+		// The batch only carries the collection identifier for the scan; the scanned range
+		// comes from the stored state's frontier and scan cursor.
 		let batch = RingRootUpdatesBatch::<T> {
 			identifier: BENCH_IDENTIFIER,
 			sequence: 2,
 			source_time: 2000,
-			updates,
-			// Extends next_ring_index by n beyond current, forcing a scan of n indices
-			next_ring_index: n.saturating_mul(2),
+			updates: BoundedVec::new(),
+			next_ring_index: n,
 		};
-
-		let old_next_ring_index = n;
-		Pallet::<T>::store_ring_roots(&batch);
 
 		#[block]
 		{
-			Pallet::<T>::detect_missing_rings_in_batch(&batch, old_next_ring_index);
+			Pallet::<T>::detect_missing_rings_in_batch(&batch);
 		}
 
-		// Indices n+1..2n-1 are missing (n-1 total)
 		assert_eq!(
 			RingCollectionStates::<T>::get(BENCH_IDENTIFIER).missing_indices.len(),
-			(n - 1) as usize,
+			n as usize
 		);
 
 		Ok(())
