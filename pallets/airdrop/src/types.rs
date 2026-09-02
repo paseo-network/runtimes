@@ -102,6 +102,18 @@ pub enum Status {
 		/// Count of registered participants.
 		total_participants: u32,
 	},
+	/// Waiting for randomness produced after the close before seeding the draw.
+	AwaitingEntropy {
+		/// Frozen registration total at the moment registration closed.
+		total_participants: u32,
+		/// Actual number of potential winners.
+		effective_winners: u32,
+		/// The randomness source's commitment moment recorded when registration closed:
+		/// an upper bound, at that time, on the moment of every value outside observers
+		/// could determine. The draw only proceeds with randomness carrying a strictly
+		/// greater moment, i.e. produced after the last possible registration.
+		last_moment: u32,
+	},
 	/// Drawing the winners for this event.
 	DrawWinners {
 		/// Frozen registration total at the moment draw started.
@@ -153,13 +165,17 @@ pub enum Status {
 #[derive(
 	Encode, Decode, DecodeWithMemTracking, Clone, PartialEq, Eq, Debug, TypeInfo, MaxEncodedLen,
 )]
-pub struct ActiveEvent<AssetId, AssetBalance> {
+pub struct ActiveEvent<AccountId, AssetId, AssetBalance> {
 	pub id: EventId,
 	pub info: EventInfo<AssetId, AssetBalance>,
 	pub status: Status,
+	/// Funding source for source-funded events; released prize funds are refunded here. `None` for
+	/// pre-funded `schedule_event` events, whose released funds stay in the pot.
+	pub source: Option<AccountId>,
 }
 
-pub type ActiveEventOf<T> = ActiveEvent<AssetIdOf<T>, AssetBalanceOf<T>>;
+pub type ActiveEventOf<T> =
+	ActiveEvent<<T as frame_system::Config>::AccountId, AssetIdOf<T>, AssetBalanceOf<T>>;
 
 /// A registration entry, stored under the entropy slot key.
 #[derive(
@@ -222,6 +238,17 @@ pub trait Airdrop<AccountId, AssetId, Balance> {
 		account_id: AccountId,
 		event_id: EventId,
 		signature: VrfSignature,
+	) -> DispatchResult;
+
+	/// Register a participant under a caller-supplied entropy slot.
+	///
+	/// The caller must derive `slot` deterministically from the participant identity and the
+	/// event, so that one participant cannot occupy two slots in the same event; the pallet only
+	/// rejects occupied slots. `entry` is the identifier the participant later claims with.
+	fn participate_with_slot(
+		event_id: EventId,
+		slot: BigEndianU256,
+		entry: RegistrationEntry<AccountId>,
 	) -> DispatchResult;
 
 	/// Claim a prize on behalf of a winning participant.

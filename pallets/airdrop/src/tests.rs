@@ -21,10 +21,19 @@ use crate::{
 	AirdropPrize, BigEndianU256, EventId, EventInfo, RegistrationEntry, Status,
 };
 use codec::Encode;
-use frame_support::{assert_err, assert_ok, traits::fungibles::Mutate};
-use indiv_support::{traits::Alias, utils::BigEndianU64};
+use frame_support::{
+	assert_err, assert_ok,
+	traits::{fungibles::Mutate, Authorize, Hooks},
+};
+use indiv_support::{
+	traits::{Alias, MomentRandomness},
+	utils::BigEndianU64,
+};
 use sp_core::sr25519;
-use sp_runtime::Permill;
+use sp_runtime::{
+	transaction_validity::{InvalidTransaction, TransactionSource},
+	Permill,
+};
 
 const ASSET_ID: u32 = 42;
 const PRIZE_VALUE: u64 = 1_000;
@@ -115,7 +124,9 @@ fn drive_to_claiming(id: EventId, info: EventInfo<u32, u64>, num_participants: u
 		participate_alias(id, participant, event_alias);
 	}
 	set_now_secs(info.draw_time as u64);
-	run_to_next_ocw(); // Registering → DrawWinners (close_registration)
+	run_to_next_ocw(); // Registering → AwaitingEntropy (close_registration)
+	assert!(matches!(Events::<Test>::get(id).unwrap().status, Status::AwaitingEntropy { .. }));
+	run_to_next_ocw(); // capture_entropy with fresher randomness → DrawWinners
 	assert!(matches!(Events::<Test>::get(id).unwrap().status, Status::DrawWinners { .. }));
 	// Callers of `drive_to_claiming` keep `num_participants` small, so
 	// `effective_winners <= DrawLimit` and one draw_winners batch fills
@@ -192,7 +203,7 @@ fn enable_then_disable_asset_round_trip() {
 }
 
 #[test]
-fn close_registration_skips_when_randomness_unavailable() {
+fn capture_entropy_waits_for_randomness_after_close() {
 	new_test_ext().execute_with(|| {
 		fund_source();
 		let id = event_id(42);
@@ -202,18 +213,197 @@ fn close_registration_skips_when_randomness_unavailable() {
 		run_to_next_ocw(); // → Registering
 		participate_alias(id, alias_from(0x11), alias_from(0xA0));
 
-		// Randomness unavailable: close_registration should leave the event in `Registering` and
-		// the OCW must retry on the next pass.
-		set_randomness(None);
+		// Close registration: the watermark records the source's commitment moment at
+		// close time (the latest randomness moment, as the mock has no lookahead).
 		set_now_secs(info.draw_time);
 		run_to_next_ocw();
-		assert!(matches!(Events::<Test>::get(id).unwrap().status, Status::Registering { .. }));
+		let Status::AwaitingEntropy { last_moment: watermark, .. } =
+			Events::<Test>::get(id).unwrap().status
+		else {
+			panic!("expected AwaitingEntropy");
+		};
+		assert!(watermark > 0, "the mock source had produced randomness before the close");
 		assert!(EventEntropy::<Test>::get(id).is_none());
 
-		// Once randomness becomes available the next OCW tick advances the event normally.
-		set_randomness(Some([7u8; 32]));
+		let call =
+			crate::Call::<Test>::capture_entropy_authorized { event_id: id, discriminator: 0 };
+
+		// Randomness still at the watermarked block: it was already public while
+		// registration was open, so the capture is rejected. The OCW checks the
+		// freshness itself before submitting, so the transaction is dropped rather
+		// than kept in the pool.
+		set_randomness(Some(([7u8; 32], watermark)));
+		assert_eq!(
+			call.authorize(TransactionSource::Local)
+				.expect("call has authorize")
+				.unwrap_err(),
+			InvalidTransaction::Custom(crate::AuthorizeInvalidity::EntropyNotReady as u8).into(),
+		);
+		// No randomness at all rejects the capture too.
+		set_randomness(None);
+		assert_eq!(
+			call.authorize(TransactionSource::Local)
+				.expect("call has authorize")
+				.unwrap_err(),
+			InvalidTransaction::Custom(crate::AuthorizeInvalidity::EntropyNotReady as u8).into(),
+		);
+		assert!(matches!(Events::<Test>::get(id).unwrap().status, Status::AwaitingEntropy { .. }));
+
+		// The OCW performs the same freshness check and skips submitting the capture:
+		// with no randomness at all, and with randomness at the watermark (the tick
+		// advances the mock randomness from `watermark - 1` to the watermark).
+		run_to_next_ocw();
+		assert!(matches!(Events::<Test>::get(id).unwrap().status, Status::AwaitingEntropy { .. }));
+		set_randomness(Some(([7u8; 32], watermark - 1)));
+		run_to_next_ocw();
+		assert!(matches!(Events::<Test>::get(id).unwrap().status, Status::AwaitingEntropy { .. }));
+
+		// Randomness produced after the watermark lets the next OCW tick seed the draw.
+		set_randomness(Some(([7u8; 32], watermark + 1)));
+		assert!(call.authorize(TransactionSource::Local).expect("call has authorize").is_ok());
 		run_to_next_ocw();
 		assert!(matches!(Events::<Test>::get(id).unwrap().status, Status::DrawWinners { .. }));
+		assert!(EventEntropy::<Test>::get(id).is_some());
+	});
+}
+
+#[test]
+fn watermark_covers_the_source_lookahead() {
+	new_test_ext().execute_with(|| {
+		fund_source();
+		// A source with a one-moment lookahead: randomness one moment past the value seen
+		// at close time may already be public while the closing block is authored.
+		RandomnessLookahead::set(&1);
+		let id = event_id(45);
+		let info = default_info(2, Permill::one());
+		assert_ok!(crate::Pallet::<Test>::schedule(SOURCE, id, info.clone()));
+		set_now_secs(info.registration_starts);
+		run_to_next_ocw(); // → Registering
+		participate_alias(id, alias_from(0x11), alias_from(0xA0));
+
+		set_now_secs(info.draw_time);
+		run_to_next_ocw(); // close_registration → AwaitingEntropy
+		let current_moment = MockRandomness::current_moment();
+		let (_, rnd_moment_at_close) = RANDOMNESS.with(|r| *r.borrow()).unwrap();
+		assert_ne!(rnd_moment_at_close, current_moment, "ensure the test is meaningful");
+		assert!(matches!(
+			Events::<Test>::get(id).unwrap().status,
+			Status::AwaitingEntropy { last_moment, .. }
+				if last_moment == current_moment
+		));
+
+		// One moment past the close is within the lookahead and must be rejected.
+		let call =
+			crate::Call::<Test>::capture_entropy_authorized { event_id: id, discriminator: 0 };
+		set_randomness(Some(([7u8; 32], rnd_moment_at_close + 1)));
+		assert_eq!(
+			call.authorize(TransactionSource::Local)
+				.expect("call has authorize")
+				.unwrap_err(),
+			InvalidTransaction::Custom(crate::AuthorizeInvalidity::EntropyNotReady as u8).into(),
+		);
+
+		// Two moments past the close is provably fresh.
+		set_randomness(Some(([7u8; 32], rnd_moment_at_close + 2)));
+		assert!(call.authorize(TransactionSource::Local).expect("call has authorize").is_ok());
+		run_to_next_ocw();
+		assert!(matches!(Events::<Test>::get(id).unwrap().status, Status::DrawWinners { .. }));
+	});
+}
+
+#[test]
+fn authorize_capture_entropy_rejects_bad_requests() {
+	new_test_ext().execute_with(|| {
+		fund_source();
+		let id = event_id(46);
+		let info = default_info(2, Permill::one());
+		assert_ok!(crate::Pallet::<Test>::schedule(SOURCE, id, info.clone()));
+
+		// Unknown event.
+		let unknown = crate::Call::<Test>::capture_entropy_authorized {
+			event_id: event_id(0xEE),
+			discriminator: 0,
+		};
+		assert_eq!(
+			unknown
+				.authorize(TransactionSource::Local)
+				.expect("call has authorize")
+				.unwrap_err(),
+			InvalidTransaction::Custom(crate::AuthorizeInvalidity::UnknownEvent as u8).into(),
+		);
+
+		// Wrong status: the event is still `Scheduled`, then `Registering`.
+		let call =
+			crate::Call::<Test>::capture_entropy_authorized { event_id: id, discriminator: 0 };
+		assert_eq!(
+			call.authorize(TransactionSource::Local)
+				.expect("call has authorize")
+				.unwrap_err(),
+			InvalidTransaction::Custom(crate::AuthorizeInvalidity::WrongStatus as u8).into(),
+		);
+		set_now_secs(info.registration_starts);
+		run_to_next_ocw(); // → Registering
+		participate_alias(id, alias_from(0x11), alias_from(0xA0));
+		assert_eq!(
+			call.authorize(TransactionSource::Local)
+				.expect("call has authorize")
+				.unwrap_err(),
+			InvalidTransaction::Custom(crate::AuthorizeInvalidity::WrongStatus as u8).into(),
+		);
+
+		// Non-local transaction source, on an otherwise valid capture.
+		set_now_secs(info.draw_time);
+		run_to_next_ocw(); // close_registration → AwaitingEntropy
+		advance_randomness();
+		assert!(call.authorize(TransactionSource::Local).expect("call has authorize").is_ok());
+		assert_eq!(
+			call.authorize(TransactionSource::External)
+				.expect("call has authorize")
+				.unwrap_err(),
+			InvalidTransaction::Custom(crate::AuthorizeInvalidity::TransactionNotLocal as u8)
+				.into(),
+		);
+	});
+}
+
+#[test]
+fn cancel_in_awaiting_entropy_routes_to_clearing() {
+	new_test_ext().execute_with(|| {
+		fund_source();
+		let id = event_id(44);
+		let info = default_info(10, Permill::one());
+		assert_ok!(crate::Pallet::<Test>::schedule(SOURCE, id, info.clone()));
+		set_now_secs(info.registration_starts);
+		run_to_next_ocw(); // → Registering
+		let n_participants = 3u32;
+		for i in 0..n_participants {
+			participate_alias(id, alias_from(0x10 + i as u8), alias_from(0xA0 + i as u8));
+		}
+		set_now_secs(info.draw_time);
+		run_to_next_ocw(); // close_registration → AwaitingEntropy, releases 7 unused slots
+		assert!(matches!(
+			Events::<Test>::get(id).unwrap().status,
+			Status::AwaitingEntropy { effective_winners: 3, .. }
+		));
+		assert_eq!(pot_balance_on_hold(), n_participants as u64 * PRIZE_VALUE);
+
+		// Cancel while waiting for entropy: routed into clean-up with the winner count
+		// preserved, and the remaining hold settled at `Finalizing` like the other
+		// post-close cancels.
+		crate::Pallet::<Test>::cancel(id);
+		assert!(matches!(
+			Events::<Test>::get(id).unwrap().status,
+			Status::ClearingRegistrations { effective_winners: 3, claimed: 0, .. }
+		));
+		assert_eq!(pot_balance_on_hold(), n_participants as u64 * PRIZE_VALUE);
+
+		set_now_secs(info.end_time);
+		run_to_next_ocw(); // drain Registrations → ClearingWinners
+		run_to_next_ocw(); // no Winners to drain → Finalizing
+		run_to_next_ocw(); // Finalize: release the remaining 3 slots, remove event
+		assert!(Events::<Test>::get(id).is_none());
+		assert_eq!(pot_balance_on_hold(), 0);
+		assert_eq!(source_balance(), POT_FUNDING - MIN_BALANCE);
 	});
 }
 
@@ -256,10 +446,11 @@ fn schedule_then_remove_releases_hold() {
 		assert_eq!(pot_balance(), MIN_BALANCE);
 
 		crate::Pallet::<Test>::remove_scheduled(id);
-		// Hold released back to the pot's free balance; source is not
-		// auto-refunded (callers manage refunds out-of-band if they need to).
+		// Hold released and the prize allocation refunded to the funding source so it can be
+		// reused for a future event. The pot retains only its ED.
 		assert_eq!(pot_balance_on_hold(), 0);
-		assert_eq!(pot_balance(), 10 * PRIZE_VALUE + MIN_BALANCE);
+		assert_eq!(pot_balance(), MIN_BALANCE);
+		assert_eq!(source_balance(), POT_FUNDING - MIN_BALANCE);
 		assert_eq!(ActionSchedule::<Test>::iter().count(), 0);
 	});
 }
@@ -286,9 +477,11 @@ fn cancel_in_registering_releases_full_hold_and_routes_to_clearing() {
 
 		// The full prize allocation is released at the cancel transition — mirroring the
 		// unused-slot release `close_registration` performs in the normal flow. Without this
-		// release the funds would sit on the pot's hold until `Finalizing`.
+		// release the funds would sit on the pot's hold until `Finalizing`. The released funds
+		// are refunded to the funding source rather than stranded in the pot.
 		assert_eq!(pot_balance_on_hold(), 0);
-		assert_eq!(pot_balance(), 10 * PRIZE_VALUE + MIN_BALANCE);
+		assert_eq!(pot_balance(), MIN_BALANCE);
+		assert_eq!(source_balance(), POT_FUNDING - MIN_BALANCE);
 
 		// Event is routed into the clean-up pipeline with no winners to settle, so the
 		// subsequent `Finalizing` step releases 0 more.
@@ -316,6 +509,8 @@ fn cancel_in_registering_drains_registrations_and_finalizes() {
 
 		crate::Pallet::<Test>::cancel(id);
 		assert_eq!(pot_balance_on_hold(), 0);
+		// Full allocation refunded to source at the cancel transition.
+		assert_eq!(source_balance(), POT_FUNDING - MIN_BALANCE);
 
 		// Drive the OCW past `end_time` so the clean-up pipeline runs.
 		set_now_secs(info.end_time);
@@ -334,6 +529,7 @@ fn cancel_in_registering_drains_registrations_and_finalizes() {
 		assert_eq!(ActionSchedule::<Test>::iter().count(), 0);
 		// No double-release — funds already came out at cancel time.
 		assert_eq!(pot_balance_on_hold(), 0);
+		assert_eq!(source_balance(), POT_FUNDING - MIN_BALANCE);
 	});
 }
 
@@ -353,15 +549,22 @@ fn cancel_in_draw_winners_routes_to_clearing_and_finalize_releases_remainder() {
 			participate_alias(id, alias_from(0x10 + i as u8), alias_from(0xA0 + i as u8));
 		}
 
-		// Transition Registering → DrawWinners. `close_registration` releases the unused
-		// `max_winners - effective_winners = 10 - 3 = 7` slots upfront.
+		// Transition Registering → AwaitingEntropy → DrawWinners. `close_registration`
+		// releases the unused `max_winners - effective_winners = 10 - 3 = 7` slots upfront;
+		// the next tick captures the draw entropy.
 		set_now_secs(info.draw_time);
+		run_to_next_ocw();
 		run_to_next_ocw();
 		assert!(matches!(
 			Events::<Test>::get(id).unwrap().status,
 			Status::DrawWinners { effective_winners: 3, .. },
 		));
 		assert_eq!(pot_balance_on_hold(), n_participants as u64 * PRIZE_VALUE);
+		// The 7 unused slots were refunded to the source, not left in the pot.
+		assert_eq!(
+			source_balance(),
+			POT_FUNDING - MIN_BALANCE - n_participants as u64 * PRIZE_VALUE
+		);
 
 		// Cancel mid-`DrawWinners` (no draw batch run yet, so no `Winners` entries).
 		crate::Pallet::<Test>::cancel(id);
@@ -381,6 +584,8 @@ fn cancel_in_draw_winners_routes_to_clearing_and_finalize_releases_remainder() {
 		run_to_next_ocw(); // Finalize: release the remaining 3 slots, remove event
 		assert!(Events::<Test>::get(id).is_none());
 		assert_eq!(pot_balance_on_hold(), 0);
+		// Remaining 3 slots refunded at `Finalizing`; the whole allocation is back with the source.
+		assert_eq!(source_balance(), POT_FUNDING - MIN_BALANCE);
 	});
 }
 
@@ -416,6 +621,61 @@ fn cancel_in_claiming_routes_to_clearing_preserving_claimed_count() {
 		run_to_next_ocw(); // Finalize: release the 1 unclaimed slot
 		assert!(Events::<Test>::get(id).is_none());
 		assert_eq!(pot_balance_on_hold(), 0);
+		// One prize went to the winner (account 99); the single unclaimed slot was refunded to
+		// the source at `Finalizing`. So the source is down exactly one awarded prize.
+		assert_eq!(source_balance(), POT_FUNDING - MIN_BALANCE - PRIZE_VALUE);
+	});
+}
+
+#[test]
+fn refunded_prize_funds_can_fund_a_new_event() {
+	new_test_ext().execute_with(|| {
+		fund_source();
+		let baseline = source_balance();
+
+		// Schedule event A, then cancel it while still `Scheduled`.
+		let a = event_id(1);
+		assert_ok!(crate::Pallet::<Test>::schedule(SOURCE, a, default_info(10, Permill::one())));
+		assert_eq!(source_balance(), baseline - 10 * PRIZE_VALUE);
+		crate::Pallet::<Test>::cancel(a);
+		// The full allocation is refunded, leaving the source exactly where it started.
+		assert_eq!(source_balance(), baseline);
+		assert_eq!(pot_balance_on_hold(), 0);
+
+		// Those same funds now bankroll a fresh event B without any new funding.
+		let b = event_id(2);
+		assert_ok!(crate::Pallet::<Test>::schedule(SOURCE, b, default_info(10, Permill::one())));
+		assert_eq!(source_balance(), baseline - 10 * PRIZE_VALUE);
+		assert_eq!(pot_balance_on_hold(), 10 * PRIZE_VALUE);
+	});
+}
+
+#[test]
+fn prefunded_event_release_stays_in_pot() {
+	new_test_ext().execute_with(|| {
+		fund_source();
+		// The `schedule_event` extrinsic assumes a pre-funded pot and records no funding source,
+		// so released funds stay in the pot rather than being refunded.
+		Assets::mint_into(ASSET_ID, &pot(), 10 * PRIZE_VALUE).expect("mint into pot");
+		let pot_before = pot_balance();
+		let source_before = source_balance();
+
+		let id = event_id(1);
+		assert_ok!(crate::Pallet::<Test>::schedule_event(
+			frame_system::RawOrigin::Root.into(),
+			id,
+			default_info(10, Permill::one()),
+		));
+		assert_eq!(pot_balance_on_hold(), 10 * PRIZE_VALUE);
+		// No funding source recorded for the extrinsic path.
+		assert!(Events::<Test>::get(id).unwrap().source.is_none());
+
+		crate::Pallet::<Test>::cancel(id);
+		// Released back into the pot's free balance — not refunded anywhere — and the source is
+		// untouched, matching the pre-funded-pot contract.
+		assert_eq!(pot_balance_on_hold(), 0);
+		assert_eq!(pot_balance(), pot_before);
+		assert_eq!(source_balance(), source_before);
 	});
 }
 
@@ -522,7 +782,9 @@ fn event_entropy_set_once_and_dropped_at_finalize() {
 		assert!(EventEntropy::<Test>::get(id).is_none(), "still not set during Registering",);
 
 		set_now_secs(info.draw_time as u64);
-		run_to_next_ocw(); // close_registration → DrawWinners
+		run_to_next_ocw(); // close_registration → AwaitingEntropy
+		assert!(EventEntropy::<Test>::get(id).is_none(), "not yet set while awaiting entropy");
+		run_to_next_ocw(); // capture_entropy → DrawWinners
 		let seed = EventEntropy::<Test>::get(id).expect("entropy set at draw open");
 
 		// Subsequent draw batches must NOT touch `EventEntropy`.
@@ -603,6 +865,73 @@ fn account_participation_validates_vrf_and_binding() {
 }
 
 #[test]
+fn slot_participation_registers_and_rejects_duplicates() {
+	new_test_ext().execute_with(|| {
+		fund_source();
+		let id = event_id(23);
+		let entry = RegistrationEntry::<u64>::Alias { alias: alias_from(0x33) };
+		let slot = BigEndianU256::from([0x44u8; 32]);
+
+		// Unknown event is rejected.
+		assert_err!(
+			crate::Pallet::<Test>::participate_with_slot(id, slot, entry.clone()),
+			crate::Error::<Test>::UnknownEvent,
+		);
+
+		assert_ok!(crate::Pallet::<Test>::schedule(SOURCE, id, default_info(2, Permill::one())));
+		// A scheduled event does not accept registrations before it opens.
+		assert_err!(
+			crate::Pallet::<Test>::participate_with_slot(id, slot, entry.clone()),
+			crate::Error::<Test>::NotAcceptingRegistrations,
+		);
+
+		set_now_secs(150);
+		run_to_next_ocw(); // → Registering
+		assert_ok!(crate::Pallet::<Test>::participate_with_slot(id, slot, entry.clone()));
+		assert_eq!(Registrations::<Test>::get(id, slot), Some(entry));
+		assert!(matches!(
+			Events::<Test>::get(id).unwrap().status,
+			Status::Registering { total_participants: 1 }
+		));
+
+		// The same slot cannot be occupied twice, whatever the entry.
+		let other_entry = RegistrationEntry::<u64>::Account { account_id: 5 };
+		assert_err!(
+			crate::Pallet::<Test>::participate_with_slot(id, slot, other_entry),
+			crate::Error::<Test>::EntropySlotTaken,
+		);
+	});
+}
+
+#[test]
+fn slot_registered_participant_wins_and_claims() {
+	new_test_ext().execute_with(|| {
+		fund_source();
+		let id = event_id(29);
+		let info = default_info(1, Permill::one());
+		assert_ok!(crate::Pallet::<Test>::schedule(SOURCE, id, info.clone()));
+		set_now_secs(info.registration_starts);
+		run_to_next_ocw(); // → Registering
+		let entry = RegistrationEntry::<u64>::Alias { alias: alias_from(0x66) };
+		let slot = BigEndianU256::from([0x55u8; 32]);
+		assert_ok!(crate::Pallet::<Test>::participate_with_slot(id, slot, entry.clone()));
+
+		set_now_secs(info.draw_time);
+		run_to_next_ocw(); // Registering → AwaitingEntropy
+		run_to_next_ocw(); // capture_entropy → DrawWinners
+		run_to_next_ocw(); // draw_winners fills the single slot
+		run_to_next_ocw(); // close_drawing → Claiming
+		assert!(matches!(Events::<Test>::get(id).unwrap().status, Status::Claiming { .. }));
+		assert_eq!(Winners::<Test>::get(id, &entry), Some(slot));
+
+		let beneficiary = 99u64;
+		assert_ok!(crate::Pallet::<Test>::claim(id, entry, beneficiary));
+		use frame_support::traits::fungibles::Inspect;
+		assert_eq!(<Assets as Inspect<u64>>::balance(ASSET_ID, &beneficiary), PRIZE_VALUE);
+	});
+}
+
+#[test]
 fn draw_marks_exactly_effective_n_winners() {
 	new_test_ext().execute_with(|| {
 		fund_source();
@@ -630,12 +959,13 @@ fn draw_with_no_participants_cancels_event() {
 		run_to_next_ocw(); // → Registering
 		set_now_secs(250);
 		run_to_next_ocw(); // close+draw: 0 participants → cancel + finalize inline
-					 // Event is removed; the hold is released back to the pot's free
-					 // balance (callers manage source refunds separately).
+					 // Event is removed; the hold is released and the full allocation
+					 // refunded to the source, so the pot keeps only its ED.
 		assert!(Events::<Test>::get(id).is_none());
 		assert_eq!(ActionSchedule::<Test>::iter().count(), 0);
 		assert_eq!(pot_balance_on_hold(), 0);
-		assert_eq!(pot_balance(), 3 * PRIZE_VALUE + MIN_BALANCE);
+		assert_eq!(pot_balance(), MIN_BALANCE);
+		assert_eq!(source_balance(), POT_FUNDING - MIN_BALANCE);
 	});
 }
 
@@ -714,11 +1044,11 @@ fn clean_up_removes_event() {
 		run_to_next_ocw(); // finalize: refund unclaimed, remove event
 		assert!(Events::<Test>::get(id).is_none());
 		assert_eq!(ActionSchedule::<Test>::iter().count(), 0);
-		// The unclaimed prize's hold was released back into the pot's free
-		// balance. The pot also
-		// keeps the ED that source paid in at schedule time.
+		// The unclaimed prize's hold was released and refunded to the source, so the pot keeps
+		// only the ED that source paid in at enable time and the source is made whole.
 		assert_eq!(pot_balance_on_hold(), 0);
-		assert_eq!(pot_balance(), PRIZE_VALUE + MIN_BALANCE);
+		assert_eq!(pot_balance(), MIN_BALANCE);
+		assert_eq!(source_balance(), POT_FUNDING - MIN_BALANCE);
 
 		// Second event: 2 winners, one claims, the other doesn't. `finalize` must release only the
 		// unclaimed half, so a partial refund.
@@ -746,13 +1076,13 @@ fn clean_up_removes_event() {
 		run_to_next_ocw(); // drains Winners (1 remaining) → Finalizing
 		run_to_next_ocw(); // finalize: refund only the unclaimed prize
 		assert!(Events::<Test>::get(id2).is_none());
-		// One prize went to the beneficiary, the other was refunded to the pot. Pot accumulated:
-		// PRIZE_VALUE from event 1 (1 unclaimed) + PRIZE_VALUE from event 2 (1 unclaimed). Source
-		// paid 3 × PRIZE_VALUE for the prize allocations plus the single ED transferred once when
-		// the asset was enabled; beneficiary received 1 × PRIZE_VALUE; pot keeps the rest.
+		// One prize went to the beneficiary, the other was refunded to the source. Across both
+		// events the source paid 3 × PRIZE_VALUE and got 2 × PRIZE_VALUE back (the unclaimed
+		// slots), so it is down exactly the single awarded prize plus the one-off ED. The pot
+		// keeps only its ED.
 		assert_eq!(pot_balance_on_hold(), 0);
-		assert_eq!(pot_balance(), 2 * PRIZE_VALUE + MIN_BALANCE);
-		assert_eq!(source_balance(), POT_FUNDING - 3 * PRIZE_VALUE - MIN_BALANCE);
+		assert_eq!(pot_balance(), MIN_BALANCE);
+		assert_eq!(source_balance(), POT_FUNDING - MIN_BALANCE - PRIZE_VALUE);
 	});
 }
 
@@ -863,7 +1193,8 @@ fn draw_winners_runs_in_multiple_batches() {
 			participate_alias(id, participant, event_alias);
 		}
 		set_now_secs(info.draw_time as u64);
-		run_to_next_ocw(); // close_registration → DrawWinners { winners_added: 0, .. }
+		run_to_next_ocw(); // close_registration → AwaitingEntropy
+		run_to_next_ocw(); // capture_entropy → DrawWinners { winners_added: 0, .. }
 		assert!(matches!(
 			Events::<Test>::get(id).unwrap().status,
 			Status::DrawWinners { winners_added: 0, effective_winners: 5, .. }
@@ -967,9 +1298,10 @@ fn end_to_end_lottery_lifecycle() {
 			Status::Registering { total_participants } if total_participants == N_PARTICIPANTS as u32
 		));
 
-		// ---- Close registration, draw winners (5 per batch), close drawing ----
+		// ---- Close registration, capture entropy, draw winners (5 per batch), close drawing ----
 		set_now_secs(info.draw_time as u64);
-		run_to_next_ocw(); // close_registration → DrawWinners
+		run_to_next_ocw(); // close_registration → AwaitingEntropy
+		run_to_next_ocw(); // capture_entropy → DrawWinners
 		assert!(matches!(
 			Events::<Test>::get(id).unwrap().status,
 			Status::DrawWinners { effective_winners: MAX_WINNERS, winners_added: 0, .. }
@@ -1014,14 +1346,35 @@ fn end_to_end_lottery_lifecycle() {
 		// ---- Pot accounting ----
 		// - Source paid 30 × PRIZE_VALUE + MIN_BALANCE (ED) up front.
 		// - 20 claims released their hold and transferred to beneficiaries (left the pot).
-		// - Finalize released the 10 unclaimed prizes back to the pot's free balance (they stay in
-		//   the pot — refunds are not auto-returned to source).
+		// - Finalize released the 10 unclaimed prizes and refunded them to the source. So the pot
+		//   keeps only its ED and the source is out exactly the 20 awarded prizes.
 		assert_eq!(pot_balance_on_hold(), 0);
-		assert_eq!(pot_balance(), (MAX_WINNERS as u64 - N_CLAIMED) * PRIZE_VALUE + MIN_BALANCE,);
-		assert_eq!(source_balance(), POT_FUNDING - MAX_WINNERS as u64 * PRIZE_VALUE - MIN_BALANCE,);
+		assert_eq!(pot_balance(), MIN_BALANCE);
+		assert_eq!(source_balance(), POT_FUNDING - N_CLAIMED * PRIZE_VALUE - MIN_BALANCE,);
 		use frame_support::traits::fungibles::Inspect;
 		for i in 0..N_CLAIMED {
 			assert_eq!(<Assets as Inspect<u64>>::balance(ASSET_ID, &(1_000 + i)), PRIZE_VALUE,);
 		}
+	});
+}
+
+/// Verify that the default mock configuration passes all integrity checks, including the
+/// per-call block-fit assertions for OCW-submitted lifecycle transactions.
+#[test]
+fn integrity_test_passes() {
+	new_test_ext().execute_with(|| {
+		<crate::Pallet<Test> as Hooks<u64>>::integrity_test();
+	});
+}
+
+/// A `DrawLimit` large enough to push `draw_winners_authorized` over the block budget must fail
+/// the integrity check, so a misconfigured runtime panics at `construct_runtime!` time rather than
+/// silently dropping the OCW transaction in production.
+#[test]
+#[should_panic(expected = "draw_winners_authorized")]
+fn integrity_test_rejects_oversized_draw_limit() {
+	new_test_ext().execute_with(|| {
+		DrawLimitValue::set(&u32::MAX);
+		<crate::Pallet<Test> as Hooks<u64>>::integrity_test();
 	});
 }

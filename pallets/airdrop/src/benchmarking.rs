@@ -99,7 +99,7 @@ pub trait BenchmarkHelper<T: Config> {
 	fn create_asset_id_parameter(id: u32) -> AssetIdOf<T>;
 	/// Build a ring-membership proof signed by `member_seed`'s key over
 	/// `(context, message)`. Returns the proof and the alias that
-	/// `T::MemberService::verify_membership_at_rev` will recover for it
+	/// `T::MemberService::verify_membership` will recover for it
 	/// (the alias is deterministic in `(member_secret, context)` — the
 	/// caller can't pick it).
 	fn build_membership_proof(
@@ -208,7 +208,7 @@ where
 /// land at a specific lifecycle phase.
 fn setup_event<T: Config>(asset_id: AssetIdOf<T>, id: EventId, max_winners: u32, status: Status) {
 	let info = default_info::<T>(asset_id, max_winners, Permill::one());
-	let event = ActiveEvent { id, info: info.clone(), status: status.clone() };
+	let event = ActiveEvent { id, info: info.clone(), status: status.clone(), source: None };
 	let timestamp = Airdrop::<T>::next_action_scheduled_at(&status, &info);
 	Events::<T>::insert(id, event);
 	ActionSchedule::<T>::insert(BigEndianU64(timestamp), id, ());
@@ -318,6 +318,12 @@ mod benches {
 		let manager = T::ManagerOrigin::try_successful_origin()
 			.map_err(|_| BenchmarkError::Stop("manager origin"))?;
 		Airdrop::<T>::schedule_event(manager.clone(), id, info)?;
+		// Worst case: source-funded, so the released allocation is refunded.
+		Events::<T>::mutate(id, |e| {
+			if let Some(ev) = e {
+				ev.source = Some(account::<T::AccountId>("refund-source", 0, 0));
+			}
+		});
 
 		#[extrinsic_call]
 		_(manager as T::RuntimeOrigin, id);
@@ -439,9 +445,9 @@ mod benches {
 
 	#[benchmark]
 	fn close_registration() -> Result<(), BenchmarkError> {
-		// Worst case for `close_registration_authorized` is the draw-initiation path:
-		// randomness is consumed (hence `setup_randomness`) and the excess prize hold is
-		// released because `effective_winners < max_winners`.
+		// Worst case for `close_registration_authorized` is the closing path: the excess
+		// prize hold is released because `effective_winners < max_winners` and the
+		// randomness commitment moment is recorded.
 		let asset_id = T::BenchmarkHelper::create_asset_id_parameter(0);
 		fund_pot_for::<T>(asset_id.clone(), MAX_WINNERS)?;
 		let pot = Airdrop::<T>::airdrop_pot_id();
@@ -452,7 +458,6 @@ mod benches {
 			prize_value::<T>(&asset_id).saturating_mul(MAX_WINNERS.into()),
 		)?;
 		T::BenchmarkHelper::set_unix_time(Duration::from_secs(DRAW_TIME as u64));
-		T::Randomness::setup_randomness();
 
 		let id = event_id(7);
 		setup_event::<T>(
@@ -461,6 +466,12 @@ mod benches {
 			MAX_WINNERS,
 			Status::Registering { total_participants: 1 },
 		);
+		// Worst case: source-funded, so releasing the unused slots also refunds them.
+		Events::<T>::mutate(id, |e| {
+			if let Some(ev) = e {
+				ev.source = Some(account::<T::AccountId>("refund-source", 0, 0));
+			}
+		});
 		// One real registration so `total_participants > 0`.
 		Registrations::<T>::insert(
 			id,
@@ -473,19 +484,75 @@ mod benches {
 		close_registration_authorized(frame_system::RawOrigin::Authorized, id, 0);
 
 		let event = Events::<T>::get(id).expect("event still present");
-		assert!(matches!(
-			event.status,
-			Status::DrawWinners {
-				effective_winners: 1,
-				winners_added: 0,
-				total_participants: 1,
-				..
-			}
-		));
-		assert!(EventEntropy::<T>::contains_key(id));
+		let Status::AwaitingEntropy { effective_winners: 1, total_participants: 1, last_moment } =
+			event.status
+		else {
+			panic!("expected AwaitingEntropy");
+		};
+		assert_eq!(last_moment, T::Randomness::current_moment());
+		assert!(!EventEntropy::<T>::contains_key(id));
 		let held_after =
 			<T as Config>::Fungibles::balance_on_hold(asset_id, &HoldReason::Airdrop.into(), &pot);
 		assert_eq!(held_after, expected_kept_hold);
+		Ok(())
+	}
+
+	#[benchmark]
+	fn capture_entropy() -> Result<(), BenchmarkError> {
+		let asset_id = T::BenchmarkHelper::create_asset_id_parameter(0);
+		fund_pot_for::<T>(asset_id.clone(), 1)?;
+		T::BenchmarkHelper::set_unix_time(Duration::from_secs(DRAW_TIME as u64));
+		// Randomness produced after the watermark recorded at close time.
+		T::Randomness::set_randomness([9u8; 32], 11);
+
+		let id = event_id(16);
+		setup_event::<T>(
+			asset_id,
+			id,
+			1,
+			Status::AwaitingEntropy {
+				total_participants: 1,
+				effective_winners: 1,
+				last_moment: 10,
+			},
+		);
+
+		#[extrinsic_call]
+		capture_entropy_authorized(frame_system::RawOrigin::Authorized, id, 0);
+
+		assert!(matches!(
+			Events::<T>::get(id).expect("event still present").status,
+			Status::DrawWinners { effective_winners: 1, winners_added: 0, .. }
+		));
+		assert!(EventEntropy::<T>::contains_key(id));
+		Ok(())
+	}
+
+	#[benchmark]
+	fn authorize_capture_entropy() -> Result<(), BenchmarkError> {
+		let asset_id = T::BenchmarkHelper::create_asset_id_parameter(0);
+		fund_pot_for::<T>(asset_id.clone(), 1)?;
+		T::BenchmarkHelper::set_unix_time(Duration::from_secs(DRAW_TIME as u64));
+		T::Randomness::set_randomness([9u8; 32], 11);
+
+		let id = event_id(17);
+		setup_event::<T>(
+			asset_id,
+			id,
+			1,
+			Status::AwaitingEntropy {
+				total_participants: 1,
+				effective_winners: 1,
+				last_moment: 10,
+			},
+		);
+
+		let call = Call::<T>::capture_entropy_authorized { event_id: id, discriminator: 0 };
+		#[block]
+		{
+			call.authorize(TransactionSource::Local).unwrap().unwrap();
+		}
+
 		Ok(())
 	}
 
@@ -685,6 +752,12 @@ mod benches {
 			1,
 			Status::Finalizing { effective_winners: 1, claimed: 0 },
 		);
+		// Worst case: source-funded, so the unclaimed prize is refunded.
+		Events::<T>::mutate(id, |e| {
+			if let Some(ev) = e {
+				ev.source = Some(account::<T::AccountId>("refund-source", 0, 0));
+			}
+		});
 
 		#[extrinsic_call]
 		finalize_authorized(frame_system::RawOrigin::Authorized, id, 0);
