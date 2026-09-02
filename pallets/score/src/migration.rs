@@ -1025,6 +1025,80 @@ mod tests {
 		});
 	}
 
+	// ===================================================================================
+	// 4. The try-runtime hooks, actually executed (not merely compiled).
+	// ===================================================================================
+
+	#[cfg(feature = "try-runtime")]
+	#[test]
+	fn pre_and_post_upgrade_agree_on_a_realistic_state() {
+		new_test_ext().execute_with(|| {
+			StorageVersion::new(0).put::<crate::Pallet<Test>>();
+			PersonhoodThreshold::<Test>::kill();
+			for who in 1u64..=4 {
+				old::Participants::<Test>::insert(
+					&AccountOrPerson::Account(who),
+					old_zero_participant(),
+				);
+			}
+
+			let state = MigrateV0ToV1::<Test>::pre_upgrade().expect("pre_upgrade");
+			MigrateV0ToV1::<Test>::on_runtime_upgrade();
+			MigrateV0ToV1::<Test>::post_upgrade(state).expect("post_upgrade");
+		});
+	}
+
+	#[cfg(feature = "try-runtime")]
+	#[test]
+	fn pre_upgrade_refuses_a_value_that_would_saturate() {
+		// 🔴 The narrowing rule is a human decision. If production data ever needs it, the
+		// try-runtime run must stop rather than apply a default nobody signed off on.
+		new_test_ext().execute_with(|| {
+			StorageVersion::new(0).put::<crate::Pallet<Test>>();
+			PersonhoodThreshold::<Test>::kill();
+			old::Participants::<Test>::insert(
+				&AccountOrPerson::Account(1u64),
+				OldParticipant { score: 300, ..old_zero_participant() },
+			);
+
+			assert!(MigrateV0ToV1::<Test>::pre_upgrade().is_err());
+		});
+
+		// ...and the same for a saturating streak.
+		new_test_ext().execute_with(|| {
+			StorageVersion::new(0).put::<crate::Pallet<Test>>();
+			PersonhoodThreshold::<Test>::kill();
+			old::Participants::<Test>::insert(
+				&AccountOrPerson::Account(1u64),
+				OldParticipant { streak: OldStreak::Absent(9_000), ..old_zero_participant() },
+			);
+
+			assert!(MigrateV0ToV1::<Test>::pre_upgrade().is_err());
+		});
+	}
+
+	#[cfg(feature = "try-runtime")]
+	#[test]
+	fn post_upgrade_catches_a_value_the_migration_failed_to_reencode() {
+		// Proves the post-check is load-bearing. Unmigrated bytes DECODE as the new type, so a
+		// naive structural check would pass here; the length and byte-equality checks do not.
+		new_test_ext().execute_with(|| {
+			StorageVersion::new(0).put::<crate::Pallet<Test>>();
+			PersonhoodThreshold::<Test>::kill();
+			old::Participants::<Test>::insert(
+				&AccountOrPerson::Account(1u64),
+				old_zero_participant(),
+			);
+			let state = MigrateV0ToV1::<Test>::pre_upgrade().expect("pre_upgrade");
+
+			// Deliberately do NOT run the migration.
+			assert!(
+				MigrateV0ToV1::<Test>::post_upgrade(state).is_err(),
+				"post_upgrade must not pass on an unmigrated Participant"
+			);
+		});
+	}
+
 	#[test]
 	fn migration_writes_nothing_when_a_participant_cannot_be_decoded() {
 		new_test_ext().execute_with(|| {

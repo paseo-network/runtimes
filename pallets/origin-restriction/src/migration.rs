@@ -436,9 +436,7 @@ mod tests {
 		},
 		pallet::{Usage, Usages},
 	};
-	use frame_support::{
-		assert_err, pallet_prelude::*, traits::OnRuntimeUpgrade,
-	};
+	use frame_support::{assert_err, pallet_prelude::*, traits::OnRuntimeUpgrade};
 	use sp_runtime::{
 		traits::BlockNumberProvider,
 		transaction_validity::InvalidTransaction,
@@ -631,6 +629,72 @@ mod tests {
 		assert_eq!(blocks_to_recover(1, 0, 0), None);
 		// ...but a zero recovery rate is fine when there is no debt.
 		assert_eq!(blocks_to_recover(0, 0, 0), Some(0));
+	}
+
+	// ===================================================================================
+	// 4. The try-runtime hooks, actually executed (not merely compiled).
+	// ===================================================================================
+
+	#[cfg(feature = "try-runtime")]
+	#[test]
+	fn pre_and_post_upgrade_agree_on_a_realistic_state() {
+		new_test_ext().execute_with(|| {
+			StorageVersion::new(0).put::<crate::Pallet<crate::mock::Test>>();
+			advance_relay_by(200);
+			// Two entries with stamps ahead of the provider clock, as on people-paseo.
+			Usages::<crate::mock::Test>::insert(
+				&RuntimeRestrictedEntity::A,
+				Usage { used: MAX_ALLOWANCE + 50, at_block: 9_000_000 },
+			);
+			Usages::<crate::mock::Test>::insert(
+				&RuntimeRestrictedEntity::B,
+				Usage { used: 1, at_block: 9_000_001 },
+			);
+
+			let state = MigrateV0ToV1::<crate::mock::Test>::pre_upgrade().expect("pre_upgrade");
+			MigrateV0ToV1::<crate::mock::Test>::on_runtime_upgrade();
+			MigrateV0ToV1::<crate::mock::Test>::post_upgrade(state).expect("post_upgrade");
+		});
+	}
+
+	#[cfg(feature = "try-runtime")]
+	#[test]
+	fn pre_upgrade_refuses_an_entity_that_would_stay_blocked_too_long() {
+		new_test_ext().execute_with(|| {
+			StorageVersion::new(0).put::<crate::Pallet<crate::mock::Test>>();
+			// A debt that needs more than MAX_ACCEPTABLE_RECOVERY_BLOCKS at 5/block.
+			let debt = MAX_ALLOWANCE
+				+ (MAX_ACCEPTABLE_RECOVERY_BLOCKS as u64 + 1) * ALLOWANCE_RECOVERY_PER_BLOCK;
+			Usages::<crate::mock::Test>::insert(
+				&RuntimeRestrictedEntity::A,
+				Usage { used: debt, at_block: 9_000_000 },
+			);
+
+			assert!(
+				MigrateV0ToV1::<crate::mock::Test>::pre_upgrade().is_err(),
+				"the `used` policy must be re-taken by a human, not inherited"
+			);
+		});
+	}
+
+	#[cfg(feature = "try-runtime")]
+	#[test]
+	fn post_upgrade_catches_a_stamp_the_migration_failed_to_rebase() {
+		// Proves the post-check is load-bearing: if `at_block` is left stale, it fails.
+		new_test_ext().execute_with(|| {
+			StorageVersion::new(0).put::<crate::Pallet<crate::mock::Test>>();
+			Usages::<crate::mock::Test>::insert(
+				&RuntimeRestrictedEntity::A,
+				Usage { used: 1, at_block: 9_000_000 },
+			);
+			let state = MigrateV0ToV1::<crate::mock::Test>::pre_upgrade().expect("pre_upgrade");
+
+			// Deliberately do NOT run the migration — simulate a no-op / half-applied run.
+			assert!(
+				MigrateV0ToV1::<crate::mock::Test>::post_upgrade(state).is_err(),
+				"post_upgrade must not pass on an unrebased Usages entry"
+			);
+		});
 	}
 
 	#[test]

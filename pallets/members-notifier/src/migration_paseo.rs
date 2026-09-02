@@ -511,6 +511,56 @@ mod tests {
 		});
 	}
 
+	// ===================================================================================
+	// 4. The try-runtime hooks, actually executed (not merely compiled).
+	// ===================================================================================
+
+	#[cfg(feature = "try-runtime")]
+	#[test]
+	fn pre_and_post_upgrade_agree_on_the_live_shape() {
+		new_test_ext().execute_with(|| {
+			StorageVersion::new(0).put::<crate::Pallet<Test>>();
+			insert_live_subscriber();
+
+			let state = MigrateV0ToV1::<Test>::pre_upgrade().expect("pre_upgrade");
+			MigrateV0ToV1::<Test>::on_runtime_upgrade();
+			MigrateV0ToV1::<Test>::post_upgrade(state).expect("post_upgrade");
+		});
+	}
+
+	#[cfg(feature = "try-runtime")]
+	#[test]
+	fn post_upgrade_catches_a_map_the_migration_failed_to_seed() {
+		// Proves the post-check is load-bearing — and that it is the same check
+		// `do_try_state` makes, so a try-runtime `--checks all` run and this hook agree.
+		new_test_ext().execute_with(|| {
+			StorageVersion::new(0).put::<crate::Pallet<Test>>();
+			insert_live_subscriber();
+			let state = MigrateV0ToV1::<Test>::pre_upgrade().expect("pre_upgrade");
+
+			// Deliberately do NOT run the migration.
+			assert!(
+				MigrateV0ToV1::<Test>::post_upgrade(state).is_err(),
+				"post_upgrade must not pass on an unseeded SubscribedCollections"
+			);
+		});
+	}
+
+	#[cfg(feature = "try-runtime")]
+	#[test]
+	fn pre_upgrade_refuses_an_already_populated_map() {
+		new_test_ext().execute_with(|| {
+			StorageVersion::new(0).put::<crate::Pallet<Test>>();
+			insert_live_subscriber();
+			SubscribedCollections::<Test>::insert(*LIVE_PEOPLE as Identifier, ());
+
+			assert!(
+				MigrateV0ToV1::<Test>::pre_upgrade().is_err(),
+				"a pre-seeded map means live state is not what this migration assumed"
+			);
+		});
+	}
+
 	#[test]
 	fn migration_is_a_no_op_when_already_at_version_one() {
 		new_test_ext().execute_with(|| {
