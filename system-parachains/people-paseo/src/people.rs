@@ -298,9 +298,25 @@ pub type FungibleExternalAsset = ItemOf<AssetsWithHolder, ExternalAssetLocation,
 pub struct AccountContexts;
 impl frame_support::traits::Contains<Context> for AccountContexts {
 	fn contains(l: &Context) -> bool {
+		// individuality v0.3.1 deleted the `RESOURCES_CONTEXT` constant. Its replacement,
+		// `Pallet::<Runtime>::resources_context()`, is a FUNCTION, not a const: the context is
+		// now derived from the runtime's network suffix rather than being a fixed byte string.
+		// It must therefore be CALLED here — binding it as a value would not compile, and
+		// hard-coding the old constant would silently split the context namespace.
 		l == &indiv_pallet_mob_rule::MOB_CONTEXT ||
 			l == &indiv_pallet_score::SCORE_CONTEXT ||
-			l == &indiv_pallet_resources::RESOURCES_CONTEXT
+			l == &indiv_pallet_resources::Pallet::<Runtime>::resources_context()
+	}
+}
+
+/// The contexts in which lite people may set up account aliases: the pallet's own
+/// authentication context, and the score context, in which a lite person can designate an
+/// account to play the game. Both are functions for the same reason as above.
+pub struct LitePeopleAccountContexts;
+impl frame_support::traits::Contains<Context> for LitePeopleAccountContexts {
+	fn contains(l: &Context) -> bool {
+		l == &indiv_pallet_people_lite::Pallet::<Runtime>::auth_context() ||
+			l == &indiv_pallet_score::Pallet::<Runtime>::score_context()
 	}
 }
 
@@ -326,6 +342,12 @@ parameter_types! {
 		indiv_support::traits::RingExponent::R2e9;
 	/// Onboarding size for lite people collection.
 	pub const LitePeopleOnboardingSize: u32 = 3;
+	/// Receives `register_with_fee` payments. Matches upstream's `plitefee`.
+	pub const LitePeoplePotId: frame_support::PalletId = frame_support::PalletId(*b"plitefee");
+	/// Fee to register as a lite person without device attestation. Upstream's value.
+	/// Kept at or above the existential deposit so the fee pot account can always exist.
+	pub LitePersonRegistrationFee: Balance =
+		(75 * UNITS).max(ExistentialDeposit::get());
 	/// The page size for chunks manager.
 	pub const ChunkPageSize: u32 = 255;
 	/// Self-inclusion delay: 60 minutes.
@@ -909,7 +931,11 @@ impl indiv_pallet_airdrop::Config for Runtime {
 	type ManagerOrigin = EnsureRoot<Self::AccountId>;
 	type PalletId = AirdropPalletId;
 	type UnixTime = Timestamp;
-	type Randomness = ParentHashRandomness<Runtime>;
+	// Real relay-chain randomness, replacing the grindable `ParentHashRandomness` placeholder.
+	// This is HALF the fix: it only produces a value if `pallet-relay-randomness` is actually
+	// fed by `OnSystemEvent` in lib.rs. Without that, this compiles, runs, never populates,
+	// and every airdrop stalls in `AwaitingEntropy` forever with no error.
+	type Randomness = indiv_pallet_relay_randomness::RelayBlockRandomness<Runtime>;
 	type AccountIdToPublic = AccountIdToSr25519Public;
 	type ClearLimit = ConstU32<100>;
 	type DrawLimit = ConstU32<100>;
@@ -918,24 +944,13 @@ impl indiv_pallet_airdrop::Config for Runtime {
 	type BenchmarkHelper = AirdropBenchmarkHelper;
 }
 
-/// Placeholder [`indiv_support::traits::CurrentBlockRandomness`] using the parent block
-/// hash. **Not** the relay-chain per-block VRF the trait documents — the parent hash is
-/// chosen by the parachain block author and is grindable. Acceptable as a stand-in until
-/// the proper relay-chain randomness adapter is wired up; revisit before mainnet.
-// TODO: Make the proper implementation.
-pub struct ParentHashRandomness<R>(core::marker::PhantomData<R>);
-impl<R> indiv_support::traits::CurrentBlockRandomness for ParentHashRandomness<R>
-where
-	R: frame_system::Config,
-	[u8; 32]: From<<R as frame_system::Config>::Hash>,
-{
-	fn randomness() -> Option<[u8; 32]> {
-		Some(frame_system::Pallet::<R>::parent_hash().into())
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn setup_randomness() {}
-}
+// `ParentHashRandomness` was DELETED here, not re-shimmed.
+//
+// It implemented `indiv_support::traits::CurrentBlockRandomness`, a trait individuality v0.3.1
+// removed. It was always a placeholder: the parent block hash is chosen by the parachain block
+// author and is grindable, so it was never safe for the airdrop draw it fed. The real relay-chain
+// randomness now arrives via `pallet-relay-randomness` (see `RelayBlockRandomness` below and
+// `OnSystemEvent` in lib.rs). Do not reintroduce a parent-hash shim to "make it compile".
 
 /// Direct byte-level reinterpretation of an `AccountId32` as an sr25519 public key.
 pub struct AccountIdToSr25519Public;
@@ -1213,8 +1228,41 @@ mod bench_xcm_sender {
 	}
 }
 
+parameter_types! {
+	/// The suffix spliced into every product context on this chain.
+	///
+	/// Bound to the shared `system-parachains-constants` value, NOT to a literal, and to the
+	/// SAME constant Asset Hub binds. If the two chains disagree, the same human derives a
+	/// different alias on each and the personhood namespace splits. Upstream's default is
+	/// `b"paseo"`; Paseo uses `b"dot"`.
+	pub DefaultNetworkSuffix: indiv_support::context::ProductContextNetworkSuffix =
+		system_parachains_constants::paseo::individuality::NETWORK_SUFFIX
+			.to_vec()
+			.try_into()
+			.expect("NETWORK_SUFFIX fits MAX_NETWORK_SUFFIX_LENGTH; qed");
+}
+
+impl indiv_pallet_network_suffix::Config for Runtime {
+	type UpdateOrigin = EnsureRoot<Self::AccountId>;
+	type DefaultSuffix = DefaultNetworkSuffix;
+	type WeightInfo = indiv_pallet_network_suffix::weights::SubstrateWeight<Runtime>;
+}
+
+impl indiv_pallet_relay_randomness::Config for Runtime {
+	type WeightInfo = indiv_pallet_relay_randomness::weights::SubstrateWeight<Runtime>;
+}
+
 impl indiv_pallet_people_lite::Config for Runtime {
 	type WeightInfo = indiv_pallet_people_lite::weights::SubstrateWeight<Runtime>;
+	type Currency = Balances;
+	type PotId = LitePeoplePotId;
+	// POLICY, FLAGGED. Gates `register_with_fee` (call index 3), which is NEW in v0.3.1 -- it
+	// did not exist on Paseo before, so no existing behaviour is being made costly. The value
+	// is upstream's. It is the only thing rate-limiting a brand-new PERMISSIONLESS path into
+	// the lite-people ring, on a chain whose native token is faucet-dispensed. See the
+	// remaining-risk list in RUNTIME_WIRING_RESULT.md before enactment.
+	type RegistrationFee = LitePersonRegistrationFee;
+	type Suffix = NetworkSuffix;
 	type AttestationAllowanceManager = EnsureRoot<Self::AccountId>;
 	type MemberService = Members;
 	type CollectionOwner = LitePeopleCollectionOwner;
@@ -1222,21 +1270,19 @@ impl indiv_pallet_people_lite::Config for Runtime {
 	type LiteOnboardingSize = LitePeopleOnboardingSize;
 	type AttestationSignature = Signature;
 	type LiteConsumerRegistrar = Resources;
+	type AccountContexts = LitePeopleAccountContexts;
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = ();
 }
 
 parameter_types! {
-	pub const MaxUsernameLength: u32 = 32;
 	pub const MinUsernameLength: u32 = 6;
 	pub const PersonAuthDuration: u32 = 2 * 24 * 60 * 60; // 2 days
 	pub const MinPersonAuthUpdateInterval: u32 = 24 * 60 * 60; // 1 day
-	pub const FriendRequestSlotsPerPeriod: u8 = 16;
-	pub const LiteFriendRequestSlotsPerPeriod: u8 = 8;
-	pub const FriendRequestPeriodDuration: u32 = 24 * 60 * 60; // 1 day
-	pub const FriendRequestGraceWindow: u32 = 60 * 60; // 1 hour
+	pub const NotificationSlotsPerPeriod: u8 = 16;
+	pub const LiteNotificationSlotsPerPeriod: u8 = 8;
+	pub const NotificationPeriodDuration: u32 = 24 * 60 * 60; // 1 day
 	pub const LongTermStorageGraceWindow: u32 = 60 * 60; // 1 hour
-	pub const FriendRequestRetentionDuration: u64 = 7 * 24 * 60 * 60; // 1 week
 	pub const MaxReservationQueueLength: u32 = 10;
 	pub const StmtStoreSlotsPerPeriod: u32 = 20;
 	pub const LiteStmtStoreSlotsPerPeriod: u32 = 10;
@@ -1247,7 +1293,7 @@ parameter_types! {
 		max_size: 500 * 1024, // 500 KiB
 		max_count: 2,
 	};
-	pub FriendRequestAllowance: StatementAllowance = StatementAllowance {
+	pub NotificationAllowance: StatementAllowance = StatementAllowance {
 		max_size: 10 * 1024, // 10 KiB
 		max_count: 1,
 	};
@@ -1276,8 +1322,11 @@ parameter_types! {
 
 impl indiv_pallet_resources::Config for Runtime {
 	type WeightInfo = indiv_pallet_resources::weights::SubstrateWeight<Runtime>;
+	// Same source of truth as Asset Hub's `pgas`/`dotns-gateway` bindings: the on-chain
+	// `NetworkSuffix` pallet, whose default is the shared `system-parachains-constants` value.
+	type Suffix = NetworkSuffix;
 	type MemberService = Members;
-	type MaxUsernameLength = MaxUsernameLength;
+	// `MaxUsernameLength` was removed from the pallet's `Config` in individuality v0.3.1.
 	type MinUsernameLength = MinUsernameLength;
 	type PersonAuthDuration = PersonAuthDuration;
 	type AccountsApiAllowance = AccountsApiAllowance;
@@ -1286,12 +1335,15 @@ impl indiv_pallet_resources::Config for Runtime {
 	type StmtStoreCleanupLimit = StmtStoreCleanupLimit;
 	type StmtStoreReplacementCooldown = StmtStoreReplacementCooldown;
 	type StmtStoreGraceWindow = StmtStoreGraceWindow;
-	type FriendRequestAllowance = FriendRequestAllowance;
-	type FriendRequestSlotsPerPeriod = FriendRequestSlotsPerPeriod;
-	type LiteFriendRequestSlotsPerPeriod = LiteFriendRequestSlotsPerPeriod;
-	type FriendRequestPeriodDuration = FriendRequestPeriodDuration;
-	type FriendRequestGraceWindow = FriendRequestGraceWindow;
-	type FriendRequestRetentionDuration = FriendRequestRetentionDuration;
+	// individuality v0.3.1 renamed the "friend request" allowance family to "notification".
+	// The rename is nominal only: every value below is byte-identical to the `FriendRequest*`
+	// value Paseo runs today, AND to upstream's own v0.3.1 value, so no behaviour changes.
+	// `FriendRequestGraceWindow` and `FriendRequestRetentionDuration` have no `Notification*`
+	// counterpart — they were dropped from `Config` outright, not renamed.
+	type NotificationAllowance = NotificationAllowance;
+	type NotificationSlotsPerPeriod = NotificationSlotsPerPeriod;
+	type LiteNotificationSlotsPerPeriod = LiteNotificationSlotsPerPeriod;
+	type NotificationPeriodDuration = NotificationPeriodDuration;
 	type OffchainWorkerInterval = ConstU32<1>;
 	type MinPersonAuthUpdateInterval = MinPersonAuthUpdateInterval;
 	type EnsurePerson = indiv_pallet_people::EnsurePersonalAliasInContext<Runtime>;

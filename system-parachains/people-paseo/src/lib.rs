@@ -308,7 +308,12 @@ parameter_types! {
 
 impl cumulus_pallet_parachain_system::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type OnSystemEvent = ();
+	// `pallet-relay-randomness` is populated ONLY from here: its `OnSystemEvent` impl reads
+	// `CURRENT_BLOCK_RANDOMNESS` / `ONE_EPOCH_AGO_RANDOMNESS` out of the relay state proof.
+	// Leaving this as `()` compiles, runs, produces no error, and leaves `Randomness` empty
+	// forever -- which makes every airdrop stall in `AwaitingEntropy` with nothing to show
+	// why. This binding is what makes `Airdrop::Randomness` real rather than decorative.
+	type OnSystemEvent = RelayRandomness;
 	type SelfParaId = parachain_info::Pallet<Runtime>;
 	type OutboundXcmpMessageSource = XcmpQueue;
 	type DmpQueue = frame_support::traits::EnqueueWithOrigin<MessageQueue, RelayOrigin>;
@@ -740,6 +745,9 @@ construct_runtime!(
 		ParachainInfo: parachain_info = 3,
 		MultiBlockMigrations: pallet_migrations = 4,
 		WeightReclaim: cumulus_pallet_weight_reclaim = 5,
+		// Upstream uses index 5 for this, but Paseo already has `WeightReclaim` there.
+		// 6 is the next free index and is confirmed free in live People metadata.
+		RelayRandomness: indiv_pallet_relay_randomness = 6,
 
 		// Monetary stuff.
 		Balances: pallet_balances = 10,
@@ -789,6 +797,8 @@ construct_runtime!(
 		MembersNotifier: indiv_pallet_members_notifier = 69,
 		Airdrop: indiv_pallet_airdrop = 70,
 		Honour: indiv_pallet_honour = 71,
+		// Index 74 matches upstream's `next-people-paseo`; confirmed free in live metadata.
+		NetworkSuffix: indiv_pallet_network_suffix = 74,
 
 		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 255,
 	}

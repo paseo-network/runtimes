@@ -68,6 +68,8 @@ sp-version = { workspace = true }
 verifiable = { workspace = true }
 indiv-support = { features = ["genesis"], workspace = true }
 indiv-pallet-airdrop = { workspace = true }
+indiv-pallet-network-suffix = { workspace = true }
+indiv-pallet-relay-randomness = { workspace = true }
 indiv-pallet-chunks-manager = { workspace = true }
 indiv-pallet-coinage = { workspace = true }
 indiv-pallet-dummy-dim = { workspace = true }
@@ -143,6 +145,8 @@ std = [
 	"frame-system/std",
 	"frame-try-runtime?/std",
 	"indiv-pallet-airdrop/std",
+	"indiv-pallet-network-suffix/std",
+	"indiv-pallet-relay-randomness/std",
 	"indiv-pallet-chunks-manager/std",
 	"indiv-pallet-coinage/std",
 	"indiv-pallet-dummy-dim/std",
@@ -231,6 +235,8 @@ runtime-benchmarks = [
 	"frame-system-benchmarking/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
 	"indiv-pallet-airdrop/runtime-benchmarks",
+	"indiv-pallet-network-suffix/runtime-benchmarks",
+	"indiv-pallet-relay-randomness/runtime-benchmarks",
 	"indiv-pallet-chunks-manager/runtime-benchmarks",
 	"indiv-pallet-coinage/runtime-benchmarks",
 	"indiv-pallet-dummy-dim/runtime-benchmarks",
@@ -296,6 +302,8 @@ try-runtime = [
 	"frame-system/try-runtime",
 	"frame-try-runtime/try-runtime",
 	"indiv-pallet-airdrop/try-runtime",
+	"indiv-pallet-network-suffix/try-runtime",
+	"indiv-pallet-relay-randomness/try-runtime",
 	"indiv-pallet-chunks-manager/try-runtime",
 	"indiv-pallet-coinage/try-runtime",
 	"indiv-pallet-dummy-dim/try-runtime",
