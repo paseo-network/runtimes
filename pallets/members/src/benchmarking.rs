@@ -29,11 +29,15 @@ use frame_support::{
 	traits::{Authorize, EnsureOrigin},
 };
 use frame_system::RawOrigin as SystemOrigin;
-use indiv_support::traits::{
-	AppendOnlyMembers, OnRingRootChange, RingExponent, RingIndex, RingMode, RingStatus,
+use indiv_support::{
+	crypto::BandersnatchSuite,
+	traits::{
+		AppendOnlyMembers, OnRingRootChange, RingExponent, RingIndex, RingMode, RingPosition,
+		RingStatus,
+	},
 };
 use sp_runtime::traits::AppendZerosInput;
-use verifiable::ring::{ark_vrf::suites::bandersnatch::BandersnatchSha512Ell2, StaticChunk};
+use verifiable::ring::StaticChunk;
 
 const RI_ZERO: RingIndex = 0;
 const SEED: u32 = 0;
@@ -42,7 +46,7 @@ const SEED: u32 = 0;
 const BENCH_IDENTIFIER: Identifier = [1u8; 32];
 
 type SecretOf<T> = <<T as Config>::Crypto as GenerateVerifiable>::Secret;
-type BandersnatchChunk = StaticChunk<BandersnatchSha512Ell2>;
+type BandersnatchChunk = StaticChunk<BandersnatchSuite>;
 
 /// Helper trait for benchmarking the members pallet.
 pub trait BenchmarkHelper<Chunk> {
@@ -498,7 +502,7 @@ mod benches {
 		let caller: T::AccountId = account("caller", 0, SEED);
 
 		// Drive the OnRingRootChange impl onto its worst-case branch
-		<T::OnRingRootChange as OnRingRootChange<MembersOf<T>>>::bench_setup_worst_case();
+		<T::OnRingRootChange as OnRingRootChange<MembersOf<T>>>::bench_setup_worst_case(identifier);
 
 		#[extrinsic_call]
 		_(SystemOrigin::Signed(caller), identifier, RI_ZERO, 1);
@@ -560,7 +564,7 @@ mod benches {
 			setup_build_ring_bench::<T>(RingExponent::R2e9, n)?;
 
 		// Drive the OnRingRootChange impl onto its worst-case branch
-		<T::OnRingRootChange as OnRingRootChange<MembersOf<T>>>::bench_setup_worst_case();
+		<T::OnRingRootChange as OnRingRootChange<MembersOf<T>>>::bench_setup_worst_case(identifier);
 
 		#[block]
 		{
@@ -584,7 +588,7 @@ mod benches {
 			setup_build_ring_bench::<T>(RingExponent::R2e10, n)?;
 
 		// Drive the OnRingRootChange impl onto its worst-case branch
-		<T::OnRingRootChange as OnRingRootChange<MembersOf<T>>>::bench_setup_worst_case();
+		<T::OnRingRootChange as OnRingRootChange<MembersOf<T>>>::bench_setup_worst_case(identifier);
 
 		#[block]
 		{
@@ -608,7 +612,7 @@ mod benches {
 			setup_build_ring_bench::<T>(RingExponent::R2e14, n)?;
 
 		// Drive the OnRingRootChange impl onto its worst-case branch
-		<T::OnRingRootChange as OnRingRootChange<MembersOf<T>>>::bench_setup_worst_case();
+		<T::OnRingRootChange as OnRingRootChange<MembersOf<T>>>::bench_setup_worst_case(identifier);
 
 		#[block]
 		{
@@ -998,7 +1002,7 @@ mod benches {
 		SuspendedCollections::<T>::insert(identifier, collection_info);
 
 		// Drive the OnRingRootChange impl onto its worst-case branch
-		<T::OnRingRootChange as OnRingRootChange<MembersOf<T>>>::bench_setup_worst_case();
+		<T::OnRingRootChange as OnRingRootChange<MembersOf<T>>>::bench_setup_worst_case(identifier);
 
 		#[extrinsic_call]
 		enqueue_ring_deletion_authorized(SystemOrigin::Authorized, identifier, RI_ZERO);
@@ -1091,6 +1095,71 @@ mod benches {
 		assert!(SuspendedCollections::<T>::get(identifier).is_none());
 		// Verify identifier was removed from owner's list
 		assert_eq!(IdentifiersOf::<T>::get(&owner).unwrap().len(), (max_collections - 1) as usize);
+
+		Ok(())
+	}
+
+	/// Benchmark for `remove_orphaned_members_authorized` - draining `n` orphaned member
+	/// entries for a suspended collection.
+	#[benchmark]
+	fn remove_orphaned_members_authorized(
+		n: Linear<1, ORPHANED_MEMBERS_REMOVAL_LIMIT>,
+	) -> Result<(), BenchmarkError> {
+		T::BenchmarkHelper::set_valid_time();
+		let identifier = BENCH_IDENTIFIER;
+
+		setup_collection::<T>(
+			identifier,
+			T::MaxFlexibleRingExponent::get().ring_capacity(),
+			T::MaxFlexibleRingExponent::get(),
+			RingMode::Flexible,
+		);
+
+		// Suspend the collection.
+		let collection_info = Collections::<T>::take(identifier).unwrap();
+		SuspendedCollections::<T>::insert(identifier, collection_info);
+
+		// Seed `n` orphaned member entries.
+		for i in 0..n {
+			let (_secret, member) = new_member_from::<T>(i, SEED);
+			Members::<T>::insert(identifier, member, RingPosition::Suspended);
+		}
+
+		#[extrinsic_call]
+		remove_orphaned_members_authorized(SystemOrigin::Authorized, identifier);
+
+		assert!(Members::<T>::iter_prefix(identifier).next().is_none());
+
+		Ok(())
+	}
+
+	/// Benchmark for `ensure_can_remove_orphaned_members` - validates that orphaned members
+	/// can be drained for a suspended collection.
+	#[benchmark]
+	fn ensure_can_remove_orphaned_members() -> Result<(), BenchmarkError> {
+		T::BenchmarkHelper::set_valid_time();
+		let identifier = BENCH_IDENTIFIER;
+
+		setup_collection::<T>(
+			identifier,
+			T::MaxFlexibleRingExponent::get().ring_capacity(),
+			T::MaxFlexibleRingExponent::get(),
+			RingMode::Flexible,
+		);
+
+		let collection_info = Collections::<T>::take(identifier).unwrap();
+		SuspendedCollections::<T>::insert(identifier, collection_info);
+
+		// At least one orphaned entry so validation passes.
+		let (_secret, member) = new_member_from::<T>(0, SEED);
+		Members::<T>::insert(identifier, member, RingPosition::Suspended);
+
+		let call = Call::<T>::remove_orphaned_members_authorized { identifier };
+
+		#[block]
+		{
+			call.authorize(TransactionSource::Local).unwrap().unwrap();
+		}
 
 		Ok(())
 	}

@@ -28,6 +28,7 @@ use frame_support::{
 	ensure, pallet_prelude::TransactionSource, traits::IsSubType, weights::Weight, CloneNoBound,
 	DefaultNoBound, EqNoBound, PartialEqNoBound,
 };
+use indiv_support::tx_priority;
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{DispatchInfoOf, Implication, TransactionExtension, ValidateResult},
@@ -123,6 +124,8 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 		_source: TransactionSource,
 	) -> ValidateResult<Self::Val, <T as frame_system::Config>::RuntimeCall> {
 		let Some(AsMemberInfo::SelfInclude(signature)) = &self.0 else {
+			// Extension not in use by this transaction: pass through with default validity. The
+			// effective priority comes from whichever extension authorizes the call.
 			return Ok((ValidTransaction::default(), (), origin));
 		};
 
@@ -176,9 +179,12 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 			return Err(InvalidTransaction::BadProof.into());
 		}
 
-		let provides = sp_core::twox_64(&("self-include", &identifier, &member).encode()[..]);
-		let valid_transaction =
-			ValidTransaction::with_tag_prefix("Members").and_provides(provides).build()?;
+		let provides =
+			sp_crypto_hashing::twox_64(&("self-include", &identifier, &member).encode()[..]);
+		let valid_transaction = ValidTransaction::with_tag_prefix("Members")
+			.and_provides(provides)
+			.priority(tx_priority::USER_DEFAULT)
+			.build()?;
 
 		// Set the origin to SelfInclude with the authenticated member key.
 		let local_origin = pallet::Origin::<T>::SelfInclude(member.clone());

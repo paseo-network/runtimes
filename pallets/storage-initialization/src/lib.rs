@@ -14,6 +14,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! # ⚠ PERMANENT PASEO FORK — NO UPSTREAM
+//!
+//! This pallet was vendored from `paritytech/individuality-community` at `28b7d07`
+//! ("Initial public release") and **deleted upstream** at `e30decd` ("Public release
+//! 2026-08-18"). It is absent from `v0.3.0` and `v0.3.1` and from every later tag.
+//!
+//! There is therefore **nothing to sync it against, ever**. It is Paseo-owned code with a
+//! permanent maintenance burden: no upstream reviewer will look at it again, and no upstream
+//! fix will arrive for it. Treat changes here as changes to first-party runtime code.
+//!
+//! ## Paseo-local deviations from the `28b7d07` vendored baseline
+//!
+//! | File | Deviation |
+//! |---|---|
+//! | `src/lib.rs` | `mod weights` → `pub mod weights`, so the runtimes can name `weights::SubstrateWeight` |
+//! | `src/weights.rs` | adds a `SubstrateWeight<T>` impl of `WeightInfo`. ⚠ **These constants are hand-written and have never been benchmarked.** They must be regenerated on Paseo reference hardware (port plan v2, chunk C15) |
+//!
+//! ## Port status against individuality v0.3.1
+//!
+//! Compiles **unchanged** against v0.3.1's `indiv-support` and the v0.3.1 pallet set —
+//! measured, not assumed (see `INDIVIDUALITY_C1_RESULT.md`, boundary matrix). It uses none
+//! of the `MembershipProver` / `CurrentBlockRandomness` / `BatchProofItem` surface that the
+//! v0.3.1 `support/src/traits.rs` reshapes.
+//!
+//! `StorageInitialization` is pallet index **60** in `people-paseo`'s `construct_runtime!` and
+//! that index is referenced by existing migration code — do not renumber it.
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(test)]

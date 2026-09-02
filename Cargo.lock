@@ -6308,6 +6308,7 @@ dependencies = [
  "parking_lot 0.12.5",
  "scale-info",
  "sp-core",
+ "sp-crypto-hashing",
  "sp-io",
  "sp-runtime",
  "verifiable",

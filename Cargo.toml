@@ -308,6 +308,18 @@ sc-chain-spec = { version = "50.0.0" }
 sc-network = { version = "0.57.0" }
 scale-info = { version = "2.11.6", default-features = false }
 separator = { version = "0.4.1" }
+# ⚠ DEFAULT FEATURES ARE ON (std). The relay chain and all system parachains rely on that, so
+# do NOT flip it. But individuality's own workspace pins this `default-features = false`, and
+# its `pallets/members-notifier` declares `serde = { workspace = true }` + `"serde/std"` in its
+# own `std` feature — coherent only under individuality's pin. Cargo IGNORES a member-level
+# `default-features = false` when the workspace entry has default features on, so under this pin
+# `serde/std` is unconditionally enabled and the **wasm** build of that pallet fails with ~1900
+# `can't find crate for std` errors while the native build stays perfectly green.
+# When `pallets/members-notifier` is ported (port plan v2, chunk C4), replace its
+#   serde = { workspace = true }
+# with
+#   serde = { version = "1.0.214", default-features = false, features = ["alloc", "derive"] }
+# That 1-line member-local pin is the whole fix. See INDIVIDUALITY_STAGE0_RESULT.md §3 class (c).
 serde = { version = "1.0.214" }
 serde_json = { version = "1.0.132", default-features = false }
 smallvec = { version = "1.13.1" }
