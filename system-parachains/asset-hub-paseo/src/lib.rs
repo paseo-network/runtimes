@@ -1727,7 +1727,7 @@ impl indiv_pallet_dotns_gateway::benchmarking::BenchmarkHelper<Runtime>
 	fn setup_ring_root(
 		identifier: &indiv_support::traits::Identifier,
 		ring_index: indiv_support::traits::RingIndex,
-	) {
+	) -> indiv_support::traits::RevisionIndex {
 		use frame_support::traits::UnixTime;
 
 		let ring_exponent = if identifier == indiv_support::traits::PEOPLE_LITE_IDENTIFIER {
@@ -1754,8 +1754,10 @@ impl indiv_pallet_dotns_gateway::benchmarking::BenchmarkHelper<Runtime>
 		}
 		let last_idx = roots.len() - 1;
 		roots[last_idx].root = real_root;
-		indiv_pallet_members_subscriber::RingRoots::<Runtime>::insert(
-			*identifier,
+		// `RingRoots` gained a leading `Generation` key in v0.3.1; write through the pallet
+		// helper so the bench seeds the CURRENT generation prefix rather than a stale one.
+		indiv_pallet_members_subscriber::Pallet::<Runtime>::set_current_ring_roots(
+			identifier,
 			ring_index,
 			roots,
 		);
@@ -1763,6 +1765,7 @@ impl indiv_pallet_dotns_gateway::benchmarking::BenchmarkHelper<Runtime>
 			*identifier,
 			ring_exponent,
 		);
+		max_recent
 	}
 
 	fn valid_proof(
@@ -1867,7 +1870,7 @@ mod bandersnatch_bench {
 		let (proof, _alias) = Crypto::create(
 			commitment,
 			&secret,
-			&indiv_pallet_dotns_gateway::DOTNS_GATEWAY_CONTEXT[..],
+			&indiv_pallet_dotns_gateway::Pallet::<crate::Runtime>::proof_context()[..],
 			message,
 		)
 		.expect("create proof");
@@ -2152,6 +2155,24 @@ impl indiv_pallet_alias_accounts::benchmarking::BenchmarkHelper<Runtime> for Run
 		pallet_timestamp::Now::<Runtime>::put(seconds.saturating_mul(1_000));
 	}
 
+	/// Make `Config::AliasFee` return `Some(fee)`.
+	///
+	/// The fee is a root-only dynamic parameter now, not pallet storage, so the benchmark sets
+	/// it through `pallet_parameters`. Benchmarks must exercise the paid registration path even
+	/// though the production default is `None` (which keeps registration closed).
+	/// The double `Some` is not a typo: the parameter's own type is `Option<Balance>`, and the
+	/// setter takes an `Option` of that.
+	fn set_alias_fee(fee: Balance) {
+		pallet_parameters::Pallet::<Runtime>::set_parameter(
+			RuntimeOrigin::root(),
+			RuntimeParameters::AliasAccounts(dynamic_params::alias_accounts::Parameters::AliasFee(
+				dynamic_params::alias_accounts::AliasFee,
+				Some(Some(fee)),
+			)),
+		)
+		.expect("root may set the alias fee");
+	}
+
 	fn allowed_context() -> indiv_support::traits::Context {
 		BENCH_ALIAS_CONTEXT
 	}
@@ -2221,8 +2242,11 @@ impl indiv_pallet_alias_accounts::benchmarking::BenchmarkHelper<Runtime> for Run
 		// the record matching `revision` with our real Bandersnatch commitment so
 		// `verify_proof` against the bench-chosen target revision succeeds.
 		indiv_pallet_members_subscriber::RingRoots::<Runtime>::mutate(
-			*identifier,
-			ring_index,
+			(
+				indiv_pallet_members_subscriber::CurrentGeneration::<Runtime>::get(),
+				*identifier,
+				ring_index,
+			),
 			|roots_opt| {
 				let roots = roots_opt
 					.as_mut()
@@ -2301,7 +2325,9 @@ impl indiv_pallet_alias_accounts::benchmarking::BenchmarkHelper<Runtime> for Run
 				})
 				.expect("revisions bounded by max_ring_revisions");
 		}
-		indiv_pallet_members_subscriber::RingRoots::<Runtime>::insert(collection, ring, roots);
+		indiv_pallet_members_subscriber::Pallet::<Runtime>::set_current_ring_roots(
+			&collection, ring, roots,
+		);
 	}
 }
 
@@ -2430,8 +2456,8 @@ impl indiv_pallet_pgas::benchmarking::BenchmarkHelper<Runtime> for PgasBenchHelp
 		};
 		let mut roots: frame_support::BoundedVec<_, _> = Default::default();
 		roots.try_push(record).expect("MaxRecentRootsPerRing > 0");
-		indiv_pallet_members_subscriber::RingRoots::<Runtime>::insert(
-			*identifier,
+		indiv_pallet_members_subscriber::Pallet::<Runtime>::set_current_ring_roots(
+			identifier,
 			ring_index,
 			roots,
 		);

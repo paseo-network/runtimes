@@ -259,7 +259,9 @@ use frame_support::{
 use indiv_pallet_game::PhaseDurationValues;
 use indiv_pallet_origin_restriction::Allowance;
 #[cfg(feature = "runtime-benchmarks")]
-use indiv_support::traits::PersonalId;
+use indiv_support::traits::{PersonalId, RingIndex};
+#[cfg(feature = "runtime-benchmarks")]
+use paseo_runtime_constants::system_parachain::ASSET_HUB_ID;
 use indiv_support::{
 	fungibles::CombineAssetsWithHolder,
 	traits::{Alias, AllocateStorage, Context},
