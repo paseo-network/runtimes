@@ -1380,6 +1380,7 @@ dependencies = [
  "indiv-pallet-alias-accounts",
  "indiv-pallet-dotns-gateway",
  "indiv-pallet-members-subscriber",
+ "indiv-pallet-network-suffix",
  "indiv-pallet-origin-restriction",
  "indiv-pallet-pgas",
  "indiv-pallet-value-transfer-auth",

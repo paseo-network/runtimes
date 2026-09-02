@@ -202,10 +202,15 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	impl_name: Cow::Borrowed("asset-hub-paseo"),
 	spec_name: Cow::Borrowed("asset-hub-paseo"),
 	authoring_version: 1,
-	spec_version: 2_004_002,
+	spec_version: 2_005_000,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 16,
+	// BUMPED 16 -> 17 for the individuality v0.3.1 port. This is mandatory, not hygiene:
+	// `indiv_pallet_alias_accounts::AsRingAlias` was removed from `TxExtension`, which changes
+	// the transaction extension tuple that every signer must construct. `AsRingAlias` is
+	// present in live Asset Hub metadata today, so an unbumped `transaction_version` would let
+	// wallets keep building the old, now-undecodable, extension payload.
+	transaction_version: 17,
 	system_version: 1,
 };
 
@@ -1318,11 +1323,21 @@ impl frame_support::traits::EnsureOriginWithArg<RuntimeOrigin, RuntimeParameters
 			StakingElection(_) =>
 				EitherOf::<EnsureRoot<AccountId>, StakingAdmin>::ensure_origin(origin.clone()),
 			// technical params, can be controlled by the fellowship voice.
-			Scheduler(_) | MessageQueue(_) => EitherOfDiverse::<
-				EnsureRoot<AccountId>,
-				WhitelistedCaller,
-			>::ensure_origin(origin.clone())
+			Scheduler(_) |
+			MessageQueue(_) |
+			AliasAccounts(
+				dynamic_params::alias_accounts::ParametersKey::StaleAliasSweepInterval(_),
+			) => EitherOfDiverse::<EnsureRoot<AccountId>, WhitelistedCaller>::ensure_origin(
+				origin.clone(),
+			)
 			.map(|_success| ()),
+			// Economic param, and the switch that opens alias registration. Root only: the
+			// whitelisted caller must not be able to open registration on its own.
+			AliasAccounts(dynamic_params::alias_accounts::ParametersKey::AliasFee(_)) =>
+				<EnsureRoot<AccountId> as EnsureOrigin<RuntimeOrigin>>::ensure_origin(
+					origin.clone(),
+				)
+				.map(|_success| ()),
 		}
 		.map_err(|_| origin)
 	}
@@ -1409,6 +1424,32 @@ pub mod dynamic_params {
 		#[codec(index = 1)]
 		pub static MaxOnIdleWeight: Option<Weight> =
 			Some(Perbill::from_percent(50) * RuntimeBlockWeights::get().max_block);
+	}
+
+	/// Parameters about the alias-accounts pallet.
+	#[dynamic_pallet_params]
+	#[codec(index = 3)]
+	pub mod alias_accounts {
+		/// PGAS burned on each paid alias registration or account swap.
+		/// `None` closes alias registration.
+		///
+		/// PASEO NOTE: this default of `None` is what preserves current on-chain behaviour.
+		/// Before individuality v0.3.1 the fee lived in the pallet's own `AliasAccounts::AliasFee`
+		/// storage, settable by `FeeManagerOrigin`. That key has never been set on Paseo Asset
+		/// Hub, so `register_alias` has always failed with `AliasFeeUnset` and alias registration
+		/// is, in effect, already closed. Binding this to any `Some(_)` value would *open*
+		/// registration at the moment of enactment, silently and with no extrinsic. Root can
+		/// open it deliberately later via `Parameters::set_parameter`.
+		#[codec(index = 0)]
+		pub static AliasFee: Option<Balance> = None;
+
+		/// Blocks between the offchain worker's sweeps for stale alias mappings.
+		///
+		/// One sweep reads every mapping, and a mapping waits out `MappingRetention` before it can
+		/// go at all, so hours between sweeps cost nothing in timeliness. Governance raises this if
+		/// the scan proves expensive on a chain with many mappings.
+		#[codec(index = 1)]
+		pub static StaleAliasSweepInterval: BlockNumber = HOURS;
 	}
 }
 
@@ -1631,8 +1672,37 @@ parameter_types! {
 	pub const DotnsMaxFutureSkewSeconds: u64 = 30;
 }
 
+parameter_types! {
+	/// The suffix spliced into every product context on this chain.
+	///
+	/// Bound to the shared `system-parachains-constants` value, NOT to a literal: Asset Hub and
+	/// People must derive identical product contexts or the same human derives a different alias
+	/// on each chain and the personhood namespace splits. Stating it once is what makes the two
+	/// runtimes provably agree. Upstream's default is `b"paseo"`; Paseo uses `b"dot"`.
+	pub DefaultNetworkSuffix: indiv_support::context::ProductContextNetworkSuffix =
+		system_parachains_constants::paseo::individuality::NETWORK_SUFFIX
+			.to_vec()
+			.try_into()
+			.expect("NETWORK_SUFFIX fits MAX_NETWORK_SUFFIX_LENGTH; qed");
+}
+
+impl indiv_pallet_network_suffix::Config for Runtime {
+	type UpdateOrigin = EnsureRoot<Self::AccountId>;
+	type DefaultSuffix = DefaultNetworkSuffix;
+	type WeightInfo = NetworkSuffixWeightInfo;
+}
+
+/// Conservatively reuse the heavier `pallet_parameters` setter weight.
+pub struct NetworkSuffixWeightInfo;
+impl indiv_pallet_network_suffix::WeightInfo for NetworkSuffixWeightInfo {
+	fn set_network_suffix(_s: u32) -> Weight {
+		<weights::pallet_parameters::WeightInfo<Runtime> as pallet_parameters::WeightInfo>::set_parameter()
+	}
+}
+
 impl indiv_pallet_dotns_gateway::Config for Runtime {
 	type WeightInfo = indiv_pallet_dotns_gateway::weights::SubstrateWeight<Runtime>;
+	type Suffix = NetworkSuffix;
 	type MemberService = MembersSubscriber;
 	type ContractCaller = ReviveContractCaller;
 	type AddressMapper = ReviveAddressMapper;
@@ -2052,12 +2122,28 @@ impl indiv_pallet_alias_accounts::Config for Runtime {
 	type MemberService = MembersSubscriber;
 	type UnixTime = Timestamp;
 	type ProofValidityWindow = ConstU64<300>;
-	type CleanupGracePeriod = ConstU64<3600>;
+	// Replaces the pre-v0.3.1 `CleanupGracePeriod = 3600`. This must exceed
+	// `MembersSubscriber`'s `OldRootRetentionDuration`, which on Paseo is 21_600 (6 h) rather
+	// than upstream's 3_600 (1 h) — `pallet_alias_accounts`'s `integrity_test` asserts exactly
+	// that, so the old 3_600 would panic the runtime at startup here even though it is fine
+	// upstream. 90 days is upstream's value and clears Paseo's 6 h by a wide margin.
+	type MappingRetention = ConstU64<{ 90 * 24 * 60 * 60 }>;
 	type PeopleLiteRingExponent = PeopleLiteRingExponent;
 	type PeopleRingExponent = PeopleRingExponent;
 	type Fungibles = Assets;
 	type PgasAssetId = PgasAssetId;
-	type FeeManagerOrigin = EnsureRoot<AccountId>;
+	// Root-only dynamic parameter, defaulting to `None`. See the parameter's own docs: `None`
+	// keeps alias registration closed, which is the chain's behaviour today.
+	type AliasFee = dynamic_params::alias_accounts::AliasFee;
+	// Governance-tunable, and kept non-zero: a zero interval would divide by zero in the sweep.
+	type OffchainWorkerInterval = indiv_support::parameters::AtLeastOne<
+		dynamic_params::alias_accounts::StaleAliasSweepInterval,
+	>;
+	// A sweep verifies every mapping in the batch twice, once in `authorize` and once in the call,
+	// and the pallet's `integrity_test` holds that pair to half of `Normal.max_extrinsic`. Stale
+	// mappings arrive in bursts, one per member of a rebuilt ring, so a batch this size retires a
+	// ring's worth over a few sweeps rather than one mapping per transaction.
+	type MaxStaleAliasBatch = ConstU32<32>;
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -2230,6 +2316,7 @@ parameter_types! {
 
 impl indiv_pallet_pgas::Config for Runtime {
 	type WeightInfo = indiv_pallet_pgas::weights::SubstrateWeight<Runtime>;
+	type Suffix = NetworkSuffix;
 	type MembershipProver = MembersSubscriber;
 	type Clock = Timestamp;
 	type Fungibles = Assets;
@@ -2457,6 +2544,9 @@ construct_runtime!(
 		// Individuality (continued)
 		DotnsGateway: indiv_pallet_dotns_gateway = 152,
 		OriginRestriction: indiv_pallet_origin_restriction = 153,
+		// Index 154 matches upstream individuality v0.3.1's `next-asset-hub-paseo` and is
+		// confirmed free in live Asset Hub metadata (spec 2_004_002).
+		NetworkSuffix: indiv_pallet_network_suffix = 154,
 
 		// Sudo.
 		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 251,
@@ -2487,7 +2577,10 @@ pub type TxExtension = cumulus_pallet_weight_reclaim::StorageWeightReclaim<
 			>,
 			frame_system::AuthorizeCall<Runtime>,
 			indiv_pallet_pgas::AsPgas<Runtime>,
-			indiv_pallet_alias_accounts::AsRingAlias<Runtime>,
+			// `indiv_pallet_alias_accounts::AsRingAlias` was removed in individuality v0.3.1
+			// along with the pallet's `#[pallet::origin]`. Dropping it changes the
+			// transaction extension tuple, so `transaction_version` MUST be bumped in the same
+			// release — see the `RuntimeVersion` above.
 			indiv_pallet_dotns_gateway::AsDotnsGateway<Runtime>,
 		),
 		// General checks and operations
@@ -2529,7 +2622,6 @@ impl pallet_revive::evm::runtime::EthExtra for EthExtraImpl {
 				>::default(),
 				frame_system::AuthorizeCall::<Runtime>::new(),
 				indiv_pallet_pgas::AsPgas::<Runtime>::new(None),
-				indiv_pallet_alias_accounts::AsRingAlias::<Runtime>::new(None),
 				indiv_pallet_dotns_gateway::AsDotnsGateway::<Runtime>::new(None),
 			),
 			indiv_pallet_origin_restriction::RestrictOrigin::<Runtime>::new(true),
@@ -2574,7 +2666,6 @@ where
 				>::default(),
 				frame_system::AuthorizeCall::<Runtime>::new(),
 				indiv_pallet_pgas::AsPgas::<Runtime>::new(None),
-				indiv_pallet_alias_accounts::AsRingAlias::<Runtime>::new(None),
 				indiv_pallet_dotns_gateway::AsDotnsGateway::<Runtime>::new(None),
 			),
 			indiv_pallet_origin_restriction::RestrictOrigin::<Runtime>::new(true),

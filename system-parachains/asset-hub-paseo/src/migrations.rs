@@ -174,6 +174,20 @@ pub type Unreleased = (
 	// AssetHub breaks. Single-block: 3 `RingRoots` entries (8 records) and 2
 	// `RingCollectionStates` — see the pallet migration's doc comment for why not an MBM.
 	indiv_pallet_members_subscriber::migration::MigrateV0ToV1<Runtime>,
+	// PASEO-LOCAL. Writes the `NetworkSuffix` key into state.
+	//
+	// The pallet's `ValueQuery` default already answers every *on-chain* read, so nothing in
+	// the runtime needs this. Off-chain readers do: `state_getStorage` over an unwritten key
+	// returns `null`, and the Android client reads that key directly and throws on `null`.
+	// Ordered before the dotNS gateway migration so that anything reading the suffix during
+	// this upgrade sees a materialised value rather than relying on the default.
+	// Idempotent and safe to leave in the tuple: once the key exists it is a single read, and
+	// it will never clobber a suffix that governance has since changed.
+	indiv_pallet_network_suffix::migration::SeedNetworkSuffix<Runtime>,
+	// individuality v0.3.1 gave `AccountNameRecord` a `chat` field on each of `lite`/`full`.
+	// Live `AccountNames` entries are in the old two-`Option<BaseLabel>` shape and would fail
+	// to decode. `VersionedMigration`, so it is self-guarding and cannot run twice.
+	indiv_pallet_dotns_gateway::migration::MigrateV0ToV1<Runtime>,
 );
 
 /// Migrations/checks that do not need to be versioned and can run on every update.
