@@ -31,9 +31,12 @@ use frame_support::{
 	weights::Weight,
 	CloneNoBound, DefaultNoBound, EqNoBound, PartialEqNoBound,
 };
-use indiv_support::traits::RingIndex;
+use indiv_support::{
+	traits::{RevisionIndex, RingIndex},
+	tx_priority,
+};
 use scale_info::TypeInfo;
-use sp_core::twox_64;
+use sp_crypto_hashing::twox_64;
 use sp_runtime::{
 	traits::{DispatchInfoOf, Implication, TransactionExtension, ValidateResult, Verify},
 	transaction_validity::{InvalidTransaction, TransactionValidityError, ValidTransaction},
@@ -78,10 +81,12 @@ pub enum AsDotnsGatewayInfo<T: Config> {
 	/// - `proof`: ring-VRF membership proof for the `People` collection. Must be generated against
 	///   the message returned by `Pallet::construct_register_proof_message`.
 	/// - `ring_index`: index of the ring of the person.
+	/// - `revision`: revision of the ring root used to build `proof`.
 	/// - `signature`: signature produced by `who` over the SCALE-encoded inherited implication.
 	RegisterFullName {
 		proof: ProofOf<T>,
 		ring_index: RingIndex,
+		revision: RevisionIndex,
 		signature: T::AttestationSignature,
 	},
 }
@@ -116,6 +121,7 @@ impl<T: Config> AsDotnsGateway<T> {
 		inherited_implication: &impl Implication,
 		proof: &ProofOf<T>,
 		ring_index: RingIndex,
+		revision: RevisionIndex,
 		signature: &T::AttestationSignature,
 	) -> Result<(indiv_support::traits::Alias, T::AccountId), TransactionValidityError>
 	where
@@ -144,8 +150,9 @@ impl<T: Config> AsDotnsGateway<T> {
 		// included in the signature above, and the signer must match with `who`, and `who` is
 		// included in the proof message.
 		let proof_msg = Pallet::<T>::construct_register_proof_message(who, label.as_slice(), link);
-		let alias = Pallet::<T>::verify_proof(&Collection::People, ring_index, proof, &proof_msg)
-			.map_err(|_| InvalidTransaction::BadProof)?;
+		let alias =
+			Pallet::<T>::verify_proof(&Collection::People, ring_index, revision, proof, &proof_msg)
+				.map_err(|_| InvalidTransaction::BadProof)?;
 
 		// An alias can only register once.
 		ensure!(
@@ -186,7 +193,12 @@ where
 		_source: TransactionSource,
 	) -> ValidateResult<Self::Val, <T as frame_system::Config>::RuntimeCall> {
 		match &self.0 {
-			Some(AsDotnsGatewayInfo::RegisterFullName { proof, ring_index, signature }) => {
+			Some(AsDotnsGatewayInfo::RegisterFullName {
+				proof,
+				ring_index,
+				revision,
+				signature,
+			}) => {
 				ensure!(
 					matches!(origin.as_system_ref(), Some(frame_system::RawOrigin::None)),
 					CustomValidity::OriginNotNone,
@@ -197,17 +209,21 @@ where
 					inherited_implication,
 					proof,
 					*ring_index,
+					*revision,
 					signature,
 				)?;
 
 				let provides = twox_64(&("DotnsGateway:Register", alias, &who).encode());
 				let validity = ValidTransaction::with_tag_prefix("DotnsGateway:Register")
-					.and_provides(provides);
+					.and_provides(provides)
+					.priority(tx_priority::USER_DEFAULT);
 
 				origin.set_caller_from(pallet::Origin::PersonRegistration(alias));
 
 				Ok((validity.into(), (), origin))
 			},
+			// Extension not in use by this transaction: pass through with default validity. The
+			// effective priority comes from whichever extension authorizes the call.
 			None => Ok((ValidTransaction::default(), (), origin)),
 		}
 	}

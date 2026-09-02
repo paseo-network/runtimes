@@ -16,23 +16,23 @@
 
 //! Tests for the dotNS gateway pallet.
 
-use frame_support::{assert_noop, assert_ok};
+use frame_support::{
+	assert_noop, assert_ok,
+	traits::{GetStorageVersion, OnRuntimeUpgrade, StorageVersion},
+};
 
 use crate::{
+	migration::MigrateV0ToV1,
 	mock::*,
 	pallet::{
-		AccountAlias, AliasRegistration, AttestationAllowance, DispatcherAddress, Error,
-		LiteLabelOwner,
+		AccountAlias, AccountNames, AliasRegistration, AttestationAllowance, DispatcherAddress,
+		Error, LiteLabelOwner,
 	},
-	types::{BaseLabel, ChatKey, Collection, DispatcherRevert, Link},
+	types::{AccountNameRecord, BaseLabel, ChatKey, Collection, DispatcherRevert, Link, NameEntry},
 	weights::WeightInfo,
 };
 use sp_core::H160;
 use sp_runtime::{transaction_validity::TransactionSource, DispatchError};
-
-fn seed_lite_owner(label: &[u8], owner: u64) {
-	LiteLabelOwner::<Test>::insert(base_name(label), owner);
-}
 
 const ALICE: u64 = 1;
 const BOB: u64 = 2;
@@ -59,6 +59,15 @@ const ALICE_FULL: &[u8] = b"alicefull";
 
 fn default_chat_key() -> ChatKey {
 	ChatKey::from([0xAB; 65])
+}
+
+/// A chat key distinct from [`default_chat_key`], for records seeded as if by a lite reservation.
+fn lite_chat_key() -> ChatKey {
+	ChatKey::from([0xCD; 65])
+}
+
+fn entry(label: &[u8], chat: Option<ChatKey>) -> Option<NameEntry> {
+	Some(NameEntry { label: base_name(label), chat })
 }
 
 mod attestation_allowance {
@@ -279,6 +288,14 @@ mod reservation {
 			assert_eq!(calls[0].0, DispatcherAddr::get());
 			assert_eq!(calls[0].2, 0);
 
+			assert_eq!(
+				AccountNames::<Test>::get(ALICE),
+				Some(AccountNameRecord {
+					lite: entry(ALICE_LITE, Some(default_chat_key())),
+					full: None
+				})
+			);
+
 			System::assert_last_event(
 				crate::Event::<Test>::NameReserved {
 					candidate: ALICE,
@@ -293,6 +310,71 @@ mod reservation {
 			// Reservation is free for the caller.
 			let info = result.unwrap();
 			assert_eq!(info.pays_fee, frame_support::dispatch::Pays::No);
+		});
+	}
+
+	#[test]
+	fn later_reservation_overwrites_account_lite_label() {
+		new_test_ext().execute_with(|| {
+			System::set_block_number(1);
+			set_attestation_allowance(ATTESTER, 5);
+
+			assert_ok!(DotnsGateway::reserve_name(
+				RuntimeOrigin::signed(ATTESTER),
+				ALICE,
+				valid_candidate_signature(ALICE),
+				base_name(ALICE_LITE),
+				default_chat_key(),
+				None,
+				SIGNED_AT_NOW
+			));
+			assert_ok!(DotnsGateway::reserve_name(
+				RuntimeOrigin::signed(ATTESTER),
+				ALICE,
+				valid_candidate_signature(ALICE),
+				base_name(BOB_LITE),
+				default_chat_key(),
+				None,
+				SIGNED_AT_NOW
+			));
+
+			assert_eq!(
+				AccountNames::<Test>::get(ALICE),
+				Some(AccountNameRecord {
+					lite: entry(BOB_LITE, Some(default_chat_key())),
+					full: None
+				})
+			);
+		});
+	}
+
+	#[test]
+	fn reservation_preserves_registered_full_label() {
+		new_test_ext().execute_with(|| {
+			System::set_block_number(1);
+			set_attestation_allowance(ATTESTER, 5);
+			AccountNames::<Test>::insert(
+				ALICE,
+				AccountNameRecord { lite: None, full: entry(ALICE_BASE, Some(lite_chat_key())) },
+			);
+
+			assert_ok!(DotnsGateway::reserve_name(
+				RuntimeOrigin::signed(ATTESTER),
+				ALICE,
+				valid_candidate_signature(ALICE),
+				base_name(ALICE_LITE),
+				default_chat_key(),
+				None,
+				SIGNED_AT_NOW
+			));
+
+			assert_eq!(
+				AccountNames::<Test>::get(ALICE),
+				Some(AccountNameRecord {
+					lite: entry(ALICE_LITE, Some(default_chat_key())),
+					full: entry(ALICE_BASE, Some(lite_chat_key()))
+				})
+			);
 		});
 	}
 
@@ -682,7 +764,11 @@ mod registration {
 	fn username_registration_with_lite_link_succeeds() {
 		new_test_ext().execute_with(|| {
 			System::set_block_number(1);
-			seed_lite_owner(ALICE_LITE, ALICE);
+			LiteLabelOwner::<Test>::insert(base_name(ALICE_LITE), ALICE);
+			AccountNames::<Test>::insert(
+				ALICE,
+				AccountNameRecord { lite: entry(ALICE_LITE, Some(lite_chat_key())), full: None },
+			);
 			let link = Link::LiteUsername(base_name(ALICE_LITE));
 			let bn = base_name(ALICE_BASE);
 
@@ -699,6 +785,15 @@ mod registration {
 			let record = AliasRegistration::<Test>::get(alias_a()).expect("record exists");
 			assert_eq!(record.collection, Collection::People);
 			assert_eq!(record.account, ALICE);
+
+			// Full label added with the linked lite label's chat key; lite entry untouched.
+			assert_eq!(
+				AccountNames::<Test>::get(ALICE),
+				Some(AccountNameRecord {
+					lite: entry(ALICE_LITE, Some(lite_chat_key())),
+					full: entry(ALICE_BASE, Some(lite_chat_key()))
+				})
+			);
 
 			// Contract call dispatched to dispatcher address.
 			let calls = get_contract_calls();
@@ -740,6 +835,13 @@ mod registration {
 			let record = AliasRegistration::<Test>::get(alias_a()).expect("record exists");
 			assert_eq!(record.account, ALICE);
 			assert_eq!(AccountAlias::<Test>::get(ALICE), Some(alias_a()));
+			assert_eq!(
+				AccountNames::<Test>::get(ALICE),
+				Some(AccountNameRecord {
+					lite: None,
+					full: entry(ALICE_BASE, Some(default_chat_key()))
+				})
+			);
 
 			System::assert_last_event(
 				crate::Event::<Test>::NameRegistered {
@@ -757,6 +859,64 @@ mod registration {
 	}
 
 	#[test]
+	fn full_label_linked_to_an_unrecorded_lite_label_has_no_chat_key() {
+		new_test_ext().execute_with(|| {
+			System::set_block_number(1);
+			LiteLabelOwner::<Test>::insert(base_name(ALICE_LITE), ALICE);
+			// The account owns two lite labels and the record holds the most recent one. The
+			// registration links the other label, whose key the pallet never recorded, so the
+			// key the contracts copy to the full label is not known here.
+			AccountNames::<Test>::insert(
+				ALICE,
+				AccountNameRecord { lite: entry(BOB_LITE, Some(lite_chat_key())), full: None },
+			);
+
+			assert_ok!(DotnsGateway::register_name(
+				person_registration_origin(alias_a()),
+				ALICE,
+				base_name(ALICE_BASE),
+				Link::LiteUsername(base_name(ALICE_LITE))
+			));
+
+			assert_eq!(
+				AccountNames::<Test>::get(ALICE),
+				Some(AccountNameRecord {
+					lite: entry(BOB_LITE, Some(lite_chat_key())),
+					full: entry(ALICE_BASE, None)
+				})
+			);
+		});
+	}
+
+	#[test]
+	fn standalone_registration_does_not_take_the_lite_chat_key() {
+		new_test_ext().execute_with(|| {
+			System::set_block_number(1);
+			// `Link::None` registers a fresh key instead of linking, so the full entry gets that
+			// key and the lite entry keeps its own.
+			AccountNames::<Test>::insert(
+				ALICE,
+				AccountNameRecord { lite: entry(ALICE_LITE, Some(lite_chat_key())), full: None },
+			);
+
+			assert_ok!(DotnsGateway::register_name(
+				person_registration_origin(alias_a()),
+				ALICE,
+				base_name(ALICE_BASE),
+				Link::None(default_chat_key())
+			));
+
+			assert_eq!(
+				AccountNames::<Test>::get(ALICE),
+				Some(AccountNameRecord {
+					lite: entry(ALICE_LITE, Some(lite_chat_key())),
+					full: entry(ALICE_BASE, Some(default_chat_key()))
+				})
+			);
+		});
+	}
+
+	#[test]
 	fn fails_when_already_registered() {
 		new_test_ext().execute_with(|| {
 			let link = Link::None(default_chat_key());
@@ -767,6 +927,7 @@ mod registration {
 			let (_, _, origin) = validate_register(
 				valid_proof(alias_a(), &register_msg(ALICE, &bn1, &link)),
 				0,
+				people_revision(),
 				offchain_signature(ALICE),
 				ALICE,
 				bn1.clone(),
@@ -779,6 +940,7 @@ mod registration {
 			let result = validate_register(
 				valid_proof(alias_a(), &register_msg(BOB, &bn2, &link)),
 				0,
+				people_revision(),
 				offchain_signature(BOB),
 				BOB,
 				bn2,
@@ -794,8 +956,15 @@ mod registration {
 			let link = Link::None(default_chat_key());
 			let bn = base_name(ALICE_BASE);
 
-			let result =
-				validate_register(invalid_proof(), 0, offchain_signature(ALICE), ALICE, bn, link);
+			let result = validate_register(
+				invalid_proof(),
+				0,
+				people_revision(),
+				offchain_signature(ALICE),
+				ALICE,
+				bn,
+				link,
+			);
 
 			assert!(matches!(
 				result,
@@ -811,6 +980,7 @@ mod registration {
 			let result = validate_register(
 				invalid_proof(),
 				0,
+				people_revision(),
 				offchain_signature(ALICE),
 				ALICE,
 				base_name(b""),
@@ -837,6 +1007,7 @@ mod registration {
 				let result = validate_register(
 					invalid_proof(),
 					0,
+					people_revision(),
 					offchain_signature(ALICE),
 					ALICE,
 					base_name(&bad),
@@ -860,6 +1031,7 @@ mod registration {
 				let result = validate_register(
 					invalid_proof(),
 					0,
+					people_revision(),
 					offchain_signature(ALICE),
 					ALICE,
 					base_name(ALICE_BASE),
@@ -928,7 +1100,15 @@ mod registration {
 			// Proof bound to (BOB, "alice", None) but call is from ALICE.
 			let proof = valid_proof(alias_a(), &register_msg(BOB, &bn, &link));
 
-			let result = validate_register(proof, 0, offchain_signature(ALICE), ALICE, bn, link);
+			let result = validate_register(
+				proof,
+				0,
+				people_revision(),
+				offchain_signature(ALICE),
+				ALICE,
+				bn,
+				link,
+			);
 
 			assert!(matches!(
 				result,
@@ -946,6 +1126,7 @@ mod registration {
 			let result = validate_register(
 				proof,
 				0,
+				people_revision(),
 				offchain_signature(ALICE),
 				ALICE,
 				base_name(BOB_BASE),
@@ -962,7 +1143,7 @@ mod registration {
 	#[test]
 	fn proof_message_binding_rejects_mismatched_link() {
 		new_test_ext().execute_with(|| {
-			seed_lite_owner(ALICE_LITE, ALICE);
+			LiteLabelOwner::<Test>::insert(base_name(ALICE_LITE), ALICE);
 
 			// Proof bound to Link::None but the call uses Link::LiteUsername.
 			let bn = base_name(ALICE_BASE);
@@ -972,6 +1153,7 @@ mod registration {
 			let result = validate_register(
 				proof,
 				0,
+				people_revision(),
 				offchain_signature(ALICE),
 				ALICE,
 				bn,
@@ -988,13 +1170,21 @@ mod registration {
 	#[test]
 	fn fails_when_user_not_owns_specified_lite_name() {
 		new_test_ext().execute_with(|| {
-			seed_lite_owner(ALICE_LITE, ALICE);
+			LiteLabelOwner::<Test>::insert(base_name(ALICE_LITE), ALICE);
 
 			let link = Link::LiteUsername(base_name(ALICE_LITE));
 			let bn = base_name(BOB_BASE);
 			let proof = valid_proof(alias_a(), &register_msg(BOB, &bn, &link));
 
-			let result = validate_register(proof, 0, offchain_signature(BOB), BOB, bn, link);
+			let result = validate_register(
+				proof,
+				0,
+				people_revision(),
+				offchain_signature(BOB),
+				BOB,
+				bn,
+				link,
+			);
 
 			assert_invalid_custom(&result, CustomValidity::NotLiteLabelOwner);
 		});
@@ -1007,7 +1197,15 @@ mod registration {
 			let bn = base_name(ALICE_BASE);
 			let proof = valid_proof(alias_a(), &register_msg(ALICE, &bn, &link));
 
-			let result = validate_register(proof, 0, offchain_signature(ALICE), ALICE, bn, link);
+			let result = validate_register(
+				proof,
+				0,
+				people_revision(),
+				offchain_signature(ALICE),
+				ALICE,
+				bn,
+				link,
+			);
 
 			assert_invalid_custom(&result, CustomValidity::NotLiteLabelOwner);
 		});
@@ -1037,6 +1235,7 @@ mod registration {
 			let (_validity, _, origin) = validate_register(
 				proof,
 				0,
+				people_revision(),
 				offchain_signature(ALICE),
 				ALICE,
 				bn.clone(),
@@ -1118,7 +1317,8 @@ mod registration {
 			let signature = offchain_signature(ALICE);
 
 			let (_validity, _, origin) =
-				validate_register(proof, 0, signature, ALICE, bn, link).expect("validates");
+				validate_register(proof, 0, people_revision(), signature, ALICE, bn, link)
+					.expect("validates");
 
 			// The extension must mutate the None origin into PersonRegistration.
 			assert_eq!(
@@ -1139,6 +1339,7 @@ mod registration {
 				crate::AsDotnsGatewayInfo::RegisterFullName {
 					proof,
 					ring_index: 0,
+					revision: people_revision(),
 					signature: offchain_signature(ALICE),
 				},
 			));
@@ -1171,6 +1372,7 @@ mod registration {
 				crate::AsDotnsGatewayInfo::RegisterFullName {
 					proof: invalid_proof(),
 					ring_index: 0,
+					revision: people_revision(),
 					signature: offchain_signature(ALICE),
 				},
 			));
@@ -1202,7 +1404,15 @@ mod registration {
 			let bn = base_name(ALICE_BASE);
 			let proof = valid_proof(alias_a(), &register_msg(ALICE, &bn, &link));
 
-			let result = validate_register(proof, 0, invalid_offchain_signature(), ALICE, bn, link);
+			let result = validate_register(
+				proof,
+				0,
+				people_revision(),
+				invalid_offchain_signature(),
+				ALICE,
+				bn,
+				link,
+			);
 
 			assert_invalid_custom(&result, CustomValidity::InvalidOffchainSignature);
 		});
@@ -1222,7 +1432,15 @@ mod registration {
 			let other_alias = [2u8; 32];
 			let proof = valid_proof(other_alias, &register_msg(ALICE, &bn, &link));
 
-			let result = validate_register(proof, 0, offchain_signature(ALICE), ALICE, bn, link);
+			let result = validate_register(
+				proof,
+				0,
+				people_revision(),
+				offchain_signature(ALICE),
+				ALICE,
+				bn,
+				link,
+			);
 
 			assert_invalid_custom(&result, CustomValidity::AccountAlreadyRegistered);
 		});
@@ -1239,6 +1457,7 @@ mod registration {
 			let (_validity, _, origin) = validate_register(
 				proof,
 				0,
+				people_revision(),
 				offchain_signature(ALICE),
 				ALICE,
 				bn.clone(),
@@ -1336,5 +1555,74 @@ mod signed_message {
 			build(1, 10, ALICE_BASE, &key, Some(ALICE_FULL), 42),
 			build(1, 10, ALICE_BASE, &key, Some(ALICE_FULL), 42),
 		);
+	}
+}
+
+mod migration {
+	use super::*;
+	use codec::Encode;
+	use frame_support::storage::unhashed;
+
+	/// Stores a record for `who` in the two-field shape used before the chat key existed.
+	fn seed_old_record(who: u64, lite: Option<&[u8]>, full: Option<&[u8]>) {
+		let value = (lite.map(base_name), full.map(base_name)).encode();
+		unhashed::put_raw(&AccountNames::<Test>::hashed_key_for(who), &value);
+	}
+
+	#[test]
+	fn v1_backfills_lite_labels_from_lite_label_owner() {
+		new_test_ext().execute_with(|| {
+			StorageVersion::new(0).put::<DotnsGateway>();
+			LiteLabelOwner::<Test>::insert(base_name(ALICE_LITE), ALICE);
+			LiteLabelOwner::<Test>::insert(base_name(BOB_LITE), BOB);
+			// An existing two-field record keeps its fields and gains the label.
+			seed_old_record(BOB, None, Some(BOB_BASE));
+			// A two-field record does not decode under the current type until migrated.
+			assert_eq!(AccountNames::<Test>::get(BOB), None);
+
+			MigrateV0ToV1::<Test>::on_runtime_upgrade();
+
+			assert_eq!(
+				AccountNames::<Test>::get(ALICE),
+				Some(AccountNameRecord { lite: entry(ALICE_LITE, None), full: None })
+			);
+			assert_eq!(
+				AccountNames::<Test>::get(BOB),
+				Some(AccountNameRecord {
+					lite: entry(BOB_LITE, None),
+					full: entry(BOB_BASE, None)
+				})
+			);
+			assert_eq!(DotnsGateway::on_chain_storage_version(), StorageVersion::new(1));
+		});
+	}
+
+	#[test]
+	fn v1_keeps_an_existing_lite_label() {
+		new_test_ext().execute_with(|| {
+			StorageVersion::new(0).put::<DotnsGateway>();
+			LiteLabelOwner::<Test>::insert(base_name(ALICE_LITE), ALICE);
+			LiteLabelOwner::<Test>::insert(base_name(BOB_LITE), ALICE);
+			seed_old_record(ALICE, Some(BOB_LITE), None);
+
+			MigrateV0ToV1::<Test>::on_runtime_upgrade();
+
+			assert_eq!(
+				AccountNames::<Test>::get(ALICE),
+				Some(AccountNameRecord { lite: entry(BOB_LITE, None), full: None })
+			);
+		});
+	}
+
+	#[test]
+	fn v1_runs_only_from_version_zero() {
+		new_test_ext().execute_with(|| {
+			StorageVersion::new(1).put::<DotnsGateway>();
+			LiteLabelOwner::<Test>::insert(base_name(ALICE_LITE), ALICE);
+
+			MigrateV0ToV1::<Test>::on_runtime_upgrade();
+
+			assert_eq!(AccountNames::<Test>::get(ALICE), None);
+		});
 	}
 }

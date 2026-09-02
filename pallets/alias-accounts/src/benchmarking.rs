@@ -18,23 +18,21 @@
 
 use super::*;
 use crate::{
-	extension::{AsRingAlias, AsRingAliasInfo},
-	pallet::{AccountToAlias, AliasFee, AliasToAccount, BalanceOf},
+	pallet::{AccountToAlias, AliasToAccount, BalanceOf, StaleSince},
 	types::{AliasAccountInfo, ContextualAlias, ProofOf},
 };
+use alloc::vec::Vec;
 use frame_benchmarking::{account, v2::*, BenchmarkError};
 use frame_support::{
 	dispatch::{DispatchInfo, PostDispatchInfo},
-	traits::{fungibles, EnsureOrigin, Get},
+	pallet_prelude::{Authorize, BoundedVec, TransactionSource},
+	traits::{fungibles, Get},
 };
 use frame_system::RawOrigin as SystemOrigin;
 use indiv_support::traits::{
 	Alias, Context, Identifier, RevisionIndex, RingIndex, PEOPLE_IDENTIFIER, PEOPLE_LITE_IDENTIFIER,
 };
-use sp_runtime::{
-	traits::{DispatchTransaction, Dispatchable},
-	Saturating,
-};
+use sp_runtime::{traits::Dispatchable, Saturating};
 
 // ============================================================================
 // Local BenchmarkHelper
@@ -73,6 +71,9 @@ pub trait BenchmarkHelper<T: Config> {
 	/// already exists.
 	fn setup_pgas_asset();
 
+	/// Make [`Config::AliasFee`] return `Some(fee)`.
+	fn set_alias_fee(fee: BalanceOf<T>);
+
 	/// Maximum number of revisions that [`Config::MemberService`] retains per ring.
 	/// Used as the worst-case `Linear` upper bound in benchmarks.
 	fn max_ring_revisions() -> u32;
@@ -87,14 +88,16 @@ pub trait BenchmarkHelper<T: Config> {
 // Setup helpers
 // ============================================================================
 
-/// Build an `AliasAccountInfo` with arbitrary alias bytes.
+/// Build an `AliasAccountInfo` whose alias is `alias_seed`, so distinct seeds give distinct
+/// aliases however many a batch needs.
 fn make_alias_info<T: Config + BenchmarkHelper<T>>(
 	collection: Identifier,
 	ring: RingIndex,
 	revision: RevisionIndex,
-	alias_seed: u8,
+	alias_seed: u32,
 ) -> AliasAccountInfo {
-	let alias: Alias = [alias_seed; 32];
+	let mut alias: Alias = [0u8; 32];
+	alias[..4].copy_from_slice(&alias_seed.to_le_bytes());
 	let context = <T as BenchmarkHelper<T>>::allowed_context();
 	AliasAccountInfo { collection, revision, ring, ca: ContextualAlias { alias, context } }
 }
@@ -107,24 +110,31 @@ fn insert_mapping<T: Config>(account: &T::AccountId, info: &AliasAccountInfo) {
 	frame_system::Pallet::<T>::inc_sufficients(account);
 }
 
-/// Seed a full `RingRoots` window and return the revision that drives
-/// `is_revision_in_grace` to its worst-case path for the current config:
-/// - `max_ring_revisions() >= 2` → a non-latest revision (slow path).
-/// - `max_ring_revisions() == 1` → the only revision (slow path is unreachable)
+/// Second every seeded ring root is dated, and the [`StaleSince`] every stamped mapping carries.
 ///
-/// Returns `(target_revision, source_time)`. The caller must call `set_time(...)`:
-/// - `set_time(source_time)` → target revision is in grace.
-/// - `set_time(source_time + CleanupGracePeriod + 1)` → target revision is past grace.
+/// The member service reads it as its newest root's time, so a benchmark holds the clock here to
+/// keep a revision retained and moves it past [`Config::MappingRetention`] to expire one.
+const RING_SOURCE_TIME: u64 = 1;
+
+/// Seed a full `RingRoots` window and return the revision that drives the member service's
+/// revision lookup to its worst-case path for the current config:
+/// - `max_ring_revisions() >= 2` → a non-latest revision (full window scan).
+/// - `max_ring_revisions() == 1` → the only revision.
+///
+/// Returns `(target_revision, source_time)`, where `source_time` is [`RING_SOURCE_TIME`], so the
+/// caller must call `set_time(...)`:
+/// - `set_time(source_time)` → target revision is still retained.
+/// - `set_time(source_time + MappingRetention + 1)` → the revision has expired at the member
+///   service, whose retention is below `MappingRetention`, and the mapping is eligible for cleanup.
 fn setup_full_window_worst_case<T: Config + BenchmarkHelper<T>>(
 	collection: Identifier,
 	ring: RingIndex,
 ) -> (RevisionIndex, u64) {
 	let max_roots = <T as BenchmarkHelper<T>>::max_ring_revisions();
-	let source_time: u64 = 1;
-	<T as BenchmarkHelper<T>>::seed_ring(collection, ring, max_roots, source_time);
+	<T as BenchmarkHelper<T>>::seed_ring(collection, ring, max_roots, RING_SOURCE_TIME);
 	// Latest root is `max_roots - 1`
 	let target_revision = max_roots.saturating_sub(2);
-	(target_revision, source_time)
+	(target_revision, RING_SOURCE_TIME)
 }
 
 // ============================================================================
@@ -141,9 +151,8 @@ mod benches {
 
 	/// Worst case: replace an existing alias with a different account, with a fee burn.
 	///
-	/// The proof targets a *non-latest* revision so `verify_proof` traverses the slow
-	/// path through `is_revision_in_grace` (i.e. `revision_source_time` + a `Timestamp::Now`
-	/// read + the grace-window arithmetic).
+	/// The proof targets a *non-latest* revision so the member service's revision validity
+	/// check and root lookup both scan the full window.
 	#[benchmark]
 	fn set_alias_account() -> Result<(), BenchmarkError> {
 		let collection: Identifier = *PEOPLE_IDENTIFIER;
@@ -151,7 +160,7 @@ mod benches {
 		let context: Context = <T as BenchmarkHelper<T>>::allowed_context();
 
 		let (target_revision, source_time) = setup_full_window_worst_case::<T>(collection, ring);
-		// Clock is `source_time` so the revision is in grace.
+		// Clock is `source_time` so the revision is still retained.
 		<T as BenchmarkHelper<T>>::set_time(source_time);
 
 		// Fee equals one PGAS ED; fund the caller with a small multiple of ED so
@@ -161,8 +170,7 @@ mod benches {
 			<T::Fungibles as fungibles::Inspect<T::AccountId>>::minimum_balance(
 				T::PgasAssetId::get(),
 			);
-		let fee: BalanceOf<T> = pgas_ed;
-		AliasFee::<T>::put(fee);
+		<T as BenchmarkHelper<T>>::set_alias_fee(pgas_ed);
 		let new_account: T::AccountId = account("paid_new", 0, 0);
 		<T::Fungibles as fungibles::Mutate<T::AccountId>>::mint_into(
 			T::PgasAssetId::get(),
@@ -245,45 +253,190 @@ mod benches {
 		Ok(())
 	}
 
-	/// The alias is stored under a revision one behind the latest. `find_valid_record` locates it
-	/// but flags it stale, which triggers a `UnixTime::now()` read and a grace-period check — more
-	/// work than the single extra iteration a hash miss would have cost.
+	/// Seeds `n` mappings in the state `action` applies to, each in a ring of its own carrying a
+	/// full revision window, and returns them in the ascending order a sweep carries them.
 	///
-	/// `r` sweeps how many records live in `RingRoots`. A ring with just one
-	/// record has no stale path to take (the only record is always the latest),
-	/// so at `r = 1` we fall through to the cheap early-exit.
-	#[benchmark]
-	fn clean_up_stale_alias() -> Result<(), BenchmarkError> {
-		let collection: Identifier = *PEOPLE_IDENTIFIER;
-		let ring: RingIndex = 0;
+	/// A batch is one pass over [`AccountToAlias`], which is keyed by account, so its mappings
+	/// span as many rings as it has accounts. One ring each is what makes every ring-root read a
+	/// separate key, and those reads are most of the batch's proof size.
+	///
+	/// Every seeded root is dated [`RING_SOURCE_TIME`], and a stamped mapping carries that same
+	/// second, so a caller that moves the clock past [`Config::MappingRetention`] from there has
+	/// both an expired revision and an expired stamp.
+	fn seed_sweep_batch<T: Config + BenchmarkHelper<T>>(
+		collection: Identifier,
+		n: u32,
+		action: StaleAliasAction,
+	) -> BoundedVec<T::AccountId, T::MaxStaleAliasBatch> {
+		let max_roots = <T as BenchmarkHelper<T>>::max_ring_revisions();
+		// The latest revision never expires, so a mapping that verifies again is stored under it.
+		// The one behind it has expired once the clock moves past the member service's retention,
+		// and is the entry a full-window scan reaches last but one.
+		let revision = match action {
+			StaleAliasAction::Report | StaleAliasAction::Retire => max_roots.saturating_sub(2),
+			StaleAliasAction::ClearReport => max_roots.saturating_sub(1),
+		};
+		// `Report` is the state before the first stamp; the other two act on a stamped mapping.
+		let stamped = matches!(action, StaleAliasAction::Retire | StaleAliasAction::ClearReport);
 
-		let (stored_revision, source_time) = setup_full_window_worst_case::<T>(collection, ring);
-		// Advance the clock past the grace window so the alias is flagged as stale and cleanup is
-		// allowed.
+		let mut accounts = (0..n)
+			.map(|i| {
+				let ring = i as RingIndex;
+				<T as BenchmarkHelper<T>>::seed_ring(collection, ring, max_roots, RING_SOURCE_TIME);
+				let holder: T::AccountId = account("sweep_holder", i, 0);
+				// One alias per holder: the alias keys the reverse mapping, so a shared one would
+				// leave every holder but the last unreachable through it.
+				let info = make_alias_info::<T>(collection, ring, revision, i);
+				insert_mapping::<T>(&holder, &info);
+				if stamped {
+					StaleSince::<T>::insert(&holder, RING_SOURCE_TIME);
+				}
+				holder
+			})
+			.collect::<Vec<_>>();
+		accounts.sort();
+		BoundedVec::try_from(accounts).expect("n is bounded by MaxStaleAliasBatch")
+	}
+
+	/// Moves the clock past [`Config::MappingRetention`] counted from [`RING_SOURCE_TIME`], which
+	/// expires both a seeded revision and a seeded stamp.
+	fn set_time_past_retention<T: Config + BenchmarkHelper<T>>() {
 		<T as BenchmarkHelper<T>>::set_time(
-			source_time.saturating_add(T::CleanupGracePeriod::get()).saturating_add(1),
+			RING_SOURCE_TIME.saturating_add(T::MappingRetention::get()).saturating_add(1),
 		);
+	}
 
-		let alias_info = make_alias_info::<T>(collection, ring, stored_revision, 3);
-		let holder: T::AccountId = account("stale_holder", 0, 0);
-		insert_mapping::<T>(&holder, &alias_info);
+	/// The reporting sweep: `n` mappings stored under a revision one behind the latest and expired
+	/// at the member service, none stamped yet, so the call reads each ring's newest root to date
+	/// it and writes the stamp.
+	#[benchmark]
+	fn report_stale_aliases(
+		n: Linear<1, { T::MaxStaleAliasBatch::get() }>,
+	) -> Result<(), BenchmarkError> {
+		let collection: Identifier = *PEOPLE_IDENTIFIER;
 
-		let caller: T::AccountId = account("cleaner", 0, 0);
+		let accounts = seed_sweep_batch::<T>(collection, n, StaleAliasAction::Report);
+		set_time_past_retention::<T>();
 
 		#[extrinsic_call]
-		_(SystemOrigin::Signed(caller), collection, alias_info.ca.clone());
+		_(SystemOrigin::Authorized, accounts.clone());
 
-		assert_eq!(AliasToAccount::<T>::get(collection, &alias_info.ca), None);
-		assert_eq!(AccountToAlias::<T>::get(&holder), None);
+		for holder in &accounts {
+			assert_eq!(StaleSince::<T>::get(holder), Some(RING_SOURCE_TIME));
+			assert!(AccountToAlias::<T>::get(holder).is_some());
+		}
 
-		frame_system::Pallet::<T>::assert_last_event(
-			Event::<T>::StaleAliasCleanedUp {
-				account: holder,
-				collection,
-				alias: alias_info.ca.alias,
-			}
-			.into(),
-		);
+		Ok(())
+	}
+
+	/// `authorize` for the reporting sweep, which reads every mapping in the batch and runs the
+	/// member service's validity check over a full revision window for each.
+	#[benchmark]
+	fn authorize_report_stale_aliases(
+		n: Linear<1, { T::MaxStaleAliasBatch::get() }>,
+	) -> Result<(), BenchmarkError> {
+		let collection: Identifier = *PEOPLE_IDENTIFIER;
+
+		let accounts = seed_sweep_batch::<T>(collection, n, StaleAliasAction::Report);
+		set_time_past_retention::<T>();
+		let call = Call::<T>::report_stale_aliases { accounts };
+
+		#[block]
+		{
+			call.authorize(TransactionSource::InBlock)
+				.ok_or("Call must give some authorization")??;
+		}
+
+		Ok(())
+	}
+
+	/// The removal sweep: `n` stamped mappings whose retention has run out, so the call removes
+	/// both directions of each and drops its sufficient reference.
+	#[benchmark]
+	fn retire_stale_aliases(
+		n: Linear<1, { T::MaxStaleAliasBatch::get() }>,
+	) -> Result<(), BenchmarkError> {
+		let collection: Identifier = *PEOPLE_IDENTIFIER;
+
+		let accounts = seed_sweep_batch::<T>(collection, n, StaleAliasAction::Retire);
+		// Past the retention counted from the stamp every seeded mapping carries.
+		set_time_past_retention::<T>();
+
+		#[extrinsic_call]
+		_(SystemOrigin::Authorized, accounts.clone());
+
+		for holder in &accounts {
+			assert_eq!(AccountToAlias::<T>::get(holder), None);
+			assert_eq!(StaleSince::<T>::get(holder), None);
+			// The mapping's sufficient reference was the only one, so dropping it reaps the
+			// account. A retirement that leaves it behind has not paid for the removal.
+			assert!(!frame_system::Account::<T>::contains_key(holder));
+		}
+
+		Ok(())
+	}
+
+	/// `authorize` for the removal sweep, which additionally compares each stamp against the
+	/// retention.
+	#[benchmark]
+	fn authorize_retire_stale_aliases(
+		n: Linear<1, { T::MaxStaleAliasBatch::get() }>,
+	) -> Result<(), BenchmarkError> {
+		let collection: Identifier = *PEOPLE_IDENTIFIER;
+
+		let accounts = seed_sweep_batch::<T>(collection, n, StaleAliasAction::Retire);
+		set_time_past_retention::<T>();
+		let call = Call::<T>::retire_stale_aliases { accounts };
+
+		#[block]
+		{
+			call.authorize(TransactionSource::InBlock)
+				.ok_or("Call must give some authorization")??;
+		}
+
+		Ok(())
+	}
+
+	/// The clearing sweep: `n` stamped mappings whose revision verifies again, which a collection
+	/// re-created under the same identifier produces. Each is stored under the newest revision, the
+	/// last entry of a full window, so the validity check scans all of it.
+	#[benchmark]
+	fn clear_stale_alias_reports(
+		n: Linear<1, { T::MaxStaleAliasBatch::get() }>,
+	) -> Result<(), BenchmarkError> {
+		let collection: Identifier = *PEOPLE_IDENTIFIER;
+
+		let accounts = seed_sweep_batch::<T>(collection, n, StaleAliasAction::ClearReport);
+		set_time_past_retention::<T>();
+
+		#[extrinsic_call]
+		_(SystemOrigin::Authorized, accounts.clone());
+
+		for holder in &accounts {
+			assert_eq!(StaleSince::<T>::get(holder), None);
+			assert!(AccountToAlias::<T>::get(holder).is_some());
+		}
+
+		Ok(())
+	}
+
+	/// `authorize` for the clearing sweep, whose validity check is the one that scans a full
+	/// revision window and finds the revision.
+	#[benchmark]
+	fn authorize_clear_stale_alias_reports(
+		n: Linear<1, { T::MaxStaleAliasBatch::get() }>,
+	) -> Result<(), BenchmarkError> {
+		let collection: Identifier = *PEOPLE_IDENTIFIER;
+
+		let accounts = seed_sweep_batch::<T>(collection, n, StaleAliasAction::ClearReport);
+		set_time_past_retention::<T>();
+		let call = Call::<T>::clear_stale_alias_reports { accounts };
+
+		#[block]
+		{
+			call.authorize(TransactionSource::InBlock)
+				.ok_or("Call must give some authorization")??;
+		}
 
 		Ok(())
 	}
@@ -294,7 +447,7 @@ mod benches {
 		let ring: RingIndex = 0;
 
 		let (stored_revision, source_time) = setup_full_window_worst_case::<T>(collection, ring);
-		// Clock is `source_time` so the revision is still in grace and the lookup returns `Some`.
+		// Clock is `source_time` so the revision is still retained and the lookup returns `Some`.
 		<T as BenchmarkHelper<T>>::set_time(source_time);
 
 		let alias_info = make_alias_info::<T>(collection, ring, stored_revision, 4);
@@ -353,9 +506,8 @@ mod benches {
 		Ok(())
 	}
 
-	/// The proof targets a *non-latest* revision so `verify_proof` exercises the slow
-	/// path through `is_revision_in_grace`, matching the worst case in
-	/// [`set_alias_account`].
+	/// The proof targets a *non-latest* revision so the member service scans the full window,
+	/// matching the worst case in [`set_alias_account`].
 	#[benchmark]
 	fn reprove_alias_account() -> Result<(), BenchmarkError> {
 		let collection: Identifier = *PEOPLE_IDENTIFIER;
@@ -399,58 +551,6 @@ mod benches {
 		frame_system::Pallet::<T>::assert_last_event(
 			Event::<T>::AliasAccountSet { account: holder, collection, alias }.into(),
 		);
-
-		Ok(())
-	}
-
-	#[benchmark]
-	fn set_alias_fee() -> Result<(), BenchmarkError> {
-		let origin =
-			T::FeeManagerOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-		let fee: BalanceOf<T> = 42u32.into();
-
-		#[extrinsic_call]
-		_(origin as T::RuntimeOrigin, fee);
-
-		assert_eq!(AliasFee::<T>::get(), Some(fee));
-
-		frame_system::Pallet::<T>::assert_last_event(Event::<T>::AliasFeeSet { fee }.into());
-
-		Ok(())
-	}
-
-	// ==================== Transaction extension benchmarks ====================
-
-	#[benchmark]
-	fn as_ring_alias_info_with_account() -> Result<(), BenchmarkError> {
-		let collection: Identifier = *PEOPLE_IDENTIFIER;
-		let ring: RingIndex = 0;
-
-		let (stored_revision, source_time) = setup_full_window_worst_case::<T>(collection, ring);
-		// Clock is `source_time` so the revision is still in grace and the
-		// extension's validate succeeds.
-		<T as BenchmarkHelper<T>>::set_time(source_time);
-
-		let alias_info = make_alias_info::<T>(collection, ring, stored_revision, 5);
-		let holder: T::AccountId = account("with_account_holder", 0, 0);
-		insert_mapping::<T>(&holder, &alias_info);
-
-		let nonce: T::Nonce = Default::default();
-		let tx_ext = AsRingAlias::<T>::new(Some(AsRingAliasInfo::WithAccount(nonce)));
-
-		let call: <T as frame_system::Config>::RuntimeCall =
-			frame_system::Call::<T>::remark { remark: alloc::vec![] }.into();
-
-		let origin: <T as frame_system::Config>::RuntimeOrigin =
-			frame_system::RawOrigin::Signed(holder).into();
-
-		#[block]
-		{
-			tx_ext
-				.test_run(origin, &call, &Default::default(), 0, 0, |_| Ok(Default::default()))
-				.expect("validate must succeed for the WithAccount path")
-				.map_err(|_| BenchmarkError::Stop("inner call failed"))?;
-		}
 
 		Ok(())
 	}

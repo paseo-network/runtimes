@@ -20,12 +20,12 @@ use super::*;
 use codec::Encode;
 use frame_benchmarking::v2::*;
 use frame_system::RawOrigin as SystemOrigin;
-use indiv_support::traits::{Identifier, RingIndex};
+use indiv_support::traits::{Identifier, RevisionIndex, RingIndex};
 use sp_runtime::traits::{DispatchTransaction, TxBaseImplication};
 
 pub trait BenchmarkHelper<T: Config> {
 	/// Populates a ring root for the given collection identifier and ring index.
-	fn setup_ring_root(identifier: &Identifier, ring_index: RingIndex);
+	fn setup_ring_root(identifier: &Identifier, ring_index: RingIndex) -> RevisionIndex;
 	/// Returns a valid proof for the given collection, bound to the given message.
 	fn valid_proof(collection: &Collection, message: &[u8]) -> ProofOf<T>;
 	/// Returns the candidate account.
@@ -106,6 +106,8 @@ mod benchmarks {
 			signed_at,
 		);
 
+		assert_eq!(crate::AccountNames::<T>::iter().count(), 1);
+
 		Ok(())
 	}
 
@@ -137,6 +139,7 @@ mod benchmarks {
 		register_name(origin, caller, label, link);
 
 		assert_eq!(AliasRegistration::<T>::iter().count(), 1);
+		assert_eq!(crate::AccountNames::<T>::iter().count(), 1);
 
 		Ok(())
 	}
@@ -144,7 +147,7 @@ mod benchmarks {
 	#[benchmark]
 	fn as_register_full_name_tx_ext() -> Result<(), BenchmarkError> {
 		T::BenchmarkHelper::set_time(1);
-		T::BenchmarkHelper::setup_ring_root(PEOPLE_IDENTIFIER, 0);
+		let revision = T::BenchmarkHelper::setup_ring_root(PEOPLE_IDENTIFIER, 0);
 		let caller: T::AccountId = T::BenchmarkHelper::candidate();
 		// 32-byte single DNS label for the full-person label position.
 		let label = crate::BaseLabel::try_from([b'x'; 32].to_vec())
@@ -179,6 +182,7 @@ mod benchmarks {
 			crate::AsDotnsGateway::<T>::new(Some(crate::AsDotnsGatewayInfo::RegisterFullName {
 				proof,
 				ring_index: 0,
+				revision,
 				signature,
 			}));
 

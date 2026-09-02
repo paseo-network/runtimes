@@ -758,3 +758,10 @@ fn create_pgas_asset_authorize_rejects_when_asset_exists() {
 		));
 	});
 }
+
+#[test]
+fn integrity_test_passes() {
+	new_test_ext().execute_with(|| {
+		<Pallet<Test> as frame_support::traits::Hooks<u64>>::integrity_test();
+	});
+}
