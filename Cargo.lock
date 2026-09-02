@@ -6415,6 +6415,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "indiv-pallet-people-airdrops"
+version = "2.3.1"
+dependencies = [
+ "frame-benchmarking",
+ "frame-executive",
+ "frame-support",
+ "frame-system",
+ "indiv-pallet-airdrop",
+ "indiv-support",
+ "log",
+ "pallet-assets",
+ "pallet-assets-holder",
+ "pallet-balances",
+ "parity-scale-codec",
+ "parking_lot 0.12.5",
+ "scale-info",
+ "sp-core",
+ "sp-crypto-hashing",
+ "sp-io",
+ "sp-runtime",
+ "verifiable",
+]
+
+[[package]]
 name = "indiv-pallet-people-lite"
 version = "2.3.1"
 dependencies = [
