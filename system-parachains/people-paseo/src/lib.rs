@@ -23,6 +23,8 @@ extern crate alloc;
 pub mod assets;
 // Genesis preset configurations.
 pub mod genesis_config_presets;
+#[cfg(test)]
+mod individuality_reachability_tests;
 pub mod parameters;
 pub mod people;
 #[cfg(test)]
