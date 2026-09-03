@@ -56,7 +56,7 @@ use pallet_xcm::{EnsureXcm, IsVoiceOfBody};
 use parachains_common::{
 	message_queue::{NarrowOriginToSibling, ParaIdToSibling},
 	AccountId, Balance, BlockNumber, Hash, Header, Nonce, Signature, AVERAGE_ON_INITIALIZE_RATIO,
-	HOURS, MAXIMUM_BLOCK_WEIGHT, NORMAL_DISPATCH_RATIO,
+	HOURS,
 };
 use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 use sp_api::impl_runtime_apis;
@@ -74,15 +74,23 @@ pub use sp_runtime::{MultiAddress, Perbill, Permill};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
-use system_parachains_constants::paseo::{
-	consensus::{
-		elastic_scaling::{
-			BLOCK_PROCESSING_VELOCITY, RELAY_PARENT_OFFSET, UNINCLUDED_SEGMENT_CAPACITY,
+// This runtime produces 2-second blocks (`elastic_scaling`: a 6s relay slot at
+// `BLOCK_PROCESSING_VELOCITY = 3`), which is the async-backing block cadence. Its block *weight*
+// must be sized for that cadence, and `asset-hub-paseo` — configured with the same
+// `SLOT_DURATION` and the same `elastic_scaling` parameters — already imports these two from
+// here. See the PR description.
+use system_parachains_constants::{
+	async_backing::{MAXIMUM_BLOCK_WEIGHT, NORMAL_DISPATCH_RATIO},
+	paseo::{
+		consensus::{
+			elastic_scaling::{
+				BLOCK_PROCESSING_VELOCITY, RELAY_PARENT_OFFSET, UNINCLUDED_SEGMENT_CAPACITY,
+			},
+			RELAY_CHAIN_SLOT_DURATION_MILLIS,
 		},
-		RELAY_CHAIN_SLOT_DURATION_MILLIS,
+		currency::*,
+		fee::WeightToFee as PasWeightToFee,
 	},
-	currency::*,
-	fee::WeightToFee as PasWeightToFee,
 };
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 use xcm::{
