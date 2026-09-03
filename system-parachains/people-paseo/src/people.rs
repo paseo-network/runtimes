@@ -1522,93 +1522,6 @@ pub type NativeAndAssets = frame_support::traits::fungible::UnionOf<
 	AccountId,
 >;
 
-/// PASEO-LOCAL. `indiv_pallet_coinage::Config::FeeConversion` at individuality v0.3.1 requires
-/// `pallet_asset_conversion::{Swap, QuotePrice}` — an AMM. Paseo's People chain has NO
-/// `pallet-asset-conversion` and no `PoolAssets` instance (confirmed against live People
-/// metadata: the runtime has `AssetRate` at index 13 and no AMM at all). Upstream's
-/// `next-people-paseo` carries one at indices 18/19; Paseo does not.
-///
-/// Coinage only ever reaches `FeeConversion` when a coin instance's asset is NOT the native
-/// asset: both `quote_asset_for_native_fee` and `charge_asset_and_transfer_native` short-circuit
-/// to a plain transfer when `asset_id == NativeAssetKind::get()`.
-///
-/// So this adapter FAILS CLOSED. `quote_price_*` returns `None`, which is the trait's documented
-/// "the pool does not exist" answer and which coinage already turns into
-/// `FeeConversionError::Unavailable` / `CannotConvertAssetToNative`. Swaps return an error and
-/// move no funds.
-///
-/// Consequences, stated plainly:
-///   * native-denominated instances — unaffected, the AMM is never consulted;
-///   * non-native instances — paid-unload fee paths fail LOUDLY with a clear error.
-///
-/// This is deliberately NOT an `AssetRate`-backed shim. `Swap` moves real funds; backing it with
-/// a governance-set rate and no liquidity would either mint or lose value silently. A loud
-/// failure is the only safe placeholder.
-///
-/// REQUIRED BEFORE ENACTMENT — one of:
-///   (a) confirm the coinage migration maps every existing coin to a NATIVE-denominated
-///       instance, in which case this adapter is never reached and can stay; or
-///   (b) adopt `pallet-asset-conversion` + a `PoolAssets` instance (upstream's People indices
-///       18 and 19, both confirmed free on Paseo) AND seed the native/CASH pool with liquidity.
-///       An AMM with no pool fails exactly like this adapter does.
-/// The coinage migration is owned by another agent; this choice is theirs to close.
-pub struct CoinageFeeConversion;
-
-impl pallet_asset_conversion::QuotePrice for CoinageFeeConversion {
-	type Balance = Balance;
-	type AssetKind = Location;
-
-	fn quote_price_tokens_for_exact_tokens(
-		_asset1: Self::AssetKind,
-		_asset2: Self::AssetKind,
-		_amount: Self::Balance,
-		_include_fee: bool,
-	) -> Option<Self::Balance> {
-		None
-	}
-
-	fn quote_price_exact_tokens_for_tokens(
-		_asset1: Self::AssetKind,
-		_asset2: Self::AssetKind,
-		_amount: Self::Balance,
-		_include_fee: bool,
-	) -> Option<Self::Balance> {
-		None
-	}
-}
-
-impl pallet_asset_conversion::Swap<AccountId> for CoinageFeeConversion {
-	type Balance = Balance;
-	type AssetKind = Location;
-
-	fn max_path_len() -> u32 {
-		2
-	}
-
-	fn swap_exact_tokens_for_tokens(
-		_sender: AccountId,
-		_path: alloc::vec::Vec<Self::AssetKind>,
-		_amount_in: Self::Balance,
-		_amount_out_min: Option<Self::Balance>,
-		_send_to: AccountId,
-		_keep_alive: bool,
-	) -> Result<Self::Balance, sp_runtime::DispatchError> {
-		Err(sp_runtime::DispatchError::Other("coinage: no asset-conversion market on Paseo People"))
-	}
-
-	fn swap_tokens_for_exact_tokens(
-		_sender: AccountId,
-		_path: alloc::vec::Vec<Self::AssetKind>,
-		_amount_out: Self::Balance,
-		_amount_in_max: Option<Self::Balance>,
-		_send_to: AccountId,
-		_keep_alive: bool,
-	) -> Result<Self::Balance, sp_runtime::DispatchError> {
-		Err(sp_runtime::DispatchError::Other("coinage: no asset-conversion market on Paseo People"))
-	}
-}
-
-/// Prices the permanent footprint of a sponsored coinage instance.
 pub struct CoinageInstanceCreationPrice;
 impl sp_runtime::traits::Convert<frame_support::traits::Footprint, Balance>
 	for CoinageInstanceCreationPrice
@@ -1690,8 +1603,13 @@ impl indiv_pallet_coinage::Config for Runtime {
 	type MaxFreeUnloadTokensPerTimePeriod = ConstU32<1000>;
 	// Replaces the separate `LitePeopleProof` / `PeopleProof` pair.
 	type MembershipProof = People;
-	// See `CoinageFeeConversion`: Paseo People has no AMM, so this fails closed.
-	type FeeConversion = CoinageFeeConversion;
+	// Bound to the on-chain AMM, as both reference integrations do: individuality v0.3.1's
+	// `next-people-paseo` and polkadot-fellows' `people-polkadot` each bind their own
+	// `AssetConversion`. Reached only when a coin instance's asset is NOT the native asset;
+	// native-denominated instances short-circuit to a plain transfer.
+	// 🔴 A pool with no liquidity behaves exactly like the fail-closed adapter this replaces:
+	// paid unloads in a non-native asset fail until a native/asset pool is seeded.
+	type FeeConversion = AssetConversion;
 	type NativeAssetKind = crate::xcm_config::RelayLocation;
 	type WeightToFee = TransactionPayment;
 	type PaidUnloadTokenTimePeriod = ConstU32<{ 3 * 24 * 60 * 60 }>; // 3 days

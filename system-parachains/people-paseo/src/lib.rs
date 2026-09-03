@@ -764,6 +764,8 @@ construct_runtime!(
 		AssetsHolder: pallet_assets_holder = 15,
 		SkipFeelessPayment: pallet_skip_feeless_payment = 16,
 		OriginRestriction: indiv_pallet_origin_restriction = 17,
+		AssetConversion: pallet_asset_conversion = 18,
+		PoolAssets: pallet_assets::<Instance1> = 19,
 
 		// Collator support. The order of these 5 are important and shall not change.
 		Authorship: pallet_authorship = 20,
@@ -830,6 +832,7 @@ mod benches {
 		[pallet_asset_tx_payment, AssetTxPayment]
 		[pallet_asset_rate, AssetRate]
 		[pallet_assets, Assets]
+		[pallet_asset_conversion, AssetConversion]
 		[pallet_balances, Balances]
 		[pallet_identity, Identity]
 		[pallet_message_queue, MessageQueue]
