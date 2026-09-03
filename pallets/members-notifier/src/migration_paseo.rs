@@ -70,26 +70,25 @@
 //! every subscriber's collections, in both directions. A `try-runtime` run with `--checks all`
 //! therefore fails loudly on an unmigrated chain. Two consequences shape this file:
 //!
-//! 1. The migration seeds the map by calling `Pallet::rebuild_subscribed_collections()` — the
-//!    same function the runtime itself uses — rather than reimplementing the rule. A second
+//! 1. The migration seeds the map by calling `Pallet::rebuild_subscribed_collections()` — the same
+//!    function the runtime itself uses — rather than reimplementing the rule. A second
 //!    implementation could drift from the invariant `do_try_state` enforces.
 //! 2. `post_upgrade` calls `do_try_state()` itself, so the check runs even when someone forgets
-//!    `--checks all`, and so a failure is attributed to this migration rather than to whatever
-//!    ran after it.
+//!    `--checks all`, and so a failure is attributed to this migration rather than to whatever ran
+//!    after it.
 //!
 //! # 🔴 OPEN QUESTION FOR A HUMAN — deliberately not decided here
 //!
 //! Should `people-paseo` ALSO run upstream's `SeedSubscriptionWhitelist`?
 //!
 //! * **Running it** matches upstream's `Migrations` tuple exactly, but on Paseo it writes a
-//!   whitelist entry for para 1000 which is **already subscribed**. `subscribe_whitelisted`
-//!   rejects an already-subscribed parachain with `CustomInvalidity::AlreadySubscribed`, so the
-//!   entry can only ever be consumed after an `unsubscribe`. It is harmless but it is state
-//!   nobody asked for, and `do_try_state` does not police the whitelist, so nothing will ever
-//!   flag it.
+//!   whitelist entry for para 1000 which is **already subscribed**. `subscribe_whitelisted` rejects
+//!   an already-subscribed parachain with `CustomInvalidity::AlreadySubscribed`, so the entry can
+//!   only ever be consumed after an `unsubscribe`. It is harmless but it is state nobody asked for,
+//!   and `do_try_state` does not police the whitelist, so nothing will ever flag it.
 //! * **Skipping it** leaves `SubscriptionWhitelist` empty, which is what the chain looks like
-//!   today, but diverges from upstream's tuple — and a future reader comparing the two tuples
-//!   will find a missing entry with no explanation unless this note is carried with it.
+//!   today, but diverges from upstream's tuple — and a future reader comparing the two tuples will
+//!   find a missing entry with no explanation unless this note is carried with it.
 //!
 //! This migration does **not** touch `SubscriptionWhitelist` either way, and `post_upgrade`
 //! asserts that it did not. Whichever way the question is answered, it is answered by adding or
@@ -121,9 +120,9 @@ pub type MigrateV0ToV1<T> = VersionedMigration<
 
 pub mod v1 {
 	use super::*;
-	use crate::{SubscribedCollections, Subscribers};
 	#[cfg(feature = "try-runtime")]
 	use crate::SubscriptionWhitelist;
+	use crate::{SubscribedCollections, Subscribers};
 	use alloc::{collections::BTreeSet, vec::Vec};
 	use indiv_support::traits::Identifier;
 
@@ -211,9 +210,10 @@ pub mod v1 {
 
 		#[cfg(feature = "try-runtime")]
 		fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::TryRuntimeError> {
-			let subscribers: Vec<(cumulus_primitives_core::ParaId, Vec<u8>)> = Subscribers::<T>::iter()
-				.map(|(para_id, info)| (para_id, info.encode()))
-				.collect();
+			let subscribers: Vec<(cumulus_primitives_core::ParaId, Vec<u8>)> =
+				Subscribers::<T>::iter()
+					.map(|(para_id, info)| (para_id, info.encode()))
+					.collect();
 
 			ensure!(
 				subscribers.len() as u32 <= EXPECTED_MAX_SUBSCRIBERS,
@@ -287,12 +287,11 @@ pub mod v1 {
 				"members-notifier: Subscribers changed during the migration"
 			);
 
-			// 2. `SubscribedCollections` is EXACTLY the captured expectation — both directions,
-			//    so neither a missing collection nor an invented one passes.
+			// 2. `SubscribedCollections` is EXACTLY the captured expectation — both directions, so
+			//    neither a missing collection nor an invented one passes.
 			let got: alloc::collections::BTreeSet<Identifier> =
 				SubscribedCollections::<T>::iter_keys().collect();
-			let want: alloc::collections::BTreeSet<Identifier> =
-				expected.iter().copied().collect();
+			let want: alloc::collections::BTreeSet<Identifier> = expected.iter().copied().collect();
 			ensure!(
 				got == want,
 				"members-notifier: SubscribedCollections is not the union of the subscribers' \
@@ -325,8 +324,8 @@ pub mod v1 {
 				"members-notifier: PageState changed"
 			);
 
-			// 5. The pallet's own invariant, run here so that it is checked even without
-			//    `--checks all`, and so a failure is attributed to this migration.
+			// 5. The pallet's own invariant, run here so that it is checked even without `--checks
+			//    all`, and so a failure is attributed to this migration.
 			Pallet::<T>::do_try_state()?;
 
 			log::info!(
@@ -397,7 +396,7 @@ mod tests {
 			);
 
 			// A ring root changes on a collection AssetHub IS subscribed to...
-            let page = PageState::<Test>::get().write_page;
+			let page = PageState::<Test>::get().write_page;
 			<crate::Pallet<Test> as OnRingRootChange<_>>::on_ring_root_change(
 				*LIVE_PEOPLE,
 				0,
@@ -410,7 +409,11 @@ mod tests {
 				0,
 				"the update was dropped by the SubscribedCollections gate"
 			);
-			assert!(!PendingUpdates::<Test>::contains_key((page, *LIVE_PEOPLE as Identifier, 0u32)));
+			assert!(!PendingUpdates::<Test>::contains_key((
+				page,
+				*LIVE_PEOPLE as Identifier,
+				0u32
+			)));
 
 			// ---- now run the migration ----
 			StorageVersion::new(0).put::<crate::Pallet<Test>>();

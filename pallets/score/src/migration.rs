@@ -94,6 +94,8 @@ pub type MigrateV0ToV1<T> = VersionedMigration<
 
 pub mod v1 {
 	use super::*;
+	#[cfg(feature = "try-runtime")]
+	use crate::AbsenceGraceSchedule;
 	use crate::{
 		pallet::{BalanceOf, MAX_PERSONHOOD_THRESHOLD_TIERS},
 		types::{
@@ -102,8 +104,6 @@ pub mod v1 {
 		},
 		Participants, PersonhoodThreshold, PersonhoodThresholdSchedule,
 	};
-	#[cfg(feature = "try-runtime")]
-	use crate::AbsenceGraceSchedule;
 	use alloc::vec::Vec;
 	use sp_core::ConstU32;
 
@@ -122,30 +122,30 @@ pub mod v1 {
 	//
 	// THE RULE SHIPPED HERE: saturate at `u8::MAX`, never truncate, and shout.
 	//
-	//   * Saturating cannot silently turn a large value into a small one. `as u8` can, and that
-	//     is the dangerous direction: `score = 256` truncates to `0`, which SILENTLY REVOKES
-	//     personhood, while saturating to 255 preserves it. Every one of these fields is
-	//     monotone in "privilege the account already had", so rounding UP preserves the status
-	//     quo and rounding DOWN removes it without anyone noticing.
+	//   * Saturating cannot silently turn a large value into a small one. `as u8` can, and that is
+	//     the dangerous direction: `score = 256` truncates to `0`, which SILENTLY REVOKES
+	//     personhood, while saturating to 255 preserves it. Every one of these fields is monotone
+	//     in "privilege the account already had", so rounding UP preserves the status quo and
+	//     rounding DOWN removes it without anyone noticing.
 	//   * It matches what the new runtime does anyway. `Streak`'s own doc-comment says the count
 	//     "saturates at u8::MAX ... so saturation is behaviourally transparent", and `score` is
 	//     re-clamped on the next update by `score.min(MAX_PERSONHOOD_THRESHOLD)` (= 21). A
 	//     saturated value self-heals; a truncated one does not.
-	//   * Under the pre-v0.3 runtime `score` was ALREADY clamped to 21 on every write
-	//     (`score.score = uncapped_score.min(MAX_PERSONHOOD_THRESHOLD)`, with
-	//     `MAX_PERSONHOOD_THRESHOLD: u32 = 21`) and `score_threshold` was validated `<= 21`. So
-	//     a stored value above 255 is not merely unlikely, it is UNREACHABLE by the old code.
-	//     If one shows up, the state is not what this migration was written against.
+	//   * Under the pre-v0.3 runtime `score` was ALREADY clamped to 21 on every write (`score.score
+	//     = uncapped_score.min(MAX_PERSONHOOD_THRESHOLD)`, with `MAX_PERSONHOOD_THRESHOLD: u32 =
+	//     21`) and `score_threshold` was validated `<= 21`. So a stored value above 255 is not
+	//     merely unlikely, it is UNREACHABLE by the old code. If one shows up, the state is not
+	//     what this migration was written against.
 	//
 	// Hence the split behaviour, which is the important half of the rule:
 	//
-	//   * [`pre_upgrade`] treats ANY saturation as a HARD FAILURE. Under try-runtime a human
-	//     sees it before enactment and decides, which is the correct place for a decision this
-	//     code is not entitled to make.
+	//   * [`pre_upgrade`] treats ANY saturation as a HARD FAILURE. Under try-runtime a human sees
+	//     it before enactment and decides, which is the correct place for a decision this code is
+	//     not entitled to make.
 	//   * [`on_runtime_upgrade`] saturates and logs at `error!` instead of aborting. Aborting at
-	//     enactment would leave the pre-v0.3 bytes in place under the v0.3.1 type — i.e. it
-	//     would leave the phantom-credit bug switched on, which is strictly worse than a
-	//     saturated streak counter.
+	//     enactment would leave the pre-v0.3 bytes in place under the v0.3.1 type — i.e. it would
+	//     leave the phantom-credit bug switched on, which is strictly worse than a saturated streak
+	//     counter.
 	//
 	// ALTERNATIVES CONSIDERED AND REJECTED, for the record:
 	//   (a) `value as u8` (truncate)  -- rejected: silently maps 256 -> 0, the one direction
@@ -257,7 +257,9 @@ pub mod v1 {
 
 	/// Narrows one participant record. Returns the new record and the number of fields that had
 	/// to saturate.
-	pub fn convert_participant<Balance>(old: OldParticipant<Balance>) -> (Participant<Balance>, u32) {
+	pub fn convert_participant<Balance>(
+		old: OldParticipant<Balance>,
+	) -> (Participant<Balance>, u32) {
 		let (score, score_saturated) = narrow(old.score);
 		let (streak, streak_saturated) = match old.streak {
 			OldStreak::Attended(n) => {
@@ -295,13 +297,13 @@ pub mod v1 {
 	/// - Every `Participants` value is re-encoded in place (same key) from the pre-v0.3 layout.
 	/// - `PersonhoodThreshold` and `PersonhoodThresholdSchedule` are re-encoded **only if they
 	///   exist**. Both are absent on people-paseo today, so this is a no-op there; it is here so
-	///   that a value set by governance between now and enactment is migrated instead of
-	///   misread. See the note on [`old`] for why they are not simply killed: killing would
-	///   discard a governance decision, and `PersonhoodThresholdSchedule`'s stored default is
-	///   not the same thing as its absence.
+	///   that a value set by governance between now and enactment is migrated instead of misread.
+	///   See the note on [`old`] for why they are not simply killed: killing would discard a
+	///   governance decision, and `PersonhoodThresholdSchedule`'s stored default is not the same
+	///   thing as its absence.
 	/// - `AbsenceGraceSchedule`, `AbsenceGraceRatio`, `CurrentRoundPoints`, `CurrentRoundIndex`,
-	///   `RoundsPointsForParticipant`, `RoundPayouts`, `RoundPlanning` and `RoundSchedules` are
-	///   NOT touched — their types are byte-identical across the version.
+	///   `RoundsPointsForParticipant`, `RoundPayouts`, `RoundPlanning` and `RoundSchedules` are NOT
+	///   touched — their types are byte-identical across the version.
 	///
 	/// # Single-block, not multi-block — on correctness, not weight
 	///
@@ -339,10 +341,8 @@ pub mod v1 {
 			let mut writes = 0u64;
 
 			// ---- Phase 1: read and convert. No writes. ----
-			let mut converted: Vec<(
-				AccountOrPerson<T::AccountId>,
-				Participant<BalanceOf<T>>,
-			)> = Vec::new();
+			let mut converted: Vec<(AccountOrPerson<T::AccountId>, Participant<BalanceOf<T>>)> =
+				Vec::new();
 			let mut saturations = 0u32;
 
 			// `iter()` over the old alias silently SKIPS a value that fails to decode, so the
@@ -471,22 +471,21 @@ pub mod v1 {
 
 			for key in old::Participants::<T>::iter_keys() {
 				let full_key = old::Participants::<T>::hashed_key_for(&key);
-				let raw = unhashed::get_raw(&full_key).ok_or(
-					sp_runtime::TryRuntimeError::Other(
+				let raw =
+					unhashed::get_raw(&full_key).ok_or(sp_runtime::TryRuntimeError::Other(
 						"score: a Participants key enumerated but its value could not be read",
-					),
-				)?;
+					))?;
 				// Must decode as the OLD layout, consuming every byte. `decode_all` is used
 				// deliberately: `Decode::decode` would accept a value that is already in the new
 				// 25-byte shape padded with junk, and this check exists to prove the layout.
 				let old_value =
 					<OldParticipant<BalanceOf<T>> as codec::DecodeAll>::decode_all(&mut &raw[..])
 						.map_err(|_| {
-							sp_runtime::TryRuntimeError::Other(
-								"score: a live Participant does not decode as the pre-v0.3 layout \
+						sp_runtime::TryRuntimeError::Other(
+							"score: a live Participant does not decode as the pre-v0.3 layout \
 								 — live state is not what this migration was written against",
-							)
-						})?;
+						)
+					})?;
 				if narrow(old_value.score).1 {
 					would_saturate = would_saturate.saturating_add(1);
 				}
@@ -567,7 +566,8 @@ pub mod v1 {
 		fn post_upgrade(state: Vec<u8>) -> Result<(), sp_runtime::TryRuntimeError> {
 			use frame_support::storage::unhashed;
 
-			type Captured = (Vec<(Vec<u8>, Vec<u8>)>, Option<Vec<u8>>, Option<Vec<u8>>, Option<Vec<u8>>);
+			type Captured =
+				(Vec<(Vec<u8>, Vec<u8>)>, Option<Vec<u8>>, Option<Vec<u8>>, Option<Vec<u8>>);
 			let (captured, threshold_raw, schedule_raw, grace_raw) =
 				<Captured>::decode(&mut &state[..]).map_err(|_| {
 					sp_runtime::TryRuntimeError::Other("score: pre_upgrade state failed to decode")
@@ -580,27 +580,25 @@ pub mod v1 {
 			);
 
 			for (full_key, old_raw) in &captured {
-				let old_value =
-					<OldParticipant<BalanceOf<T>> as codec::DecodeAll>::decode_all(
-						&mut &old_raw[..],
+				let old_value = <OldParticipant<BalanceOf<T>> as codec::DecodeAll>::decode_all(
+					&mut &old_raw[..],
+				)
+				.map_err(|_| {
+					sp_runtime::TryRuntimeError::Other(
+						"score: captured pre_upgrade bytes no longer decode",
 					)
-					.map_err(|_| {
-						sp_runtime::TryRuntimeError::Other(
-							"score: captured pre_upgrade bytes no longer decode",
-						)
-					})?;
+				})?;
 				let (expected, _) = convert_participant(old_value);
 
-				let new_raw = unhashed::get_raw(full_key).ok_or(
-					sp_runtime::TryRuntimeError::Other(
+				let new_raw =
+					unhashed::get_raw(full_key).ok_or(sp_runtime::TryRuntimeError::Other(
 						"score: a Participants key disappeared during the migration",
-					),
-				)?;
+					))?;
 
 				// 2. The stored bytes are EXACTLY the re-encoded expectation derived from
 				//    `pre_upgrade`'s capture. Byte comparison, not structural: a structural
-				//    comparison of the new type against itself would also pass on unmigrated
-				//    bytes, because unmigrated bytes decode.
+				//    comparison of the new type against itself would also pass on unmigrated bytes,
+				//    because unmigrated bytes decode.
 				ensure!(
 					new_raw == expected.encode(),
 					"score: a migrated Participant is not the re-encoding of the value captured \
@@ -662,11 +660,12 @@ pub mod v1 {
 				"score: PersonhoodThresholdSchedule appeared or disappeared"
 			);
 			if let (Some(before), Some(after)) = (&schedule_raw, &now_schedule) {
-				let tiers = OldPersonhoodThresholdTiers::decode(&mut &before[..]).map_err(|_| {
-					sp_runtime::TryRuntimeError::Other(
-						"score: captured PersonhoodThresholdSchedule bytes",
-					)
-				})?;
+				let tiers =
+					OldPersonhoodThresholdTiers::decode(&mut &before[..]).map_err(|_| {
+						sp_runtime::TryRuntimeError::Other(
+							"score: captured PersonhoodThresholdSchedule bytes",
+						)
+					})?;
 				let expected: Vec<PersonhoodThresholdTier> = tiers
 					.iter()
 					.map(|t| PersonhoodThresholdTier {
@@ -720,7 +719,10 @@ mod tests {
 	type LiveBalance = u128;
 
 	fn unhex(s: &str) -> Vec<u8> {
-		(0..s.len()).step_by(2).map(|i| u8::from_str_radix(&s[i..i + 2], 16).unwrap()).collect()
+		(0..s.len())
+			.step_by(2)
+			.map(|i| u8::from_str_radix(&s[i..i + 2], 16).unwrap())
+			.collect()
 	}
 
 	// ===================================================================================
@@ -831,7 +833,8 @@ mod tests {
 			(0xA5, Recognition::Suspended(3)),
 			(0x01, Recognition::Recognized(u64::MAX)),
 		] {
-			let history = crate::types::AttendanceHistory::decode(&mut &[history_byte][..]).unwrap();
+			let history =
+				crate::types::AttendanceHistory::decode(&mut &[history_byte][..]).unwrap();
 			let old = OldParticipant::<LiveBalance> {
 				score: 21,
 				streak: OldStreak::Attended(5),
@@ -1012,15 +1015,17 @@ mod tests {
 					last_attended_game: Some(1),
 				},
 			);
-			let before =
-				frame_support::storage::unhashed::get_raw(&Participants::<Test>::hashed_key_for(&a))
-					.unwrap();
+			let before = frame_support::storage::unhashed::get_raw(
+				&Participants::<Test>::hashed_key_for(&a),
+			)
+			.unwrap();
 
 			MigrateV0ToV1::<Test>::on_runtime_upgrade();
 
-			let after =
-				frame_support::storage::unhashed::get_raw(&Participants::<Test>::hashed_key_for(&a))
-					.unwrap();
+			let after = frame_support::storage::unhashed::get_raw(
+				&Participants::<Test>::hashed_key_for(&a),
+			)
+			.unwrap();
 			assert_eq!(before, after, "a second run must not re-narrow an already-narrow value");
 		});
 	}
@@ -1111,17 +1116,19 @@ mod tests {
 				&old::Participants::<Test>::hashed_key_for(&b),
 				&[0x00, 0x01],
 			);
-			let before_a =
-				frame_support::storage::unhashed::get_raw(&old::Participants::<Test>::hashed_key_for(&a))
-					.unwrap();
+			let before_a = frame_support::storage::unhashed::get_raw(
+				&old::Participants::<Test>::hashed_key_for(&a),
+			)
+			.unwrap();
 
 			MigrateV0ToV1::<Test>::on_runtime_upgrade();
 
 			// All-or-nothing: the abort happens in phase 1, before any write, so the GOOD entry
 			// is left in the pre-v0.3 encoding too.
-			let after_a =
-				frame_support::storage::unhashed::get_raw(&old::Participants::<Test>::hashed_key_for(&a))
-					.unwrap();
+			let after_a = frame_support::storage::unhashed::get_raw(
+				&old::Participants::<Test>::hashed_key_for(&a),
+			)
+			.unwrap();
 			assert_eq!(before_a, after_a, "nothing was written");
 		});
 	}

@@ -43,10 +43,10 @@
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
-#[cfg(test)]
-mod mock;
 /// PASEO-LOCAL. Does not exist upstream — see the module documentation.
 pub mod migration;
+#[cfg(test)]
+mod mock;
 #[cfg(test)]
 mod tests;
 pub mod weights;
