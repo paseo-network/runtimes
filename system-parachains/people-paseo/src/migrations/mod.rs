@@ -17,6 +17,7 @@
 use super::*;
 
 pub mod coinage;
+pub mod ring_roots;
 use alloc::vec::Vec;
 use assets_common::{
 	local_and_foreign_assets::ForeignAssetReserveData,
@@ -37,6 +38,17 @@ pub type Unreleased = (
 	// later migration that derives a product context sees a materialised suffix.
 	// Idempotent; never clobbers a suffix governance has changed.
 	indiv_pallet_network_suffix::migration::SeedNetworkSuffix<Runtime>,
+	//
+	// 🔴 MUST RUN BEFORE ANYTHING THAT READS A RING ROOT.
+	//
+	// PASEO-LOCAL. v0.3.1's `verifiable` bump shrinks `Members::Root.root` from 768 to 288 bytes
+	// (it stores only the ring commitment; the 480-byte KZG verifier key is now re-derived). The
+	// 24 live records are in the old layout and `RingRoot`'s hand-written `Decode` reads them
+	// **without error** — every ring would present the same root. Strips the inlined key.
+	//
+	// Ordered here because `MigrateV0ToV1` and the two collection-creation migrations below fire
+	// `on_ring_root_change`, which reads roots: they must see the converted form.
+	ring_roots::MigrateRingRootsToCommitmentOnly,
 	//
 	// 🔴 MUST RUN BEFORE THE TWO COLLECTION-CREATION MIGRATIONS BELOW.
 	//
