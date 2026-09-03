@@ -1897,55 +1897,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bridge-hub-paseo-integration-tests"
-version = "2.3.1"
-dependencies = [
- "asset-hub-paseo-runtime",
- "bp-asset-hub-paseo",
- "bp-bridge-hub-paseo",
- "bp-messages",
- "bridge-hub-common",
- "bridge-hub-paseo-runtime",
- "cumulus-pallet-parachain-system",
- "cumulus-pallet-xcmp-queue",
- "emulated-integration-tests-common",
- "frame-support",
- "hex-literal",
- "integration-tests-helpers",
- "pallet-asset-conversion",
- "pallet-assets",
- "pallet-balances",
- "pallet-bridge-messages",
- "pallet-bridge-relayers",
- "pallet-message-queue",
- "pallet-xcm",
- "parachains-common",
- "parity-scale-codec",
- "paseo-system-emulated-network",
- "scale-info",
- "snowbridge-beacon-primitives",
- "snowbridge-core",
- "snowbridge-inbound-queue-primitives",
- "snowbridge-outbound-queue-primitives",
- "snowbridge-pallet-inbound-queue",
- "snowbridge-pallet-inbound-queue-fixtures",
- "snowbridge-pallet-inbound-queue-v2",
- "snowbridge-pallet-outbound-queue",
- "snowbridge-pallet-outbound-queue-v2",
- "snowbridge-pallet-system",
- "snowbridge-pallet-system-frontend",
- "snowbridge-pallet-system-v2",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "staging-xcm",
- "staging-xcm-builder",
- "staging-xcm-executor",
- "system-parachains-constants 2.3.1",
- "xcm-runtime-apis",
-]
-
-[[package]]
 name = "bridge-hub-paseo-runtime"
 version = "2.3.1"
 dependencies = [
