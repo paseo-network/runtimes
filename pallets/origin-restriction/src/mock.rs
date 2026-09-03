@@ -28,13 +28,18 @@ use pallet_transaction_payment::ConstFeeMultiplier;
 use sp_core::{ConstU64, H256};
 use sp_runtime::{
 	testing::UintAuthorityId,
-	traits::{Applyable, BlakeTwo256, Checkable, ConstUint, IdentityLookup},
+	traits::{Applyable, BlakeTwo256, BlockNumberProvider, Checkable, ConstUint, IdentityLookup},
 	transaction_validity::{InvalidTransaction, TransactionSource},
 	BuildStorage, DispatchError, FixedU128, TransactionOutcome,
 };
 
 pub type AccountId = <Test as frame_system::Config>::AccountId;
 pub type BlockNumber = u64;
+pub type RelayBlockNumber = u64;
+
+/// The mock relay chain block number at genesis. It is not zero, so a test that reads
+/// [`Usage::at_block`] fails if the pallet takes the parachain block number instead.
+pub const RELAY_BLOCK_GENESIS: RelayBlockNumber = 1_000;
 
 pub type TransactionExtension = (RestrictOrigin<Test>,);
 
@@ -190,8 +195,27 @@ impl crate::BenchmarkHelper<OriginCaller, RuntimeCall> for TestBenchmarkHelper {
 pub const MAX_ALLOWANCE: u64 = 124;
 pub const ALLOWANCE_RECOVERY_PER_BLOCK: u64 = 5;
 
+frame_support::parameter_types! {
+	pub storage MockRelayBlockNumber: RelayBlockNumber = RELAY_BLOCK_GENESIS;
+}
+
+/// Stands in for the relay chain block number, moved by [`advance_by`] and [`advance_relay_by`].
+pub struct MockRelayBlockNumberProvider;
+impl BlockNumberProvider for MockRelayBlockNumberProvider {
+	type BlockNumber = RelayBlockNumber;
+
+	fn current_block_number() -> RelayBlockNumber {
+		MockRelayBlockNumber::get()
+	}
+
+	fn set_block_number(block: RelayBlockNumber) {
+		MockRelayBlockNumber::set(&block);
+	}
+}
+
 impl crate::Config for Test {
 	type WeightInfo = ();
+	type BlockNumberProvider = MockRelayBlockNumberProvider;
 	type RestrictedEntity = RuntimeRestrictedEntity;
 	type OperationAllowedOneTimeExcess = TestOperationAllowedOneTimeExcess;
 	#[cfg(feature = "runtime-benchmarks")]
@@ -259,20 +283,24 @@ impl pallet_transaction_payment::Config for Test {
 
 impl mock_pallet::Config for Test {}
 
-/// Advance the chain to a certain block number.
-#[allow(dead_code)]
-pub fn advance_to(b: BlockNumber) {
-	while System::block_number() < b {
-		System::set_block_number(System::block_number() + 1);
-	}
+/// Advance the parachain by a certain number of blocks, and the relay chain by as many blocks.
+pub fn advance_by(b: BlockNumber) {
+	System::set_block_number(System::block_number() + b);
+	MockRelayBlockNumberProvider::set_block_number(
+		MockRelayBlockNumberProvider::current_block_number() + b,
+	);
 }
 
-/// Advance the chain by a certain number of blocks.
-pub fn advance_by(b: BlockNumber) {
-	let initial_block = System::block_number();
-	while System::block_number() < b + initial_block {
-		System::set_block_number(System::block_number() + 1);
-	}
+/// Advance only the relay chain by a certain number of blocks.
+pub fn advance_relay_by(b: RelayBlockNumber) {
+	MockRelayBlockNumberProvider::set_block_number(
+		MockRelayBlockNumberProvider::current_block_number() + b,
+	);
+}
+
+/// Advance only the parachain by a certain number of blocks.
+pub fn advance_para_by(b: BlockNumber) {
+	System::set_block_number(System::block_number() + b);
 }
 
 /// Builds a new `TestExternalities`.
@@ -341,6 +369,25 @@ pub fn exec_signed_tx_disabled(
 	let tx = UncheckedExtrinsic::new_signed(call.into(), who, UintAuthorityId(who), tx_ext);
 
 	exec_tx(tx)
+}
+
+/// Run only the `validate` step of the transaction extension pipeline for the given origin and
+/// call, without `prepare` or dispatch, and without rolling back. This exposes any storage
+/// mutation performed by `validate` to the caller, so a test can assert that `validate` leaves
+/// storage untouched.
+pub fn validate_only_signed_tx(
+	who: u64,
+	call: impl Into<RuntimeCall>,
+) -> Result<(), TransactionExecutionError> {
+	let tx_ext = (RestrictOrigin::<Test>::new(true),);
+	let tx = UncheckedExtrinsic::new_signed(call.into(), who, UintAuthorityId(who), tx_ext);
+	let info = tx.get_dispatch_info();
+	let len = tx.encoded_size();
+
+	let checked = Checkable::check(tx, &frame_system::ChainContext::<Test>::default())?;
+	checked.validate::<Test>(TransactionSource::External, &info, len)?;
+
+	Ok(())
 }
 
 /// Execute a transaction with the given origin, call and transaction extension.

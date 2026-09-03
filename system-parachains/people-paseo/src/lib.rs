@@ -23,6 +23,7 @@ extern crate alloc;
 pub mod assets;
 // Genesis preset configurations.
 pub mod genesis_config_presets;
+pub mod parameters;
 pub mod people;
 #[cfg(test)]
 mod tests;
@@ -184,10 +185,15 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: Cow::Borrowed("people-paseo"),
 	impl_name: Cow::Borrowed("people-paseo"),
 	authoring_version: 1,
-	spec_version: 2_004_004,
+	spec_version: 2_005_000,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 1,
+	// BUMPED 1 -> 2 for the individuality v0.3.1 port. MANDATORY, not hygiene: coinage call
+	// index 9 KEEPS ITS NUMBER while changing both name and arguments
+	// (`unload_recycler_into_external_asset_and_vouchers` ->
+	// `unload_recycler_into_external_asset_and_loaded_coins`). A signer that did not notice
+	// would build a call that decodes as the wrong extrinsic rather than failing cleanly.
+	transaction_version: 2,
 	system_version: 1,
 };
 
@@ -316,7 +322,12 @@ parameter_types! {
 
 impl cumulus_pallet_parachain_system::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type OnSystemEvent = ();
+	// `pallet-relay-randomness` is populated ONLY from here: its `OnSystemEvent` impl reads
+	// `CURRENT_BLOCK_RANDOMNESS` / `ONE_EPOCH_AGO_RANDOMNESS` out of the relay state proof.
+	// Leaving this as `()` compiles, runs, produces no error, and leaves `Randomness` empty
+	// forever -- which makes every airdrop stall in `AwaitingEntropy` with nothing to show
+	// why. This binding is what makes `Airdrop::Randomness` real rather than decorative.
+	type OnSystemEvent = RelayRandomness;
 	type SelfParaId = parachain_info::Pallet<Runtime>;
 	type OutboundXcmpMessageSource = XcmpQueue;
 	type DmpQueue = frame_support::traits::EnqueueWithOrigin<MessageQueue, RelayOrigin>;
@@ -748,6 +759,9 @@ construct_runtime!(
 		ParachainInfo: parachain_info = 3,
 		MultiBlockMigrations: pallet_migrations = 4,
 		WeightReclaim: cumulus_pallet_weight_reclaim = 5,
+		// Upstream uses index 5 for this, but Paseo already has `WeightReclaim` there.
+		// 6 is the next free index and is confirmed free in live People metadata.
+		RelayRandomness: indiv_pallet_relay_randomness = 6,
 
 		// Monetary stuff.
 		Balances: pallet_balances = 10,
@@ -758,6 +772,8 @@ construct_runtime!(
 		AssetsHolder: pallet_assets_holder = 15,
 		SkipFeelessPayment: pallet_skip_feeless_payment = 16,
 		OriginRestriction: indiv_pallet_origin_restriction = 17,
+		AssetConversion: pallet_asset_conversion = 18,
+		PoolAssets: pallet_assets::<Instance1> = 19,
 
 		// Collator support. The order of these 5 are important and shall not change.
 		Authorship: pallet_authorship = 20,
@@ -797,6 +813,9 @@ construct_runtime!(
 		MembersNotifier: indiv_pallet_members_notifier = 69,
 		Airdrop: indiv_pallet_airdrop = 70,
 		Honour: indiv_pallet_honour = 71,
+		// Index 74 matches upstream's `next-people-paseo`; confirmed free in live metadata.
+		Parameters: pallet_parameters = 73,
+		NetworkSuffix: indiv_pallet_network_suffix = 74,
 
 		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 255,
 	}
@@ -821,10 +840,12 @@ mod benches {
 		[pallet_asset_tx_payment, AssetTxPayment]
 		[pallet_asset_rate, AssetRate]
 		[pallet_assets, Assets]
+		[pallet_asset_conversion, AssetConversion]
 		[pallet_balances, Balances]
 		[pallet_identity, Identity]
 		[pallet_message_queue, MessageQueue]
 		[pallet_migrations, MultiBlockMigrations]
+		[pallet_parameters, Parameters]
 		[pallet_multisig, Multisig]
 		[pallet_proxy, Proxy]
 		[pallet_session, SessionBench::<Runtime>]

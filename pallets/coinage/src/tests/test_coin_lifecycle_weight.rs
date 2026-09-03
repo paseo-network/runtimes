@@ -42,31 +42,49 @@ fn worst_case_lifecycle_weight<T: Config>() -> Weight {
 	// Background operation: 1 key insertion for paid token
 	let bg_paid_token = bg_per_key;
 
-	// Phase 2: Loading - worst case uses max consolidation
+	// Phase 2: Loading - worst case uses max consolidation. On a sponsored instance each load
+	// call also charges the load deposit.
 	let load_one = T::WeightInfo::load_recycler_with_coin()
-		.max(T::WeightInfo::load_recycler_with_external_asset());
+		.max(T::WeightInfo::load_recycler_with_external_asset())
+		.saturating_add(T::WeightInfo::charge_load_deposit());
 	let load_worst = load_one.saturating_mul(max_aliases_single_ring.into());
 
 	// Background operation: 1 key insertion per coin loaded (worst case)
 	let bg_recycler = bg_per_key.saturating_mul(max_aliases_single_ring.into());
 
 	// Phase 3: Unloading - worst case uses max values
-	let unload_worst =
-		Pallet::<T>::unload_recycler_into_coin_weight(max_aliases_single_ring as usize)
-			.max(Pallet::<T>::unload_recycler_into_external_asset_and_vouchers_weight(
-				max_aliases_single_ring as usize,
-				max_split_outputs as usize,
-			))
-			.max(Pallet::<T>::unload_recycler_into_external_asset_weight(
-				max_aliases_single_ring as usize,
-			))
-			.max(Pallet::<T>::unload_recycler_into_external_asset_non_anonymous_weight(
-				max_aliases_single_ring as usize,
-			))
-			.max(Pallet::<T>::unload_recycler_into_coins_weight(
-				max_aliases_single_ring as usize,
-				max_split_outputs,
-			));
+	let unload_worst = Pallet::<T>::unload_recycler_into_coin_weight(
+		max_aliases_single_ring as usize,
+	)
+	.max(Pallet::<T>::unload_recycler_into_external_asset_and_loaded_coins_prepaid_weight(
+		max_aliases_single_ring as usize,
+		max_split_outputs as usize,
+	))
+	.max(Pallet::<T>::unload_recycler_into_external_asset_and_loaded_coins_from_output_weight(
+		max_aliases_single_ring as usize,
+		max_split_outputs as usize,
+	))
+	.max(Pallet::<T>::unload_recycler_into_external_asset_prepaid_weight(
+		max_aliases_single_ring as usize,
+	))
+	.max(Pallet::<T>::unload_recycler_into_external_asset_from_output_weight(
+		max_aliases_single_ring as usize,
+	))
+	.max(Pallet::<T>::unload_recycler_into_external_asset_non_anonymous_weight(
+		max_aliases_single_ring as usize,
+	))
+	.max(Pallet::<T>::unload_recycler_into_coins_from_output_weight(
+		max_aliases_single_ring as usize,
+		max_split_outputs,
+	))
+	.max(Pallet::<T>::unload_recycler_into_coins_prepaid_weight(
+		max_aliases_single_ring as usize,
+		max_split_outputs,
+	))
+	// On a sponsored instance the unload settles the load deposits, and the variants producing
+	// loaded coins additionally charge deposits for their fresh keys.
+	.saturating_add(T::WeightInfo::settle_load_deposits())
+	.saturating_add(T::WeightInfo::charge_load_deposit());
 
 	// Phase 4: Transfers/Splits - worst case uses max age
 	let tx_split_max = T::WeightInfo::transfer().max(T::WeightInfo::split(max_split_outputs));

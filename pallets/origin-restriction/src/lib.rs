@@ -17,7 +17,9 @@
 //! # Origin restriction pallet and transaction extension
 //!
 //! This pallet tracks certain origin and limits how much total "fee usage" they can accumulate.
-//! Usage gradually recovers as blocks pass.
+//! Usage gradually recovers as the blocks of [`Config::BlockNumberProvider`] pass. A parachain
+//! configures the relay chain block number there, so the recovery rate does not depend on the
+//! local block production.
 //!
 //! First the entity is extracted from the restricted origin, the entity represents the granularity
 //! of usage tracking.
@@ -41,6 +43,8 @@
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
+/// PASEO-LOCAL. Does not exist upstream — see the module documentation.
+pub mod migration;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
@@ -59,13 +63,12 @@ use frame_support::{
 	weights::WeightToFee,
 	DebugNoBound, Parameter,
 };
-use frame_system::pallet_prelude::BlockNumberFor;
 use pallet_transaction_payment::OnChargeTransaction;
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{
-		AsTransactionAuthorizedOrigin, DispatchInfoOf, DispatchOriginOf, Dispatchable, Implication,
-		PostDispatchInfoOf, TransactionExtension, ValidateResult,
+		AsTransactionAuthorizedOrigin, BlockNumberProvider, DispatchInfoOf, DispatchOriginOf,
+		Dispatchable, Implication, PostDispatchInfoOf, TransactionExtension, ValidateResult,
 	},
 	transaction_validity::{
 		InvalidTransaction, TransactionSource, TransactionValidityError, ValidTransaction,
@@ -80,7 +83,7 @@ use sp_runtime::{
 pub struct Allowance<Balance> {
 	/// The maximum usage allowed before transactions are restricted.
 	pub max: Balance,
-	/// The amount of usage recovered per block.
+	/// The amount of usage recovered per block of [`Config::BlockNumberProvider`].
 	pub recovery_per_block: Balance,
 }
 
@@ -115,7 +118,8 @@ pub mod pallet {
 	pub struct Usage<Balance, BlockNumber> {
 		/// The amount of usage consumed at block `at_block`.
 		pub used: Balance,
-		/// The block number at which the usage was last updated.
+		/// The block number at which the usage was last updated. (Provided by
+		/// [`Config::BlockNumberProvider`]).
 		pub at_block: BlockNumber,
 	}
 
@@ -125,8 +129,24 @@ pub mod pallet {
 		<<T as pallet_transaction_payment::Config>::OnChargeTransaction as OnChargeTransaction<
 			T,
 		>>::Balance;
+	pub(crate) type ProviderBlockNumberFor<T> =
+		<<T as Config>::BlockNumberProvider as BlockNumberProvider>::BlockNumber;
+
+	/// PASEO-LOCAL DEVIATION from individuality v0.3.1.
+	///
+	/// Upstream ships this pallet with no storage version, because upstream's `next-*` runtimes
+	/// are launched from genesis presets and never carry a `Usages` entry stamped on the old
+	/// clock. `people-paseo` does. Declaring a version is what lets
+	/// [`migration::MigrateV0ToV1`] be a `VersionedMigration` and therefore self-guarding — that
+	/// migration is destructive on a second run (it would discard accrued recovery) and must
+	/// never run twice.
+	///
+	/// Keep this at `1` until a further storage change lands; bump it in lockstep with a new
+	/// `VersionedMigration` in `migration.rs`.
+	pub const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
 	#[pallet::pallet]
+	#[pallet::storage_version(STORAGE_VERSION)]
 	pub struct Pallet<T>(_);
 
 	/// The current usage for each entity.
@@ -135,7 +155,7 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		T::RestrictedEntity,
-		Usage<BalanceOf<T>, BlockNumberFor<T>>,
+		Usage<BalanceOf<T>, ProviderBlockNumberFor<T>>,
 	>;
 
 	#[pallet::config]
@@ -149,6 +169,12 @@ pub mod pallet {
 	{
 		/// The weight information for this pallet.
 		type WeightInfo: WeightInfo;
+
+		/// The block number used to measure the usage recovery.
+		///
+		/// A parachain must set the relay chain block number provider, so that the recovery rate
+		/// stays the same when the local block production changes.
+		type BlockNumberProvider: BlockNumberProvider;
 
 		/// The type that represent the entities tracked, its allowance and the conversion from
 		/// origin is bounded in [`RestrictedEntity`].
@@ -208,7 +234,7 @@ pub mod pallet {
 				return Err(Error::<T>::NoUsage.into())
 			};
 
-			let now = frame_system::Pallet::<T>::block_number();
+			let now = T::BlockNumberProvider::current_block_number();
 			let elapsed = now.saturating_sub(usage.at_block).saturated_into::<u32>();
 
 			let allowance = entity.allowance();
@@ -250,7 +276,12 @@ impl<T> RestrictOrigin<T> {
 /// The info passed between the validate and prepare steps for the `RestrictOrigins` extension.
 #[derive(DebugNoBound)]
 pub enum Val<T: Config> {
-	Charge { fee: BalanceOf<T>, entity: T::RestrictedEntity },
+	Charge {
+		fee: BalanceOf<T>,
+		entity: T::RestrictedEntity,
+		/// The updated usage to persist in `prepare`.
+		usage: Usage<BalanceOf<T>, ProviderBlockNumberFor<T>>,
+	},
 	NoCharge,
 }
 
@@ -303,7 +334,7 @@ impl<T: Config> TransactionExtension<T::RuntimeCall> for RestrictOrigin<T> {
 			return Err(InvalidTransaction::Call.into())
 		}
 
-		let now = frame_system::Pallet::<T>::block_number();
+		let now = T::BlockNumberProvider::current_block_number();
 		let mut usage = match Usages::<T>::get(&entity) {
 			Some(mut usage) => {
 				let elapsed = now.saturating_sub(usage.at_block).saturated_into::<u32>();
@@ -320,14 +351,12 @@ impl<T: Config> TransactionExtension<T::RuntimeCall> for RestrictOrigin<T> {
 		let fee = extrinsic_fee::<T>(info.total_weight(), len);
 		usage.used = usage.used.saturating_add(fee);
 
-		Usages::<T>::insert(&entity, &usage);
-
 		let allowed_one_time_excess = || {
 			usage_without_new_xt == 0u32.into() &&
 				T::OperationAllowedOneTimeExcess::contains(&entity, call)
 		};
 		if usage.used <= allowance.max || allowed_one_time_excess() {
-			Ok((ValidTransaction::default(), Val::Charge { fee, entity }, origin))
+			Ok((ValidTransaction::default(), Val::Charge { fee, entity, usage }, origin))
 		} else {
 			Err(InvalidTransaction::Payment.into())
 		}
@@ -342,7 +371,14 @@ impl<T: Config> TransactionExtension<T::RuntimeCall> for RestrictOrigin<T> {
 		_len: usize,
 	) -> Result<Self::Pre, TransactionValidityError> {
 		match val {
-			Val::Charge { fee, entity } => Ok(Pre::Charge { fee, entity }),
+			Val::Charge { fee, entity, usage } => {
+				// The value `usage` was calculated in `validate` and is blindly set to the entity
+				// usage here in `prepare`. No other transaction extension, and no other logic
+				// should write into `Usages` for this entity in between `validate` and
+				// `prepare`, otherwise the change would be simply ignored and overwritten.
+				Usages::<T>::insert(&entity, &usage);
+				Ok(Pre::Charge { fee, entity })
+			},
 			Val::NoCharge => Ok(Pre::NoCharge { refund: self.weight(call) }),
 		}
 	}

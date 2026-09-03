@@ -52,7 +52,7 @@ struct TamperScenario {
 	secrets: Vec<Secret>,
 	/// The recycler ring members.
 	ring_members: Vec<MemberOf<Test>>,
-	value: CoinValue,
+	value: Denomination,
 	index: RingIndex,
 	revision: RevisionIndex,
 }
@@ -62,10 +62,13 @@ struct TamperScenario {
 /// Creates a recycler with **4** members and an `unload_recycler_into_external_asset` call
 /// carrying **3** aliases (`secrets[0..3]`). Returns three legitimate alias proofs plus a
 /// swapped proof from the fourth member (`secrets[3]`).
-fn setup_tamper_scenario() -> TamperScenario {
+///
+/// `max_fee` has to match how the extrinsic pays: it is ignored by a prepaid token, and has to
+/// cover the converted fee when the fee comes out of the output.
+fn setup_tamper_scenario(max_fee: u64) -> TamperScenario {
 	setup_balances();
 
-	let value: CoinValue = 0;
+	let value: Denomination = 0;
 	let (secrets, index, revision) = setup_recycler(value, 4, 0);
 
 	let aliases: Vec<_> = secrets[..3]
@@ -76,18 +79,20 @@ fn setup_tamper_scenario() -> TamperScenario {
 		.collect();
 
 	let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_external_asset {
+		instance_id: TEST_INSTANCE_ID,
 		aliases: BoundedVec::truncate_from(aliases),
 		value,
 		index,
 		revision,
 		to: CHARLIE,
+		max_fee,
 	});
 
 	let inherited_implication = ((0u8, &call), (), ());
 	let encoded_implication = inherited_implication.encode();
 	let proven_msg = sp_io::hashing::blake2_256(&encoded_implication);
 
-	let ring_members = Coinage::get_recycler_members(value, index);
+	let ring_members = Coinage::get_recycler_members(TEST_INSTANCE_ID, value, index);
 	let legit_proofs: Vec<_> = secrets[..3]
 		.iter()
 		.map(|s| create_unload_proof(s, &ring_members, &proven_msg).0)
@@ -113,7 +118,7 @@ fn setup_tamper_scenario() -> TamperScenario {
 #[test]
 fn people_swapped_alias_proofs_is_invalid() {
 	new_test_ext().execute_with(|| {
-		let s = setup_tamper_scenario();
+		let s = setup_tamper_scenario(0);
 
 		// People proof signs over the LEGITIMATE alias proofs.
 		let legit_alias_proofs: BoundedVec<_, <Test as Config>::MaxConsolidation> =
@@ -122,8 +127,11 @@ fn people_swapped_alias_proofs_is_invalid() {
 			&[legit_alias_proofs.encode(), s.encoded_implication].concat(),
 		);
 		let context = crate::pallet::free_unload_token_context(0, 0);
-		let people_proof =
-			PeopleProof { context: context.to_vec(), msg: intent_msg.to_vec(), alias: [0u8; 32] };
+		let people_proof = MembershipProof {
+			context: context.to_vec(),
+			msg: intent_msg.to_vec(),
+			alias: [0u8; 32],
+		};
 
 		// Attacker keeps legit_proofs[0..2] but swaps item 1 and 2.
 		let tampered: BoundedVec<_, <Test as Config>::MaxConsolidation> =
@@ -163,7 +171,7 @@ fn people_swapped_alias_proofs_is_invalid() {
 #[test]
 fn lite_people_swapped_alias_proofs_is_invalid() {
 	new_test_ext().execute_with(|| {
-		let s = setup_tamper_scenario();
+		let s = setup_tamper_scenario(0);
 
 		// Lite people proof signs over the LEGITIMATE alias proofs.
 		let legit_alias_proofs: BoundedVec<_, <Test as Config>::MaxConsolidation> =
@@ -172,7 +180,7 @@ fn lite_people_swapped_alias_proofs_is_invalid() {
 			&[legit_alias_proofs.encode(), s.encoded_implication].concat(),
 		);
 		let context = crate::pallet::free_unload_token_context(0, 0);
-		let lite_people_proof = LitePeopleProof {
+		let lite_people_proof = MembershipProof {
 			context: context.to_vec(),
 			msg: intent_msg.to_vec(),
 			alias: [0u8; 32],
@@ -243,7 +251,7 @@ fn paid_swapped_alias_proofs_is_invalid() {
 		Members::process_maintenance();
 
 		// Now reuse the common tamper scenario for the recycler + call.
-		let s = setup_tamper_scenario();
+		let s = setup_tamper_scenario(0);
 		let period: u32 = 0;
 		let paid_ring_index: u32 = 0;
 
@@ -309,19 +317,19 @@ fn paid_swapped_alias_proofs_is_invalid() {
 /// A valid from-output extrinsic with 3 alias proofs becomes invalid when an attacker swaps
 /// items 1 and 2 inside `alias_proofs`.
 ///
-/// The first alias proof signs `blake2_256(alias_proofs[1..].encode() ++
-/// inherited_implication.encode())`. Swapping two proofs in the tail changes the encoding,
-/// so `validate_alias_proof` fails for the first proof.
+/// The first alias proof signs `blake2_256(alias_proofs[1..].encode() ++ retry_counter ++
+/// inherited_implication)`. Swapping two proofs in the tail changes the encoding, so
+/// `validate_alias_proof` fails for the first proof.
 #[test]
 fn from_output_swapped_alias_proofs_is_invalid() {
 	new_test_ext().execute_with(|| {
-		let s = setup_tamper_scenario();
+		let s = setup_tamper_scenario(unload_token_fee_in_asset());
+		let inherited_implication = ((0u8, &s.call), (), ());
 
 		// First proof signs over the LEGITIMATE tail: [legit_proofs[1], legit_proofs[2]].
 		let legit_tail = vec![s.legit_proofs[1].clone(), s.legit_proofs[2].clone()];
-		let intent_msg = sp_io::hashing::blake2_256(
-			&[legit_tail.encode(), s.encoded_implication.clone()].concat(),
-		);
+		let intent_msg =
+			(&legit_tail, 0u8, &inherited_implication).using_encoded(sp_io::hashing::blake2_256);
 		let (first_proof, _) = create_unload_proof(&s.secrets[0], &s.ring_members, &intent_msg);
 
 		// Attacker swaps items 1 and 2.
@@ -335,6 +343,7 @@ fn from_output_swapped_alias_proofs_is_invalid() {
 			fee_recycler_value: s.value,
 			fee_recycler_index: s.index,
 			fee_recycler_revision: s.revision,
+			retry_counter: 0u8,
 			alias_proofs: tampered,
 		});
 		let ext = Extrinsic::new_transaction(
@@ -352,6 +361,7 @@ fn from_output_swapped_alias_proofs_is_invalid() {
 			fee_recycler_value: s.value,
 			fee_recycler_index: s.index,
 			fee_recycler_revision: s.revision,
+			retry_counter: 0u8,
 			alias_proofs: legit,
 		});
 		let ext = Extrinsic::new_transaction(

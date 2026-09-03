@@ -25,7 +25,7 @@ use sp_runtime::{
 use verifiable::GenerateVerifiable;
 
 // The value tested for.
-const VALUE: crate::pallet::CoinValue = 0;
+const VALUE: crate::pallet::Denomination = 0;
 
 // Lifecycle test for recyclers with pallet-members architecture.
 //
@@ -71,6 +71,7 @@ fn test_recycler_lifecycle_granular() {
 
 		assert_ok!(Coinage::load_recycler_with_external_asset(
 			RuntimeOrigin::signed(alice),
+			TEST_INSTANCE_ID,
 			CodecPreservation::Expendable,
 			VALUE,
 			member_r0_0,
@@ -78,7 +79,7 @@ fn test_recycler_lifecycle_granular() {
 		));
 
 		// Verify collection created and member mapped
-		assert!(RecyclerCollectionCreated::<Test>::contains_key(VALUE));
+		assert!(RecyclerCollectionCreated::<Test>::contains_key(TEST_INSTANCE_ID, VALUE));
 		assert!(RecyclersCoinToRecycler::<Test>::contains_key(member_r0_0));
 
 		// ====================================================================
@@ -86,7 +87,7 @@ fn test_recycler_lifecycle_granular() {
 		// ====================================================================
 		Members::process_maintenance();
 
-		let identifier = Coinage::recycler_collection_identifier(VALUE);
+		let identifier = Coinage::recycler_collection_identifier(TEST_INSTANCE_ID, VALUE);
 		let status_r0 =
 			<Test as Config>::MemberService::ring_status(&identifier, 0).expect("ring 0 exists");
 		assert_eq!(status_r0.total, 1);
@@ -106,11 +107,13 @@ fn test_recycler_lifecycle_granular() {
 				.unwrap();
 
 		let call = crate::Call::<Test>::unload_recycler_into_external_asset {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: bounded_vec![alias_r0_0],
 			value: VALUE,
 			index: 0,
 			revision: r0_revision_v1,
 			to: dest_user,
+			max_fee: unload_token_fee_in_asset(),
 		};
 		let ext = build_unload_from_output_ext(
 			call,
@@ -122,7 +125,10 @@ fn test_recycler_lifecycle_granular() {
 		Executive::apply_extrinsic(ext).unwrap().unwrap();
 
 		// Verify unloaded
-		assert!(RecyclersUnloaded::<Test>::contains_key((VALUE, 0u32, alias_r0_0)));
+		assert!(matches!(
+			RecyclerAliasStates::<Test>::get((TEST_INSTANCE_ID, VALUE, 0u32, alias_r0_0)),
+			Some(AliasState::Unloaded),
+		));
 
 		check_accounting();
 
@@ -138,6 +144,7 @@ fn test_recycler_lifecycle_granular() {
 
 			assert_ok!(Coinage::load_recycler_with_external_asset(
 				RuntimeOrigin::signed(alice),
+				TEST_INSTANCE_ID,
 				CodecPreservation::Expendable,
 				VALUE,
 				member,
@@ -171,11 +178,13 @@ fn test_recycler_lifecycle_granular() {
 					.unwrap();
 
 			let call = crate::Call::<Test>::unload_recycler_into_external_asset {
+				instance_id: TEST_INSTANCE_ID,
 				aliases: bounded_vec![alias],
 				value: VALUE,
 				index: 0,
 				revision: r0_revision_v2,
 				to: dest_user,
+				max_fee: unload_token_fee_in_asset(),
 			};
 			let ext = build_unload_from_output_ext(call, VALUE, 0, r0_revision_v2, &[secret]);
 			Executive::apply_extrinsic(ext).unwrap().unwrap();
@@ -196,6 +205,7 @@ fn test_recycler_lifecycle_granular() {
 
 			assert_ok!(Coinage::load_recycler_with_external_asset(
 				RuntimeOrigin::signed(alice),
+				TEST_INSTANCE_ID,
 				CodecPreservation::Expendable,
 				VALUE,
 				member,
@@ -225,6 +235,7 @@ fn test_recycler_lifecycle_granular() {
 
 			assert_ok!(Coinage::load_recycler_with_external_asset(
 				RuntimeOrigin::signed(alice),
+				TEST_INSTANCE_ID,
 				CodecPreservation::Expendable,
 				VALUE,
 				member,
@@ -246,6 +257,7 @@ fn test_recycler_lifecycle_granular() {
 
 			assert_ok!(Coinage::load_recycler_with_external_asset(
 				RuntimeOrigin::signed(alice),
+				TEST_INSTANCE_ID,
 				CodecPreservation::Expendable,
 				VALUE,
 				member,
@@ -276,7 +288,10 @@ fn test_recycler_lifecycle_granular() {
 		let target_time_0 = r0_immutable_since + expiration;
 		advance_until_time(target_time_0.saturating_sub(2)); // -2 because one block is 2s
 
-		let clean_recycler_ext = build_authorized_ext(crate::Call::clean_recycler { value: VALUE });
+		let clean_recycler_ext = build_authorized_ext(crate::Call::clean_recycler {
+			instance_id: TEST_INSTANCE_ID,
+			value: VALUE,
+		});
 		assert_eq!(
 			Executive::validate_transaction(
 				TransactionSource::Local,
@@ -294,25 +309,151 @@ fn test_recycler_lifecycle_granular() {
 		// ====================================================================
 		// 10. Execute clean_recycler
 		// ====================================================================
-		let clean_recycler_ext = build_authorized_ext(crate::Call::clean_recycler { value: VALUE });
+		let clean_recycler_ext = build_authorized_ext(crate::Call::clean_recycler {
+			instance_id: TEST_INSTANCE_ID,
+			value: VALUE,
+		});
 		Executive::apply_extrinsic(clean_recycler_ext).unwrap().unwrap();
 
 		let clean_dust_ext = build_authorized_ext(crate::Call::clean_recycler_dust {});
 		Executive::apply_extrinsic(clean_dust_ext).unwrap().unwrap();
 
 		// Verify ring removed
-		assert_eq!(RecyclersLastRemovedRingIndex::<Test>::get(VALUE), Some(0));
+		assert_eq!(RecyclersLastRemovedRingIndex::<Test>::get(TEST_INSTANCE_ID, VALUE), Some(0));
 
 		// Verify unloaded entries cleared for ring 0
-		assert!(!RecyclersUnloaded::<Test>::contains_key((VALUE, 0u32, alias_r0_0)));
+		assert!(!matches!(
+			RecyclerAliasStates::<Test>::get((TEST_INSTANCE_ID, VALUE, 0u32, alias_r0_0)),
+			Some(AliasState::Unloaded),
+		));
 
 		// ====================================================================
-		// 11. Check destroyed value and accounting
+		// 11. Check archived value and accounting
 		// ====================================================================
-		// Ring 0 had 767 members total. 2 were unloaded (step 3 and step 6).
-		// clean_unchecked now correctly subtracts unloaded count, so destroyed = 765 * 1000.
-		assert_eq!(TotalValueOfDestroyedCoins::<Test>::get(), (ring_capacity as u64 - 2) * 1000);
+		// Ring 0 had 767 members total. 2 were unloaded (step 3 and step 6). The remaining 765 are
+		// no longer destroyed: they are archived and recoverable, so nothing is destroyed here.
+		assert_eq!(TotalValueOfDestroyedCoins::<Test>::get(TEST_INSTANCE_ID), 0);
+		assert_eq!(
+			RecyclersArchives::<Test>::get((TEST_INSTANCE_ID, VALUE, 0u32))
+				.unwrap()
+				.remaining,
+			ring_capacity - 2,
+		);
 
 		check_accounting();
+	});
+}
+
+#[test]
+fn recycler_alias_unloaded_event_emitted_on_success_not_on_locked_attempt_extrinsic() {
+	// `RecyclerAliasUnloaded` must be emitted once per alias when an unload persists, and must
+	// NOT be emitted when a failed dispatch reverts the premarked fee alias into a temporary
+	// lock. The successful retry covers both emission sites: the fee alias is emitted from the
+	// extension's `post_dispatch` (premark path) and the second alias from the batch unload.
+	new_test_ext().execute_with(|| {
+		System::set_block_number(1);
+		setup_balances();
+
+		let value: Denomination = 0; // $1 coin = 1000 underlying units each
+		let dest = CHARLIE;
+		let (secrets, index, revision) = setup_recycler(value, 2, 0);
+		let alias0 = CryptoOf::<Test>::alias_in_context(
+			&secrets[0],
+			crate::pallet::UNLOADING_RECYCLER_CONTEXT.as_ref(),
+		)
+		.unwrap();
+		let alias1 = CryptoOf::<Test>::alias_in_context(
+			&secrets[1],
+			crate::pallet::UNLOADING_RECYCLER_CONTEXT.as_ref(),
+		)
+		.unwrap();
+
+		let call = crate::Call::<Test>::unload_recycler_into_external_asset {
+			instance_id: TEST_INSTANCE_ID,
+			aliases: bounded_vec![alias0, alias1],
+			value,
+			index,
+			revision,
+			to: dest,
+			max_fee: unload_token_fee_in_asset(),
+		};
+		// Make the dispatch fail: validation quotes the conversion and accepts the call, then the
+		// swap takes more of the asset than the quote bounding it allowed.
+		set_fee_conversion_swap_surcharge(1);
+		let ext =
+			build_unload_from_output_ext(call.clone(), value, index, revision, &secrets[0..2]);
+
+		// Extension validate passes, prepare premarks alias0 as unloaded, dispatch fails,
+		// post_dispatch reverts alias0 into a temporary retry lock.
+		let result = Executive::apply_extrinsic(ext);
+		assert!(matches!(result, Ok(Err(_))), "dispatch should fail: {result:?}");
+		assert!(
+			super::get_recycler_alias_lock_until(value, index, alias0).is_some(),
+			"failed dispatch should lock the fee alias for retry"
+		);
+
+		// The unload did not persist for any alias, so no event must have been emitted: not for
+		// the premarked-then-locked alias0 (prepare/post_dispatch effects survive the dispatch
+		// error) and not for alias1 (its unload was reverted with the failed dispatch).
+		assert!(
+			!System::events().iter().any(|record| matches!(
+				record.event,
+				RuntimeEvent::Coinage(crate::Event::RecyclerAliasUnloaded { .. })
+			)),
+			"no RecyclerAliasUnloaded event must be emitted for a failed dispatch"
+		);
+
+		// Wait out the lock and retry against a market in line with its quote, with a fresh retry
+		// counter.
+		set_fee_conversion_swap_surcharge(0);
+		let lock_until = super::get_recycler_alias_lock_until(value, index, alias0)
+			.expect("failed dispatch should lock the alias");
+		advance_until_time(lock_until as u32);
+		assert_eq!(super::get_recycler_alias_lock_until(value, index, alias0), None);
+
+		let refreshed_ext =
+			build_unload_from_output_ext(call, value, index, revision, &secrets[0..2]);
+		let result = Executive::apply_extrinsic(refreshed_ext);
+		assert!(matches!(result, Ok(Ok(_))), "retry should succeed: {result:?}");
+
+		// Both aliases are now permanently unloaded and each got its event: alias0 through the
+		// extension `post_dispatch` premark path, alias1 through `RecyclerManager::unload`.
+		assert_eq!(
+			RecyclerAliasStates::<Test>::get((TEST_INSTANCE_ID, value, index, alias0)),
+			Some(AliasState::Unloaded),
+		);
+		assert_eq!(
+			RecyclerAliasStates::<Test>::get((TEST_INSTANCE_ID, value, index, alias1)),
+			Some(AliasState::Unloaded),
+		);
+		System::assert_has_event(
+			crate::Event::<Test>::RecyclerAliasUnloaded {
+				instance_id: TEST_INSTANCE_ID,
+				value,
+				ring_index: index,
+				alias: alias0,
+			}
+			.into(),
+		);
+		System::assert_has_event(
+			crate::Event::<Test>::RecyclerAliasUnloaded {
+				instance_id: TEST_INSTANCE_ID,
+				value,
+				ring_index: index,
+				alias: alias1,
+			}
+			.into(),
+		);
+		assert_eq!(
+			System::events()
+				.iter()
+				.filter(|record| matches!(
+					record.event,
+					RuntimeEvent::Coinage(crate::Event::RecyclerAliasUnloaded { .. })
+				))
+				.count(),
+			2,
+			"exactly one event per unloaded alias"
+		);
 	});
 }

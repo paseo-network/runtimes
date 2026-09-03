@@ -28,8 +28,8 @@ use frame_system::{
 	AuthorizeCall, EnsureRoot,
 };
 use indiv_support::traits::{
-	Alias, Context, ContextualAlias, Identifier, MembershipProver, RevisedContextualAlias,
-	RevisionIndex, RingIndex,
+	Alias, Context, ContextualAlias, Identifier, MembershipProver, RevisionIndex, RingIndex,
+	RingMembershipProof,
 };
 use sp_core::sr25519;
 use sp_runtime::{
@@ -41,7 +41,7 @@ use sp_runtime::{
 	traits::TryConvert,
 	BuildStorage, DispatchError,
 };
-use verifiable::{mock::Mock, AliasVec, BatchProofItem, Entropy, Error, GenerateVerifiable};
+use verifiable::{mock::Mock, AliasVec, Entropy, Error, GenerateVerifiable};
 
 pub type Header = sp_runtime::generic::Header<u64, sp_runtime::traits::BlakeTwo256>;
 pub type Block = sp_runtime::generic::Block<Header, Extrinsic>;
@@ -133,21 +133,53 @@ pub fn set_now_secs(secs: u64) {
 }
 
 thread_local! {
-	pub static RANDOMNESS: RefCell<Option<[u8; 32]>> = const { RefCell::new(Some([42u8; 32])) };
+	pub static RANDOMNESS: RefCell<Option<([u8; 32], u32)>> =
+		const { RefCell::new(Some(([42u8; 32], 1))) };
 }
 
-pub fn set_randomness(value: Option<[u8; 32]>) {
+pub fn set_randomness(value: Option<([u8; 32], u32)>) {
 	RANDOMNESS.with(|r| *r.borrow_mut() = value);
 }
 
+/// Advance the mock randomness by one block, mirroring the relay chain producing a fresh
+/// VRF output every block. A no-op while the randomness is set to `None`.
+pub fn advance_randomness() {
+	RANDOMNESS.with(|r| {
+		let mut r = r.borrow_mut();
+		if let Some((value, block_number)) = *r {
+			*r = Some((value, block_number + 1));
+		}
+	});
+}
+
+parameter_types! {
+	/// The mock source's observation lookahead, covered by its commitment moment.
+	pub storage RandomnessLookahead: u32 = 0;
+}
+
 pub struct MockRandomness;
-impl indiv_support::traits::CurrentBlockRandomness for MockRandomness {
-	fn randomness() -> Option<[u8; 32]> {
+impl indiv_support::traits::MomentRandomness<u32> for MockRandomness {
+	fn randomness() -> Option<([u8; 32], u32)> {
 		RANDOMNESS.with(|r| *r.borrow())
 	}
 
+	fn current_moment() -> u32 {
+		RANDOMNESS.with(|r| r.borrow().map_or(0, |(_, moment)| moment)) + RandomnessLookahead::get()
+	}
+
 	#[cfg(feature = "runtime-benchmarks")]
-	fn setup_randomness() {}
+	fn set_randomness(randomness: [u8; 32], moment: u32) {
+		RANDOMNESS.with(|r| *r.borrow_mut() = Some((randomness, moment)));
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn set_current_moment(moment: u32) {
+		RANDOMNESS.with(|r| {
+			let mut r = r.borrow_mut();
+			let value = r.map_or([0u8; 32], |(value, _)| value);
+			*r = Some((value, moment.saturating_sub(RandomnessLookahead::get())));
+		});
+	}
 }
 
 pub fn set_draw_limit(limit: u32) {
@@ -283,18 +315,6 @@ impl MembershipProver for MockMemberService {
 		_identifier: &Identifier,
 		proof: &MockProof,
 		_ring_index: RingIndex,
-		context: Context,
-		msg: &[u8],
-	) -> Result<RevisedContextualAlias, DispatchError> {
-		let alias = MockCrypto::validate((), proof, &members_for_proof(proof), &context, msg)
-			.map_err(|_| DispatchError::Other("mock proof invalid"))?;
-		Ok(RevisedContextualAlias { revision: 0, ring: 0, ca: ContextualAlias { context, alias } })
-	}
-
-	fn verify_membership_at_rev(
-		_identifier: &Identifier,
-		proof: &MockProof,
-		_ring_index: RingIndex,
 		_revision: RevisionIndex,
 		context: Context,
 		msg: &[u8],
@@ -307,16 +327,8 @@ impl MembershipProver for MockMemberService {
 	fn verify_memberships_in_ring(
 		_identifier: &Identifier,
 		_ring_index: RingIndex,
-		_items: &[BatchProofItem<MockProof>],
-	) -> Result<Vec<RevisedContextualAlias>, DispatchError> {
-		unimplemented!()
-	}
-
-	fn verify_memberships_in_ring_at_rev(
-		_identifier: &Identifier,
-		_ring_index: RingIndex,
 		_revision: RevisionIndex,
-		_items: &[BatchProofItem<MockProof>],
+		_items: &[RingMembershipProof<MockProof>],
 	) -> Result<Vec<ContextualAlias>, DispatchError> {
 		unimplemented!()
 	}
@@ -337,6 +349,11 @@ impl MembershipProver for MockMemberService {
 		_revision: RevisionIndex,
 	) -> Option<u64> {
 		None
+	}
+
+	fn old_root_retention() -> u64 {
+		// This mock keeps no root history, so nothing is ever superseded.
+		0
 	}
 }
 
@@ -467,9 +484,11 @@ pub type Executive = frame_executive::Executive<
 /// equivalent to one block's worth of OCW activity. Each call corresponds to
 /// a single OCW tick: an event whose lifecycle needs N transitions to reach
 /// its next phase boundary needs N calls (e.g. multi-batch draws and clean-ups
-/// take multiple ticks each).
+/// take multiple ticks each). Each tick also advances the mock randomness by
+/// one block, mirroring the fresh relay VRF the real chain sees every block.
 pub fn run_to_next_ocw() {
 	use frame_support::traits::Hooks;
+	advance_randomness();
 	let block = frame_system::Pallet::<Test>::block_number();
 	crate::Pallet::<Test>::offchain_worker(block);
 	let transactions =

@@ -131,9 +131,11 @@ pub trait OnRingRootChange<RingRoot> {
 
 	/// Seed the impl's storage so the next `on_ring_root_change` call exercises
 	/// its worst-case branch. Callers invoke this from benchmark setup before
-	/// the measured extrinsic; the default is a no-op.
+	/// the measured extrinsic; the default is a no-op. The identifier is the
+	/// collection the measured extrinsic will change, since an impl may key its
+	/// worst-case state on it.
 	#[cfg(feature = "runtime-benchmarks")]
-	fn bench_setup_worst_case() {}
+	fn bench_setup_worst_case(_identifier: Identifier) {}
 }
 
 impl<RingRoot> OnRingRootChange<RingRoot> for () {

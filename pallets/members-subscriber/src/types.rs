@@ -46,6 +46,20 @@ impl<T: Config> MembersTypeConfig for SubscriberConfig<T> {
 /// Ring root members type from the crypto implementation.
 pub type MembersOf<T> = indiv_support::members_notifier_subscriber::MembersOf<SubscriberConfig<T>>;
 
+/// Separates one set of stored ring roots from the next. It increases once per
+/// `clear_all_ring_data`, so once per termination or per notifier re-initialization.
+/// The current value addresses live entries; every lower one is stale and awaits purging.
+pub type Generation = u32;
+
+/// Position of the ongoing stale-ring-root purge.
+#[derive(Encode, Decode, Clone, PartialEq, Eq, Debug, TypeInfo, MaxEncodedLen)]
+pub struct RingPurgeProgress {
+	/// Oldest generation still holding entries to remove.
+	pub generation: Generation,
+	/// Number of pages already removed from that generation.
+	pub page: u32,
+}
+
 /// Represents a single ring root update sent between notifier and subscriber.
 pub type RingRootUpdate<T> =
 	indiv_support::members_notifier_subscriber::RingRootUpdate<SubscriberConfig<T>>;
@@ -119,6 +133,11 @@ pub struct RingCollectionState<MaxMissing: Get<u32>, MaxDeleted: Get<u32>> {
 	/// Upper bound of the ring index space (max allocated index + 1).
 	/// Updated from each batch's `next_ring_index`. Used as the scan range for missing detection.
 	pub next_ring_index: u32,
+	/// Lowest ring index the gap scan has not examined yet. The scan resumes here and advances by
+	/// at most one page per batch, so a jump larger than a page is finished by later batches.
+	/// Two kinds of index below it are never revisited: one that replay abandoned, and one the
+	/// notifier deleted after the scan passed it while `deleted_indices` was at capacity.
+	pub next_scan_index: u32,
 	/// Missing ring indices mapped to their replay request attempt count.
 	/// Count starts at 0 when first detected, increments on each replay request.
 	pub missing_indices: BoundedBTreeMap<RingIndex, u32, MaxMissing>,

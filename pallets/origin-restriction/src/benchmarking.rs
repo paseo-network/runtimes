@@ -19,7 +19,7 @@
 use super::*;
 use frame_benchmarking::{v2::*, BenchmarkError};
 use frame_support::dispatch::DispatchClass;
-use sp_runtime::traits::DispatchTransaction;
+use sp_runtime::traits::{BlockNumberProvider, DispatchTransaction};
 
 fn assert_last_event<T: Config>(generic_event: <T as frame_system::Config>::RuntimeEvent) {
 	frame_system::Pallet::<T>::assert_last_event(generic_event.into());
@@ -37,7 +37,7 @@ mod benches {
 
 		Usages::<T>::insert(&entity, Usage { used: 1u32.into(), at_block: 0u32.into() });
 
-		frame_system::Pallet::<T>::set_block_number(1_000u32.into());
+		T::BlockNumberProvider::set_block_number(1_000u32.into());
 
 		#[extrinsic_call]
 		_(frame_system::RawOrigin::Root, entity.clone());
@@ -54,7 +54,12 @@ mod benches {
 
 		let entity = T::RestrictedEntity::restricted_entity(&origin)
 			.expect("The origin from `excess_pair` must be restricted");
-		let now = frame_system::Pallet::<T>::block_number();
+
+		// Set the block number, so that the extension measures the same read as in production.
+		// A provider that keeps the value in storage writes it only when it is set.
+		T::BlockNumberProvider::set_block_number(1_000u32.into());
+
+		let now = T::BlockNumberProvider::current_block_number();
 		Usages::<T>::insert(&entity, Usage { used: 0u32.into(), at_block: now });
 
 		let info = DispatchInfo {

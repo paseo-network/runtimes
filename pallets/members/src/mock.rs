@@ -252,6 +252,14 @@ impl crate::WeightInfo for MockWeights {
 		Weight::from_parts(24, 24)
 	}
 
+	fn ensure_can_remove_orphaned_members() -> Weight {
+		Weight::from_parts(23, 23)
+	}
+
+	fn remove_orphaned_members_authorized(n: u32) -> Weight {
+		Weight::from_parts(24 + n as u64, 24)
+	}
+
 	fn delete_ring_page_authorized(members: u32) -> Weight {
 		Weight::from_parts(25 + members as u64, 25)
 	}

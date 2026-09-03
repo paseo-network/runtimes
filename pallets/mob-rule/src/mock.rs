@@ -15,25 +15,34 @@
 // limitations under the License.
 
 use crate::*;
+use codec::{Decode, Encode};
 use frame_support::{
-	derive_impl, parameter_types,
-	traits::{EnsureOriginWithArg, OriginTrait, UnixTime},
+	derive_impl,
+	dispatch::{DispatchErrorWithPostInfo, GetDispatchInfo},
+	parameter_types,
+	storage::with_transaction,
+	traits::{EnsureOriginWithArg, OffchainWorker, OriginTrait, UnixTime},
 	PalletId,
 };
 use frame_system::{
-	offchain::{CreateBare, CreateTransactionBase},
-	pallet_prelude::ExtrinsicFor,
-	EnsureRoot,
+	offchain::{CreateAuthorizedTransaction, CreateBare, CreateTransaction, CreateTransactionBase},
+	AuthorizeCall, EnsureRoot,
 };
 use indiv_support::traits::CountedMembers;
 use sp_core::{ConstU16, ConstU32, ConstU64, H256};
 use sp_runtime::{
-	traits::{BlakeTwo256, IdentityLookup},
-	BuildStorage, Percent,
+	testing::UintAuthorityId,
+	traits::{Applyable, BlakeTwo256, Checkable, IdentityLookup},
+	transaction_validity::{InvalidTransaction, TransactionSource, TransactionValidityError},
+	BuildStorage, DispatchError, Percent, TransactionOutcome,
 };
 use xcm::v5::Location;
 
-type Block = frame_system::mocking::MockBlock<Test>;
+pub type TxExtension = (AuthorizeCall<Test>,);
+pub type Header = sp_runtime::generic::Header<u64, sp_runtime::traits::BlakeTwo256>;
+pub type Extrinsic =
+	sp_runtime::generic::UncheckedExtrinsic<u64, RuntimeCall, UintAuthorityId, TxExtension>;
+type Block = sp_runtime::generic::Block<Header, Extrinsic>;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -163,8 +172,6 @@ where
 	}
 }
 
-pub type Extrinsic = ExtrinsicFor<Test>;
-
 impl<LocalCall> CreateBare<LocalCall> for Test
 where
 	RuntimeCall: From<LocalCall>,
@@ -180,6 +187,29 @@ where
 {
 	type Extrinsic = Extrinsic;
 	type RuntimeCall = RuntimeCall;
+}
+
+impl<LocalCall> CreateTransaction<LocalCall> for Test
+where
+	RuntimeCall: From<LocalCall>,
+{
+	type Extension = TxExtension;
+
+	fn create_transaction(
+		call: <Self as CreateTransactionBase<LocalCall>>::RuntimeCall,
+		extension: Self::Extension,
+	) -> Self::Extrinsic {
+		Extrinsic::new_transaction(call, extension)
+	}
+}
+
+impl<LocalCall> CreateAuthorizedTransaction<LocalCall> for Test
+where
+	RuntimeCall: From<LocalCall>,
+{
+	fn create_extension() -> Self::Extension {
+		(AuthorizeCall::new(),)
+	}
 }
 
 impl crate::Config for Test {
@@ -234,6 +264,72 @@ impl TestExt {
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	let c = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 	sp_io::TestExternalities::from(c)
+}
+
+/// Advances the chain to `target`, running the offchain worker on every block and applying the
+/// transactions it submits, so the offchain flow is exercised end-to-end the same way it would be
+/// on-chain. `take_submitted` drains the mocked pool (its concrete type stays at the call site).
+/// Time (`Now`) is left untouched so tests can control it independently.
+pub fn run_offchain_to_block(target: u64, mut take_submitted: impl FnMut() -> Vec<Vec<u8>>) {
+	while System::block_number() < target {
+		let current = System::block_number();
+		AllPalletsWithSystem::offchain_worker(current);
+		for tx in take_submitted() {
+			let extrinsic = Extrinsic::decode(&mut &tx[..]).expect("offchain tx decodes");
+			exec_tx(extrinsic, TransactionSource::Local).expect("offchain tx applies");
+		}
+		System::set_block_number(current + 1);
+	}
+}
+
+/// We gather both error types into a single one so tests can assert on the exact
+/// failure mode without ignoring an inner error.
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub enum TransactionExecutionError {
+	Validity(TransactionValidityError),
+	Dispatch(DispatchErrorWithPostInfo),
+}
+
+impl From<DispatchErrorWithPostInfo> for TransactionExecutionError {
+	fn from(e: DispatchErrorWithPostInfo) -> Self {
+		TransactionExecutionError::Dispatch(e)
+	}
+}
+
+impl From<TransactionValidityError> for TransactionExecutionError {
+	fn from(e: TransactionValidityError) -> Self {
+		TransactionExecutionError::Validity(e)
+	}
+}
+
+impl From<DispatchError> for TransactionExecutionError {
+	fn from(e: DispatchError) -> Self {
+		TransactionExecutionError::Dispatch(e.into())
+	}
+}
+
+impl From<InvalidTransaction> for TransactionExecutionError {
+	fn from(e: InvalidTransaction) -> Self {
+		TransactionExecutionError::Validity(e.into())
+	}
+}
+
+pub fn exec_tx(x: Extrinsic, source: TransactionSource) -> Result<(), TransactionExecutionError> {
+	let info = x.get_dispatch_info();
+	let len = x.encoded_size();
+
+	let checked = Checkable::check(x, &frame_system::ChainContext::<Test>::default())?;
+
+	// Validation is always rolled back in production.
+	with_transaction(|| {
+		let valid = checked.validate::<Test>(source, &info, len);
+		TransactionOutcome::Rollback(Result::<_, DispatchError>::Ok(valid))
+	})
+	.unwrap()?;
+
+	checked.apply::<Test>(&info, len)??;
+
+	Ok(())
 }
 
 #[cfg(feature = "runtime-benchmarks")]

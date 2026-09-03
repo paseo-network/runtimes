@@ -19,13 +19,20 @@
 use super::{pallet::*, *};
 use crate::{
 	mock::*,
-	types::{Credibility, FriendRequestReference, PersonalUsernameChoice},
+	types::{Credibility, NotificationReference, PersonalUsernameChoice},
 	Error,
 };
 use codec::Encode;
-use frame_support::{assert_noop, assert_ok, dispatch::GetDispatchInfo, traits::Authorize};
+use frame_support::{
+	assert_noop, assert_ok,
+	dispatch::GetDispatchInfo,
+	traits::{Authorize, Hooks},
+};
 use frame_system::RawOrigin as SystemOrigin;
-use indiv_support::traits::AppendOnlyMembers;
+use indiv_support::{
+	context::{build_product_context, personhood},
+	traits::AppendOnlyMembers,
+};
 use sp_core::Get;
 use sp_runtime::{
 	traits::DispatchTransaction,
@@ -834,9 +841,19 @@ fn validate_username_variants() {
 
 		// Invalid lite
 
+		// Empty username
+		assert!(matches!(
+			Resources::validate_username(&username::<Test>(b""), false),
+			Err(Error::<Test>::InvalidUsername)
+		));
 		// Too short base
 		assert!(matches!(
-			Resources::validate_username(&username::<Test>(b"abc.12"), false),
+			Resources::validate_username(&username::<Test>(b"abcdef.12"), false),
+			Err(Error::<Test>::InvalidUsername)
+		));
+		// Digit in base
+		assert!(matches!(
+			Resources::validate_username(&username::<Test>(b"abcdef1.12"), false),
 			Err(Error::<Test>::InvalidUsername)
 		));
 		// Too few digits
@@ -852,6 +869,16 @@ fn validate_username_variants() {
 		// No separator/digits
 		assert!(matches!(
 			Resources::validate_username(&username::<Test>(b"abcdefg"), false),
+			Err(Error::<Test>::InvalidUsername)
+		));
+		// Multiple separators
+		assert!(matches!(
+			Resources::validate_username(&username::<Test>(b"abc.defg.12"), false),
+			Err(Error::<Test>::InvalidUsername)
+		));
+		// Hyphen in base
+		assert!(matches!(
+			Resources::validate_username(&username::<Test>(b"abcdef-g.12"), false),
 			Err(Error::<Test>::InvalidUsername)
 		));
 		// Uppercase base
@@ -875,9 +902,24 @@ fn validate_username_variants() {
 
 		// Invalid person
 
+		// Empty username
+		assert!(matches!(
+			Resources::validate_username(&username::<Test>(b""), true),
+			Err(Error::<Test>::InvalidUsername)
+		));
 		// Too short
 		assert!(matches!(
 			Resources::validate_username(&username::<Test>(b"abc"), true),
+			Err(Error::<Test>::InvalidUsername)
+		));
+		// One character below the minimum length
+		assert!(matches!(
+			Resources::validate_username(&username::<Test>(b"abcdef"), true),
+			Err(Error::<Test>::InvalidUsername)
+		));
+		// Digits not allowed
+		assert!(matches!(
+			Resources::validate_username(&username::<Test>(b"abcd123"), true),
 			Err(Error::<Test>::InvalidUsername)
 		));
 		// Uppercase
@@ -896,18 +938,6 @@ fn validate_username_variants() {
 			Err(Error::<Test>::InvalidUsername)
 		));
 	});
-}
-
-//TODO: This could be folded with validate_username_variants() test.
-#[test]
-fn test_username_basic() {
-	Resources::validate_username(&b"abcdefg.12".to_vec().try_into().unwrap(), false).unwrap();
-	Resources::validate_username(&b"abcdefg.1".to_vec().try_into().unwrap(), false).unwrap_err();
-	Resources::validate_username(&b"abcdef.12".to_vec().try_into().unwrap(), false).unwrap_err();
-	Resources::validate_username(&b"abcdef1.12".to_vec().try_into().unwrap(), false).unwrap_err();
-	Resources::validate_username(&b"abcdefg.a2".to_vec().try_into().unwrap(), false).unwrap_err();
-	Resources::validate_username(&b"abcdefgh12".to_vec().try_into().unwrap(), false).unwrap_err();
-	Resources::validate_username(&b"abcdefghij".to_vec().try_into().unwrap(), false).unwrap_err();
 }
 
 // --- Statement Allowance Tests ---
@@ -1507,100 +1537,119 @@ fn touch_keeps_existing_allowance_for_non_demoted_person() {
 	});
 }
 
-mod friend_request {
+mod notification {
 	use super::*;
 
 	#[test]
-	fn friend_request_registration_rejects_non_current_period() {
+	fn notification_registration_rejects_non_current_period() {
 		new_test_ext().execute_with(|| {
 			set_time_sec(3 * SECONDS_PER_DAY + 123);
 
 			let current_period =
-				Resources::friend_request_period_from_timestamp(TestClock::now().as_secs());
-			let stale_period = current_period.saturating_sub(2);
-			let reference = FriendRequestReference { period: stale_period, seq: 0 };
-			let origin = friend_request_origin(42);
+				Resources::notification_period_from_timestamp(TestClock::now().as_secs());
+			let stale_period = current_period.saturating_sub(3);
+			let reference = NotificationReference { period: stale_period, seq: 0 };
+			let origin = notification_origin(42);
 
 			assert_noop!(
-				Resources::set_friend_request_statement_account_for_sequence(
+				Resources::set_notification_statement_account_for_sequence(
 					origin,
 					reference,
 					id_to_account(99),
 				),
-				Error::<Test>::InvalidFriendRequestPeriod
+				Error::<Test>::InvalidNotificationPeriod
 			);
 		});
 	}
 
 	#[test]
-	fn friend_request_registration_accepts_previous_period_within_grace_window() {
+	fn notification_registration_rejects_previous_period_within_grace_window() {
 		new_test_ext().execute_with(|| {
 			set_time_sec(SECONDS_PER_DAY + 100);
 
 			let current_period =
-				Resources::friend_request_period_from_timestamp(TestClock::now().as_secs());
+				Resources::notification_period_from_timestamp(TestClock::now().as_secs());
 			let previous_period = current_period.saturating_sub(1);
-			let reference = FriendRequestReference { period: previous_period, seq: 1 };
-			let origin = friend_request_origin(44);
+			let reference = NotificationReference { period: previous_period, seq: 1 };
+			let origin = notification_origin(44);
 
-			assert_ok!(Resources::set_friend_request_statement_account_for_sequence(
-				origin,
-				reference,
-				id_to_account(101),
-			));
+			assert_noop!(
+				Resources::set_notification_statement_account_for_sequence(
+					origin,
+					reference,
+					id_to_account(101),
+				),
+				Error::<Test>::InvalidNotificationPeriod
+			);
 		});
 	}
 
 	#[test]
-	fn friend_request_registration_uses_period_context_and_sets_allowance() {
+	fn notification_registration_rejects_older_period_within_statement_store_grace_window() {
+		new_test_ext().execute_with(|| {
+			set_time_sec(2 * SECONDS_PER_DAY + 100);
+
+			let reference = NotificationReference { period: 0, seq: 1 };
+			assert_noop!(
+				Resources::set_notification_statement_account_for_sequence(
+					notification_origin(45),
+					reference,
+					id_to_account(102),
+				),
+				Error::<Test>::InvalidNotificationPeriod
+			);
+		});
+	}
+
+	#[test]
+	fn notification_registration_uses_period_context_and_sets_allowance() {
 		new_test_ext().execute_with(|| {
 			set_time_sec(SECONDS_PER_DAY + 10);
 
 			let now = TestClock::now().as_secs();
-			let reference = FriendRequestReference {
-				period: Resources::friend_request_period_from_timestamp(now),
+			let reference = NotificationReference {
+				period: Resources::notification_period_from_timestamp(now),
 				seq: 3,
 			};
 			let alias = id_to_alias(77);
-			let origin = friend_request_origin(77);
+			let origin = notification_origin(77);
 			let stmt_account = id_to_account(99);
 			let pre_allowance = get_allowance(&stmt_account);
 
-			assert_ok!(Resources::set_friend_request_statement_account_for_sequence(
+			assert_ok!(Resources::set_notification_statement_account_for_sequence(
 				origin,
 				reference,
 				stmt_account.clone(),
 			));
 
-			let registration = FriendRequestRegistrationByAlias::<Test>::get(alias)
-				.expect("friend request registration should exist");
+			let registration = NotificationRegistrationByAlias::<Test>::get(alias)
+				.expect("notification registration should exist");
 			assert_eq!(registration.account_id, stmt_account);
 			assert_eq!(registration.reference, reference);
-			assert_eq!(FriendRequestAliasByAccount::<Test>::get(id_to_account(99)), Some(alias));
+			assert_eq!(NotificationAliasByAccount::<Test>::get(id_to_account(99)), Some(alias));
 
 			let expected_allowance =
-				pre_allowance.saturating_add(<Test as Config>::FriendRequestAllowance::get());
+				pre_allowance.saturating_add(<Test as Config>::NotificationAllowance::get());
 			assert_eq!(get_allowance(id_to_account(99)), expected_allowance);
 		});
 	}
 
 	#[test]
-	fn friend_request_cleanup_authorize_rejects_external_source() {
+	fn notification_cleanup_authorize_rejects_external_source() {
 		new_test_ext().execute_with(|| {
-			set_time_sec(SECONDS_PER_DAY + 100);
-
-			let reference = FriendRequestReference { period: 0u32, seq: 2 };
+			let reference = NotificationReference { period: 0u32, seq: 2 };
 			let stmt_account = id_to_account(102);
-			assert_ok!(Resources::set_friend_request_statement_account_for_sequence(
-				friend_request_origin(55),
+			set_time_sec(100);
+			assert_ok!(Resources::set_notification_statement_account_for_sequence(
+				notification_origin(55),
 				reference,
 				stmt_account.clone(),
 			));
 
 			set_time_sec(
-				Resources::friend_request_expiration_time(reference.period).saturating_add(1),
+				Resources::notification_expiration_time(reference.period).saturating_add(1),
 			);
-			let call = crate::Call::<Test>::clear_expired_friend_request_sequence {
+			let call = crate::Call::<Test>::clear_expired_notification_sequence {
 				account: stmt_account,
 				seq: reference.seq,
 			};
@@ -1611,22 +1660,20 @@ mod friend_request {
 	}
 
 	#[test]
-	fn friend_request_cleanup_authorize_returns_custom_invalidity_before_expiry() {
+	fn notification_cleanup_authorize_returns_custom_invalidity_before_expiry() {
 		new_test_ext().execute_with(|| {
-			let grace_secs: u64 = <Test as Config>::FriendRequestGraceWindow::get() as u64;
-			set_time_sec(SECONDS_PER_DAY + 100);
-
 			let previous_period = 0u32;
-			let reference = FriendRequestReference { period: previous_period, seq: 2 };
+			let reference = NotificationReference { period: previous_period, seq: 2 };
 			let stmt_account = id_to_account(102);
-			assert_ok!(Resources::set_friend_request_statement_account_for_sequence(
-				friend_request_origin(55),
+			set_time_sec(100);
+			assert_ok!(Resources::set_notification_statement_account_for_sequence(
+				notification_origin(55),
 				reference,
 				stmt_account.clone(),
 			));
 
-			set_time_sec(SECONDS_PER_DAY + grace_secs + 1);
-			let call = crate::Call::<Test>::clear_expired_friend_request_sequence {
+			set_time_sec(Resources::notification_expiration_time(previous_period));
+			let call = crate::Call::<Test>::clear_expired_notification_sequence {
 				account: stmt_account,
 				seq: reference.seq,
 			};
@@ -1635,7 +1682,7 @@ mod friend_request {
 			assert_eq!(
 				result,
 				Some(Err(InvalidTransaction::Custom(
-					crate::extension::CustomValidity::InvalidExpiredFriendRequestCleanup as u8
+					crate::extension::CustomValidity::InvalidExpiredNotificationCleanup as u8
 				)
 				.into()))
 			);
@@ -1643,99 +1690,97 @@ mod friend_request {
 	}
 
 	#[test]
-	fn offchain_worker_clears_expired_friend_request_registrations() {
+	fn offchain_worker_clears_expired_notification_registrations() {
 		new_test_ext().execute_with(|| {
-			set_time_sec(SECONDS_PER_DAY + 100);
-
-			let reference = FriendRequestReference { period: 0, seq: 3 };
+			let reference = NotificationReference { period: 0, seq: 3 };
 			let alias = id_to_alias(56);
 			let stmt_account = id_to_account(103);
-			assert_ok!(Resources::set_friend_request_statement_account_for_sequence(
-				friend_request_origin(56),
+			set_time_sec(100);
+			assert_ok!(Resources::set_notification_statement_account_for_sequence(
+				notification_origin(56),
 				reference,
 				stmt_account.clone(),
 			));
 
-			assert_eq!(FriendRequestAliasByAccount::<Test>::get(&stmt_account), Some(alias));
-			assert!(FriendRequestRegistrationByAlias::<Test>::contains_key(alias));
+			assert_eq!(NotificationAliasByAccount::<Test>::get(&stmt_account), Some(alias));
+			assert!(NotificationRegistrationByAlias::<Test>::contains_key(alias));
 
 			set_time_sec(
-				Resources::friend_request_expiration_time(reference.period).saturating_add(1),
+				Resources::notification_expiration_time(reference.period).saturating_add(1),
 			);
 			advance_to_block(2);
 
-			assert_eq!(FriendRequestAliasByAccount::<Test>::get(&stmt_account), None);
-			assert!(!FriendRequestRegistrationByAlias::<Test>::contains_key(alias));
+			assert_eq!(NotificationAliasByAccount::<Test>::get(&stmt_account), None);
+			assert!(!NotificationRegistrationByAlias::<Test>::contains_key(alias));
 			assert_eq!(get_allowance(&stmt_account), StatementAllowance::default());
 			System::assert_has_event(
-				Event::<Test>::FriendRequestStmtUsageRemoved { account: id_to_account(103) }.into(),
+				Event::<Test>::NotificationStmtUsageRemoved { account: id_to_account(103) }.into(),
 			);
 		});
 	}
 
 	#[test]
-	fn friend_request_period_math_uses_full_u64_timestamp() {
+	fn notification_period_math_uses_full_u64_timestamp() {
 		new_test_ext().execute_with(|| {
-			let period_duration = u64::from(<Test as Config>::FriendRequestPeriodDuration::get());
+			let period_duration = u64::from(<Test as Config>::NotificationPeriodDuration::get());
 			let now = u64::from(u32::MAX).saturating_add(period_duration);
 			let expected = (now / period_duration) as u32;
 
-			assert_eq!(Resources::friend_request_period_from_timestamp(now), expected);
+			assert_eq!(Resources::notification_period_from_timestamp(now), expected);
 		});
 	}
 
 	#[test]
-	fn friend_request_context_layout_is_fixed_and_non_truncating() {
+	fn notification_context_uses_allocated_people_raw_suffix() {
 		new_test_ext().execute_with(|| {
-			let reference = FriendRequestReference { period: 0x0102_0304, seq: 0xAB };
-			let context = Resources::friend_request_context(reference);
-			let prefix = b"FRND_REQ:";
+			let reference = NotificationReference { period: 0x0102_0304, seq: 0xAB };
 
-			assert_eq!(&context[..prefix.len()], prefix);
-			assert_eq!(&context[prefix.len()..prefix.len() + 4], &reference.period.to_be_bytes());
-			assert_eq!(context[prefix.len() + 4], reference.seq);
-			assert!(
-				context[prefix.len() + 5..].iter().all(|b| *b == b' '),
-				"remaining context bytes should stay as padding",
+			assert_eq!(
+				Resources::notification_context(reference),
+				build_product_context(
+					personhood::PRODUCT_NAME,
+					&<Test as Config>::Suffix::get(),
+					personhood::resources_notification(reference.period, reference.seq),
+				),
 			);
 		});
 	}
 
 	#[test]
-	fn friend_request_registration_rejects_sequence_above_max() {
+	fn notification_registration_rejects_sequence_above_max() {
 		new_test_ext().execute_with(|| {
 			let now = 100u64;
 			set_time_sec(now);
 
-			let reference = FriendRequestReference {
-				period: Resources::friend_request_period_from_timestamp(now),
-				seq: <Test as Config>::FriendRequestSlotsPerPeriod::get() + 1,
+			let reference = NotificationReference {
+				period: Resources::notification_period_from_timestamp(now),
+				seq: <Test as Config>::NotificationSlotsPerPeriod::get() + 1,
 			};
-			let origin = friend_request_origin(7);
+			let origin = notification_origin(7);
 
 			assert_noop!(
-				Resources::set_friend_request_statement_account_for_sequence(
+				Resources::set_notification_statement_account_for_sequence(
 					origin,
 					reference,
 					id_to_account(50),
 				),
-				Error::<Test>::InvalidFriendRequestSequence
+				Error::<Test>::InvalidNotificationSequence
 			);
 		});
 	}
 
 	#[test]
-	fn friend_request_registration_rejects_signed_origin() {
+	fn notification_registration_rejects_signed_origin() {
 		new_test_ext().execute_with(|| {
 			let now = 321u64;
 			set_time_sec(now);
-			let reference = FriendRequestReference {
-				period: Resources::friend_request_period_from_timestamp(now),
+			let reference = NotificationReference {
+				period: Resources::notification_period_from_timestamp(now),
 				seq: 0,
 			};
 
 			assert_noop!(
-				Resources::set_friend_request_statement_account_for_sequence(
+				Resources::set_notification_statement_account_for_sequence(
 					RuntimeOrigin::signed(id_to_account(7)),
 					reference,
 					id_to_account(70),
@@ -1746,44 +1791,44 @@ mod friend_request {
 	}
 
 	#[test]
-	fn friend_request_registration_rejects_duplicate_alias() {
+	fn notification_registration_rejects_duplicate_alias() {
 		new_test_ext().execute_with(|| {
 			let now = 123u64;
 			set_time_sec(now);
 
-			let reference = FriendRequestReference {
-				period: Resources::friend_request_period_from_timestamp(now),
+			let reference = NotificationReference {
+				period: Resources::notification_period_from_timestamp(now),
 				seq: 1,
 			};
-			let origin = friend_request_origin(7);
+			let origin = notification_origin(7);
 
-			assert_ok!(Resources::set_friend_request_statement_account_for_sequence(
+			assert_ok!(Resources::set_notification_statement_account_for_sequence(
 				origin.clone(),
 				reference,
 				id_to_account(50),
 			));
 			assert_noop!(
-				Resources::set_friend_request_statement_account_for_sequence(
+				Resources::set_notification_statement_account_for_sequence(
 					origin,
 					reference,
 					id_to_account(51),
 				),
-				Error::<Test>::FriendRequestRegistrationAlreadyExists
+				Error::<Test>::NotificationRegistrationAlreadyExists
 			);
 		});
 	}
 
 	#[test]
-	fn friend_request_registration_invalid_period_returns_custom_invalidity() {
+	fn notification_registration_invalid_period_returns_custom_invalidity() {
 		new_test_ext().execute_with(|| {
 			let now = 123u64;
 			set_time_sec(now);
 
-			let reference = FriendRequestReference {
-				period: Resources::friend_request_period_from_timestamp(now).saturating_add(10),
+			let reference = NotificationReference {
+				period: Resources::notification_period_from_timestamp(now).saturating_add(10),
 				seq: 1,
 			};
-			let context = Resources::friend_request_context(reference);
+			let context = Resources::notification_context(reference);
 
 			let secret = MockCrypto::new_secret([1u8; 32]);
 			let member = MockCrypto::member_from_secret(&secret);
@@ -1796,10 +1841,10 @@ mod friend_request {
 				.expect("proof should build");
 
 			let tx_ext = crate::extension::AsResources::<Test>::new(Some(
-				crate::extension::AsResourcesInfo::RegisterFriendRequestWithProof(proof, 0),
+				crate::extension::AsResourcesInfo::RegisterNotificationWithProof(proof, 0, 0),
 			));
 			let call = RuntimeCall::Resources(
-				crate::Call::set_friend_request_statement_account_for_sequence {
+				crate::Call::set_notification_statement_account_for_sequence {
 					reference,
 					account_id: id_to_account(99),
 				},
@@ -1818,22 +1863,22 @@ mod friend_request {
 				result,
 				Err(sp_runtime::transaction_validity::TransactionValidityError::Invalid(
 					sp_runtime::transaction_validity::InvalidTransaction::Custom(code),
-				)) if code == crate::extension::CustomValidity::InvalidFriendRequestPeriod as u8
+				)) if code == crate::extension::CustomValidity::InvalidNotificationPeriod as u8
 			));
 		});
 	}
 
 	#[test]
-	fn friend_request_registration_invalid_sequence_returns_custom_invalidity() {
+	fn notification_registration_invalid_sequence_returns_custom_invalidity() {
 		new_test_ext().execute_with(|| {
 			let now = 123u64;
 			set_time_sec(now);
 
-			let reference = FriendRequestReference {
-				period: Resources::friend_request_period_from_timestamp(now),
-				seq: <Test as Config>::FriendRequestSlotsPerPeriod::get() + 1,
+			let reference = NotificationReference {
+				period: Resources::notification_period_from_timestamp(now),
+				seq: <Test as Config>::NotificationSlotsPerPeriod::get() + 1,
 			};
-			let context = Resources::friend_request_context(reference);
+			let context = Resources::notification_context(reference);
 
 			let secret = MockCrypto::new_secret([2u8; 32]);
 			let member = MockCrypto::member_from_secret(&secret);
@@ -1844,10 +1889,10 @@ mod friend_request {
 				.expect("proof should build");
 
 			let tx_ext = crate::extension::AsResources::<Test>::new(Some(
-				crate::extension::AsResourcesInfo::RegisterFriendRequestWithProof(proof, 0),
+				crate::extension::AsResourcesInfo::RegisterNotificationWithProof(proof, 0, 0),
 			));
 			let call = RuntimeCall::Resources(
-				crate::Call::set_friend_request_statement_account_for_sequence {
+				crate::Call::set_notification_statement_account_for_sequence {
 					reference,
 					account_id: id_to_account(100),
 				},
@@ -1866,25 +1911,25 @@ mod friend_request {
 				result,
 				Err(sp_runtime::transaction_validity::TransactionValidityError::Invalid(
 					sp_runtime::transaction_validity::InvalidTransaction::Custom(code),
-				)) if code == crate::extension::CustomValidity::InvalidFriendRequestSequence as u8
+				)) if code == crate::extension::CustomValidity::InvalidNotificationSequence as u8
 			));
 		});
 	}
 
 	#[test]
-	fn friend_request_registration_rejects_occupied_account_before_dispatch() {
+	fn notification_registration_rejects_occupied_account_before_dispatch() {
 		new_test_ext().execute_with(|| {
 			let now = 123u64;
 			set_time_sec(now);
 
 			let stmt_account = id_to_account(79);
-			let reference = FriendRequestReference {
-				period: Resources::friend_request_period_from_timestamp(now),
+			let reference = NotificationReference {
+				period: Resources::notification_period_from_timestamp(now),
 				seq: 2,
 			};
 
-			let first_origin = friend_request_origin(41);
-			assert_ok!(Resources::set_friend_request_statement_account_for_sequence(
+			let first_origin = notification_origin(41);
+			assert_ok!(Resources::set_notification_statement_account_for_sequence(
 				first_origin,
 				reference,
 				stmt_account.clone(),
@@ -1893,17 +1938,17 @@ mod friend_request {
 			// Match the collection-aware extension behavior for alias/account registration
 			// conflicts.
 			assert_eq!(
-				Resources::validate_friend_request_registration(id_to_alias(42), &stmt_account)
+				Resources::validate_notification_registration(id_to_alias(42), &stmt_account)
 					.map_err(|_| {
-						crate::extension::CustomValidity::FriendRequestRegistrationConflict
+						crate::extension::CustomValidity::NotificationRegistrationConflict
 					}),
-				Err(crate::extension::CustomValidity::FriendRequestRegistrationConflict),
+				Err(crate::extension::CustomValidity::NotificationRegistrationConflict),
 			);
 		});
 	}
 
 	#[test]
-	fn friend_request_registration_replay_is_rejected_before_dispatch() {
+	fn notification_registration_replay_is_rejected_before_dispatch() {
 		new_test_ext().execute_with(|| {
 			let now = 123u64;
 			set_time_sec(now);
@@ -1921,16 +1966,16 @@ mod friend_request {
 			assert_ok!(People::force_recognize_personhood(RuntimeOrigin::root(), vec![member]));
 			advance_to_block(3);
 
-			let reference = FriendRequestReference {
-				period: Resources::friend_request_period_from_timestamp(now),
+			let reference = NotificationReference {
+				period: Resources::notification_period_from_timestamp(now),
 				seq: 1,
 			};
-			let context = Resources::friend_request_context(reference);
+			let context = Resources::notification_context(reference);
 			let stmt_account = id_to_account(78);
 			let extension_version = 0u8;
 
 			let call = RuntimeCall::Resources(
-				crate::Call::set_friend_request_statement_account_for_sequence {
+				crate::Call::set_notification_statement_account_for_sequence {
 					reference,
 					account_id: stmt_account.clone(),
 				},
@@ -1945,8 +1990,8 @@ mod friend_request {
 			let (proof, alias) = MockCrypto::create(commitment, &secret, &context, &msg)
 				.expect("proof should build");
 
-			assert_ok!(Resources::set_friend_request_statement_account_for_sequence(
-				RuntimeOrigin::from(OriginCaller::Resources(crate::Origin::FriendRequestAlias(
+			assert_ok!(Resources::set_notification_statement_account_for_sequence(
+				RuntimeOrigin::from(OriginCaller::Resources(crate::Origin::NotificationAlias(
 					alias
 				))),
 				reference,
@@ -1954,7 +1999,7 @@ mod friend_request {
 			));
 
 			let tx_ext = crate::extension::AsResources::<Test>::new(Some(
-				crate::extension::AsResourcesInfo::RegisterFriendRequestWithProof(proof, 0),
+				crate::extension::AsResourcesInfo::RegisterNotificationWithProof(proof, 0, 0),
 			));
 			let result = tx_ext.validate_only(
 				SystemOrigin::None.into(),
@@ -1970,13 +2015,13 @@ mod friend_request {
 				Err(sp_runtime::transaction_validity::TransactionValidityError::Invalid(
 					sp_runtime::transaction_validity::InvalidTransaction::Custom(code)
 				)) if code
-					== crate::extension::CustomValidity::FriendRequestRegistrationConflict as u8
+					== crate::extension::CustomValidity::NotificationRegistrationConflict as u8
 			));
 		});
 	}
 
 	#[test]
-	fn friend_request_registration_uses_same_pool_tag_for_same_slot() {
+	fn notification_registration_uses_same_pool_tag_for_same_slot() {
 		new_test_ext().execute_with(|| {
 			let now = 123u64;
 			set_time_sec(now);
@@ -1994,24 +2039,24 @@ mod friend_request {
 			assert_ok!(People::force_recognize_personhood(RuntimeOrigin::root(), vec![member]));
 			advance_to_block(3);
 
-			let reference = FriendRequestReference {
-				period: Resources::friend_request_period_from_timestamp(now),
+			let reference = NotificationReference {
+				period: Resources::notification_period_from_timestamp(now),
 				seq: 4,
 			};
-			let context = Resources::friend_request_context(reference);
+			let context = Resources::notification_context(reference);
 			let extension_version = 0u8;
 			let ring_members =
 				Members::ring_members(indiv_pallet_people::PEOPLE_MEMBER_IDENTIFIER, 0);
 			let commitment = MockCrypto::open((), &member, ring_members.into_iter())
 				.expect("commitment should open");
 			let first_call = RuntimeCall::Resources(
-				crate::Call::set_friend_request_statement_account_for_sequence {
+				crate::Call::set_notification_statement_account_for_sequence {
 					reference,
 					account_id: id_to_account(81),
 				},
 			);
 			let second_call = RuntimeCall::Resources(
-				crate::Call::set_friend_request_statement_account_for_sequence {
+				crate::Call::set_notification_statement_account_for_sequence {
 					reference,
 					account_id: id_to_account(82),
 				},
@@ -2027,10 +2072,14 @@ mod friend_request {
 			let (second_proof, _) = MockCrypto::create(commitment, &secret, &context, &second_msg)
 				.expect("second proof should build");
 			let first_tx_ext = crate::extension::AsResources::<Test>::new(Some(
-				crate::extension::AsResourcesInfo::RegisterFriendRequestWithProof(first_proof, 0),
+				crate::extension::AsResourcesInfo::RegisterNotificationWithProof(first_proof, 0, 0),
 			));
 			let second_tx_ext = crate::extension::AsResources::<Test>::new(Some(
-				crate::extension::AsResourcesInfo::RegisterFriendRequestWithProof(second_proof, 0),
+				crate::extension::AsResourcesInfo::RegisterNotificationWithProof(
+					second_proof,
+					0,
+					0,
+				),
 			));
 
 			let first_validity = first_tx_ext
@@ -2042,7 +2091,7 @@ mod friend_request {
 					sp_runtime::transaction_validity::TransactionSource::External,
 					extension_version,
 				)
-				.expect("first friend request registration should validate");
+				.expect("first notification registration should validate");
 			let second_validity = second_tx_ext
 				.validate_only(
 					SystemOrigin::None.into(),
@@ -2052,44 +2101,44 @@ mod friend_request {
 					sp_runtime::transaction_validity::TransactionSource::External,
 					extension_version,
 				)
-				.expect("second friend request registration should validate");
+				.expect("second notification registration should validate");
 
 			assert_eq!(
 				first_validity.0.provides, second_validity.0.provides,
-				"same friend request slot should dedupe in the tx pool even if account_id changes"
+				"same notification slot should dedupe in the tx pool even if account_id changes"
 			);
 		});
 	}
 
 	#[test]
-	fn friend_request_dispatchable_with_alias_origin_succeeds() {
+	fn notification_dispatchable_with_alias_origin_succeeds() {
 		new_test_ext().execute_with(|| {
 			System::set_block_number(1);
 			let now = 123u64;
 			set_time_sec(now);
 
 			let stmt_account = id_to_account(200);
-			let reference = FriendRequestReference {
-				period: Resources::friend_request_period_from_timestamp(now),
+			let reference = NotificationReference {
+				period: Resources::notification_period_from_timestamp(now),
 				seq: 1,
 			};
-			let origin = friend_request_origin(90);
+			let origin = notification_origin(90);
 
-			assert_ok!(Resources::set_friend_request_statement_account_for_sequence(
+			assert_ok!(Resources::set_notification_statement_account_for_sequence(
 				origin,
 				reference,
 				stmt_account.clone(),
 			));
 
 			let alias = id_to_alias(90);
-			assert_eq!(FriendRequestAliasByAccount::<Test>::get(&stmt_account), Some(alias));
-			assert!(FriendRequestRegistrationByAlias::<Test>::contains_key(alias));
+			assert_eq!(NotificationAliasByAccount::<Test>::get(&stmt_account), Some(alias));
+			assert!(NotificationRegistrationByAlias::<Test>::contains_key(alias));
 
-			let friend_request_allowance = <Test as Config>::FriendRequestAllowance::get();
-			assert_eq!(get_allowance(&stmt_account), friend_request_allowance);
+			let notification_allowance = <Test as Config>::NotificationAllowance::get();
+			assert_eq!(get_allowance(&stmt_account), notification_allowance);
 
 			System::assert_has_event(
-				Event::<Test>::FriendRequestStmtUsageSet {
+				Event::<Test>::NotificationStmtUsageSet {
 					alias,
 					period: reference.period,
 					seq: reference.seq,
@@ -2101,21 +2150,21 @@ mod friend_request {
 	}
 
 	#[test]
-	fn collection_based_lite_friend_request_rejects_seq_above_lite_limit() {
+	fn collection_based_lite_notification_rejects_seq_above_lite_limit() {
 		new_test_ext().execute_with(|| {
 			let now = 123u64;
 			set_time_sec(now);
 
-			let seq = <Test as Config>::LiteFriendRequestSlotsPerPeriod::get() + 1;
+			let seq = <Test as Config>::LiteNotificationSlotsPerPeriod::get() + 1;
 			// Ensure this seq is within the full-people limit, proving the rejection
 			// is specific to the lite path.
-			assert!(seq <= <Test as Config>::FriendRequestSlotsPerPeriod::get());
+			assert!(seq <= <Test as Config>::NotificationSlotsPerPeriod::get());
 
-			let reference = FriendRequestReference {
-				period: Resources::friend_request_period_from_timestamp(now),
+			let reference = NotificationReference {
+				period: Resources::notification_period_from_timestamp(now),
 				seq,
 			};
-			let context = Resources::friend_request_context(reference);
+			let context = Resources::notification_context(reference);
 
 			let secret = MockCrypto::new_secret([30u8; 32]);
 			let member = MockCrypto::member_from_secret(&secret);
@@ -2126,14 +2175,15 @@ mod friend_request {
 				.expect("proof should build");
 
 			let tx_ext = crate::extension::AsResources::<Test>::new(Some(
-				crate::extension::AsResourcesInfo::RegisterFriendRequestForCollection(
+				crate::extension::AsResourcesInfo::RegisterNotificationForCollection(
 					proof,
+					0,
 					0,
 					crate::types::MembershipCollection::LitePeople,
 				),
 			));
 			let call = RuntimeCall::Resources(
-				crate::Call::set_friend_request_statement_account_for_sequence {
+				crate::Call::set_notification_statement_account_for_sequence {
 					reference,
 					account_id: id_to_account(201),
 				},
@@ -2152,23 +2202,23 @@ mod friend_request {
 				result,
 				Err(sp_runtime::transaction_validity::TransactionValidityError::Invalid(
 					sp_runtime::transaction_validity::InvalidTransaction::Custom(code),
-				)) if code == crate::extension::CustomValidity::InvalidFriendRequestSequence as u8
+				)) if code == crate::extension::CustomValidity::InvalidNotificationSequence as u8
 			));
 		});
 	}
 
 	#[test]
-	fn collection_based_lite_friend_request_accepts_seq_at_lite_limit() {
+	fn collection_based_lite_notification_accepts_seq_at_lite_limit() {
 		new_test_ext().execute_with(|| {
 			let now = 123u64;
 			set_time_sec(now);
 
-			let seq = <Test as Config>::LiteFriendRequestSlotsPerPeriod::get();
-			let reference = FriendRequestReference {
-				period: Resources::friend_request_period_from_timestamp(now),
+			let seq = <Test as Config>::LiteNotificationSlotsPerPeriod::get();
+			let reference = NotificationReference {
+				period: Resources::notification_period_from_timestamp(now),
 				seq,
 			};
-			let context = Resources::friend_request_context(reference);
+			let context = Resources::notification_context(reference);
 
 			assert_ok!(Members::create_collection(
 				0,
@@ -2188,7 +2238,7 @@ mod friend_request {
 
 			let extension_version = 0u8;
 			let call = RuntimeCall::Resources(
-				crate::Call::set_friend_request_statement_account_for_sequence {
+				crate::Call::set_notification_statement_account_for_sequence {
 					reference,
 					account_id: id_to_account(201),
 				},
@@ -2203,8 +2253,9 @@ mod friend_request {
 				.expect("proof should build");
 
 			let tx_ext = crate::extension::AsResources::<Test>::new(Some(
-				crate::extension::AsResourcesInfo::RegisterFriendRequestForCollection(
+				crate::extension::AsResourcesInfo::RegisterNotificationForCollection(
 					proof,
+					0,
 					0,
 					crate::types::MembershipCollection::LitePeople,
 				),
@@ -2233,14 +2284,14 @@ mod friend_request {
 			set_time_sec(now);
 
 			// Use a seq that is above the lite limit but within the full-people limit.
-			let seq = <Test as Config>::LiteFriendRequestSlotsPerPeriod::get() + 1;
-			assert!(seq <= <Test as Config>::FriendRequestSlotsPerPeriod::get());
+			let seq = <Test as Config>::LiteNotificationSlotsPerPeriod::get() + 1;
+			assert!(seq <= <Test as Config>::NotificationSlotsPerPeriod::get());
 
-			let reference = FriendRequestReference {
-				period: Resources::friend_request_period_from_timestamp(now),
+			let reference = NotificationReference {
+				period: Resources::notification_period_from_timestamp(now),
 				seq,
 			};
-			let context = Resources::friend_request_context(reference);
+			let context = Resources::notification_context(reference);
 
 			assert_ok!(Members::create_collection(
 				0,
@@ -2261,7 +2312,7 @@ mod friend_request {
 				.expect("commitment should open");
 			let extension_version = 0u8;
 			let call = RuntimeCall::Resources(
-				crate::Call::set_friend_request_statement_account_for_sequence {
+				crate::Call::set_notification_statement_account_for_sequence {
 					reference,
 					account_id: id_to_account(202),
 				},
@@ -2272,8 +2323,9 @@ mod friend_request {
 				.expect("proof should build");
 
 			let tx_ext = crate::extension::AsResources::<Test>::new(Some(
-				crate::extension::AsResourcesInfo::RegisterFriendRequestForCollection(
+				crate::extension::AsResourcesInfo::RegisterNotificationForCollection(
 					proof,
+					0,
 					0,
 					crate::types::MembershipCollection::People,
 				),
@@ -2293,7 +2345,7 @@ mod friend_request {
 	}
 
 	#[test]
-	fn collection_based_friend_request_shared_storage_coexistence_via_extension() {
+	fn collection_based_notification_shared_storage_coexistence_via_extension() {
 		new_test_ext().execute_with(|| {
 			System::set_block_number(1);
 			let now = 123u64;
@@ -2330,16 +2382,16 @@ mod friend_request {
 			));
 			advance_to_block(3);
 
-			let reference = FriendRequestReference {
-				period: Resources::friend_request_period_from_timestamp(now),
+			let reference = NotificationReference {
+				period: Resources::notification_period_from_timestamp(now),
 				seq: 1,
 			};
-			let context = Resources::friend_request_context(reference);
+			let context = Resources::notification_context(reference);
 			let extension_version = 0u8;
 
 			let people_account = id_to_account(300);
 			let people_call = RuntimeCall::Resources(
-				crate::Call::set_friend_request_statement_account_for_sequence {
+				crate::Call::set_notification_statement_account_for_sequence {
 					reference,
 					account_id: people_account.clone(),
 				},
@@ -2356,8 +2408,9 @@ mod friend_request {
 				MockCrypto::create(people_commitment, &people_secret, &context, &people_msg)
 					.expect("people proof should build");
 			let people_tx_ext = crate::extension::AsResources::<Test>::new(Some(
-				crate::extension::AsResourcesInfo::RegisterFriendRequestForCollection(
+				crate::extension::AsResourcesInfo::RegisterNotificationForCollection(
 					people_proof,
+					0,
 					0,
 					crate::types::MembershipCollection::People,
 				),
@@ -2366,7 +2419,7 @@ mod friend_request {
 				SystemOrigin::None.into(),
 				people_call,
 				&RuntimeCall::Resources(
-					crate::Call::set_friend_request_statement_account_for_sequence {
+					crate::Call::set_notification_statement_account_for_sequence {
 						reference,
 						account_id: people_account.clone(),
 					},
@@ -2378,7 +2431,7 @@ mod friend_request {
 
 			let lite_account = id_to_account(301);
 			let lite_call = RuntimeCall::Resources(
-				crate::Call::set_friend_request_statement_account_for_sequence {
+				crate::Call::set_notification_statement_account_for_sequence {
 					reference,
 					account_id: lite_account.clone(),
 				},
@@ -2393,8 +2446,9 @@ mod friend_request {
 				MockCrypto::create(lite_commitment, &lite_secret, &context, &lite_msg)
 					.expect("lite proof should build");
 			let lite_tx_ext = crate::extension::AsResources::<Test>::new(Some(
-				crate::extension::AsResourcesInfo::RegisterFriendRequestForCollection(
+				crate::extension::AsResourcesInfo::RegisterNotificationForCollection(
 					lite_proof,
+					0,
 					0,
 					crate::types::MembershipCollection::LitePeople,
 				),
@@ -2403,7 +2457,7 @@ mod friend_request {
 				SystemOrigin::None.into(),
 				lite_call,
 				&RuntimeCall::Resources(
-					crate::Call::set_friend_request_statement_account_for_sequence {
+					crate::Call::set_notification_statement_account_for_sequence {
 						reference,
 						account_id: lite_account.clone(),
 					},
@@ -2414,17 +2468,17 @@ mod friend_request {
 			));
 
 			assert_eq!(
-				FriendRequestAliasByAccount::<Test>::get(&people_account),
+				NotificationAliasByAccount::<Test>::get(&people_account),
 				Some(people_alias)
 			);
-			assert_eq!(FriendRequestAliasByAccount::<Test>::get(&lite_account), Some(lite_alias));
-			assert!(FriendRequestRegistrationByAlias::<Test>::contains_key(people_alias));
-			assert!(FriendRequestRegistrationByAlias::<Test>::contains_key(lite_alias));
+			assert_eq!(NotificationAliasByAccount::<Test>::get(&lite_account), Some(lite_alias));
+			assert!(NotificationRegistrationByAlias::<Test>::contains_key(people_alias));
+			assert!(NotificationRegistrationByAlias::<Test>::contains_key(lite_alias));
 		});
 	}
 
 	#[test]
-	fn collection_based_lite_friend_request_end_to_end_via_extension() {
+	fn collection_based_lite_notification_end_to_end_via_extension() {
 		new_test_ext().execute_with(|| {
 			System::set_block_number(1);
 			let now = 123u64;
@@ -2447,14 +2501,14 @@ mod friend_request {
 			));
 			advance_to_block(3);
 
-			let reference = FriendRequestReference {
-				period: Resources::friend_request_period_from_timestamp(now),
+			let reference = NotificationReference {
+				period: Resources::notification_period_from_timestamp(now),
 				seq: 1,
 			};
-			let context = Resources::friend_request_context(reference);
+			let context = Resources::notification_context(reference);
 			let extension_version = 0u8;
 			let call = RuntimeCall::Resources(
-				crate::Call::set_friend_request_statement_account_for_sequence {
+				crate::Call::set_notification_statement_account_for_sequence {
 					reference,
 					account_id: id_to_account(400),
 				},
@@ -2469,8 +2523,9 @@ mod friend_request {
 				.expect("proof should build");
 
 			let tx_ext = crate::extension::AsResources::<Test>::new(Some(
-				crate::extension::AsResourcesInfo::RegisterFriendRequestForCollection(
+				crate::extension::AsResourcesInfo::RegisterNotificationForCollection(
 					proof,
+					0,
 					0,
 					crate::types::MembershipCollection::LitePeople,
 				),
@@ -2480,7 +2535,7 @@ mod friend_request {
 				SystemOrigin::None.into(),
 				call,
 				&RuntimeCall::Resources(
-					crate::Call::set_friend_request_statement_account_for_sequence {
+					crate::Call::set_notification_statement_account_for_sequence {
 						reference,
 						account_id: id_to_account(400),
 					},
@@ -2490,11 +2545,11 @@ mod friend_request {
 				extension_version,
 			));
 
-			assert_eq!(FriendRequestAliasByAccount::<Test>::get(id_to_account(400)), Some(alias));
-			assert!(FriendRequestRegistrationByAlias::<Test>::contains_key(alias));
+			assert_eq!(NotificationAliasByAccount::<Test>::get(id_to_account(400)), Some(alias));
+			assert!(NotificationRegistrationByAlias::<Test>::contains_key(alias));
 			assert_eq!(
 				get_allowance(id_to_account(400)),
-				<Test as Config>::FriendRequestAllowance::get()
+				<Test as Config>::NotificationAllowance::get()
 			);
 		});
 	}
@@ -2519,14 +2574,14 @@ mod friend_request {
 			assert_ok!(People::force_recognize_personhood(RuntimeOrigin::root(), vec![member]));
 			advance_to_block(3);
 
-			let reference = FriendRequestReference {
-				period: Resources::friend_request_period_from_timestamp(now),
+			let reference = NotificationReference {
+				period: Resources::notification_period_from_timestamp(now),
 				seq: 1,
 			};
-			let context = Resources::friend_request_context(reference);
+			let context = Resources::notification_context(reference);
 			let extension_version = 0u8;
 			let call = RuntimeCall::Resources(
-				crate::Call::set_friend_request_statement_account_for_sequence {
+				crate::Call::set_notification_statement_account_for_sequence {
 					reference,
 					account_id: id_to_account(401),
 				},
@@ -2542,8 +2597,9 @@ mod friend_request {
 
 			// Submit with LitePeople collection, but the proof is from the People ring.
 			let tx_ext = crate::extension::AsResources::<Test>::new(Some(
-				crate::extension::AsResourcesInfo::RegisterFriendRequestForCollection(
+				crate::extension::AsResourcesInfo::RegisterNotificationForCollection(
 					proof,
+					0,
 					0,
 					crate::types::MembershipCollection::LitePeople,
 				),
@@ -2571,7 +2627,7 @@ mod friend_request {
 	}
 
 	#[test]
-	fn collection_based_friend_request_cleanup_works_for_lite_registration_via_extension() {
+	fn collection_based_notification_cleanup_works_for_lite_registration_via_extension() {
 		new_test_ext().execute_with(|| {
 			System::set_block_number(1);
 			let now = 123u64;
@@ -2594,14 +2650,14 @@ mod friend_request {
 			advance_to_block(3);
 
 			let stmt_account = id_to_account(310);
-			let reference = FriendRequestReference {
-				period: Resources::friend_request_period_from_timestamp(now),
+			let reference = NotificationReference {
+				period: Resources::notification_period_from_timestamp(now),
 				seq: 1,
 			};
-			let context = Resources::friend_request_context(reference);
+			let context = Resources::notification_context(reference);
 			let extension_version = 0u8;
 			let call = RuntimeCall::Resources(
-				crate::Call::set_friend_request_statement_account_for_sequence {
+				crate::Call::set_notification_statement_account_for_sequence {
 					reference,
 					account_id: stmt_account.clone(),
 				},
@@ -2615,8 +2671,9 @@ mod friend_request {
 			let (proof, alias) = MockCrypto::create(commitment, &secret, &context, &msg)
 				.expect("proof should build");
 			let tx_ext = crate::extension::AsResources::<Test>::new(Some(
-				crate::extension::AsResourcesInfo::RegisterFriendRequestForCollection(
+				crate::extension::AsResourcesInfo::RegisterNotificationForCollection(
 					proof,
+					0,
 					0,
 					crate::types::MembershipCollection::LitePeople,
 				),
@@ -2626,7 +2683,7 @@ mod friend_request {
 				SystemOrigin::None.into(),
 				call,
 				&RuntimeCall::Resources(
-					crate::Call::set_friend_request_statement_account_for_sequence {
+					crate::Call::set_notification_statement_account_for_sequence {
 						reference,
 						account_id: stmt_account.clone(),
 					},
@@ -2636,24 +2693,24 @@ mod friend_request {
 				extension_version,
 			));
 
-			assert!(FriendRequestRegistrationByAlias::<Test>::contains_key(alias));
+			assert!(NotificationRegistrationByAlias::<Test>::contains_key(alias));
 
 			// Advance past expiration.
 			set_time_sec(
-				Resources::friend_request_expiration_time(reference.period).saturating_add(1),
+				Resources::notification_expiration_time(reference.period).saturating_add(1),
 			);
-			assert_ok!(Resources::clear_expired_friend_request_sequence(
+			assert_ok!(Resources::clear_expired_notification_sequence(
 				frame_system::RawOrigin::Authorized.into(),
 				stmt_account.clone(),
 				reference.seq,
 			));
 
 			// Cleanup should have removed the registration.
-			assert_eq!(FriendRequestAliasByAccount::<Test>::get(&stmt_account), None);
-			assert!(!FriendRequestRegistrationByAlias::<Test>::contains_key(alias));
+			assert_eq!(NotificationAliasByAccount::<Test>::get(&stmt_account), None);
+			assert!(!NotificationRegistrationByAlias::<Test>::contains_key(alias));
 			assert_eq!(get_allowance(&stmt_account), StatementAllowance::default());
 			System::assert_has_event(
-				Event::<Test>::FriendRequestStmtUsageRemoved { account: id_to_account(310) }.into(),
+				Event::<Test>::NotificationStmtUsageRemoved { account: id_to_account(310) }.into(),
 			);
 		});
 	}
@@ -2966,10 +3023,10 @@ mod long_term_storage {
 			let period =
 				Resources::long_term_storage_period_from_timestamp(TestClock::now().as_secs());
 
-			// Using a friend request origin should fail.
+			// Using a notification origin should fail.
 			assert_noop!(
 				Resources::claim_long_term_storage(
-					friend_request_origin(7),
+					notification_origin(7),
 					period,
 					0,
 					id_to_account(99),
@@ -3203,6 +3260,7 @@ mod stmt_store_allowance {
 				crate::extension::AsResourcesInfo::RegisterStatementStoreAllowance(
 					first_proof,
 					0,
+					0,
 					crate::types::MembershipCollection::LitePeople,
 				),
 			));
@@ -3228,6 +3286,7 @@ mod stmt_store_allowance {
 			let second_tx_ext = crate::extension::AsResources::<Test>::new(Some(
 				crate::extension::AsResourcesInfo::RegisterStatementStoreAllowance(
 					second_proof,
+					0,
 					0,
 					crate::types::MembershipCollection::LitePeople,
 				),
@@ -3299,6 +3358,7 @@ mod stmt_store_allowance {
 				crate::extension::AsResourcesInfo::RegisterStatementStoreAllowance(
 					first_proof,
 					0,
+					0,
 					crate::types::MembershipCollection::LitePeople,
 				),
 			));
@@ -3329,6 +3389,7 @@ mod stmt_store_allowance {
 			let second_tx_ext = crate::extension::AsResources::<Test>::new(Some(
 				crate::extension::AsResourcesInfo::RegisterStatementStoreAllowance(
 					second_proof,
+					0,
 					0,
 					crate::types::MembershipCollection::LitePeople,
 				),
@@ -3372,6 +3433,7 @@ mod stmt_store_allowance {
 			let tx_ext = crate::extension::AsResources::<Test>::new(Some(
 				crate::extension::AsResourcesInfo::RegisterStatementStoreAllowance(
 					proof,
+					0,
 					0,
 					crate::types::MembershipCollection::LitePeople,
 				),
@@ -3422,6 +3484,7 @@ mod stmt_store_allowance {
 			let tx_ext = crate::extension::AsResources::<Test>::new(Some(
 				crate::extension::AsResourcesInfo::RegisterStatementStoreAllowance(
 					proof,
+					0,
 					0,
 					crate::types::MembershipCollection::LitePeople,
 				),
@@ -3692,19 +3755,18 @@ mod stmt_store_allowance {
 	}
 
 	#[test]
-	fn context_layout_is_fixed_and_non_truncating() {
+	fn statement_store_context_uses_allocated_people_raw_suffix() {
 		new_test_ext().execute_with(|| {
 			let period = 0x0102_0304u32;
 			let seq = 0x05060708u32;
-			let context = Resources::stmt_store_slot_context(period, seq);
-			let prefix = b"SSS_SLOT:";
 
-			assert_eq!(&context[..prefix.len()], prefix);
-			assert_eq!(&context[prefix.len()..prefix.len() + 4], &period.to_be_bytes());
-			assert_eq!(&context[prefix.len() + 4..prefix.len() + 8], &seq.to_be_bytes());
-			assert!(
-				context[prefix.len() + 8..].iter().all(|b| *b == b' '),
-				"remaining context bytes should stay as padding",
+			assert_eq!(
+				Resources::stmt_store_slot_context(period, seq),
+				build_product_context(
+					personhood::PRODUCT_NAME,
+					&<Test as Config>::Suffix::get(),
+					personhood::statement_store_slot(period, seq),
+				),
 			);
 		});
 	}
@@ -3861,4 +3923,550 @@ mod stmt_store_allowance {
 			assert_eq!(aliases_left, vec![last_alias]);
 		});
 	}
+}
+
+/// The pallet reads these parameters from the runtime on every use, so a runtime may change them
+/// without a migration. Each test changes one parameter while state created under the old value
+/// exists and checks that both a raise and a lowering apply to the next call.
+mod dynamic_parameters {
+	use super::*;
+	use crate::{
+		extension::{AsResources, AsResourcesInfo, CustomValidity},
+		types::{MembershipCollection, ProofOf},
+	};
+	use indiv_support::{traits::Identifier, utils::BigEndianU32};
+	use sp_runtime::{traits::TxBaseImplication, transaction_validity::TransactionValidityError};
+
+	const EXTENSION_VERSION: u8 = 0;
+
+	type Secret = <MockCrypto as GenerateVerifiable>::Secret;
+
+	fn identifier(collection: MembershipCollection) -> &'static Identifier {
+		match collection {
+			MembershipCollection::People => indiv_pallet_people::PEOPLE_MEMBER_IDENTIFIER,
+			MembershipCollection::LitePeople =>
+				indiv_pallet_people_lite::LITE_PEOPLE_MEMBER_IDENTIFIER,
+		}
+	}
+
+	/// Build a one-member ring for `collection` and return the member's secret.
+	fn setup_ring(collection: MembershipCollection, seed: u8) -> Secret {
+		assert_ok!(Members::create_collection(
+			0,
+			identifier(collection),
+			1,
+			indiv_pallet_members::RingMode::Flexible,
+			indiv_support::traits::RingExponent::R2e9,
+			None,
+		));
+		let secret = MockCrypto::new_secret([seed; 32]);
+		let member = MockCrypto::member_from_secret(&secret);
+		match collection {
+			MembershipCollection::People => {
+				assert_ok!(People::force_recognize_personhood(RuntimeOrigin::root(), vec![member]));
+			},
+			MembershipCollection::LitePeople => {
+				assert_ok!(Members::add_members(identifier(collection), vec![member]));
+			},
+		}
+		advance_to_block(3);
+		secret
+	}
+
+	/// Validate `call` through `AsResources` with a proof built by the ring member in `context`.
+	fn validate_with_proof(
+		collection: MembershipCollection,
+		secret: &Secret,
+		context: Context,
+		call: RuntimeCall,
+		info: impl FnOnce(ProofOf<Test>) -> AsResourcesInfo<Test>,
+	) -> Result<(), TransactionValidityError> {
+		let member = MockCrypto::member_from_secret(secret);
+		let msg =
+			TxBaseImplication((EXTENSION_VERSION, &call)).using_encoded(sp_io::hashing::blake2_256);
+		let ring_members = Members::ring_members(identifier(collection), 0);
+		let commitment = MockCrypto::open((), &member, ring_members.into_iter())
+			.expect("commitment should open");
+		let (proof, _) =
+			MockCrypto::create(commitment, secret, &context, &msg).expect("proof should build");
+		AsResources::<Test>::new(Some(info(proof)))
+			.validate_only(
+				SystemOrigin::None.into(),
+				&call,
+				&call.get_dispatch_info(),
+				0,
+				TransactionSource::External,
+				EXTENSION_VERSION,
+			)
+			.map(|_| ())
+	}
+
+	fn validate_stmt_store_claim(
+		collection: MembershipCollection,
+		secret: &Secret,
+		period: u32,
+		seq: u32,
+	) -> Result<(), TransactionValidityError> {
+		let call = RuntimeCall::Resources(crate::Call::set_statement_store_account {
+			period,
+			seq,
+			target_account: id_to_account(500),
+		});
+		validate_with_proof(
+			collection,
+			secret,
+			Resources::stmt_store_slot_context(period, seq),
+			call,
+			|proof| AsResourcesInfo::RegisterStatementStoreAllowance(proof, 0, 0, collection),
+		)
+	}
+
+	fn validate_notification_claim(
+		collection: MembershipCollection,
+		secret: &Secret,
+		reference: NotificationReference,
+	) -> Result<(), TransactionValidityError> {
+		let call =
+			RuntimeCall::Resources(crate::Call::set_notification_statement_account_for_sequence {
+				reference,
+				account_id: id_to_account(500),
+			});
+		validate_with_proof(
+			collection,
+			secret,
+			Resources::notification_context(reference),
+			call,
+			|proof| AsResourcesInfo::RegisterNotificationForCollection(proof, 0, 0, collection),
+		)
+	}
+
+	fn validate_long_term_storage_claim(
+		collection: MembershipCollection,
+		secret: &Secret,
+		period: u32,
+		counter: u8,
+	) -> Result<(), TransactionValidityError> {
+		let call = RuntimeCall::Resources(crate::Call::claim_long_term_storage {
+			period,
+			counter,
+			account_id: id_to_account(500),
+		});
+		validate_with_proof(
+			collection,
+			secret,
+			Resources::long_term_storage_context(period, counter),
+			call,
+			|proof| AsResourcesInfo::ClaimLongTermStorage(proof, 0, 0, collection),
+		)
+	}
+
+	fn assert_stmt_store_slot_bound_follows(
+		collection: MembershipCollection,
+		limit: u32,
+		set_limit: impl Fn(u32),
+	) {
+		let secret = setup_ring(collection, 1);
+		set_time_sec(SECONDS_PER_DAY + 100);
+		let period = Resources::stmt_store_period_from_timestamp(TestClock::now().as_secs());
+		let rejected = Err(CustomValidity::InvalidStmtStoreSequence.into());
+
+		assert_ok!(validate_stmt_store_claim(collection, &secret, period, limit - 1));
+		assert_eq!(validate_stmt_store_claim(collection, &secret, period, limit), rejected);
+
+		set_limit(limit + 1);
+		assert_ok!(validate_stmt_store_claim(collection, &secret, period, limit));
+
+		set_limit(limit - 1);
+		assert_eq!(validate_stmt_store_claim(collection, &secret, period, limit - 1), rejected);
+		assert_ok!(validate_stmt_store_claim(collection, &secret, period, limit - 2));
+	}
+
+	#[test]
+	fn stmt_store_slots_per_period_bound_follows_parameter() {
+		new_test_ext().execute_with(|| {
+			assert_stmt_store_slot_bound_follows(
+				MembershipCollection::People,
+				StmtStoreSlotsPerPeriod::get(),
+				|limit| StmtStoreSlotsPerPeriod::set(&limit),
+			);
+		});
+	}
+
+	#[test]
+	fn lite_stmt_store_slots_per_period_bound_follows_parameter() {
+		new_test_ext().execute_with(|| {
+			assert_stmt_store_slot_bound_follows(
+				MembershipCollection::LitePeople,
+				LiteStmtStoreSlotsPerPeriod::get(),
+				|limit| LiteStmtStoreSlotsPerPeriod::set(&limit),
+			);
+		});
+	}
+
+	#[test]
+	fn lowering_stmt_store_slots_per_period_keeps_existing_entries_clearable() {
+		new_test_ext().execute_with(|| {
+			set_time_sec(SECONDS_PER_DAY + 100);
+			let period = Resources::stmt_store_period_from_timestamp(TestClock::now().as_secs());
+			let period_key = BigEndianU32::from(period);
+			let alias = id_to_alias(60);
+			let target = id_to_account(600);
+			let seq = StmtStoreSlotsPerPeriod::get() - 1;
+
+			assert_ok!(Resources::set_statement_store_account(
+				stmt_store_slot_origin(60),
+				period,
+				seq,
+				target.clone(),
+			));
+			assert_eq!(get_allowance(&target), AccountsApiAllowance::get());
+
+			// The stored `seq` is now above the bound.
+			StmtStoreSlotsPerPeriod::set(&1);
+
+			let period_end = (period as u64 + 1) * SECONDS_PER_DAY;
+			set_time_sec(period_end + StmtStoreGraceWindow::get() as u64 + 1);
+			assert_ok!(Resources::clear_expired_stmt_store_allowances(
+				SystemOrigin::Authorized.into(),
+				period,
+				alias,
+			));
+
+			assert_eq!(StatementStoreAllowances::<Test>::get(period_key, alias), None);
+			assert_eq!(
+				StmtStoreAllowanceByAccount::<Test>::get(&target, (period_key, seq, alias)),
+				None,
+			);
+			assert_eq!(get_allowance(&target), StatementAllowance::default());
+		});
+	}
+
+	#[test]
+	fn stmt_store_cleanup_limit_applies_to_each_cleanup_call() {
+		new_test_ext().execute_with(|| {
+			System::set_block_number(1);
+			set_time_sec(SECONDS_PER_DAY + 100);
+			let period = Resources::stmt_store_period_from_timestamp(TestClock::now().as_secs());
+			let period_key = BigEndianU32::from(period);
+			let total = StmtStoreCleanupLimit::get() + 2;
+
+			for i in 0..total {
+				assert_ok!(Resources::set_statement_store_account(
+					stmt_store_slot_origin(100 + i as u64),
+					period,
+					0,
+					id_to_account(1000 + i as u64),
+				));
+			}
+			let period_end = (period as u64 + 1) * SECONDS_PER_DAY;
+			set_time_sec(period_end + StmtStoreGraceWindow::get() as u64 + 1);
+			let first_alias =
+				StatementStoreAllowances::<Test>::iter_keys().next().expect("entries exist").1;
+
+			// Lowering the limit removes fewer entries per call.
+			let lowered = 5;
+			StmtStoreCleanupLimit::set(&lowered);
+			assert_ok!(Resources::clear_expired_stmt_store_allowances(
+				SystemOrigin::Authorized.into(),
+				period,
+				first_alias,
+			));
+			assert_eq!(
+				StatementStoreAllowances::<Test>::iter_key_prefix(period_key).count(),
+				(total - lowered) as usize,
+			);
+
+			// Raising the limit above the remaining count drains the period in one call.
+			StmtStoreCleanupLimit::set(&(total * 2));
+			let first_alias =
+				StatementStoreAllowances::<Test>::iter_keys().next().expect("entries exist").1;
+			assert_ok!(Resources::clear_expired_stmt_store_allowances(
+				SystemOrigin::Authorized.into(),
+				period,
+				first_alias,
+			));
+			assert_eq!(StatementStoreAllowances::<Test>::iter_key_prefix(period_key).count(), 0);
+			System::assert_has_event(
+				Event::<Test>::StmtStoreAllowancesCleared {
+					period,
+					first_key: first_alias,
+					count: total - lowered,
+				}
+				.into(),
+			);
+		});
+	}
+
+	#[test]
+	fn stmt_store_replacement_cooldown_applies_to_existing_entries() {
+		new_test_ext().execute_with(|| {
+			set_time_sec(SECONDS_PER_DAY + 100);
+			let claimed_at = TestClock::now().as_secs();
+			let period = Resources::stmt_store_period_from_timestamp(claimed_at);
+			let cooldown = StmtStoreReplacementCooldown::get();
+
+			assert_ok!(Resources::set_statement_store_account(
+				stmt_store_slot_origin(60),
+				period,
+				0,
+				id_to_account(600),
+			));
+
+			// Past the cooldown the entry was created under, but within the raised one.
+			StmtStoreReplacementCooldown::set(&(cooldown * 2));
+			set_time_sec(claimed_at + cooldown as u64 + 1);
+			assert_noop!(
+				Resources::set_statement_store_account(
+					stmt_store_slot_origin(60),
+					period,
+					1,
+					id_to_account(601),
+				),
+				Error::<Test>::StmtStoreReplacementTooEarly
+			);
+
+			// Lowering the cooldown allows the replacement at the same time.
+			StmtStoreReplacementCooldown::set(&(cooldown / 2));
+			assert_ok!(Resources::set_statement_store_account(
+				stmt_store_slot_origin(60),
+				period,
+				1,
+				id_to_account(601),
+			));
+			let entry =
+				StatementStoreAllowances::<Test>::get(BigEndianU32::from(period), id_to_alias(60))
+					.expect("entry exists");
+			assert_eq!(entry.account_id, id_to_account(601));
+			assert_eq!(get_allowance(id_to_account(600)), StatementAllowance::default());
+			assert_eq!(get_allowance(id_to_account(601)), AccountsApiAllowance::get());
+		});
+	}
+
+	#[test]
+	fn stmt_store_grace_window_moves_the_cleanup_threshold() {
+		new_test_ext().execute_with(|| {
+			set_time_sec(SECONDS_PER_DAY + 100);
+			let period = Resources::stmt_store_period_from_timestamp(TestClock::now().as_secs());
+			let grace = StmtStoreGraceWindow::get() as u64;
+			let period_end = (period as u64 + 1) * SECONDS_PER_DAY;
+
+			assert_ok!(Resources::set_statement_store_account(
+				stmt_store_slot_origin(60),
+				period,
+				0,
+				id_to_account(600),
+			));
+			let call = crate::Call::<Test>::clear_expired_stmt_store_allowances {
+				period,
+				first_entry: id_to_alias(60),
+			};
+			let blocked = Some(Err(CustomValidity::InvalidExpiredStmtStoreCleanup.into()));
+
+			set_time_sec(period_end + grace + 1);
+			assert!(matches!(call.authorize(TransactionSource::InBlock), Some(Ok(_))));
+
+			// Raising the window keeps the period active past the old threshold.
+			StmtStoreGraceWindow::set(&(grace as u32 * 2));
+			assert_eq!(call.authorize(TransactionSource::InBlock), blocked);
+			set_time_sec(period_end + 2 * grace + 1);
+			assert!(matches!(call.authorize(TransactionSource::InBlock), Some(Ok(_))));
+
+			// Lowering the window makes the period clearable earlier.
+			set_time_sec(period_end + grace / 2);
+			assert_eq!(call.authorize(TransactionSource::InBlock), blocked);
+			StmtStoreGraceWindow::set(&(grace as u32 / 4));
+			assert!(matches!(call.authorize(TransactionSource::InBlock), Some(Ok(_))));
+		});
+	}
+
+	#[test]
+	fn notification_slots_per_period_bound_follows_parameter() {
+		new_test_ext().execute_with(|| {
+			set_time_sec(SECONDS_PER_DAY + 100);
+			let period = Resources::notification_period_from_timestamp(TestClock::now().as_secs());
+			let limit = NotificationSlotsPerPeriod::get();
+			let register = |alias_id: u64, seq: u8| {
+				Resources::set_notification_statement_account_for_sequence(
+					notification_origin(alias_id),
+					NotificationReference { period, seq },
+					id_to_account(alias_id),
+				)
+			};
+
+			assert_noop!(register(1, limit + 1), Error::<Test>::InvalidNotificationSequence);
+
+			NotificationSlotsPerPeriod::set(&(limit + 1));
+			assert_ok!(register(1, limit + 1));
+
+			NotificationSlotsPerPeriod::set(&(limit - 1));
+			assert_noop!(register(2, limit), Error::<Test>::InvalidNotificationSequence);
+			assert_ok!(register(2, limit - 1));
+		});
+	}
+
+	#[test]
+	fn lowering_notification_slots_per_period_keeps_existing_registrations_clearable() {
+		new_test_ext().execute_with(|| {
+			set_time_sec(SECONDS_PER_DAY + 100);
+			let period = Resources::notification_period_from_timestamp(TestClock::now().as_secs());
+			let seq = NotificationSlotsPerPeriod::get();
+			let account = id_to_account(600);
+
+			assert_ok!(Resources::set_notification_statement_account_for_sequence(
+				notification_origin(60),
+				NotificationReference { period, seq },
+				account.clone(),
+			));
+			assert_eq!(get_allowance(&account), NotificationAllowance::get());
+
+			// The stored `seq` is now above the bound.
+			NotificationSlotsPerPeriod::set(&0);
+
+			set_time_sec(Resources::notification_expiration_time(period) + 1);
+			let call = crate::Call::<Test>::clear_expired_notification_sequence {
+				account: account.clone(),
+				seq,
+			};
+			assert!(matches!(call.authorize(TransactionSource::InBlock), Some(Ok(_))));
+			assert_ok!(Resources::clear_expired_notification_sequence(
+				SystemOrigin::Authorized.into(),
+				account.clone(),
+				seq,
+			));
+			assert_eq!(NotificationAliasByAccount::<Test>::get(&account), None);
+			assert_eq!(get_allowance(&account), StatementAllowance::default());
+		});
+	}
+
+	#[test]
+	fn lite_notification_slots_per_period_bound_follows_parameter() {
+		new_test_ext().execute_with(|| {
+			let collection = MembershipCollection::LitePeople;
+			let secret = setup_ring(collection, 1);
+			set_time_sec(SECONDS_PER_DAY + 100);
+			let period = Resources::notification_period_from_timestamp(TestClock::now().as_secs());
+			let limit = LiteNotificationSlotsPerPeriod::get();
+			assert!(limit < NotificationSlotsPerPeriod::get());
+			let validate = |seq: u8| {
+				validate_notification_claim(
+					collection,
+					&secret,
+					NotificationReference { period, seq },
+				)
+			};
+			let rejected = Err(CustomValidity::InvalidNotificationSequence.into());
+
+			assert_ok!(validate(limit));
+			assert_eq!(validate(limit + 1), rejected);
+
+			LiteNotificationSlotsPerPeriod::set(&(limit + 1));
+			assert_ok!(validate(limit + 1));
+
+			LiteNotificationSlotsPerPeriod::set(&(limit - 1));
+			assert_eq!(validate(limit), rejected);
+			assert_ok!(validate(limit - 1));
+		});
+	}
+
+	#[test]
+	fn long_term_storage_claims_per_period_bound_follows_parameter() {
+		new_test_ext().execute_with(|| {
+			let collection = MembershipCollection::People;
+			let secret = setup_ring(collection, 1);
+			set_time_sec(3 * SECONDS_PER_DAY + 100);
+			let period =
+				Resources::long_term_storage_period_from_timestamp(TestClock::now().as_secs());
+			let limit = LongTermStorageClaimsPerPeriod::get();
+			let validate = |counter: u8| {
+				validate_long_term_storage_claim(collection, &secret, period, counter)
+			};
+			let rejected = Err(CustomValidity::InvalidLongTermStorageCounter.into());
+
+			assert_ok!(validate(limit - 1));
+			assert_eq!(validate(limit), rejected);
+
+			LongTermStorageClaimsPerPeriod::set(&(limit + 1));
+			assert_ok!(validate(limit));
+
+			LongTermStorageClaimsPerPeriod::set(&(limit - 1));
+			assert_eq!(validate(limit - 1), rejected);
+			assert_ok!(validate(limit - 2));
+		});
+	}
+
+	#[test]
+	fn long_term_storage_cleanup_limit_bounds_the_limit_argument() {
+		new_test_ext().execute_with(|| {
+			let period = 3u32;
+			let period_key = BigEndianU32::from(period);
+			SpentLongTermStorageAliases::<Test>::insert(period_key, id_to_alias(1), ());
+			set_time_sec(
+				(period as u64 + 1) * LongTermStoragePeriodDuration::get() as u64 +
+					LongTermStorageGraceWindow::get() as u64 +
+					1,
+			);
+			let limit = LongTermStorageCleanupLimit::get();
+			let clear = |limit: u32| {
+				Resources::clear_expired_long_term_storage_aliases(
+					SystemOrigin::Authorized.into(),
+					period,
+					limit,
+				)
+			};
+
+			assert_noop!(clear(limit + 1), Error::<Test>::LongTermStorageCleanupLimitExceeded);
+
+			LongTermStorageCleanupLimit::set(&(limit + 1));
+			assert_ok!(clear(limit + 1));
+
+			LongTermStorageCleanupLimit::set(&(limit - 1));
+			assert_noop!(clear(limit), Error::<Test>::LongTermStorageCleanupLimitExceeded);
+			assert_ok!(clear(limit - 1));
+		});
+	}
+
+	#[test]
+	fn offchain_worker_submits_long_term_storage_cleanup_with_current_limit() {
+		new_test_ext().execute_with(|| {
+			System::set_block_number(1);
+			let period = 3u32;
+			let period_key = BigEndianU32::from(period);
+			let total = 5u32;
+			for i in 0..total {
+				SpentLongTermStorageAliases::<Test>::insert(period_key, id_to_alias(i as u64), ());
+			}
+			set_time_sec(
+				(period as u64 + 1) * LongTermStoragePeriodDuration::get() as u64 +
+					LongTermStorageGraceWindow::get() as u64 +
+					1,
+			);
+
+			// A lowered limit removes fewer entries per offchain-worker run.
+			let lowered = 2;
+			LongTermStorageCleanupLimit::set(&lowered);
+			advance_to_block(2);
+			assert_eq!(
+				SpentLongTermStorageAliases::<Test>::iter_key_prefix(period_key).count(),
+				(total - lowered) as usize,
+			);
+
+			// A raised limit drains the rest in one run.
+			LongTermStorageCleanupLimit::set(&(total * 2));
+			advance_to_block(3);
+			assert_eq!(SpentLongTermStorageAliases::<Test>::iter_key_prefix(period_key).count(), 0);
+			System::assert_has_event(
+				Event::<Test>::LongTermStorageAliasesCleared { period, count: total - lowered }
+					.into(),
+			);
+		});
+	}
+}
+
+/// Verify that the default mock configuration passes all integrity checks,
+/// including the block-fit assertions for the OCW-submitted cleanup calls.
+#[test]
+fn integrity_test_passes() {
+	new_test_ext().execute_with(|| {
+		<crate::Pallet<Test> as Hooks<u64>>::integrity_test();
+	});
 }

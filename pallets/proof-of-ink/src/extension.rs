@@ -176,6 +176,9 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 				frame_system::Pallet::<T>::inc_providers(who);
 				let ValidNonceInfo { requires, provides } =
 					CheckNonce::<T>::validate_nonce_for_account(who, *nonce)?;
+				// Fee-paying account path (authenticated by signed account + nonce): deliberately
+				// keeps the default priority so it is ordered by the normal fee-based priority.
+				// lint:allow-default-priority
 				let validity = ValidTransaction { requires, provides, ..Default::default() };
 				Ok((
 					validity,
@@ -210,6 +213,9 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 
 				let ValidNonceInfo { requires, provides } =
 					CheckNonce::<T>::validate_nonce_for_account(&who, *nonce)?;
+				// Fee-paying account path (authenticated by signed account + nonce): deliberately
+				// keeps the default priority so it is ordered by the normal fee-based priority.
+				// lint:allow-default-priority
 				let validity = ValidTransaction { requires, provides, ..Default::default() };
 				origin.set_caller(Origin::ReferredCandidate(who.clone()).into());
 				Ok((validity, Some(who), origin))
@@ -256,6 +262,9 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 
 				let ValidNonceInfo { requires, provides } =
 					CheckNonce::<T>::validate_nonce_for_account(&who, *nonce)?;
+				// Fee-paying account path (authenticated by signed account + nonce): deliberately
+				// keeps the default priority so it is ordered by the normal fee-based priority.
+				// lint:allow-default-priority
 				let validity = ValidTransaction { requires, provides, ..Default::default() };
 				Ok((validity, Some(who.clone()), Origin::InvitedCandidate(who.clone()).into()))
 			},

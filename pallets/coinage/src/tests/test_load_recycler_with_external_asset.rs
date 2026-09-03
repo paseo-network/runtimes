@@ -32,7 +32,7 @@ fn fund(who: u64, amount: u64) {
 fn build_ext(
 	signer: u64,
 	preservation: CodecPreservation,
-	value: CoinValue,
+	value: Denomination,
 	member_key: MemberOf<Test>,
 	proof_of_ownership: SignatureOf<Test>,
 ) -> Extrinsic {
@@ -40,6 +40,7 @@ fn build_ext(
 	build_signed_as_coin_ext(
 		signer,
 		crate::Call::load_recycler_with_external_asset {
+			instance_id: TEST_INSTANCE_ID,
 			preservation,
 			value,
 			member_key,
@@ -60,6 +61,7 @@ fn bad_origin_fail() {
 		assert_noop!(
 			Coinage::load_recycler_with_external_asset(
 				RuntimeOrigin::none(),
+				TEST_INSTANCE_ID,
 				CodecPreservation::Expendable,
 				0,
 				member,
@@ -134,7 +136,7 @@ fn value_out_of_bound_fail() {
 
 		let res = Executive::apply_extrinsic(ext);
 		assert_ok!(res.as_ref());
-		assert_err!(res.unwrap(), Error::<Test>::CoinValueOutOfBound);
+		assert_err!(res.unwrap(), Error::<Test>::DenominationOutOfBound);
 	});
 }
 
@@ -184,7 +186,7 @@ fn all_good_success_when_no_recycler() {
 		assert_eq!(Executive::apply_extrinsic(ext), Ok(Ok(())));
 
 		// Check Recycler Collection Created
-		assert!(RecyclerCollectionCreated::<Test>::contains_key(value));
+		assert!(RecyclerCollectionCreated::<Test>::contains_key(TEST_INSTANCE_ID, value));
 
 		// Check Member mapping
 		assert!(RecyclersCoinToRecycler::<Test>::contains_key(member));
@@ -198,6 +200,7 @@ fn all_good_success_when_no_recycler() {
 		assert_eq!(AssetsWithHolder::total_balance_on_hold(TEST_ASSET_ID, &pallet_acc), 1000);
 		System::assert_has_event(
 			crate::Event::<Test>::RecyclerLoadedWithExternalAsset {
+				instance_id: TEST_INSTANCE_ID,
 				who: user,
 				value,
 				amount: 1000,
@@ -257,7 +260,7 @@ fn all_good_success_when_recycler_get_full_a_new_one_is_created() {
 		}
 
 		// Collection should exist
-		assert!(RecyclerCollectionCreated::<Test>::contains_key(value));
+		assert!(RecyclerCollectionCreated::<Test>::contains_key(TEST_INSTANCE_ID, value));
 
 		// Load one more -> should go into the next ring
 		let user = 2000;
@@ -280,17 +283,16 @@ fn batch_grouped_load_success() {
 		let member_b = CryptoOf::<Test>::member_from_secret(&get_secret(52));
 		let member_c = CryptoOf::<Test>::member_from_secret(&get_secret(53));
 
-		assert_ok!(RecyclerManager::<Test>::load_batch_grouped(&[
-			(0, member_a),
-			(1, member_b),
-			(0, member_c),
-		]));
+		assert_ok!(RecyclerManager::<Test>::load_batch_grouped(
+			TEST_INSTANCE_ID,
+			&[(0, member_a), (1, member_b), (0, member_c),]
+		));
 
-		assert!(RecyclerCollectionCreated::<Test>::contains_key(0));
-		assert!(RecyclerCollectionCreated::<Test>::contains_key(1));
-		assert_eq!(RecyclersCoinToRecycler::<Test>::get(member_a), Some(0));
-		assert_eq!(RecyclersCoinToRecycler::<Test>::get(member_b), Some(1));
-		assert_eq!(RecyclersCoinToRecycler::<Test>::get(member_c), Some(0));
+		assert!(RecyclerCollectionCreated::<Test>::contains_key(TEST_INSTANCE_ID, 0));
+		assert!(RecyclerCollectionCreated::<Test>::contains_key(TEST_INSTANCE_ID, 1));
+		assert_eq!(RecyclersCoinToRecycler::<Test>::get(member_a), Some((TEST_INSTANCE_ID, 0)));
+		assert_eq!(RecyclersCoinToRecycler::<Test>::get(member_b), Some((TEST_INSTANCE_ID, 1)));
+		assert_eq!(RecyclersCoinToRecycler::<Test>::get(member_c), Some((TEST_INSTANCE_ID, 0)));
 	});
 }
 
@@ -299,11 +301,12 @@ fn batch_grouped_load_duplicate_member_key_fails_without_partial_mutation() {
 	new_test_ext().execute_with(|| {
 		let member = CryptoOf::<Test>::member_from_secret(&get_secret(61));
 
-		let result = RecyclerManager::<Test>::load_batch_grouped(&[(0, member), (1, member)]);
+		let result = RecyclerManager::<Test>::load_batch_grouped(
+			TEST_INSTANCE_ID,
+			&[(0, member), (1, member)],
+		);
 		assert!(matches!(result, Err(RecyclerLoadError::MemberKeyAlreadyUsed)));
 
-		assert!(!RecyclerCollectionCreated::<Test>::contains_key(0));
-		assert!(!RecyclerCollectionCreated::<Test>::contains_key(1));
 		assert_eq!(RecyclersCoinToRecycler::<Test>::get(member), None);
 	});
 }
@@ -314,7 +317,7 @@ fn batch_grouped_load_duplicate_member_key_fails_without_partial_mutation() {
 fn make_batch_item(
 	signer: u64,
 	preservation: CodecPreservation,
-	value: CoinValue,
+	value: Denomination,
 ) -> (MemberOf<Test>, UnpaidLoadInput<Test>) {
 	let secret = get_unique_secret();
 	let member_key = CryptoOf::<Test>::member_from_secret(&secret);
@@ -330,7 +333,10 @@ fn build_batch_ext(
 	nonce: u32,
 	items: BoundedVec<UnpaidLoadInput<Test>, <Test as Config>::MaxBatchUnpaidLoad>,
 ) -> Extrinsic {
-	let call = crate::Call::load_recycler_with_external_asset_unpaid_batch { items };
+	let call = crate::Call::load_recycler_with_external_asset_unpaid_batch {
+		instance_id: TEST_INSTANCE_ID,
+		items,
+	};
 	let info = Some(AsCoinageInfo::InfallibleUnpaidSigned { nonce });
 	let extension = (AuthorizeCall::<Test>::new(), AsCoinage::<Test>::new(info));
 	Extrinsic::new_signed(call.into(), signer, UintAuthorityId(signer), extension)
@@ -341,11 +347,11 @@ fn batch_unpaid_load_success_with_max_items() {
 	new_test_ext().execute_with(|| {
 		System::set_block_number(1);
 		setup_asset();
-		Coinage::do_initialize().unwrap();
 
 		let user = 1;
 		let value = 0;
-		let asset_amount = Coinage::coin_value_to_asset_amount(value).unwrap();
+		let asset_amount =
+			Coinage::denomination_to_asset_amount(UNDERLYING_ASSET_UNIT, value).unwrap();
 		let n = MAX_BATCH_UNPAID_LOAD;
 		// Protect leaves enough behind to keep the asset account alive (and therefore the
 		// system account, which carries the nonce).
@@ -399,7 +405,6 @@ fn batch_unpaid_load_success_with_max_items() {
 fn batch_unpaid_load_duplicate_member_key_rejected_by_extension() {
 	new_test_ext().execute_with(|| {
 		setup_asset();
-		Coinage::do_initialize().unwrap();
 		let user = 1;
 		fund(user, 100_000);
 
@@ -423,5 +428,220 @@ fn batch_unpaid_load_duplicate_member_key_rejected_by_extension() {
 
 		// State unchanged: no recycler mapping created.
 		assert!(!RecyclersCoinToRecycler::<Test>::contains_key(member_key));
+	});
+}
+
+#[test]
+fn batch_unpaid_load_empty_rejected() {
+	new_test_ext().execute_with(|| {
+		setup_asset();
+		let user = 1;
+		fund(user, 100_000);
+
+		// A batch with no inner items is rejected by the extension.
+		let bounded = BoundedVec::try_from(Vec::new()).expect("empty vec fits in the bound");
+		let ext = build_batch_ext(user, 0, bounded);
+		assert_invalid(ext, CustomInvalidity::EmptyUnpaidLoadBatch);
+	});
+}
+
+#[test]
+fn batch_unpaid_load_aggregate_insufficient_balance_rejected() {
+	new_test_ext().execute_with(|| {
+		setup_asset();
+		let user = 1;
+		let value = 0;
+		let asset_amount =
+			Coinage::denomination_to_asset_amount(UNDERLYING_ASSET_UNIT, value).unwrap();
+		assert!(asset_amount > 0, "amount must be non-zero for this test to be meaningful");
+
+		// Two items, each individually affordable, but their sum is one unit short.
+		let total_cost = asset_amount * 2;
+		fund(user, total_cost - 1);
+		assert!(
+			total_cost > asset_amount,
+			"each item must be individually affordable, so only the aggregate check can reject"
+		);
+
+		let (member_a, item_a) = make_batch_item(user, CodecPreservation::Expendable, value);
+		let (member_b, item_b) = make_batch_item(user, CodecPreservation::Expendable, value);
+		let bounded =
+			BoundedVec::try_from(vec![item_a, item_b]).expect("two items fit in the bound");
+
+		let ext = build_batch_ext(user, 0, bounded);
+		assert_invalid(ext, CustomInvalidity::InfallibleUnpaidSignedInsufficientBalance);
+
+		// State unchanged: neither member key was registered.
+		assert!(!RecyclersCoinToRecycler::<Test>::contains_key(member_a));
+		assert!(!RecyclersCoinToRecycler::<Test>::contains_key(member_b));
+	});
+}
+
+#[test]
+fn batch_unpaid_load_aggregate_exact_balance_succeeds() {
+	new_test_ext().execute_with(|| {
+		System::set_block_number(1);
+		setup_asset();
+		let user = 1;
+		let value = 0;
+		let asset_amount =
+			Coinage::denomination_to_asset_amount(UNDERLYING_ASSET_UNIT, value).unwrap();
+
+		// Funding exactly the aggregate cost is enough under `Expendable` preservation.
+		let total_cost = asset_amount * 2;
+		fund(user, total_cost);
+
+		let (member_a, item_a) = make_batch_item(user, CodecPreservation::Expendable, value);
+		let (member_b, item_b) = make_batch_item(user, CodecPreservation::Expendable, value);
+		let bounded =
+			BoundedVec::try_from(vec![item_a, item_b]).expect("two items fit in the bound");
+
+		let ext = build_batch_ext(user, 0, bounded);
+		assert_eq!(Executive::apply_extrinsic(ext), Ok(Ok(())));
+
+		// Both member keys registered and the whole balance was consumed.
+		assert!(RecyclersCoinToRecycler::<Test>::contains_key(member_a));
+		assert!(RecyclersCoinToRecycler::<Test>::contains_key(member_b));
+		assert_eq!(Assets::balance(TEST_ASSET_ID, user), 0);
+	});
+}
+
+#[test]
+fn batch_unpaid_load_mixed_preservation_uses_strictest() {
+	new_test_ext().execute_with(|| {
+		setup_asset();
+		let user = 1;
+		let value = 0;
+		let asset_amount =
+			Coinage::denomination_to_asset_amount(UNDERLYING_ASSET_UNIT, value).unwrap();
+		let total_cost = asset_amount * 2;
+
+		// A batch mixing `Expendable` and `Preserve`: the strictest mode (`Preserve`) governs the
+		// aggregate balance check, so the existential deposit (1 unit) must remain on top of the
+		// batch cost. Funding exactly the batch cost is therefore not enough.
+		fund(user, total_cost);
+
+		let (member_a, item_a) = make_batch_item(user, CodecPreservation::Expendable, value);
+		let (member_b, item_b) = make_batch_item(user, CodecPreservation::Preserve, value);
+		let items = vec![item_a, item_b];
+		let bounded = BoundedVec::try_from(items.clone()).expect("two items fit in the bound");
+
+		let ext = build_batch_ext(user, 0, bounded);
+		assert_invalid(ext, CustomInvalidity::InfallibleUnpaidSignedInsufficientBalance);
+		assert!(!RecyclersCoinToRecycler::<Test>::contains_key(member_a));
+		assert!(!RecyclersCoinToRecycler::<Test>::contains_key(member_b));
+
+		// Funding the existential deposit on top makes the same batch valid, confirming the
+		// shortfall was exactly the `Preserve` reserve and not a per-item failure.
+		fund(user, 1);
+		let bounded = BoundedVec::try_from(items).expect("two items fit in the bound");
+		let ext = build_batch_ext(user, 0, bounded);
+		assert_eq!(Executive::apply_extrinsic(ext), Ok(Ok(())));
+		assert!(RecyclersCoinToRecycler::<Test>::contains_key(member_a));
+		assert!(RecyclersCoinToRecycler::<Test>::contains_key(member_b));
+	});
+}
+
+#[test]
+fn codec_preservation_strictest_orders_preserve_over_protect_over_expendable() {
+	use CodecPreservation::{Expendable, Preserve, Protect};
+
+	// The batch validator folds per-item preservation into the strictest mode via `strictest`.
+	// `reducible_balance` only distinguishes `Expendable` from the rest (pallet-assets maps
+	// preservation to a `keep_alive` bool), so the `Preserve` vs `Protect` ordering is only
+	// observable on the pure function itself. `Preserve` > `Protect` > `Expendable`.
+	assert_eq!(Preserve.strictest(Protect), Preserve);
+	assert_eq!(Protect.strictest(Preserve), Preserve);
+	assert_eq!(Protect.strictest(Expendable), Protect);
+	assert_eq!(Expendable.strictest(Protect), Protect);
+	assert_eq!(Preserve.strictest(Expendable), Preserve);
+	assert_eq!(Expendable.strictest(Preserve), Preserve);
+	assert_eq!(Expendable.strictest(Expendable), Expendable);
+	assert_eq!(Protect.strictest(Protect), Protect);
+	assert_eq!(Preserve.strictest(Preserve), Preserve);
+}
+
+/// The load deposit price used by the sponsored-instance tests.
+const PRICE: u64 = 10;
+
+#[test]
+fn sponsored_load_charges_the_pot_never_the_user() {
+	new_test_ext().execute_with(|| {
+		System::set_block_number(1);
+		let instance_id = setup_sponsored_instance();
+		set_load_deposit(NATIVE_DEPOSIT_ID, PRICE);
+		fund_pot(instance_id, NATIVE_DEPOSIT_ID, 100);
+
+		let user = 20_000u64;
+		let user_native_before = Balances::free_balance(user);
+		let free_before = pot_free(instance_id, NATIVE_DEPOSIT_ID);
+
+		assert_ok!(try_load(instance_id, SPONSORED_ASSET_ID, 0));
+
+		// The deposit came from the pot's free balance, nothing from the loading user.
+		assert_eq!(pot_held(instance_id, NATIVE_DEPOSIT_ID), PRICE);
+		assert_eq!(free_before - pot_free(instance_id, NATIVE_DEPOSIT_ID), PRICE);
+		assert_eq!(Balances::free_balance(user), user_native_before);
+		assert_eq!(
+			current_tier(instance_id),
+			Some(DepositTier { asset_id: NATIVE_DEPOSIT_ID, price: PRICE, count: 1 })
+		);
+		check_load_deposit_invariant(instance_id, 1);
+		System::assert_has_event(
+			crate::Event::<Test>::LoadDepositsHeld {
+				instance_id,
+				currency: NATIVE_DEPOSIT_ID,
+				price: PRICE,
+				count: 1,
+			}
+			.into(),
+		);
+
+		// A privileged load takes no deposit and writes no ledger.
+		assert_ok!(try_load(TEST_INSTANCE_ID, TEST_ASSET_ID, 1));
+		assert!(current_tier(TEST_INSTANCE_ID).is_none());
+		assert_eq!(pot_held(TEST_INSTANCE_ID, NATIVE_DEPOSIT_ID), 0);
+	});
+}
+
+#[test]
+fn broke_pot_blocks_sponsored_loads_in_validation_and_dispatch() {
+	new_test_ext().execute_with(|| {
+		let instance_id = setup_sponsored_instance();
+		set_load_deposit(NATIVE_DEPOSIT_ID, PRICE);
+
+		assert!(matches!(
+			Pallet::<Test>::ensure_can_charge_load_deposit(instance_id, 1),
+			Err(CustomInvalidity::PotCannotCoverLoadDeposit)
+		));
+		let err = try_load(instance_id, SPONSORED_ASSET_ID, 0).unwrap_err();
+		assert_eq!(err.error, Error::<Test>::PotCannotCoverLoadDeposit.into());
+
+		// The plain signed load is also rejected pre-dispatch so the signer is not charged
+		// for a sponsor's empty pot.
+		let user = 20_100u64;
+		fund_native(user, 1_000);
+		assert_ok!(Assets::mint(
+			RuntimeOrigin::signed(ALICE),
+			SPONSORED_ASSET_ID,
+			user,
+			UNDERLYING_ASSET_UNIT
+		));
+		let secret = get_unique_secret();
+		let member = CryptoOf::<Test>::member_from_secret(&secret);
+		let proof = CryptoOf::<Test>::sign(&secret, &user.encode()).unwrap();
+		let call = crate::Call::<Test>::load_recycler_with_external_asset {
+			instance_id,
+			preservation: CodecPreservation::Expendable,
+			value: 0,
+			member_key: member,
+			proof_of_ownership: proof,
+		};
+		let ext = build_signed_ext(user, call);
+		assert_invalid(ext, CustomInvalidity::PotCannotCoverLoadDeposit);
+
+		// Funding the pot unblocks loading.
+		fund_pot(instance_id, NATIVE_DEPOSIT_ID, 100);
+		assert_ok!(try_load(instance_id, SPONSORED_ASSET_ID, 1));
 	});
 }

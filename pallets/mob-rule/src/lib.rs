@@ -22,9 +22,12 @@
 extern crate alloc;
 use alloc::vec::Vec;
 
-use frame_system::offchain::CreateInherent;
-use indiv_support::traits::{
-	Alias, Callback, Context, Judgement, JudgementContext, Statement, StatementOracle, Truth,
+use indiv_support::{
+	traits::{
+		Alias, Callback, Context, Judgement, JudgementContext, Statement, StatementOracle, Truth,
+	},
+	tx_priority,
+	weight_budget::OcwWeightBudget,
 };
 
 #[cfg(test)]
@@ -46,7 +49,7 @@ pub use weights::WeightInfo;
 pub mod pallet {
 	use super::*;
 	use frame_support::{
-		dispatch::{GetDispatchInfo, RawOrigin},
+		dispatch::{extract_actual_weight, GetDispatchInfo, PostDispatchInfo, RawOrigin},
 		pallet_prelude::*,
 		traits::{
 			fungible::{Inspect, Mutate, MutateHold},
@@ -56,7 +59,10 @@ pub mod pallet {
 		weights::WeightMeter,
 		PalletId,
 	};
-	use frame_system::{offchain::SubmitTransaction, pallet_prelude::*};
+	use frame_system::{
+		offchain::{CreateAuthorizedTransaction, SubmitTransaction},
+		pallet_prelude::*,
+	};
 	use indiv_support::traits::CountedMembers;
 	use sp_arithmetic::traits::{SaturatedConversion, Saturating};
 	use sp_runtime::{
@@ -75,7 +81,10 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
-	pub trait Config: CreateInherent<Call<Self>> + frame_system::Config {
+	pub trait Config:
+		CreateAuthorizedTransaction<Call<Self>>
+		+ frame_system::Config<RuntimeCall: Dispatchable<PostInfo = PostDispatchInfo>>
+	{
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
 
@@ -341,6 +350,26 @@ pub mod pallet {
 		pub(crate) verdict: Judgement,
 	}
 
+	/// The mob-rule extrinsic call that attempted to dispatch the callback.
+	#[derive(
+		PartialEq,
+		Eq,
+		Clone,
+		Copy,
+		Encode,
+		Decode,
+		Debug,
+		TypeInfo,
+		MaxEncodedLen,
+		DecodeWithMemTracking,
+	)]
+	pub enum CallbackTrigger {
+		/// The callback was triggered while executing the `close_case` extrinsic.
+		CloseCase,
+		/// The callback was triggered while executing the `intervene` extrinsic.
+		Intervene,
+	}
+
 	pub type CaseIndex = u32;
 	pub type RoundIndex = u32;
 	pub type VoteCount = u64;
@@ -472,8 +501,13 @@ pub mod pallet {
 			/// The result of the callback.
 			result: DispatchResult,
 		},
-		/// There was a codec error when trying to execute the callback.
-		CallbackError,
+		/// There was a codec error when trying to decode the callback call.
+		CallbackError {
+			/// The case whose callback failed to decode.
+			case_index: CaseIndex,
+			/// The mob-rule extrinsic call which attempted to trigger the callback.
+			trigger: CallbackTrigger,
+		},
 		/// The case has been closed with the following result.
 		CaseClosed {
 			/// The case index that was closed.
@@ -618,6 +652,33 @@ pub mod pallet {
 		UnderPenalty,
 		/// The open case expiration is disabled due to insufficient active voters.
 		CaseExpirationDisabled,
+		/// The dispatched callback's weight exceeds the declared `max_callback_weight` upper
+		/// bound.
+		CallbackWeightTooLow,
+	}
+
+	/// Custom transaction-validity errors reported from `authorize` entry points.
+	#[repr(u8)]
+	pub enum CustomInvalidity {
+		/// The `max_callback_weight` declared by a `close_case` transaction does not cover the
+		/// actual weight of the case's callback.
+		CallbackWeightTooLow = 55,
+		/// The case is not ripe.
+		CaseNotRipe = 56,
+		/// The case is not done.
+		CaseNotDone = 57,
+		/// The case has not reached its configured time limit.
+		CaseTooRecent = 58,
+		/// The case is not open.
+		CaseNotOpen = 59,
+		/// Case expiration is disabled because there are too few active voters.
+		CaseExpirationDisabled = 60,
+	}
+
+	impl From<CustomInvalidity> for TransactionValidityError {
+		fn from(e: CustomInvalidity) -> Self {
+			InvalidTransaction::Custom(e as u8).into()
+		}
 	}
 
 	#[pallet::call]
@@ -679,42 +740,45 @@ pub mod pallet {
 			Ok(pays.into())
 		}
 
-		// The weight must take into account the cost of `ValidateUnsigned::pre_dispatch`.
-		#[pallet::weight(T::WeightInfo::close_case())]
+		/// `max_callback_weight` is a caller-declared upper bound on the weight of the callback
+		/// dispatched when the case is closed. It is included in this call's declared weight and
+		/// checked against the actual callback weight on-chain, with the difference refunded. The
+		/// call fails with `CallbackWeightTooLow` if the bound does not cover the callback.
+		#[pallet::authorize(Pallet::<T>::authorize_close_case)]
+		#[pallet::weight_of_authorize(T::WeightInfo::authorize_close_case())]
+		#[pallet::weight(T::WeightInfo::close_case().saturating_add(*max_callback_weight))]
 		#[pallet::call_index(1)]
 		pub fn close_case(
 			origin: OriginFor<T>,
 			case_index: CaseIndex,
+			max_callback_weight: Weight,
 		) -> DispatchResultWithPostInfo {
-			ensure_none(origin)?;
+			ensure_authorized(origin)?;
 
 			let case = Self::validate_close_case(case_index)?;
 			RipeCases::<T>::remove(case_index);
 
-			match case.details.callback.curry((case_index, case.details.context, case.verdict)) {
-				Err(_error) => {
-					// TODO: Report error in event, but codec::Error doesn't implement TypeInfo.
-					Self::deposit_event(Event::CallbackError);
-				},
-				Ok(call) => {
-					let result = call.dispatch(RawOrigin::Root.into());
-					Self::deposit_event(Event::Callback {
-						result: result.map(|_| ()).map_err(|e| e.error),
-					});
-				},
-			}
+			let callback_weight = Self::dispatch_callback(
+				case_index,
+				case.details.callback,
+				case.details.context,
+				case.verdict,
+				CallbackTrigger::CloseCase,
+				max_callback_weight,
+			)?;
 
 			let done_case = DoneCase { since: T::Clock::now().as_secs(), verdict: case.verdict };
 			DoneCases::<T>::insert(case_index, done_case);
 
 			Self::deposit_event(Event::CaseClosed { case_index, verdict: case.verdict });
-			Ok(().into())
+			Ok(Some(T::WeightInfo::close_case().saturating_add(callback_weight)).into())
 		}
 
-		/// Origin must be `None`. The transaction is validated in `ValidateUnsigned`
+		/// Origin must be authorized. The transaction is authorized in `AuthorizeCall`
 		/// when the source is local (e.g. from the offchain worker). For external transactions, use
 		/// `clean_vote_signed`.
-		// The weight must take into account the cost of `ValidateUnsigned::pre_dispatch`.
+		#[pallet::authorize(Pallet::<T>::authorize_clean_vote)]
+		#[pallet::weight_of_authorize(T::WeightInfo::authorize_clean_vote())]
 		#[pallet::weight(T::WeightInfo::clean_vote())]
 		#[pallet::call_index(2)]
 		pub fn clean_vote(
@@ -722,59 +786,55 @@ pub mod pallet {
 			case_index: CaseIndex,
 			voter: Alias,
 		) -> DispatchResult {
-			ensure_none(origin)?;
+			ensure_authorized(origin)?;
 			Self::clean_vote_inner(case_index, voter)?;
 			Ok(())
 		}
 
-		// The weight must take into account the cost of `ValidateUnsigned::pre_dispatch`.
+		#[pallet::authorize(Pallet::<T>::authorize_reap_case)]
+		#[pallet::weight_of_authorize(T::WeightInfo::authorize_reap_case())]
 		#[pallet::weight(T::WeightInfo::reap_case())]
 		#[pallet::call_index(3)]
 		pub fn reap_case(
 			origin: OriginFor<T>,
 			case_index: CaseIndex,
 		) -> DispatchResultWithPostInfo {
-			ensure_none(origin)?;
+			ensure_authorized(origin)?;
 			Self::validate_reap_case(case_index)?;
 			DoneCases::<T>::remove(case_index);
 			Self::deposit_event(Event::CaseRemoved { case_index });
 			Ok(().into())
 		}
 
-		#[pallet::weight(T::WeightInfo::intervene())]
+		/// `max_callback_weight` is a caller-declared upper bound on the weight of the callback
+		/// dispatched when the case is intervened. It is included in this call's declared weight
+		/// and checked against the actual callback weight on-chain, with the difference refunded.
+		/// The call fails with `CallbackWeightTooLow` if the bound does not cover the callback.
+		#[pallet::weight(T::WeightInfo::intervene().saturating_add(*max_callback_weight))]
 		#[pallet::call_index(4)]
 		pub fn intervene(
 			origin: OriginFor<T>,
 			case_index: CaseIndex,
 			verdict: Judgement,
+			max_callback_weight: Weight,
 		) -> DispatchResultWithPostInfo {
 			T::InterventionOrigin::ensure_origin_or_root(origin)?;
 			let case = OpenCases::<T>::take(case_index).ok_or(Error::<T>::NotOpen)?;
 
-			match case.details.callback.curry((case_index, case.details.context, verdict)) {
-				Err(_error) => {
-					// TODO: Report error in event, but codec::Error doesn't implement TypeInfo.
-					Self::deposit_event(Event::CallbackError);
-				},
-				Ok(call) => {
-					let info = call.get_dispatch_info();
-					let result = call.dispatch(RawOrigin::Root.into());
-					frame_system::Pallet::<T>::register_extra_weight_unchecked(
-						info.call_weight,
-						info.class,
-					);
-
-					Self::deposit_event(Event::Callback {
-						result: result.map(|_| ()).map_err(|e| e.error),
-					});
-				},
-			}
+			let callback_weight = Self::dispatch_callback(
+				case_index,
+				case.details.callback,
+				case.details.context,
+				verdict,
+				CallbackTrigger::Intervene,
+				max_callback_weight,
+			)?;
 
 			let done_case = DoneCase { since: T::Clock::now().as_secs(), verdict };
 			DoneCases::<T>::insert(case_index, done_case);
 
 			Self::deposit_event(Event::CaseIntervened { case_index, verdict });
-			Ok(Pays::No.into())
+			Ok((Some(T::WeightInfo::intervene().saturating_add(callback_weight)), Pays::No).into())
 		}
 
 		/// A person claims the mob credit associated with a correct vote on a case.
@@ -1012,14 +1072,15 @@ pub mod pallet {
 			Ok(Pays::No.into())
 		}
 
-		// The weight must take into account the cost of `ValidateUnsigned::pre_dispatch`.
+		#[pallet::authorize(Pallet::<T>::authorize_force_ripen_case)]
+		#[pallet::weight_of_authorize(T::WeightInfo::authorize_force_ripen_case())]
 		#[pallet::weight(T::WeightInfo::force_ripen_case())]
 		#[pallet::call_index(13)]
 		pub fn force_ripen_case(
 			origin: OriginFor<T>,
 			case_index: CaseIndex,
 		) -> DispatchResultWithPostInfo {
-			ensure_none(origin)?;
+			ensure_authorized(origin)?;
 
 			let case = Self::validate_timeout_case(case_index)?;
 			OpenCases::<T>::remove(case_index);
@@ -1089,7 +1150,6 @@ pub mod pallet {
 
 		/// Origin must be signed.
 		#[pallet::call_index(16)]
-		// The weight is an overestimate, this call doesn't execute logic in pre_dispatch.
 		#[pallet::weight(T::WeightInfo::clean_vote())]
 		pub fn clean_vote_signed(
 			origin: OriginFor<T>,
@@ -1126,9 +1186,21 @@ pub mod pallet {
 
 			// Operation 1: closing cases - moving cases from "RipeCases" to "DoneCases".
 			// Executes for all entries in "RipeCases" storage item.
-			for (case_index, _case) in RipeCases::<T>::iter() {
+			for (case_index, case) in RipeCases::<T>::iter() {
 				if Self::validate_close_case(case_index).is_ok() {
-					let res = Self::submit_unsigned_transaction(Call::close_case { case_index });
+					// The weight may increase between the current state and state of inclusion,
+					// but it should be included soon and the offchain worker will re-run regularly
+					// anyway.
+					let max_callback_weight = Self::callback_weight(
+						case_index,
+						&case.details.callback,
+						case.details.context,
+						case.verdict,
+					);
+					let res = Self::submit_authorized_transaction(Call::close_case {
+						case_index,
+						max_callback_weight,
+					});
 					Self::log_offchain_worker_tx_submit_result(res, "close case");
 				}
 			}
@@ -1142,7 +1214,7 @@ pub mod pallet {
 					// No need to call validate_clean_case here since
 					// the votes_to_clean does the filtering already
 					let res =
-						Self::submit_unsigned_transaction(Call::clean_vote { case_index, voter });
+						Self::submit_authorized_transaction(Call::clean_vote { case_index, voter });
 					Self::log_offchain_worker_tx_submit_result(res, "clean case");
 				}
 			}
@@ -1152,7 +1224,7 @@ pub mod pallet {
 			// Executes for all entries in "DoneCases".
 			for (case_index, _case) in DoneCases::<T>::iter() {
 				if Self::validate_reap_case(case_index).is_ok() {
-					let res = Self::submit_unsigned_transaction(Call::reap_case { case_index });
+					let res = Self::submit_authorized_transaction(Call::reap_case { case_index });
 					Self::log_offchain_worker_tx_submit_result(res, "reap case");
 				}
 			}
@@ -1163,7 +1235,7 @@ pub mod pallet {
 			for (case_index, _case) in OpenCases::<T>::iter() {
 				if Self::validate_timeout_case(case_index).is_ok() {
 					let res =
-						Self::submit_unsigned_transaction(Call::force_ripen_case { case_index });
+						Self::submit_authorized_transaction(Call::force_ripen_case { case_index });
 					Self::log_offchain_worker_tx_submit_result(res, "timeout case");
 				}
 			}
@@ -1174,6 +1246,31 @@ pub mod pallet {
 				T::VotesOpenForClaimsDuration::get() as u64 <= T::MaxVoteClaimDuration::get(),
 				"the time when a case becomes reaped (`CaseTimeoutSecs`) should be longer than the \
 				time given to voters to claim their votes (`VotesOpenForClaimsDuration`)",
+			);
+
+			let budget = OcwWeightBudget::from_normal_max::<T>();
+
+			// `close_case` additionally charges `max_callback_weight`, a caller-declared upper
+			// bound on the dispatched callback whose value depends on the runtime's registered
+			// callbacks and so cannot be bounded here. It is checked against the block on its own:
+			// a callback exceeding the budget would already fail to dispatch. This asserts the
+			// pallet's own contribution leaves room for it.
+			budget.assert_fits(
+				"close_case",
+				T::WeightInfo::close_case().saturating_add(T::WeightInfo::authorize_close_case()),
+			);
+			budget.assert_fits(
+				"clean_vote",
+				T::WeightInfo::clean_vote().saturating_add(T::WeightInfo::authorize_clean_vote()),
+			);
+			budget.assert_fits(
+				"reap_case",
+				T::WeightInfo::reap_case().saturating_add(T::WeightInfo::authorize_reap_case()),
+			);
+			budget.assert_fits(
+				"force_ripen_case",
+				T::WeightInfo::force_ripen_case()
+					.saturating_add(T::WeightInfo::authorize_force_ripen_case()),
 			);
 		}
 
@@ -1187,64 +1284,103 @@ pub mod pallet {
 		}
 	}
 
-	// TODO: Migrate to `#[pallet::authorize]` with `frame_system::AuthorizeCall` before
-	// `ValidateUnsigned` is removed (deadline April 2027). See
-	// https://github.com/paritytech/polkadot-sdk/issues/2415.
-	#[pallet::validate_unsigned]
-	#[allow(deprecated)]
-	#[allow(clippy::let_unit_value)]
-	impl<T: Config> ValidateUnsigned for Pallet<T> {
-		type Call = Call<T>;
-
-		fn validate_unsigned(source: TransactionSource, call: &Self::Call) -> TransactionValidity {
-			match call {
-				Call::close_case { case_index } => {
-					Self::validate_close_case(*case_index).map_err(|e| match e {
-						// Case is still open, not yet ripe
-						Error::NotRipe if OpenCases::<T>::contains_key(case_index) =>
-							InvalidTransaction::Future,
-						_ => InvalidTransaction::Stale,
-					})?;
-					build_transaction_validity("PersonhoodMobRuleCaseClosing", case_index)
-				},
-				Call::clean_vote { case_index, voter } => {
-					// We only accept local transaction as the number of vote to clean can
-					// be very large. In which case we don't want to spam the transaction pool
-					// with free-to-craft external transactions, and force external transactions
-					// to be signed.
-					ensure!(
-						matches!(source, TransactionSource::Local | TransactionSource::InBlock),
-						InvalidTransaction::BadSigner
-					);
-					Self::validate_clean_vote(*case_index, *voter).map_err(|e| match e {
-						// Case is done but claims period not over yet
-						Error::Recent => InvalidTransaction::Future,
-						_ => InvalidTransaction::Stale,
-					})?;
-					build_transaction_validity("PersonhoodMobRuleVoteCleaning", (case_index, voter))
-				},
-				Call::reap_case { case_index } => {
-					Self::validate_reap_case(*case_index).map_err(|e| match e {
-						// Case is done but reap period not reached yet
-						Error::Recent => InvalidTransaction::Future,
-						_ => InvalidTransaction::Stale,
-					})?;
-					build_transaction_validity("PersonhoodMobRuleCaseReaping", case_index)
-				},
-				Call::force_ripen_case { case_index } => {
-					Self::validate_timeout_case(*case_index).map_err(|e| match e {
-						// Case is open but voting duration not reached yet
-						Error::Recent => InvalidTransaction::Future,
-						_ => InvalidTransaction::Stale,
-					})?;
-					build_transaction_validity("PersonhoodMobRuleCaseTimeout", case_index)
-				},
-				_ => Err(TransactionValidityError::Invalid(InvalidTransaction::Call)),
-			}
-		}
-	}
-
 	impl<T: Config> Pallet<T> {
+		fn authorize_close_case(
+			_source: TransactionSource,
+			case_index: &CaseIndex,
+			max_callback_weight: &Weight,
+		) -> TransactionValidityWithRefund {
+			let case = Self::validate_close_case(*case_index)
+				.map_err(|_| CustomInvalidity::CaseNotRipe)?;
+
+			let callback_weight = Self::callback_weight(
+				*case_index,
+				&case.details.callback,
+				case.details.context,
+				case.verdict,
+			);
+			ensure!(
+				max_callback_weight.all_gte(callback_weight),
+				CustomInvalidity::CallbackWeightTooLow
+			);
+
+			let validity = build_transaction_validity(
+				"PersonhoodMobRuleCaseClosing",
+				case_index,
+				tx_priority::BACKGROUND_PROGRESS,
+			)?;
+			Ok((validity, Weight::zero()))
+		}
+
+		fn authorize_clean_vote(
+			source: TransactionSource,
+			case_index: &CaseIndex,
+			voter: &Alias,
+		) -> TransactionValidityWithRefund {
+			// We only accept local transaction as the number of vote to clean can
+			// be very large. In which case we don't want to spam the transaction pool
+			// with free-to-craft external transactions, and force external transactions
+			// to be signed.
+			ensure!(
+				matches!(source, TransactionSource::Local | TransactionSource::InBlock),
+				InvalidTransaction::BadSigner
+			);
+			Self::validate_clean_vote(*case_index, *voter).map_err(|e| {
+				TransactionValidityError::Invalid(match e {
+					// Case is done but claims period not over yet
+					Error::Recent => InvalidTransaction::Future,
+					_ => InvalidTransaction::Stale,
+				})
+			})?;
+			let validity = build_transaction_validity(
+				"PersonhoodMobRuleVoteCleaning",
+				(case_index, voter),
+				tx_priority::CLEANUP,
+			)?;
+			Ok((validity, Weight::zero()))
+		}
+
+		fn authorize_reap_case(
+			_source: TransactionSource,
+			case_index: &CaseIndex,
+		) -> TransactionValidityWithRefund {
+			Self::validate_reap_case(*case_index).map_err(|error| match error {
+				Error::NotDone => CustomInvalidity::CaseNotDone,
+				Error::Recent => CustomInvalidity::CaseTooRecent,
+				_ => {
+					log::error!(target: LOG_TARGET, "Unexpected reap case validation error");
+					CustomInvalidity::CaseNotDone
+				},
+			})?;
+			let validity = build_transaction_validity(
+				"PersonhoodMobRuleCaseReaping",
+				case_index,
+				tx_priority::CLEANUP,
+			)?;
+			Ok((validity, Weight::zero()))
+		}
+
+		fn authorize_force_ripen_case(
+			_source: TransactionSource,
+			case_index: &CaseIndex,
+		) -> TransactionValidityWithRefund {
+			Self::validate_timeout_case(*case_index).map_err(|error| match error {
+				Error::NotOpen => CustomInvalidity::CaseNotOpen,
+				Error::CaseExpirationDisabled => CustomInvalidity::CaseExpirationDisabled,
+				Error::Recent => CustomInvalidity::CaseTooRecent,
+				_ => {
+					log::error!(target: LOG_TARGET, "Unexpected timeout case validation error");
+					CustomInvalidity::CaseNotOpen
+				},
+			})?;
+			let validity = build_transaction_validity(
+				"PersonhoodMobRuleCaseTimeout",
+				case_index,
+				tx_priority::BACKGROUND_PROGRESS,
+			)?;
+			Ok((validity, Weight::zero()))
+		}
+
 		fn do_on_poll(weight_meter: &mut WeightMeter) {
 			// Check if we have enough weight to perform the basic checks.
 			if weight_meter.try_consume(T::WeightInfo::on_poll_base()).is_err() {
@@ -1423,8 +1559,8 @@ pub mod pallet {
 			}
 		}
 
-		fn submit_unsigned_transaction(call: Call<T>) -> Result<(), ()> {
-			let xt = T::create_bare(call.into());
+		fn submit_authorized_transaction(call: Call<T>) -> Result<(), ()> {
+			let xt = T::create_authorized_transaction(call.into());
 			SubmitTransaction::<T, Call<T>>::submit_transaction(xt)
 		}
 
@@ -1456,15 +1592,88 @@ pub mod pallet {
 
 			Ok(())
 		}
+
+		/// Computes the declared (pre-dispatch) weight of a case's callback.
+		///
+		/// This is the value the offchain worker passes as `max_callback_weight` when submitting
+		/// `close_case`, so the parent call's declared weight covers the dispatched callback.
+		/// Returns zero when the callback fails to decode, matching `dispatch_callback` which
+		/// dispatches nothing in that case.
+		pub(crate) fn callback_weight(
+			case_index: CaseIndex,
+			callback: &Callback<
+				(CaseIndex, JudgementContext, Judgement),
+				<T as frame_system::Config>::RuntimeCall,
+			>,
+			context: JudgementContext,
+			verdict: Judgement,
+		) -> Weight {
+			match callback.curry((case_index, context, verdict)) {
+				Ok(call) => call.get_dispatch_info().call_weight,
+				Err(_) => Weight::zero(),
+			}
+		}
+
+		/// Dispatches the case callback and returns the weight it actually consumed.
+		///
+		/// `max_callback_weight` is the caller-declared upper bound already accounted for in the
+		/// parent call's declared weight. The dispatched callback's pre-dispatch weight is checked
+		/// against it (failing with `CallbackWeightTooLow` when the bound is insufficient) so the
+		/// parent call can refund the difference between the declared bound and the returned
+		/// weight. A callback that fails to decode dispatches nothing and consumes zero weight.
+		fn dispatch_callback(
+			case_index: CaseIndex,
+			callback: Callback<
+				(CaseIndex, JudgementContext, Judgement),
+				<T as frame_system::Config>::RuntimeCall,
+			>,
+			context: JudgementContext,
+			verdict: Judgement,
+			trigger: CallbackTrigger,
+			max_callback_weight: Weight,
+		) -> Result<Weight, DispatchError> {
+			match callback.curry((case_index, context, verdict)) {
+				Err(error) => {
+					log::warn!(
+						target: LOG_TARGET,
+						"callback decode failed: case_index={case_index}, trigger={trigger:?}, callback_pallet_index={}, callback_call_index={}, error={error}",
+						callback.pallet_index(),
+						callback.call_index(),
+					);
+
+					Self::deposit_event(Event::CallbackError { case_index, trigger });
+
+					Ok(Weight::zero())
+				},
+				Ok(call) => {
+					let dispatch_info = call.get_dispatch_info();
+					ensure!(
+						dispatch_info.call_weight.all_lte(max_callback_weight),
+						Error::<T>::CallbackWeightTooLow
+					);
+
+					let result = call.dispatch(RawOrigin::Root.into());
+
+					Self::deposit_event(Event::Callback {
+						result: result.map(|_| ()).map_err(|e| e.error),
+					});
+
+					let actual_weight = extract_actual_weight(&result, &dispatch_info);
+					Ok(actual_weight)
+				},
+			}
+		}
 	}
 
 	fn build_transaction_validity(
 		tag_prefix: &'static str,
 		provides: impl Encode,
+		priority: TransactionPriority,
 	) -> TransactionValidity {
 		ValidTransaction::with_tag_prefix(tag_prefix)
 			.and_provides(provides)
 			.propagate(true)
+			.priority(priority)
 			.build()
 	}
 

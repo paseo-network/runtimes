@@ -31,7 +31,7 @@ use frame_support::{
 };
 use frame_system::RawOrigin;
 use mock::set_time;
-use sp_core::blake2_256;
+use sp_crypto_hashing::blake2_256;
 use sp_runtime::{
 	generic::ExtensionVersion,
 	traits::{DispatchTransaction, Dispatchable},
