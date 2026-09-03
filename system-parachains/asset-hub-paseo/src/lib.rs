@@ -2914,16 +2914,27 @@ pub type TxExtension = cumulus_pallet_weight_reclaim::StorageWeightReclaim<
 	(
 		// Origin modifiers
 		(
+			// PASEO-LOCAL. Upstream `next-asset-hub-paseo` holds this slot open as `()`; this
+			// is the local deviation from the `value-transfer-auth` fork pallet and it stays
+			// first. It passes the origin through untouched, so it does not interact with the
+			// origin modifiers after it.
 			AuthorizeValueTransfer<
 				Runtime,
 				paseo_runtime_constants::ValueTransferAuthorizationPubkey,
 			>,
+			// Must precede `AuthorizeCall`, `CheckNonce` and `ChargeAssetTxPayment`: it swaps a
+			// signed origin for `pallet_scarcity::Origin::Nft`, and the account checks and
+			// transaction payment are what must see the swapped origin and skip themselves, so
+			// a balance-less purse key can transact. See `pallets/scarcity/src/extension.rs`.
+			// Slot 1 is exactly where upstream puts it.
+			pallet_scarcity::extension::AsScarcity<Runtime>,
 			frame_system::AuthorizeCall<Runtime>,
 			indiv_pallet_pgas::AsPgas<Runtime>,
 			// `indiv_pallet_alias_accounts::AsRingAlias` was removed in individuality v0.3.1
 			// along with the pallet's `#[pallet::origin]`. Dropping it changes the
 			// transaction extension tuple, so `transaction_version` MUST be bumped in the same
-			// release — see the `RuntimeVersion` above.
+			// release — see the `RuntimeVersion` above. Adding `AsScarcity` changes it again;
+			// the same bump covers both.
 			indiv_pallet_dotns_gateway::AsDotnsGateway<Runtime>,
 		),
 		// General checks and operations
@@ -2963,6 +2974,7 @@ impl pallet_revive::evm::runtime::EthExtra for EthExtraImpl {
 					Runtime,
 					paseo_runtime_constants::ValueTransferAuthorizationPubkey,
 				>::default(),
+				pallet_scarcity::extension::AsScarcity::<Runtime>::new(None),
 				frame_system::AuthorizeCall::<Runtime>::new(),
 				indiv_pallet_pgas::AsPgas::<Runtime>::new(None),
 				indiv_pallet_dotns_gateway::AsDotnsGateway::<Runtime>::new(None),
@@ -3007,6 +3019,7 @@ where
 					Runtime,
 					paseo_runtime_constants::ValueTransferAuthorizationPubkey,
 				>::default(),
+				pallet_scarcity::extension::AsScarcity::<Runtime>::new(None),
 				frame_system::AuthorizeCall::<Runtime>::new(),
 				indiv_pallet_pgas::AsPgas::<Runtime>::new(None),
 				indiv_pallet_dotns_gateway::AsDotnsGateway::<Runtime>::new(None),
