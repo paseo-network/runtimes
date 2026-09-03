@@ -1381,13 +1381,10 @@ dependencies = [
  "indiv-pallet-dotns-gateway",
  "indiv-pallet-members-subscriber",
  "indiv-pallet-network-suffix",
- "indiv-pallet-nft-claims",
  "indiv-pallet-origin-restriction",
  "indiv-pallet-pgas",
  "indiv-pallet-value-transfer-auth",
- "indiv-precompile-nft-claims",
  "indiv-precompile-personhood",
- "indiv-precompile-scarcity",
  "indiv-support",
  "kusama-runtime-constants",
  "log",
@@ -1428,7 +1425,6 @@ dependencies = [
  "pallet-rc-migrator",
  "pallet-referenda",
  "pallet-revive",
- "pallet-scarcity",
  "pallet-scheduler",
  "pallet-session",
  "pallet-staking",
@@ -6411,60 +6407,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "indiv-pallet-nft-claims"
-version = "2.3.1"
-dependencies = [
- "binary-merkle-tree",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "indiv-support",
- "log",
- "pallet-scarcity",
- "parity-scale-codec",
- "scale-info",
- "sp-api",
- "sp-core",
- "sp-io",
- "sp-runtime",
-]
-
-[[package]]
-name = "indiv-pallet-nft-credits"
-version = "2.3.1"
-dependencies = [
- "binary-merkle-tree",
- "cumulus-primitives-core",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "indiv-pallet-airdrop",
- "indiv-pallet-chunks-manager",
- "indiv-pallet-game",
- "indiv-pallet-members",
- "indiv-pallet-people",
- "indiv-pallet-people-lite",
- "indiv-pallet-score",
- "indiv-support",
- "log",
- "pallet-assets",
- "pallet-assets-holder",
- "pallet-balances",
- "parity-scale-codec",
- "parking_lot 0.12.5",
- "scale-info",
- "sp-api",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-state-machine",
- "sp-statement-store 26.0.0",
- "sp-trie",
- "staging-xcm",
- "verifiable",
-]
-
-[[package]]
 name = "indiv-pallet-origin-restriction"
 version = "2.3.1"
 dependencies = [
@@ -6491,30 +6433,6 @@ dependencies = [
  "indiv-pallet-members",
  "indiv-support",
  "log",
- "parity-scale-codec",
- "parking_lot 0.12.5",
- "scale-info",
- "sp-core",
- "sp-crypto-hashing",
- "sp-io",
- "sp-runtime",
- "verifiable",
-]
-
-[[package]]
-name = "indiv-pallet-people-airdrops"
-version = "2.3.1"
-dependencies = [
- "frame-benchmarking",
- "frame-executive",
- "frame-support",
- "frame-system",
- "indiv-pallet-airdrop",
- "indiv-support",
- "log",
- "pallet-assets",
- "pallet-assets-holder",
- "pallet-balances",
  "parity-scale-codec",
  "parking_lot 0.12.5",
  "scale-info",
@@ -6706,23 +6624,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "indiv-precompile-nft-claims"
-version = "2.3.1"
-dependencies = [
- "frame-support",
- "frame-system",
- "indiv-pallet-nft-claims",
- "indiv-support",
- "pallet-balances",
- "pallet-revive",
- "pallet-scarcity",
- "parity-scale-codec",
- "scale-info",
- "sp-io",
- "sp-runtime",
-]
-
-[[package]]
 name = "indiv-precompile-personhood"
 version = "2.3.1"
 dependencies = [
@@ -6743,21 +6644,6 @@ dependencies = [
  "sp-runtime",
  "staging-xcm",
  "verifiable",
-]
-
-[[package]]
-name = "indiv-precompile-scarcity"
-version = "2.3.1"
-dependencies = [
- "frame-support",
- "frame-system",
- "pallet-balances",
- "pallet-revive",
- "pallet-scarcity",
- "parity-scale-codec",
- "scale-info",
- "sp-io",
- "sp-runtime",
 ]
 
 [[package]]
@@ -9949,23 +9835,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-scarcity"
-version = "2.3.1"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "indiv-support",
- "log",
- "pallet-balances",
- "parity-scale-codec",
- "scale-info",
- "sp-api",
- "sp-io",
- "sp-runtime",
-]
-
-[[package]]
 name = "pallet-scheduler"
 version = "49.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -11044,10 +10913,8 @@ dependencies = [
  "indiv-pallet-members-notifier",
  "indiv-pallet-mob-rule",
  "indiv-pallet-network-suffix",
- "indiv-pallet-nft-credits",
  "indiv-pallet-origin-restriction",
  "indiv-pallet-people",
- "indiv-pallet-people-airdrops",
  "indiv-pallet-people-lite",
  "indiv-pallet-proof-of-ink",
  "indiv-pallet-relay-randomness",

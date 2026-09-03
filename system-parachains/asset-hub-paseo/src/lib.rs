@@ -140,9 +140,7 @@ use frame_system::{
 	EnsureRoot, EnsureSigned, EnsureSignedBy,
 };
 use indiv_pallet_value_transfer_auth::extension::AuthorizeValueTransfer;
-use indiv_precompile_nft_claims::NftClaimsMinter;
 use indiv_precompile_personhood::PersonhoodCheck;
-use indiv_precompile_scarcity::{ScarcityCollection, ScarcityFactory};
 use pallet_asset_conversion_precompiles::AssetConversion as AssetConversionPrecompile;
 use pallet_assets_precompiles::{ForeignAssetId, ForeignIdConfig, InlineIdConfig, ERC20};
 use pallet_nfts::PalletFeatures;
@@ -1133,63 +1131,6 @@ impl pallet_nfts::Config for Runtime {
 	type BlockNumberProvider = RelaychainDataProvider<Runtime>;
 }
 
-parameter_types! {
-	pub const ScarcityDepositBase: Balance = system_para_deposit(1, 0);
-	pub const ScarcityDepositPerByte: Balance = system_para_deposit(0, 1);
-	pub const ScarcityHoldReason: RuntimeHoldReason =
-		RuntimeHoldReason::Scarcity(pallet_scarcity::HoldReason::StorageDeposit);
-}
-
-/// Storage price shared by every Scarcity deposit converter: a per-record base plus a
-/// per-byte price over the footprint's logical encoded size.
-pub type ScarcityStoragePrice =
-	LinearStoragePrice<ScarcityDepositBase, ScarcityDepositPerByte, Balance>;
-
-impl pallet_scarcity::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	// PASEO-LOCAL: upstream uses `weights::pallet_scarcity::WeightInfo<Runtime>`, but this repo
-	// has no generated weights file for the pallet yet. The in-crate reference weights match the
-	// convention used by every other vendored individuality pallet here; regenerate before this
-	// runtime is proposed for enactment.
-	type WeightInfo = pallet_scarcity::weights::SubstrateWeight<Runtime>;
-	type UnixTime = Timestamp;
-	type Balance = Balance;
-	// The pallet aggregates exact deposit sums per collection; the consideration ticket
-	// receives that sum directly, hence the `Identity` conversion over `Balance`.
-	type Consideration = HoldConsideration<
-		AccountId,
-		Balances,
-		ScarcityHoldReason,
-		sp_runtime::traits::Identity,
-		Balance,
-	>;
-	type CollectionDeposit = ScarcityStoragePrice;
-	type ItemDeposit = ScarcityStoragePrice;
-	type InstanceDeposit = ScarcityStoragePrice;
-	type MetadataDeposit = ScarcityStoragePrice;
-	type MaxKeyLen = ConstU32<32>;
-	type MaxValueLen = ConstU32<256>;
-	type MaxInstanceMetadata = ConstU32<100>;
-	// Matches Coinage's `CoinFailureLockPeriod`; purse transactions must use an era
-	// shorter than this (see the pallet's replay and mortality rules).
-	type LockPeriod = ConstU64<60>;
-	type MaxTransferPriority = ConstU64<1_000_000>;
-	// Clears a collection's nft-claims minter registration when the collection is deleted, so no
-	// registration outlives the collection it names.
-	type OnCollectionDeleted = indiv_pallet_nft_claims::ClearCollectionMinter<Runtime>;
-	// A purse key needs no account, so `AutoMapper` never sees one. Registering it at mint time
-	// is what lets the ERC-721 view resolve its address back to the key.
-	#[cfg(not(feature = "runtime-benchmarks"))]
-	type OnPurseOccupied = indiv_precompile_scarcity::MapPurseKey<Runtime>;
-	// Every entry that occupies a key adds `on_purse_occupied_weight()` on its own, so a
-	// benchmark that ran the real handler would charge it twice.
-	#[cfg(feature = "runtime-benchmarks")]
-	type OnPurseOccupied = ();
-	// The collections are exposed as ERC-721 contracts, whose `name`, `symbol` and `tokenURI`
-	// are `string`. Held here so the rule covers the extrinsics too, not only the precompile.
-	type MetadataPolicy = indiv_precompile_scarcity::Erc721MetadataPolicy<Runtime>;
-}
-
 /// XCM router instance to BridgeHub with bridging capabilities for `Kusama` global
 /// consensus with dynamic fees and back-pressure.
 pub type ToKusamaXcmRouterInstance = pallet_xcm_bridge_hub_router::Instance1;
@@ -1633,9 +1574,6 @@ impl pallet_revive::Config for Runtime {
 		AssetConversionPrecompile<{ ASSET_CONVERSION_PRECOMPILE }, Self>,
 		VestingPrecompile<Self>,
 		PersonhoodCheck<Self>,
-		ScarcityCollection<Self, 0x0520>,
-		ScarcityFactory<Self, 0x0521>,
-		NftClaimsMinter<Self, 0x0522>,
 	);
 	type AddressMapper = pallet_revive::AccountId32Mapper<Self>;
 	type RuntimeMemory = ConstU32<{ 128 * 1024 * 1024 }>;
@@ -2071,253 +2009,6 @@ impl frame_support::traits::EnsureOrigin<RuntimeOrigin> for EnsureNotifierSiblin
 	#[cfg(feature = "runtime-benchmarks")]
 	fn try_successful_origin() -> Result<RuntimeOrigin, ()> {
 		Ok(cumulus_pallet_xcm::Origin::SiblingParachain(PEOPLE_ID.into()).into())
-	}
-}
-
-/// Resolves the origin of an nft-claims claim into the account or person that may claim.
-///
-/// The claim does not apply the alias-accounts grace policy to the binding's ring revision, unlike
-/// a `personhood_info` lookup. The game chain awards the credit to the alias before the claim, so a
-/// revision that goes stale after the award still resolves to its person. A stale binding stays
-/// claimable until someone calls `clean_up_stale_alias`, which deletes the `AccountToAlias` entry.
-/// The claim then fails until the person binds the alias again with a proof against a live
-/// revision.
-pub struct EnsureCreditClaimant;
-impl
-	frame_support::traits::EnsureOriginWithArg<RuntimeOrigin, indiv_pallet_nft_claims::ClaimantKind>
-	for EnsureCreditClaimant
-{
-	type Success = indiv_support::identity::AccountOrPerson<AccountId>;
-
-	fn try_origin(
-		o: RuntimeOrigin,
-		kind: &indiv_pallet_nft_claims::ClaimantKind,
-	) -> Result<Self::Success, RuntimeOrigin> {
-		let Ok(frame_system::RawOrigin::Signed(who)) = o.clone().into() else {
-			return Err(o);
-		};
-
-		// Neither kind replaces the signed origin, so `ChargePGAS` bills the claimant.
-		match kind {
-			indiv_pallet_nft_claims::ClaimantKind::Account =>
-				Ok(indiv_support::identity::AccountOrPerson::Account(who)),
-
-			// The direct read skips the grace policy, so a stale binding resolves.
-			indiv_pallet_nft_claims::ClaimantKind::Person =>
-				match indiv_pallet_alias_accounts::AccountToAlias::<Runtime>::get(&who) {
-					Some(info) =>
-						Ok(indiv_support::identity::AccountOrPerson::Person(info.ca.alias)),
-					None => Err(o),
-				},
-		}
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn try_successful_origin(
-		kind: &indiv_pallet_nft_claims::ClaimantKind,
-	) -> Result<RuntimeOrigin, ()> {
-		let who = AccountId::new([1u8; 32]);
-		if matches!(kind, indiv_pallet_nft_claims::ClaimantKind::Person) {
-			indiv_pallet_alias_accounts::AccountToAlias::<Runtime>::insert(
-				&who,
-				indiv_pallet_alias_accounts::AliasAccountInfo {
-					collection: *indiv_pallet_alias_accounts::PEOPLE_IDENTIFIER,
-					revision: 0,
-					ring: 0,
-					ca: indiv_support::traits::ContextualAlias {
-						context: [0u8; 32],
-						alias: [1u8; 32],
-					},
-				},
-			);
-		}
-
-		Ok(frame_system::RawOrigin::Signed(who).into())
-	}
-}
-
-parameter_types! {
-	/// Metered ceiling for one collection minter contract call, reserved by every claim and
-	/// refunded to what the call really consumed.
-	///
-	/// Deliberately far below the DotNS contract budget: a minter only picks an item index, and
-	/// the reservation prices every claim whether a contract runs or not. The nft-claims
-	/// `integrity_test` holds the claim worst case plus this ceiling to the block budget.
-	pub const NftClaimsSelectorWeightLimit: Weight =
-		Weight::from_parts(5_000_000_000, 512 * 1024);
-	/// Maximum storage deposit a collection owner may pay for one minter call.
-	///
-	/// One PGAS is enough for modest per-claim accounting while bounding the owner's exposure to
-	/// a contract they registered.
-	pub const NftClaimsSelectorDepositLimit: Balance = UNITS;
-}
-
-/// Executes a collection's registered minter contract for `pallet-nft-claims`.
-///
-/// The contract is called as the current collection owner, who pays its storage deposit up to
-/// [`NftClaimsSelectorDepositLimit`]. `PGasDeposit` takes that deposit in PGAS where the owner
-/// holds it and in the native token otherwise, so a claim fails once the owner can pay neither.
-/// The return must be one canonical ABI `uint32` naming the item to mint.
-pub struct NftClaimsCollectionSelector;
-impl NftClaimsCollectionSelector {
-	/// Calls a minter contract as `owner` under the selector's weight and deposit ceilings.
-	/// ABI construction and return validation remain the responsibility of the selector.
-	pub fn call(
-		owner: AccountId,
-		contract: sp_core::H160,
-		data: Vec<u8>,
-	) -> pallet_revive::ContractResult<pallet_revive::ExecReturnValue, Balance> {
-		use pallet_revive::{ExecConfig, TransactionLimits};
-
-		pallet_revive::Pallet::<Runtime>::bare_call(
-			RuntimeOrigin::signed(owner),
-			contract,
-			0u128.into(),
-			TransactionLimits::WeightAndDeposit {
-				weight_limit: NftClaimsSelectorWeightLimit::get(),
-				deposit_limit: NftClaimsSelectorDepositLimit::get(),
-			},
-			data,
-			&ExecConfig::new_substrate_tx(),
-		)
-	}
-}
-
-impl indiv_pallet_nft_claims::CollectionSelector<AccountId> for NftClaimsCollectionSelector {
-	fn max_weight() -> Weight {
-		NftClaimsSelectorWeightLimit::get()
-	}
-
-	fn validate(contract: sp_core::H160) -> sp_runtime::DispatchResult {
-		frame_support::ensure!(
-			pallet_revive::AccountInfo::<Runtime>::is_contract(&contract),
-			sp_runtime::DispatchError::Other("no contract code at the minter address")
-		);
-		Ok(())
-	}
-
-	fn select(
-		owner: AccountId,
-		contract: sp_core::H160,
-		collection: pallet_scarcity::CollectionId,
-		entropy: indiv_support::credit_trees::NftClaimCredit,
-	) -> Result<indiv_pallet_nft_claims::Selection, indiv_pallet_nft_claims::SelectionError> {
-		let cr = Self::call(owner, contract, minter_call_data(collection, entropy));
-		// A trap, a revert and a malformed return all consumed metered weight, which the claim
-		// charges: refunding it would let a gas-burning contract occupy block space for free.
-		let weight_consumed = cr.weight_consumed;
-		let fail = |error: sp_runtime::DispatchError| indiv_pallet_nft_claims::SelectionError {
-			error,
-			weight_consumed,
-		};
-		let ret = cr.result.map_err(fail)?;
-		if ret.did_revert() {
-			log::debug!(
-				target: "runtime::nft-claims",
-				"minter contract {contract:?} reverted with 0x{}",
-				sp_core::hexdisplay::HexDisplay::from(&ret.data)
-			);
-			return Err(fail(sp_runtime::DispatchError::Other("minter contract reverted")));
-		}
-		let item = decode_minter_item(&ret.data).ok_or_else(|| {
-			log::debug!(
-				target: "runtime::nft-claims",
-				"minter contract {contract:?} returned no canonical uint32 item: 0x{}",
-				sp_core::hexdisplay::HexDisplay::from(&ret.data)
-			);
-			fail(sp_runtime::DispatchError::Other("minter contract returned no item"))
-		})?;
-		Ok(indiv_pallet_nft_claims::Selection { item, weight_consumed })
-	}
-}
-
-/// ABI-encode `mint(uint32 collection, bytes32 entropy)`.
-fn minter_call_data(
-	collection: pallet_scarcity::CollectionId,
-	entropy: indiv_support::credit_trees::NftClaimCredit,
-) -> Vec<u8> {
-	let mut data = Vec::with_capacity(68);
-	data.extend_from_slice(&sp_io::hashing::keccak_256(b"mint(uint32,bytes32)")[..4]);
-	data.extend_from_slice(&[0u8; 28]);
-	data.extend_from_slice(&collection.to_be_bytes());
-	data.extend_from_slice(&entropy);
-	data
-}
-
-/// ABI-decode one canonical `uint32` word, which is the only return a minter may give.
-fn decode_minter_item(data: &[u8]) -> Option<pallet_scarcity::ItemIndex> {
-	if data.len() != 32 || data[..28] != [0u8; 28] {
-		return None;
-	}
-	Some(u32::from_be_bytes(data[28..].try_into().ok()?))
-}
-
-impl indiv_pallet_nft_claims::Config for Runtime {
-	// PASEO-LOCAL: no generated weights file for the pallet in this repo yet; see the note on
-	// `pallet_scarcity::Config::WeightInfo` above.
-	type WeightInfo = indiv_pallet_nft_claims::weights::SubstrateWeight<Runtime>;
-	// The game pallet, which sends the credit trees, runs on the People chain. `PEOPLE_ID` is
-	// exactly the sibling this check accepts, so the existing notifier check is the game-chain
-	// check too.
-	type EnsureGameChainOrigin = EnsureNotifierSibling;
-	// At least the game pallet's `MaxCreditTreesPerMessage`, otherwise the batches it sends fail
-	// to decode here and their trees never arrive.
-	type MaxTreesPerMessage = ConstU32<32>;
-	type EnsureClaimant = EnsureCreditClaimant;
-	type Nfts = Scarcity;
-	type CollectionSelector = NftClaimsCollectionSelector;
-	// The game chain awards at most `MaxCreditsPerBlock` credits per block, 1200 on
-	// people-paseo, so a proof carries at most 11 sibling hashes. 16 covers 65536 leaves,
-	// leaving room for that bound to grow without stranding the tail of a tree.
-	type MaxProofNodes = ConstU32<16>;
-	#[cfg(feature = "runtime-benchmarks")]
-	type BenchmarkHelper = NftClaimsBenchmarkHelper;
-}
-
-/// Creates the collection and item the benchmarks mint into, which on a live chain their owner
-/// has set up beforehand.
-#[cfg(feature = "runtime-benchmarks")]
-pub struct NftClaimsBenchmarkHelper;
-#[cfg(feature = "runtime-benchmarks")]
-impl indiv_pallet_nft_claims::BenchmarkHelper<AccountId> for NftClaimsBenchmarkHelper {
-	fn prepare_collection(
-		owner: &AccountId,
-		collection: pallet_scarcity::CollectionId,
-		item: pallet_scarcity::ItemIndex,
-	) {
-		use frame_support::traits::fungible::Mutate;
-
-		let owner = owner.clone();
-		let _ = Balances::set_balance(&owner, ExistentialDeposit::get().saturating_mul(1_000_000));
-
-		while pallet_scarcity::NextCollectionId::<Runtime>::get() <= collection {
-			Scarcity::do_create_collection(owner.clone()).expect("collection is created; qed");
-		}
-		while pallet_scarcity::Collections::<Runtime>::get(collection)
-			.expect("the collection was just created; qed")
-			.next_item_index <=
-			item
-		{
-			Scarcity::do_define_item(
-				owner.clone(),
-				collection,
-				pallet_scarcity::Transferability::Transferable,
-				alloc::vec::Vec::new(),
-			)
-			.expect("item is defined; qed");
-		}
-	}
-
-	fn prepare_contract(owner: &AccountId) -> sp_core::H160 {
-		use pallet_revive::call_builder::{Contract, VmBinaryModule};
-
-		Contract::<Runtime>::with_caller(
-			owner.clone(),
-			VmBinaryModule::dummy(),
-			alloc::vec::Vec::new(),
-		)
-		.expect("benchmark minter contract is deployed; qed")
-		.address
 	}
 }
 
@@ -2843,9 +2534,6 @@ construct_runtime!(
 		AssetConversion: pallet_asset_conversion = 55,
 		AssetsFreezer: pallet_assets_freezer::<Instance1> = 56,
 		AssetsHolder: pallet_assets_holder::<Instance1> = 57,
-		// Index 58 matches upstream individuality v0.3.1's `next-asset-hub-paseo` and is free in
-		// this runtime's `construct_runtime!`.
-		Scarcity: pallet_scarcity = 58,
 
 		// OpenGov stuff
 		Treasury: pallet_treasury = 60,
@@ -2873,7 +2561,6 @@ construct_runtime!(
 		Staking: pallet_staking_async = 89,
 
 		// Individuality
-		NftClaims: indiv_pallet_nft_claims = 96,
 		MembersSubscriber: indiv_pallet_members_subscriber = 97,
 		AliasAccounts: indiv_pallet_alias_accounts = 98,
 		Pgas: indiv_pallet_pgas = 99,
@@ -2914,27 +2601,16 @@ pub type TxExtension = cumulus_pallet_weight_reclaim::StorageWeightReclaim<
 	(
 		// Origin modifiers
 		(
-			// PASEO-LOCAL. Upstream `next-asset-hub-paseo` holds this slot open as `()`; this
-			// is the local deviation from the `value-transfer-auth` fork pallet and it stays
-			// first. It passes the origin through untouched, so it does not interact with the
-			// origin modifiers after it.
 			AuthorizeValueTransfer<
 				Runtime,
 				paseo_runtime_constants::ValueTransferAuthorizationPubkey,
 			>,
-			// Must precede `AuthorizeCall`, `CheckNonce` and `ChargeAssetTxPayment`: it swaps a
-			// signed origin for `pallet_scarcity::Origin::Nft`, and the account checks and
-			// transaction payment are what must see the swapped origin and skip themselves, so
-			// a balance-less purse key can transact. See `pallets/scarcity/src/extension.rs`.
-			// Slot 1 is exactly where upstream puts it.
-			pallet_scarcity::extension::AsScarcity<Runtime>,
 			frame_system::AuthorizeCall<Runtime>,
 			indiv_pallet_pgas::AsPgas<Runtime>,
 			// `indiv_pallet_alias_accounts::AsRingAlias` was removed in individuality v0.3.1
 			// along with the pallet's `#[pallet::origin]`. Dropping it changes the
 			// transaction extension tuple, so `transaction_version` MUST be bumped in the same
-			// release — see the `RuntimeVersion` above. Adding `AsScarcity` changes it again;
-			// the same bump covers both.
+			// release — see the `RuntimeVersion` above.
 			indiv_pallet_dotns_gateway::AsDotnsGateway<Runtime>,
 		),
 		// General checks and operations
@@ -2974,7 +2650,6 @@ impl pallet_revive::evm::runtime::EthExtra for EthExtraImpl {
 					Runtime,
 					paseo_runtime_constants::ValueTransferAuthorizationPubkey,
 				>::default(),
-				pallet_scarcity::extension::AsScarcity::<Runtime>::new(None),
 				frame_system::AuthorizeCall::<Runtime>::new(),
 				indiv_pallet_pgas::AsPgas::<Runtime>::new(None),
 				indiv_pallet_dotns_gateway::AsDotnsGateway::<Runtime>::new(None),
@@ -3019,7 +2694,6 @@ where
 					Runtime,
 					paseo_runtime_constants::ValueTransferAuthorizationPubkey,
 				>::default(),
-				pallet_scarcity::extension::AsScarcity::<Runtime>::new(None),
 				frame_system::AuthorizeCall::<Runtime>::new(),
 				indiv_pallet_pgas::AsPgas::<Runtime>::new(None),
 				indiv_pallet_dotns_gateway::AsDotnsGateway::<Runtime>::new(None),
@@ -3188,10 +2862,8 @@ mod benches {
 		[indiv_pallet_alias_accounts, AliasAccounts]
 		[indiv_pallet_dotns_gateway, DotnsGateway]
 		[indiv_pallet_members_subscriber, MembersSubscriber]
-		[indiv_pallet_nft_claims, NftClaims]
 		[indiv_pallet_origin_restriction, OriginRestriction]
 		[indiv_pallet_pgas, Pgas]
-		[pallet_scarcity, Scarcity]
 
 		// XCM
 		[pallet_xcm, PalletXcmExtrinsicsBenchmark::<Runtime>]
@@ -4004,28 +3676,6 @@ pallet_revive::impl_runtime_apis_plus_revive_traits!(
 				)?,
 				// collect ... e.g. other tokens
 			].concat().into())
-		}
-	}
-
-	impl pallet_scarcity::runtime_api::ScarcityApi<Block> for Runtime {
-		fn metadata_batch(
-			queries: Vec<pallet_scarcity::runtime_api::MetadataQuery>,
-		) -> Result<
-			Vec<pallet_scarcity::runtime_api::MetadataLayers>,
-			pallet_scarcity::runtime_api::BatchError,
-		> {
-			Scarcity::metadata_batch(queries)
-		}
-	}
-
-	impl indiv_pallet_nft_claims::runtime_api::NftClaimsApi<Block> for Runtime {
-		fn preview_mints(
-			queries: Vec<indiv_pallet_nft_claims::runtime_api::PreviewQuery>,
-		) -> Result<
-			Vec<indiv_pallet_nft_claims::runtime_api::PreviewOutcome>,
-			indiv_pallet_nft_claims::runtime_api::BatchError,
-		> {
-			NftClaims::preview_mints(queries)
 		}
 	}
 
