@@ -34,7 +34,7 @@ use indiv_pallet_people::PEOPLE_MEMBER_IDENTIFIER;
 use indiv_pallet_people_lite::LITE_PEOPLE_MEMBER_IDENTIFIER;
 use indiv_support::traits::{MembershipProver, RevisionIndex, RingIndex};
 use scale_info::TypeInfo;
-use sp_core::twox_64;
+use sp_io::hashing::twox_64;
 use sp_runtime::{
 	traits::{DispatchInfoOf, TransactionExtension, ValidateResult},
 	transaction_validity::{InvalidTransaction, TransactionValidityError, ValidTransaction},

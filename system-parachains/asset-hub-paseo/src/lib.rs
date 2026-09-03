@@ -122,6 +122,7 @@ use frame_support::{
 	dispatch::DispatchClass,
 	dynamic_params::{dynamic_pallet_params, dynamic_params},
 	genesis_builder_helper::{build_state, get_preset},
+	migrations::ForceUnstuckOnFailedMigration,
 	ord_parameter_types, parameter_types,
 	traits::{
 		fungible::{self, HoldConsideration},
@@ -153,7 +154,6 @@ use parachains_common::{
 };
 use paseo_runtime_constants::system_parachain::PEOPLE_ID;
 use sp_runtime::Debug;
-use system_parachains_common::ForceUnstuckOnFailedMigration;
 use system_parachains_constants::{
 	async_backing::{
 		AVERAGE_ON_INITIALIZE_RATIO, HOURS, MAXIMUM_BLOCK_WEIGHT, MINUTES, NORMAL_DISPATCH_RATIO,
@@ -893,6 +893,7 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type ConsensusHook = ConsensusHook;
 	type WeightInfo = weights::cumulus_pallet_parachain_system::WeightInfo<Runtime>;
 	type RelayParentOffset = ConstU32<RELAY_PARENT_OFFSET>;
+	type SchedulingSignatureVerifier = ();
 }
 
 type ConsensusHook = cumulus_pallet_aura_ext::FixedVelocityConsensusHook<
@@ -3277,6 +3278,10 @@ pallet_revive::impl_runtime_apis_plus_revive_traits!(
 	impl cumulus_primitives_core::RelayParentOffsetApi<Block> for Runtime {
 		fn relay_parent_offset() -> u32 {
 			RELAY_PARENT_OFFSET
+		}
+
+		fn max_claim_queue_offset() -> u8 {
+			cumulus_pallet_parachain_system::Pallet::<Runtime>::max_claim_queue_offset()
 		}
 	}
 

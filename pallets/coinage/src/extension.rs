@@ -24,7 +24,7 @@ use frame_support::{
 };
 use frame_system::{CheckNonce, ValidNonceInfo};
 use scale_info::TypeInfo;
-use sp_core::{blake2_256, twox_64};
+use sp_io::hashing::{blake2_256, twox_64};
 use sp_runtime::{
 	traits::{
 		DispatchInfoOf, PostDispatchInfoOf, Saturating, TransactionExtension, ValidateResult,

@@ -31,7 +31,7 @@ use frame_support::{
 use frame_system::{CheckNonce, ValidNonceInfo};
 use indiv_support::traits::{Context, MembershipProver, RevisedContextualAlias};
 use scale_info::TypeInfo;
-use sp_core::twox_64;
+use sp_io::hashing::twox_64;
 use sp_runtime::{
 	traits::{DispatchInfoOf, TransactionExtension, ValidateResult},
 	transaction_validity::{InvalidTransaction, TransactionValidityError, ValidTransaction},

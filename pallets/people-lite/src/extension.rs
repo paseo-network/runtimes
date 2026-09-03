@@ -30,7 +30,7 @@ use frame_support::{
 use frame_system::{CheckNonce, ValidNonceInfo};
 use indiv_support::traits::{Context, MembershipProver, RevisedContextualAlias, RingIndex};
 use scale_info::TypeInfo;
-use sp_core::{blake2_256, twox_64};
+use sp_io::hashing::{blake2_256, twox_64};
 use sp_runtime::{
 	traits::{DispatchInfoOf, TransactionExtension, ValidateResult},
 	transaction_validity::{

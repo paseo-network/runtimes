@@ -128,7 +128,7 @@ impl<T: Config + Send + Sync> TransactionExtension<RuntimeCallOf<T>> for VoterAu
 			return Err(InvalidTransaction::Stale.into());
 		}
 
-		let message = inherited_implication.using_encoded(sp_core::hashing::blake2_256);
+		let message = inherited_implication.using_encoded(sp_io::hashing::blake2_256);
 
 		let aliases =
 			Pallet::<T>::validate_vote_proof(vote, &message, proof, *ring_index, *revision)

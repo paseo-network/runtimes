@@ -23,7 +23,7 @@ use codec::Encode;
 use frame_support::{assert_err, assert_ok, traits::fungibles::InspectHold as _, BoundedVec};
 use frame_system::AuthorizeCall;
 use indiv_support::traits::Alias;
-use sp_core::blake2_256;
+use sp_io::hashing::blake2_256;
 use sp_runtime::{bounded_vec, testing::UintAuthorityId};
 use verifiable::GenerateVerifiable;
 

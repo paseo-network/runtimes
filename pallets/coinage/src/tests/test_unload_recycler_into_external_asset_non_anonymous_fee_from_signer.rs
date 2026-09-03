@@ -29,7 +29,7 @@ use crate::{
 };
 use codec::Encode;
 use frame_support::{assert_noop, assert_ok, traits::Currency};
-use sp_core::blake2_256;
+use sp_io::hashing::blake2_256;
 use sp_runtime::{bounded_vec, DispatchError};
 use verifiable::GenerateVerifiable;
 

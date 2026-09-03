@@ -176,7 +176,8 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 			return Err(InvalidTransaction::BadProof.into());
 		}
 
-		let provides = sp_core::twox_64(&("self-include", &identifier, &member).encode()[..]);
+		let provides =
+			sp_io::hashing::twox_64(&("self-include", &identifier, &member).encode()[..]);
 		let valid_transaction =
 			ValidTransaction::with_tag_prefix("Members").and_provides(provides).build()?;
 

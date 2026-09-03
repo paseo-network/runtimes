@@ -33,7 +33,7 @@ use frame_support::{
 };
 use indiv_support::traits::RingIndex;
 use scale_info::TypeInfo;
-use sp_core::twox_64;
+use sp_io::hashing::twox_64;
 use sp_runtime::{
 	traits::{DispatchInfoOf, Implication, TransactionExtension, ValidateResult, Verify},
 	transaction_validity::{InvalidTransaction, TransactionValidityError, ValidTransaction},

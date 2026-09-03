@@ -58,7 +58,7 @@ use indiv_support::traits::{
 	Alias, AppendOnlyMembers, AppendOnlyMembersWeightInfo, Context, Identifier, MembershipProver,
 	RevisionIndex, RingExponent, RingIndex,
 };
-use sp_core::blake2_256;
+use sp_io::hashing::blake2_256;
 use sp_runtime::{
 	traits::{AccountIdConversion, Convert, Zero},
 	SaturatedConversion, Saturating,
