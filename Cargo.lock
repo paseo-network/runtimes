@@ -10897,6 +10897,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-executive",
  "frame-metadata-hash-extension",
+ "frame-remote-externalities",
  "frame-support",
  "frame-system",
  "frame-system-benchmarking",
@@ -10972,6 +10973,7 @@ dependencies = [
  "sp-session",
  "sp-statement-store 26.0.0",
  "sp-storage",
+ "sp-tracing",
  "sp-transaction-pool",
  "sp-version",
  "staging-parachain-info",
@@ -10980,6 +10982,7 @@ dependencies = [
  "staging-xcm-executor",
  "substrate-wasm-builder",
  "system-parachains-constants 2.3.1",
+ "tokio",
  "verifiable",
  "xcm-runtime-apis",
 ]

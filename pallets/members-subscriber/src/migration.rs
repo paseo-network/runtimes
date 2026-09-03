@@ -537,8 +537,36 @@ pub mod v1 {
 			}
 
 			// 3. No entry is left at the pre-v0.3 key layout.
+			//
+			// This MUST discriminate on the raw key length, not by decoding. The old double map
+			// and the new NMap share an item prefix, and the new key is the old key with a
+			// 12-byte `Twox64Concat(Generation)` segment spliced in FRONT:
+			//
+			//   old: prefix(32) + Identifier(48) + RingIndex(20)              = 100 bytes
+			//   new: prefix(32) + Generation(12) + Identifier(48) + RingIndex(20) = 112 bytes
+			//
+			// So `old::RingRoots::<T>::iter_keys()` happily decodes a NEW key as an old one --
+			// the trailing 12 bytes are simply ignored -- and reports every migrated entry as a
+			// phantom leftover. That is the same trailing-bytes trap this migration exists to
+			// defuse, and it made `post_upgrade` fail on a correct migration.
+			let ring_roots_prefix = frame_support::storage::storage_prefix(
+				<Pallet<T> as frame_support::traits::PalletInfoAccess>::name().as_bytes(),
+				b"RingRoots",
+			);
+			const OLD_RING_ROOTS_KEY_LEN: usize = 32 + 48 + 20;
+			let mut stale = 0usize;
+			let mut cursor = ring_roots_prefix.to_vec();
+			while let Some(next) = sp_io::storage::next_key(&cursor) {
+				if !next.starts_with(&ring_roots_prefix) {
+					break;
+				}
+				if next.len() == OLD_RING_ROOTS_KEY_LEN {
+					stale += 1;
+				}
+				cursor = next;
+			}
 			ensure!(
-				old::RingRoots::<T>::iter_keys().next().is_none(),
+				stale == 0,
 				"members-subscriber: an entry remains at the pre-v0.3 RingRoots key layout"
 			);
 			// ...and the new map holds exactly what was captured, nothing invented.
