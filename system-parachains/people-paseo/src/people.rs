@@ -902,7 +902,7 @@ impl indiv_pallet_honour::benchmarking::BenchmarkHelper<Runtime> for HonourBench
 		.expect("benchmark: people collection must be created");
 
 		let secret =
-			BandersnatchVrfVerifiable::new_secret(sp_core::twox_256(b"honour-bench-voter"));
+			BandersnatchVrfVerifiable::new_secret(sp_io::hashing::twox_256(b"honour-bench-voter"));
 		let member = BandersnatchVrfVerifiable::member_from_secret(&secret);
 
 		Members::add_members(indiv_pallet_people::PEOPLE_MEMBER_IDENTIFIER, vec![member])
@@ -1516,7 +1516,7 @@ impl indiv_pallet_coinage::BenchmarkHelper<Runtime> for CoinageBenchHelper {
 		let ring_exponent = <Runtime as indiv_pallet_people::Config>::RingExponent::get();
 		indiv_pallet_members::Pallet::<Runtime>::initialize_chunks(ring_exponent);
 
-		let entropy = sp_core::twox_256(b"people_for_coinage:42");
+		let entropy = sp_io::hashing::twox_256(b"people_for_coinage:42");
 		let secret = BandersnatchVrfVerifiable::new_secret(entropy);
 		let member = BandersnatchVrfVerifiable::member_from_secret(&secret);
 

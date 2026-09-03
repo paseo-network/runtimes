@@ -122,6 +122,7 @@ use frame_support::{
 	dispatch::DispatchClass,
 	dynamic_params::{dynamic_pallet_params, dynamic_params},
 	genesis_builder_helper::{build_state, get_preset},
+	migrations::ForceUnstuckOnFailedMigration,
 	ord_parameter_types, parameter_types,
 	traits::{
 		fungible::{self, HoldConsideration},
@@ -153,7 +154,6 @@ use parachains_common::{
 };
 use paseo_runtime_constants::system_parachain::PEOPLE_ID;
 use sp_runtime::Debug;
-use system_parachains_common::ForceUnstuckOnFailedMigration;
 use system_parachains_constants::{
 	async_backing::{
 		AVERAGE_ON_INITIALIZE_RATIO, HOURS, MAXIMUM_BLOCK_WEIGHT, MINUTES, NORMAL_DISPATCH_RATIO,
@@ -898,6 +898,7 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type ConsensusHook = ConsensusHook;
 	type WeightInfo = weights::cumulus_pallet_parachain_system::WeightInfo<Runtime>;
 	type RelayParentOffset = ConstU32<RELAY_PARENT_OFFSET>;
+	type SchedulingSignatureVerifier = ();
 }
 
 type ConsensusHook = cumulus_pallet_aura_ext::FixedVelocityConsensusHook<
@@ -3414,6 +3415,10 @@ pallet_revive::impl_runtime_apis_plus_revive_traits!(
 		fn relay_parent_offset() -> u32 {
 			RELAY_PARENT_OFFSET
 		}
+
+		fn max_claim_queue_offset() -> u8 {
+			cumulus_pallet_parachain_system::Pallet::<Runtime>::max_claim_queue_offset()
+		}
 	}
 
 	impl cumulus_primitives_aura::AuraUnincludedSegmentApi<Block> for Runtime {
@@ -4291,10 +4296,14 @@ mod tests {
 	}
 
 	/// The nomination-pools `with_era` bound (`TotalUnbondingPools`) must stay pinned at its
-	/// historical maximum (32) across the `AreNominatorsSlashable` fast-unbond flip. Otherwise the
-	/// lowered nominator bonding duration would shrink the bound (32 -> 6), making oversized
-	/// historical sub-pools undecodable and destroying per-era unbonding accounting on the next
-	/// `unbond`.
+	/// historical maximum (32) across the `AreNominatorsSlashable` fast-unbond flip. Otherwise a
+	/// lowered nominator bonding duration would shrink the bound, making oversized historical
+	/// sub-pools undecodable and destroying per-era unbonding accounting on the next `unbond`.
+	///
+	/// Paseo holds this by pinning `NominatorFastUnbondDuration` to `BondingDuration` (28), so
+	/// neither flag state moves the bound off 32. If the fast-unbond duration is ever actually
+	/// shortened, `PostUnbondingPoolsWindow` (currently a flat `ConstU32<4>`) has to widen by the
+	/// same amount, and this test should be updated to pin that relationship instead.
 	#[test]
 	fn nomination_pools_bound_survives_nominator_unslashable_flip() {
 		use frame_support::traits::Get;
@@ -4304,7 +4313,7 @@ mod tests {
 			// The bound the pallet actually uses for `SubPools::with_era`.
 			let total_unbonding_pools = || {
 				<Staking as StakingInterface>::nominator_bonding_duration() +
-					<Runtime as pallet_nomination_pools::Config>::PostUnbondingPoolsWindow::get()
+					<<Runtime as pallet_nomination_pools::Config>::PostUnbondingPoolsWindow as Get<u32>>::get()
 			};
 
 			// Pre-flip: nominators slashable, so the nominator bonding duration is the full
@@ -4314,18 +4323,25 @@ mod tests {
 			pallet_staking_async::AreNominatorsSlashable::<Runtime>::put(true);
 			assert_eq!(<Staking as StakingInterface>::nominator_bonding_duration(), 28);
 			assert_eq!(
-				<Runtime as pallet_nomination_pools::Config>::PostUnbondingPoolsWindow::get(),
+				<<Runtime as pallet_nomination_pools::Config>::PostUnbondingPoolsWindow as Get<
+					u32,
+				>>::get(),
 				4
 			);
 			assert_eq!(total_unbonding_pools(), 32);
 
-			// The flip: nominators become non-slashable, so the nominator bonding duration drops to
-			// `NominatorFastUnbondDuration` (2). The window must widen to 30 so the bound stays 32.
+			// The flip: nominators become non-slashable. Paseo pins
+			// `NominatorFastUnbondDuration` to `BondingDuration` (both 28), so the nominator
+			// bonding duration does not move and the bound stays 32 on its own. This is the
+			// mechanism by which the invariant is held here: the fast-unbond path is configured
+			// flat rather than the window being widened to compensate.
 			pallet_staking_async::AreNominatorsSlashable::<Runtime>::put(false);
-			assert_eq!(<Staking as StakingInterface>::nominator_bonding_duration(), 2);
+			assert_eq!(<Staking as StakingInterface>::nominator_bonding_duration(), 28);
 			assert_eq!(
-				<Runtime as pallet_nomination_pools::Config>::PostUnbondingPoolsWindow::get(),
-				30
+				<<Runtime as pallet_nomination_pools::Config>::PostUnbondingPoolsWindow as Get<
+					u32,
+				>>::get(),
+				4
 			);
 			assert_eq!(total_unbonding_pools(), 32);
 		});

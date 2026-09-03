@@ -15,6 +15,7 @@
 
 use crate::{governance::Treasurer, *};
 use frame_support::traits::{tokens::UnityOrOuterConversion, FromContains};
+use pallet_bounties::TransferAllFungibles;
 use parachains_common::pay::VersionedLocatableAccount;
 use polkadot_runtime_common::impls::{ContainsParts, VersionedLocatableAsset};
 
@@ -91,7 +92,10 @@ impl pallet_bounties::Config for Runtime {
 	type MaximumReasonLength = MaximumReasonLength;
 	type OnSlash = Treasury;
 	type WeightInfo = weights::pallet_bounties::WeightInfo<Runtime>;
-	type TransferAllAssets = ();
+	// Sweeps every asset in `BountyRelevantAssets` (native PAS only, here) when the
+	// multi-asset bounty accounts are re-derived. Leaving this as `()` silently makes
+	// `migrations::MigrateBountyAccountAssets` a no-op.
+	type TransferAllAssets = TransferAllFungibles<AccountId, NativeAndAssets, BountyRelevantAssets>;
 }
 
 parameter_types! {

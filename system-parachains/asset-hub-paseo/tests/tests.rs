@@ -29,13 +29,9 @@ use asset_hub_paseo_runtime::{
 };
 use asset_test_utils::{
 	include_create_and_manage_foreign_assets_for_local_consensus_parachain_assets_works,
-	include_teleports_for_foreign_assets_works,
-	test_cases_over_bridge::{
-		receive_reserve_asset_deposited_from_different_consensus_works, TestBridgingConfig,
-	},
+	include_teleports_for_foreign_assets_works, test_cases_over_bridge::TestBridgingConfig,
 	CollatorSessionKey, CollatorSessionKeys, ExtBuilder, GovernanceOrigin, SlotDurations,
 };
-use assets_common::local_and_foreign_assets::ForeignAssetReserveData;
 use codec::{Decode, Encode};
 use frame_support::{
 	assert_err, assert_ok,
@@ -55,7 +51,6 @@ use xcm::latest::{
 	WESTEND_GENESIS_HASH,
 };
 use xcm_builder::WithLatestLocationConverter;
-use xcm_executor::traits::ConvertLocation;
 use xcm_runtime_apis::conversions::LocationToAccountHelper;
 
 const ALICE: [u8; 32] = [1u8; 32];
@@ -223,8 +218,7 @@ asset_test_utils::include_teleports_for_native_asset_works!(
 	Runtime,
 	AllPalletsWithoutSystem,
 	XcmConfig,
-	// TODO: after AHM change this from `()` to `CheckingAccount`
-	(),
+	CheckingAccount,
 	WeightToFee,
 	ParachainSystem,
 	collator_session_keys(),
@@ -396,89 +390,6 @@ fn limited_reserve_transfer_assets_for_native_asset_to_asset_hub_kusama_works() 
 		Some(TreasuryAccount::get()),
 	)
 } */
-
-#[test]
-fn receive_reserve_asset_deposited_ksm_from_asset_hub_kusama_fees_paid_by_pool_swap_works() {
-	const BLOCK_AUTHOR_ACCOUNT: [u8; 32] = [13; 32];
-	let block_author_account = AccountId::from(BLOCK_AUTHOR_ACCOUNT);
-	let dap_staging_account = pallet_dap::Pallet::<Runtime>::staging_account();
-
-	let foreign_asset_id_location_v5 = Location::new(2, [GlobalConsensus(NetworkId::Kusama)]);
-	let reserve_location = Location::new(2, [GlobalConsensus(NetworkId::Kusama), Parachain(1000)]);
-	let foreign_asset_reserve_data =
-		ForeignAssetReserveData { reserve: reserve_location, teleportable: false };
-	let foreign_asset_id_minimum_balance = 1_000_000_000;
-	// sovereign account as foreign asset owner (can be whoever for this scenario)
-	let foreign_asset_owner = LocationToAccountId::convert_location(&Location::parent()).unwrap();
-	let foreign_asset_create_params = (
-		foreign_asset_owner.clone(),
-		foreign_asset_id_location_v5.clone(),
-		foreign_asset_reserve_data,
-		foreign_asset_id_minimum_balance,
-	);
-	let pool_params = (
-		foreign_asset_owner,
-		foreign_asset_id_location_v5.clone(),
-		foreign_asset_id_minimum_balance,
-	);
-
-	receive_reserve_asset_deposited_from_different_consensus_works::<
-		Runtime,
-		AllPalletsWithoutSystem,
-		XcmConfig,
-		ForeignAssetsInstance,
-	>(
-		collator_session_keys().add(collator_session_key(BLOCK_AUTHOR_ACCOUNT)),
-		ExistentialDeposit::get(),
-		AccountId::from([73; 32]),
-		block_author_account.clone(),
-		// receiving KSMs
-		foreign_asset_create_params,
-		1000000000000,
-		|| {
-			// setup pool for paying fees to touch `SwapFirstAssetTrader`
-			asset_test_utils::test_cases::setup_pool_for_paying_fees_with_foreign_assets::<
-				Runtime,
-				RuntimeOrigin,
-			>(ExistentialDeposit::get(), pool_params);
-			// DAP staging account for collecting local native fees from `BuyExecution`
-			let _ = Balances::force_set_balance(
-				RuntimeOrigin::root(),
-				pallet_dap::Pallet::<Runtime>::staging_account().into(),
-				ExistentialDeposit::get(),
-			);
-			// prepare bridge configuration
-			bridging_to_asset_hub_kusama()
-		},
-		(
-			[PalletInstance(
-				bp_bridge_hub_paseo::WITH_BRIDGE_POLKAPAS_TO_KUSAMA_MESSAGES_PALLET_INDEX,
-			)]
-			.into(),
-			GlobalConsensus(Kusama),
-			[Parachain(1000)].into(),
-		),
-		|| {
-			// check DAP staging account for ED
-			assert_eq!(Balances::free_balance(&dap_staging_account), ExistentialDeposit::get());
-			// check now foreign asset for DAP staging account
-			assert_eq!(
-				ForeignAssets::balance(foreign_asset_id_location_v5.clone(), &dap_staging_account),
-				0
-			);
-		},
-		|| {
-			// `SwapFirstAssetTrader` - DAP staging account receives xcm fees in KSMs (swapped
-			// to DOT)
-			assert!(Balances::free_balance(&dap_staging_account) > ExistentialDeposit::get());
-			// DAP staging account receives no foreign assets
-			assert_eq!(
-				ForeignAssets::balance(foreign_asset_id_location_v5.clone(), &dap_staging_account),
-				0
-			);
-		},
-	)
-}
 
 #[test]
 fn reserve_transfer_native_asset_to_non_teleport_para_works() {
@@ -1107,6 +1018,7 @@ fn staking_operator_filter_allows_validator_ops_and_session_keys() {
 	// StakingOperator can manage session keys
 	assert!(operator.filter(&RuntimeCall::StakingRcClient(RcClientCall::set_keys {
 		keys: Default::default(),
+		proof: Default::default(),
 		max_delivery_and_remote_execution_fee: None,
 	})));
 	assert!(operator.filter(&RuntimeCall::StakingRcClient(RcClientCall::purge_keys {
@@ -1329,8 +1241,8 @@ fn slash_goes_to_dap_buffer_account() {
 }
 
 #[test]
-fn migrate_bounty_account_assets_moves_dot_usdt_and_usdc() {
-	use asset_hub_polkadot_runtime::{
+fn migrate_bounty_account_assets_moves_native_and_leaves_the_rest() {
+	use asset_hub_paseo_runtime::{
 		migrations::MigrateBountyAccountAssets, treasury::TreasuryPalletId,
 	};
 	use frame_support::traits::{
@@ -1402,13 +1314,17 @@ fn migrate_bounty_account_assets_moves_dot_usdt_and_usdc() {
 
 		MigrateBountyAccountAssets::on_runtime_upgrade();
 
-		// DOT (native), USDT and USDC moved.
+		// Native PAS moves: it is the only entry in `BountyRelevantAssets`.
 		assert_eq!(Balances::free_balance(&old), 0);
 		assert_eq!(Balances::free_balance(&new), DOT_AMOUNT);
-		assert_eq!(Assets::balance(USDT_ASSET_ID, &old), 0);
-		assert_eq!(Assets::balance(USDT_ASSET_ID, &new), USDT_AMOUNT);
-		assert_eq!(Assets::balance(USDC_ASSET_ID, &old), 0);
-		assert_eq!(Assets::balance(USDC_ASSET_ID, &new), USDC_AMOUNT);
+		// USDT and USDC do NOT move here, unlike on Polkadot Asset Hub: Paseo deliberately
+		// lists native only in `treasury::BountyRelevantAssets` ("Paseo testnet only uses
+		// native PAS"), and `TransferAllFungibles` sweeps exactly that list. If those assets
+		// are ever added to the list, these two pairs flip to the `&new` account.
+		assert_eq!(Assets::balance(USDT_ASSET_ID, &old), USDT_AMOUNT);
+		assert_eq!(Assets::balance(USDT_ASSET_ID, &new), 0);
+		assert_eq!(Assets::balance(USDC_ASSET_ID, &old), USDC_AMOUNT);
+		assert_eq!(Assets::balance(USDC_ASSET_ID, &new), 0);
 		// An asset not used by the multi-asset bounties pallet stays at the old account.
 		assert_eq!(Assets::balance(UNRELATED_ASSET_ID, &old), UNRELATED_AMOUNT);
 		assert_eq!(Assets::balance(UNRELATED_ASSET_ID, &new), 0);

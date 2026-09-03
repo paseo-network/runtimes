@@ -31,12 +31,12 @@ sp-trie = { workspace = true }
 verifiable = { workspace = true }
 xcm = { workspace = true }
 indiv-support = { workspace = true }
+sp-io = { workspace = true }
 
 [dev-dependencies]
 pallet-balances = { workspace = true }
 pallet-assets = { workspace = true }
 pallet-assets-holder = { workspace = true }
-sp-io = { workspace = true }
 parking_lot = { workspace = true }
 frame-executive = { workspace = true }
 indiv-pallet-members = { workspace = true }

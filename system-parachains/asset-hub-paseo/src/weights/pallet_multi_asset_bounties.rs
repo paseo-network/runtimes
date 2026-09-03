@@ -364,4 +364,20 @@ impl<T: frame_system::Config> pallet_multi_asset_bounties::WeightInfo for Weight
 			.saturating_add(T::DbWeight::get().reads(7))
 			.saturating_add(T::DbWeight::get().writes(6))
 	}
+	/// Storage: `MultiAssetBounties::Bounties` (r:1 w:1)
+	/// Proof: `MultiAssetBounties::Bounties` (`max_values`: None, `max_size`: Some(2513), added: 4988, mode: `MaxEncodedLen`)
+	/// Storage: `AssetRate::ConversionRateToNative` (r:1 w:0)
+	/// Proof: `AssetRate::ConversionRateToNative` (`max_values`: None, `max_size`: Some(1238), added: 3713, mode: `MaxEncodedLen`)
+	/// Storage: `MultiAssetBounties::CuratorDeposit` (r:1 w:1)
+	/// Proof: `MultiAssetBounties::CuratorDeposit` (`max_values`: None, `max_size`: Some(41), added: 2516, mode: `MaxEncodedLen`)
+	fn increase_value() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `534`
+		//  Estimated: `5978`
+		// Minimum execution time: 25_550_000 picoseconds.
+		Weight::from_parts(27_930_000, 0)
+			.saturating_add(Weight::from_parts(0, 5978))
+			.saturating_add(T::DbWeight::get().reads(3))
+			.saturating_add(T::DbWeight::get().writes(2))
+	}
 }
