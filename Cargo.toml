@@ -103,6 +103,7 @@ indiv-pallet-nft-credits = { path = "pallets/nft-credits", default-features = fa
 indiv-pallet-origin-restriction = { path = "pallets/origin-restriction", default-features = false }
 indiv-pallet-people-lite = { path = "pallets/people-lite", default-features = false }
 indiv-pallet-people = { path = "pallets/people-multi", default-features = false }
+indiv-pallet-people-airdrops = { path = "pallets/people-airdrops", default-features = false }
 indiv-pallet-pgas = { path = "pallets/pgas", default-features = false }
 indiv-pallet-proof-of-ink = { path = "pallets/proof-of-ink", default-features = false }
 indiv-pallet-relay-randomness = { path = "pallets/relay-randomness", default-features = false }
@@ -423,6 +424,7 @@ members = [
 	"pallets/nft-claims",
 	"pallets/nft-credits",
 	"pallets/origin-restriction",
+	"pallets/people-airdrops",
 	"pallets/people-lite",
 	"pallets/people-multi",
 	"pallets/pgas",
