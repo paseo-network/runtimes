@@ -62,7 +62,10 @@ fn person_gated_contexts() -> alloc::vec::Vec<(&'static str, Context)> {
 fn lite_gated_contexts() -> alloc::vec::Vec<(&'static str, Context)> {
 	alloc::vec![
 		("people-lite auth", indiv_pallet_people_lite::Pallet::<Runtime>::auth_context()),
-		("score (also game's EnsureLiteAlias)", indiv_pallet_score::Pallet::<Runtime>::score_context()),
+		(
+			"score (also game's EnsureLiteAlias)",
+			indiv_pallet_score::Pallet::<Runtime>::score_context()
+		),
 	]
 }
 
@@ -136,8 +139,7 @@ fn derived_contexts_resolve_against_the_shared_network_suffix() {
 	use system_parachains_constants::paseo::individuality::NETWORK_SUFFIX;
 
 	sp_io::TestExternalities::default().execute_with(|| {
-		let expect =
-			|alloc| build_product_context(personhood::PRODUCT_NAME, NETWORK_SUFFIX, alloc);
+		let expect = |alloc| build_product_context(personhood::PRODUCT_NAME, NETWORK_SUFFIX, alloc);
 
 		assert_eq!(
 			indiv_pallet_score::Pallet::<Runtime>::score_context(),
