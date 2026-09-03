@@ -139,14 +139,20 @@ pub mod migrations {
 
 	/// Unreleased migrations. Add new ones here:
 	///
+	/// `MigrateV6ToV7` comes with the stable2606 `cumulus-pallet-xcmp-queue`, which drops the
+	/// per-channel signal bookkeeping from `OutboundXcmpStatus`. Ordered first, matching
+	/// upstream's `bulletin-paseo`.
+	///
 	/// `RelocateFromTransactionStorage` is the one-shot move of `Renewals`,
 	/// `PendingAutoRenewals` (landing as `PendingRenewals`) and `PermanentStorageUsed` out
 	/// of the `TransactionStorage` prefix and into the new `DataRenewal` pallet's. The
 	/// source key literals keep their pre-split names. `Authorizations` is deliberately
 	/// untouched: `AuthorizationExtent::extra` occupies the slot the pre-split
 	/// `bytes_permanent` field had, so existing values already decode as the new layout.
-	pub type Unreleased =
-		(pallet_bulletin_data_renewal::migrations::RelocateFromTransactionStorage<Runtime>,);
+	pub type Unreleased = (
+		cumulus_pallet_xcmp_queue::migration::v7::MigrateV6ToV7<Runtime>,
+		pallet_bulletin_data_renewal::migrations::RelocateFromTransactionStorage<Runtime>,
+	);
 
 	/// Migrations/checks that do not need to be versioned and can run on every update.
 	pub type Permanent = (
@@ -431,6 +437,7 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type CheckAssociatedRelayNumber = RelayNumberMonotonicallyIncreases;
 	type ConsensusHook = ConsensusHook;
 	type RelayParentOffset = ConstU32<0>;
+	type SchedulingSignatureVerifier = ();
 }
 
 type ConsensusHook = cumulus_pallet_aura_ext::FixedVelocityConsensusHook<
@@ -776,6 +783,10 @@ impl_runtime_apis! {
 	impl cumulus_primitives_core::RelayParentOffsetApi<Block> for Runtime {
 		fn relay_parent_offset() -> u32 {
 			0
+		}
+
+		fn max_claim_queue_offset() -> u8 {
+			cumulus_pallet_parachain_system::Pallet::<Runtime>::max_claim_queue_offset()
 		}
 	}
 
