@@ -44,6 +44,10 @@ on:
         description: 'Build bulletin-paseo runtime'
         type: boolean
         default: false
+      build_fast_runtimes:
+        description: 'Additionally build fast-runtime variants (paseo, coretime-paseo)'
+        type: boolean
+        default: true
       dry_run:
         description: 'Run without creating tag or GitHub release (for testing)'
         type: boolean
@@ -106,6 +110,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    # A failing fast-runtime build must never block the production release; the
+    # release is simply published without the fast artifacts.
+    continue-on-error: ${{ matrix.variant == 'fast' }}
     strategy:
       matrix:
         include:
@@ -113,25 +120,62 @@ jobs:
           - name: "paseo"
             path: "relay/paseo"
             package_type: "relay"
+            variant: "release"
+            variant_id: ""
+            features: "on-chain-release-build"
           # Parachain runtimes
           - name: "asset-hub-paseo"
             path: "system-parachains/asset-hub-paseo"
             package_type: "parachains"
+            variant: "release"
+            variant_id: ""
+            features: "on-chain-release-build"
           - name: "bridge-hub-paseo"
             path: "system-parachains/bridge-hub-paseo"
             package_type: "parachains"
+            variant: "release"
+            variant_id: ""
+            features: "on-chain-release-build"
           - name: "collectives-paseo"
             path: "system-parachains/collectives-paseo"
             package_type: "parachains"
+            variant: "release"
+            variant_id: ""
+            features: "on-chain-release-build"
           - name: "people-paseo"
             path: "system-parachains/people-paseo"
             package_type: "parachains"
+            variant: "release"
+            variant_id: ""
+            features: "on-chain-release-build"
           - name: "coretime-paseo"
             path: "system-parachains/coretime-paseo"
             package_type: "parachains"
+            variant: "release"
+            variant_id: ""
+            features: "on-chain-release-build"
           - name: "bulletin-paseo"
             path: "system-parachains/bulletin-paseo"
             package_type: "parachains"
+            variant: "release"
+            variant_id: ""
+            features: "on-chain-release-build"
+          # Fast-runtime variants. Only runtimes that actually define the
+          # `fast-runtime` feature are listed here. `TIMESLICE_PERIOD` is shared
+          # between the relay and coretime, so these two must always be built and
+          # deployed as a matched pair.
+          - name: "paseo"
+            path: "relay/paseo"
+            package_type: "relay"
+            variant: "fast"
+            variant_id: "_fast"
+            features: "on-chain-release-build,fast-runtime"
+          - name: "coretime-paseo"
+            path: "system-parachains/coretime-paseo"
+            package_type: "parachains"
+            variant: "fast"
+            variant_id: "_fast"
+            features: "on-chain-release-build,fast-runtime"
 
     steps:
       - name: Check package type
@@ -175,6 +219,11 @@ jobs:
               fi
               ;;
           esac
+
+          # Fast-runtime variants are opt-in and built on top of the same selection.
+          if [[ "${{ matrix.variant }}" == "fast" && "${{ github.event.inputs.build_fast_runtimes }}" != "true" ]]; then
+            should_run=false
+          fi
           echo "should_run=$should_run" >> $GITHUB_OUTPUT
 
       - name: Checkout sources
@@ -191,17 +240,17 @@ jobs:
         uses: actions/cache@v3
         with:
           path: "${{ github.workspace }}/${{ matrix.path }}/target"
-          key: srtool-target-${{ matrix.name }}-${{ github.sha }}
+          key: srtool-target-${{ matrix.name }}${{ matrix.variant_id }}-${{ github.sha }}
           restore-keys: |
-            srtool-target-${{ matrix.name }}-
+            srtool-target-${{ matrix.name }}${{ matrix.variant_id }}-
             srtool-target-
 
-      - name: Build ${{ matrix.name }} runtime
+      - name: Build ${{ matrix.name }} runtime (${{ matrix.variant }})
         if: steps.check_package.outputs.should_run == 'true'
         id: srtool_build
         uses: paritytech/srtool-actions@v0.9.4
         env:
-          BUILD_OPTS: "--features on-chain-release-build"
+          BUILD_OPTS: "--features ${{ matrix.features }}"
         with:
           chain: ${{ matrix.name }}
           package: "${{ matrix.name }}-runtime"
@@ -211,30 +260,30 @@ jobs:
       - name: Store srtool digest to disk
         if: steps.check_package.outputs.should_run == 'true'
         run: |
-          echo '${{ steps.srtool_build.outputs.json }}' | jq . > ${{ matrix.name }}-srtool-digest.json
+          echo '${{ steps.srtool_build.outputs.json }}' | jq . > ${{ matrix.name }}${{ matrix.variant_id }}-srtool-digest.json
 
       # Get the compressed WASM file
       - name: Copy compressed WASM
         if: steps.check_package.outputs.should_run == 'true'
         run: |
           # Copy only the compressed WASM file
-          cp ${{ steps.srtool_build.outputs.wasm_compressed }} ./${{ matrix.name }}_runtime.compressed.wasm
+          cp ${{ steps.srtool_build.outputs.wasm_compressed }} ./${{ matrix.name }}${{ matrix.variant_id }}_runtime.compressed.wasm
 
       - name: Archive Runtime
         if: steps.check_package.outputs.should_run == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.name }}-runtime-${{ needs.create-tag.outputs.release_tag }}
+          name: ${{ matrix.name }}${{ matrix.variant_id }}-runtime-${{ needs.create-tag.outputs.release_tag }}
           path: |
-            ${{ matrix.name }}_runtime.compressed.wasm
-            ${{ matrix.name }}-srtool-digest.json
+            ${{ matrix.name }}${{ matrix.variant_id }}_runtime.compressed.wasm
+            ${{ matrix.name }}${{ matrix.variant_id }}-srtool-digest.json
 
       - name: Prepare release notes
         if: steps.check_package.outputs.should_run == 'true'
         id: release_notes
         run: |
           {
-            echo "### Runtime: \`${{ matrix.name }}\`"
+            echo "### Runtime: \`${{ matrix.name }}${{ matrix.variant_id }}\`${{ matrix.variant == 'fast' && ' _(fast-runtime build — testing only, do not deploy to Paseo)_' || '' }}"
             echo "\`\`\`"
             echo "🏋️ Runtime Size:           ${{ fromJSON(steps.srtool_build.outputs.json).runtimes.compressed.subwasm.size }} bytes"
             echo "🔥 Core Version:           ${{ fromJSON(steps.srtool_build.outputs.json).runtimes.compressed.subwasm.core_version.specName }}-${{ fromJSON(steps.srtool_build.outputs.json).runtimes.compressed.subwasm.core_version.specVersion }}"
@@ -244,14 +293,14 @@ jobs:
             echo "🗳️ Blake2-256 hash:        ${{ fromJSON(steps.srtool_build.outputs.json).runtimes.compressed.subwasm.blake2_256 }}"
             echo "📦 IPFS:                   ${{ fromJSON(steps.srtool_build.outputs.json).runtimes.compressed.subwasm.ipfs_hash }}"
             echo "\`\`\`"
-          } > runtime_notes_${{ matrix.name }}.md
-          echo "notes_file=runtime_notes_${{ matrix.name }}.md" >> $GITHUB_OUTPUT
+          } > runtime_notes_${{ matrix.name }}${{ matrix.variant_id }}.md
+          echo "notes_file=runtime_notes_${{ matrix.name }}${{ matrix.variant_id }}.md" >> $GITHUB_OUTPUT
 
       - name: Upload release notes
         if: steps.check_package.outputs.should_run == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: release-notes-${{ matrix.name }}
+          name: release-notes-${{ matrix.name }}${{ matrix.variant_id }}
           path: ${{ steps.release_notes.outputs.notes_file }}
 
   generate-chain-specs:
@@ -485,6 +534,10 @@ jobs:
             echo "  - Coretime Paseo" >> release_notes.md
           fi
           echo "" >> release_notes.md
+          if [ "${{ github.event.inputs.build_fast_runtimes }}" == "true" ]; then
+            echo "- **Fast runtimes:** \`*_fast_runtime.compressed.wasm\` artifacts are built with the \`fast-runtime\` feature (short epochs, \`TIMESLICE_PERIOD = 20\`) and are meant for local/ephemeral test networks only. The relay and coretime fast runtimes share \`TIMESLICE_PERIOD\` and must be deployed together." >> release_notes.md
+            echo "" >> release_notes.md
+          fi
           
           # Get the latest release tag of the same kind
           if [ "${{ github.event.inputs.tag_suffix }}" == "none" ]; then
