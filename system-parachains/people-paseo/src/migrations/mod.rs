@@ -15,6 +15,8 @@
 // limitations under the License.
 
 use super::*;
+
+pub mod coinage;
 use alloc::vec::Vec;
 use assets_common::{
 	local_and_foreign_assets::ForeignAssetReserveData,
