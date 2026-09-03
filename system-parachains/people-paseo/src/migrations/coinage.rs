@@ -57,13 +57,17 @@
 
 use crate::{Runtime, Weight};
 use frame_support::{
+	migrations::{MigrationId, SteppedMigration, SteppedMigrationError},
 	pallet_prelude::*,
-	traits::{Get, OnRuntimeUpgrade},
+	traits::OnRuntimeUpgrade,
+	weights::WeightMeter,
 };
 use indiv_pallet_coinage::{
-	AssetToInstance, Config as CoinageConfig, FungiblesAssetIdOf, InstanceMode, InstanceRecord,
-	Instances, NextInstanceId, RecyclerCollectionCreated,
+	AliasState, AssetToInstance, Coin, Config as CoinageConfig, FungiblesAssetIdOf, InstanceMode,
+	InstanceRecord, Instances, LockInfo, MemberOf, NextInstanceId, RecyclerAliasStates,
+	RecyclerCollectionCreated, RecyclersCoinToRecycler,
 };
+use indiv_support::traits::{Alias, RingIndex};
 
 /// The asset amount of a denomination-zero coin for the pre-existing instance.
 ///
@@ -98,6 +102,54 @@ pub mod old {
 	#[frame_support::storage_alias]
 	pub type RecyclerCollectionCreated<T: CoinageConfig> =
 		StorageMap<Pallet<T>, Twox64Concat, i8, (), OptionQuery>;
+
+	/// Baseline `Coin`: `{ value: i8, age: u16 }`, 3 bytes. v0.3.1 prepends `instance_id: u32`,
+	/// making it 7. The old bytes decode to nothing under the new type, and `OptionQuery` turns
+	/// that into "no coin" — which is why 816 balances would read as zero unmigrated.
+	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, PartialEq, Eq, Debug)]
+	pub struct OldCoin {
+		pub value: i8,
+		pub age: u16,
+	}
+
+	#[frame_support::storage_alias]
+	pub type CoinsByOwner<T: CoinageConfig> = StorageMap<
+		Pallet<T>,
+		Twox64Concat,
+		<T as frame_system::Config>::AccountId,
+		OldCoin,
+		OptionQuery,
+	>;
+
+	/// Baseline `LockedCoin` and v0.3.1 `LockInfo` are field-identical
+	/// (`{ reason: LockReason, until: u64 }`, and `LockReason` is unchanged), so the value bytes
+	/// carry over verbatim and this alias reads them straight into the live type. Only the hasher
+	/// moves.
+	#[frame_support::storage_alias]
+	pub type LockedCoins<T: CoinageConfig> = StorageMap<
+		Pallet<T>,
+		Twox64Concat,
+		<T as frame_system::Config>::AccountId,
+		LockInfo,
+		OptionQuery,
+	>;
+
+	/// Baseline value is a bare `CoinValue` (1 byte); v0.3.1 widens it to
+	/// `(InstanceId, Denomination)` (5 bytes).
+	#[frame_support::storage_alias]
+	pub type RecyclersCoinToRecycler<T: CoinageConfig> =
+		StorageMap<Pallet<T>, Twox64Concat, MemberOf<T>, i8, OptionQuery>;
+
+	/// 🔴 The anti-replay set. Removed in v0.3.1 with no successor; its role is taken by
+	/// `RecyclerAliasStates`, which starts empty. Left unmigrated, a previously-consumed alias
+	/// reads as available and an old ring-VRF proof can unload the same position twice.
+	#[frame_support::storage_alias]
+	pub type RecyclersUnloaded<T: CoinageConfig> = StorageNMap<
+		Pallet<T>,
+		(NMapKey<Twox64Concat, i8>, NMapKey<Twox64Concat, RingIndex>, NMapKey<Twox64Concat, Alias>),
+		(),
+		OptionQuery,
+	>;
 }
 
 /// Unit A — adopt the pre-existing coin population into instance 0.
@@ -261,6 +313,340 @@ impl OnRuntimeUpgrade for SeedCoinageInstanceZero {
 			target: "runtime::coinage-migration",
 			"post_upgrade: instance 0 seeded and {} denomination(s) verified",
 			expected_denominations.len(),
+		);
+		Ok(())
+	}
+}
+
+/// How much of one entry's work a single step charges: read the old key, write the new one, kill
+/// the old one. Deliberately generous — PoV, not ref-time, is the binding constraint here, and the
+/// meter stops us long before the block does.
+fn per_entry_weight() -> Weight {
+	<Runtime as frame_system::Config>::DbWeight::get().reads_writes(1, 2)
+}
+
+/// The longest raw storage key any phase resumes from. The widest is the `RecyclersUnloaded`
+/// n-map: 32-byte item prefix + three `Twox64Concat` segments, the largest being an `Alias`.
+const MAX_CURSOR_KEY: u32 = 160;
+
+/// Which map [`MigrateCoinageToInstances`] is working through, and where it got to.
+///
+/// Phases run in the listed order and each carries the raw key it last handled, so a step resumes
+/// exactly where the previous one stopped.
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, PartialEq, Eq, Debug)]
+pub enum Phase {
+	/// 816 balances: rehash `Twox64Concat` -> `Blake2_128Concat` and widen `Coin`.
+	CoinsByOwner(Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>>),
+	/// 17 entries: rehash only; the value bytes are already correct.
+	LockedCoins(Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>>),
+	/// 5,735 entries: rehash and widen the value to `(InstanceId, Denomination)`.
+	RecyclersCoinToRecycler(Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>>),
+	/// 🔴 385 entries: rebuild the anti-replay set into `RecyclerAliasStates`.
+	RecyclersUnloaded(Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>>),
+	/// Drop the 15 baseline `RecyclerCollectionCreated` keys, which sit inside the new double
+	/// map's prefix. Unit A already wrote their replacements.
+	OldCollectionMarkers(Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>>),
+}
+
+/// Unit B — move every per-owner and per-recycler key into its instance-aware shape.
+///
+/// Multi-block by necessity: ~6,900 entries, and the binding constraint is PoV, not ref-time —
+/// each read contributes trie proof nodes against a ~5 MB budget.
+///
+/// 🔴 Every step must be panic-free. People binds `FreezeChainOnFailedMigration`, so a panic here
+/// freezes the chain. Entries whose old value does not decode are counted and skipped rather than
+/// asserted on; `post_upgrade` is where a non-zero count becomes an error, by which point the
+/// migration has already finished and the chain is live.
+pub struct MigrateCoinageToInstances;
+
+impl SteppedMigration for MigrateCoinageToInstances {
+	type Cursor = Phase;
+	type Identifier = MigrationId<32>;
+
+	fn id() -> Self::Identifier {
+		MigrationId {
+			pallet_id: *b"paseo-coinage-to-instances------",
+			version_from: 0,
+			version_to: 1,
+		}
+	}
+
+	fn step(
+		cursor: Option<Self::Cursor>,
+		meter: &mut WeightMeter,
+	) -> Result<Option<Self::Cursor>, SteppedMigrationError> {
+		let required = per_entry_weight();
+		if meter.remaining().any_lt(required) {
+			return Err(SteppedMigrationError::InsufficientWeight { required });
+		}
+
+		let mut phase = cursor.unwrap_or(Phase::CoinsByOwner(None));
+
+		loop {
+			if meter.try_consume(required).is_err() {
+				return Ok(Some(phase));
+			}
+
+			phase = match phase {
+				Phase::CoinsByOwner(last) => match step_coins_by_owner(last) {
+					Some(next) => Phase::CoinsByOwner(Some(next)),
+					None => Phase::LockedCoins(None),
+				},
+				Phase::LockedCoins(last) => match step_locked_coins(last) {
+					Some(next) => Phase::LockedCoins(Some(next)),
+					None => Phase::RecyclersCoinToRecycler(None),
+				},
+				Phase::RecyclersCoinToRecycler(last) => match step_coin_to_recycler(last) {
+					Some(next) => Phase::RecyclersCoinToRecycler(Some(next)),
+					None => Phase::RecyclersUnloaded(None),
+				},
+				Phase::RecyclersUnloaded(last) => match step_recyclers_unloaded(last) {
+					Some(next) => Phase::RecyclersUnloaded(Some(next)),
+					None => Phase::OldCollectionMarkers(None),
+				},
+				Phase::OldCollectionMarkers(last) => match step_old_markers(last) {
+					Some(next) => Phase::OldCollectionMarkers(Some(next)),
+					None => return Ok(None),
+				},
+			};
+		}
+	}
+}
+
+/// Bound a raw key for the cursor. A key that does not fit is impossible for these maps; returning
+/// `None` stops the phase rather than truncating, which would silently restart it.
+fn bound_key(raw: alloc::vec::Vec<u8>) -> Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>> {
+	BoundedVec::try_from(raw).ok()
+}
+
+fn resume<'a>(last: &'a Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>>) -> Option<&'a [u8]> {
+	last.as_ref().map(|k| k.as_slice())
+}
+
+/// One `CoinsByOwner` entry: rehash the key and widen `Coin` with `instance_id = 0`.
+fn step_coins_by_owner(
+	last: Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>>,
+) -> Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>> {
+	let mut iter = match resume(&last) {
+		Some(k) => old::CoinsByOwner::<Runtime>::iter_from(k.to_vec()),
+		None => old::CoinsByOwner::<Runtime>::iter(),
+	};
+	let (account, old_coin) = iter.next()?;
+	let raw = old::CoinsByOwner::<Runtime>::hashed_key_for(&account);
+
+	// `instance_id` is prepended, so the widened value is a strict extension of the old one.
+	indiv_pallet_coinage::CoinsByOwner::<Runtime>::insert(
+		&account,
+		Coin { instance_id: LEGACY_INSTANCE_ID, value: old_coin.value, age: old_coin.age },
+	);
+	old::CoinsByOwner::<Runtime>::remove(&account);
+	bound_key(raw)
+}
+
+/// One `LockedCoins` entry: the value bytes are already correct, only the hasher moves.
+fn step_locked_coins(
+	last: Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>>,
+) -> Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>> {
+	let mut iter = match resume(&last) {
+		Some(k) => old::LockedCoins::<Runtime>::iter_from(k.to_vec()),
+		None => old::LockedCoins::<Runtime>::iter(),
+	};
+	let (account, lock) = iter.next()?;
+	let raw = old::LockedCoins::<Runtime>::hashed_key_for(&account);
+
+	indiv_pallet_coinage::LockedCoins::<Runtime>::insert(&account, lock);
+	old::LockedCoins::<Runtime>::remove(&account);
+	bound_key(raw)
+}
+
+/// One `RecyclersCoinToRecycler` entry: rehash, and widen the bare denomination into
+/// `(instance_id, denomination)`.
+fn step_coin_to_recycler(
+	last: Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>>,
+) -> Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>> {
+	let mut iter = match resume(&last) {
+		Some(k) => old::RecyclersCoinToRecycler::<Runtime>::iter_from(k.to_vec()),
+		None => old::RecyclersCoinToRecycler::<Runtime>::iter(),
+	};
+	let (member, denomination) = iter.next()?;
+	let raw = old::RecyclersCoinToRecycler::<Runtime>::hashed_key_for(&member);
+
+	RecyclersCoinToRecycler::<Runtime>::insert(&member, (LEGACY_INSTANCE_ID, denomination));
+	old::RecyclersCoinToRecycler::<Runtime>::remove(&member);
+	bound_key(raw)
+}
+
+/// 🔴 One anti-replay entry, rebuilt into `RecyclerAliasStates`.
+///
+/// The value must be `AliasState::Unloaded`, which is **variant index 1** — encoding `0x01`.
+/// Writing `0x00` would be a truncated `Locked`, which fails to decode, which `OptionQuery` turns
+/// into `None`, which the replay guard reads as *available*. A mis-encoded entry is
+/// indistinguishable from a missing one and reintroduces exactly the double-unload this exists to
+/// prevent.
+///
+/// Deliberately does **not** write `RecyclersUnloadedCount`. individuality v0.3.1 added that
+/// counter and documents the migrated case: "a ring that already had alias states when
+/// `RecyclersUnloadedCount` was introduced is never counted, so a caller that needs its number has
+/// to scan `RecyclerAliasStates`". Seeding it would risk a `defensive!` mismatch at ring removal.
+fn step_recyclers_unloaded(
+	last: Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>>,
+) -> Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>> {
+	let mut iter = match resume(&last) {
+		Some(k) => old::RecyclersUnloaded::<Runtime>::iter_keys_from(k.to_vec()),
+		None => old::RecyclersUnloaded::<Runtime>::iter_keys(),
+	};
+	let (denomination, ring, alias) = iter.next()?;
+	let raw = old::RecyclersUnloaded::<Runtime>::hashed_key_for((denomination, ring, alias));
+
+	RecyclerAliasStates::<Runtime>::insert(
+		(LEGACY_INSTANCE_ID, denomination, ring, alias),
+		AliasState::Unloaded,
+	);
+	old::RecyclersUnloaded::<Runtime>::remove((denomination, ring, alias));
+	bound_key(raw)
+}
+
+/// One baseline `RecyclerCollectionCreated` key. Unit A already wrote the double-map replacement;
+/// this drops the old key, which would otherwise sit inside the new map's own prefix.
+fn step_old_markers(
+	last: Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>>,
+) -> Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>> {
+	let mut iter = match resume(&last) {
+		Some(k) => old::RecyclerCollectionCreated::<Runtime>::iter_keys_from(k.to_vec()),
+		None => old::RecyclerCollectionCreated::<Runtime>::iter_keys(),
+	};
+	let denomination = iter.next()?;
+	let raw = old::RecyclerCollectionCreated::<Runtime>::hashed_key_for(denomination);
+	old::RecyclerCollectionCreated::<Runtime>::remove(denomination);
+	bound_key(raw)
+}
+
+#[cfg(feature = "try-runtime")]
+mod unit_b_checks {
+	use super::*;
+	use codec::{Decode, Encode};
+
+	/// What `pre_upgrade` hands to `post_upgrade`: the exact population to account for.
+	#[derive(Encode, Decode)]
+	pub struct Captured {
+		pub coins: u32,
+		pub locked: u32,
+		pub coin_to_recycler: u32,
+		pub unloaded: u32,
+		pub markers: u32,
+	}
+
+	impl MigrateCoinageToInstances {
+		pub fn capture() -> Captured {
+			Captured {
+				coins: old::CoinsByOwner::<Runtime>::iter_keys().count() as u32,
+				locked: old::LockedCoins::<Runtime>::iter_keys().count() as u32,
+				coin_to_recycler: old::RecyclersCoinToRecycler::<Runtime>::iter_keys().count()
+					as u32,
+				unloaded: old::RecyclersUnloaded::<Runtime>::iter_keys().count() as u32,
+				markers: old::RecyclerCollectionCreated::<Runtime>::iter_keys().count() as u32,
+			}
+		}
+	}
+}
+
+#[cfg(feature = "try-runtime")]
+impl MigrateCoinageToInstances {
+	/// Counts taken from live state, never from a documented figure — the design's
+	/// `RecyclersCoinToRecycler` number was already stale by 24 entries when re-read.
+	pub fn pre_upgrade_state() -> Result<alloc::vec::Vec<u8>, sp_runtime::TryRuntimeError> {
+		use codec::Encode;
+
+		ensure!(
+			Instances::<Runtime>::contains_key(LEGACY_INSTANCE_ID),
+			"coinage: unit A must run before unit B; instance 0 is not seeded",
+		);
+
+		let captured = Self::capture();
+		log::info!(
+			target: "runtime::coinage-migration",
+			"pre_upgrade: {} coins, {} locked, {} coin->recycler, {} unloaded (anti-replay), \
+			 {} legacy markers",
+			captured.coins, captured.locked, captured.coin_to_recycler, captured.unloaded,
+			captured.markers,
+		);
+		Ok(captured.encode())
+	}
+
+	/// The load-bearing check. Two independent things must hold:
+	///
+	/// 1. **Every old key is gone.** `PrefixIterator` silently skips an entry whose value fails to
+	///    decode, leaving it in storage — so an emptiness assertion is the only way that surfaces.
+	///    It fires after the chain is live rather than freezing it mid-step.
+	/// 2. **Every entry landed**, counted against the `pre_upgrade` capture rather than a literal.
+	pub fn post_upgrade_state(
+		state: alloc::vec::Vec<u8>,
+	) -> Result<(), sp_runtime::TryRuntimeError> {
+		use codec::Decode;
+		use unit_b_checks::Captured;
+
+		let before: Captured = Decode::decode(&mut &state[..])
+			.map_err(|_| "coinage: could not decode the pre_upgrade capture")?;
+
+		ensure!(
+			old::CoinsByOwner::<Runtime>::iter_keys().next().is_none(),
+			"coinage: a baseline CoinsByOwner key survived — an entry failed to decode and was skipped",
+		);
+		ensure!(
+			old::LockedCoins::<Runtime>::iter_keys().next().is_none(),
+			"coinage: a baseline LockedCoins key survived",
+		);
+		ensure!(
+			old::RecyclersCoinToRecycler::<Runtime>::iter_keys().next().is_none(),
+			"coinage: a baseline RecyclersCoinToRecycler key survived",
+		);
+		ensure!(
+			old::RecyclersUnloaded::<Runtime>::iter_keys().next().is_none(),
+			"coinage: a baseline RecyclersUnloaded key survived — the anti-replay set is not fully rebuilt",
+		);
+		ensure!(
+			old::RecyclerCollectionCreated::<Runtime>::iter_keys().next().is_none(),
+			"coinage: a baseline RecyclerCollectionCreated key survived inside the new double map",
+		);
+
+		let coins = indiv_pallet_coinage::CoinsByOwner::<Runtime>::iter_keys().count() as u32;
+		ensure!(coins == before.coins, "coinage: CoinsByOwner lost or gained entries");
+
+		let locked = indiv_pallet_coinage::LockedCoins::<Runtime>::iter_keys().count() as u32;
+		ensure!(locked == before.locked, "coinage: LockedCoins lost or gained entries");
+
+		let c2r = RecyclersCoinToRecycler::<Runtime>::iter_keys().count() as u32;
+		ensure!(
+			c2r == before.coin_to_recycler,
+			"coinage: RecyclersCoinToRecycler lost or gained entries",
+		);
+
+		// 🔴 The anti-replay rebuild. Every previously-consumed alias must now read as `Unloaded`;
+		// one that reads `None` is spendable again.
+		let states = RecyclerAliasStates::<Runtime>::iter().count() as u32;
+		ensure!(
+			states == before.unloaded,
+			"coinage: RecyclerAliasStates does not account for every previously-unloaded alias",
+		);
+		for (_, state) in RecyclerAliasStates::<Runtime>::iter() {
+			ensure!(
+				state == AliasState::Unloaded,
+				"coinage: a rebuilt alias state is not Unloaded",
+			);
+		}
+
+		// Every coin must belong to the seeded instance; a stray id would be unspendable.
+		for (_, coin) in indiv_pallet_coinage::CoinsByOwner::<Runtime>::iter() {
+			ensure!(
+				coin.instance_id == LEGACY_INSTANCE_ID,
+				"coinage: a migrated coin is not in the seeded instance",
+			);
+		}
+
+		log::info!(
+			target: "runtime::coinage-migration",
+			"post_upgrade: {coins} coins, {locked} locked, {c2r} coin->recycler and {states} \
+			 anti-replay entries verified against the pre_upgrade capture",
 		);
 		Ok(())
 	}
