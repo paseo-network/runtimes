@@ -31,7 +31,7 @@ pub type ProofOf<T> =
 
 /// Full information about an alias-to-account mapping.
 ///
-/// Stored in `AccountToAlias` and embedded in the `Origin::RingAlias` variant.
+/// Stored in `AccountToAlias`, which is what a call reads to resolve an account's person.
 #[derive(
 	Clone, PartialEq, Eq, Debug, Encode, Decode, MaxEncodedLen, TypeInfo, DecodeWithMemTracking,
 )]

@@ -15,7 +15,7 @@
 // limitations under the License.
 
 use codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
-use indiv_support::traits::{Alias, PersonalId};
+use indiv_support::traits::PersonalId;
 use scale_info::TypeInfo;
 use sp_core::ConstU32;
 use sp_runtime::BoundedVec;
@@ -60,12 +60,16 @@ impl AttendanceHistory {
 }
 
 /// A streak of attendance or absence.
+///
+/// The inner count saturates at `u8::MAX` (255). Since the streak value is
+/// only consumed as a score delta (score is capped at 21), any value above 21
+/// produces the same result, so saturation is behaviourally transparent.
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Eq, PartialEq, Debug, Clone)]
 pub enum Streak {
 	/// The person has attended the given number of times.
-	Attended(u32),
+	Attended(u8),
 	/// The person has been absent the given number of times.
-	Absent(u32),
+	Absent(u8),
 }
 
 impl Default for Streak {
@@ -76,7 +80,7 @@ impl Default for Streak {
 
 impl Streak {
 	/// Add to the attendance streak or switch to attendance if previously absent
-	pub fn add_attendance(&mut self, amount: u32) {
+	pub fn add_attendance(&mut self, amount: u8) {
 		match self {
 			Streak::Attended(count) => {
 				*count = count.saturating_add(amount);
@@ -88,7 +92,7 @@ impl Streak {
 	}
 
 	/// Add to the absence streak or switch to absence if previously attended
-	pub fn add_absence(&mut self, amount: u32) {
+	pub fn add_absence(&mut self, amount: u8) {
 		match self {
 			Streak::Absent(count) => {
 				*count = count.saturating_add(amount);
@@ -100,7 +104,7 @@ impl Streak {
 	}
 
 	/// Get the number of consecutive attendances by the person.
-	pub fn attendance(&self) -> u32 {
+	pub fn attendance(&self) -> u8 {
 		match self {
 			Streak::Attended(count) => *count,
 			Streak::Absent(_) => 0,
@@ -108,7 +112,7 @@ impl Streak {
 	}
 
 	/// Get the number of consecutive absences by the person.
-	pub fn absence(&self) -> u32 {
+	pub fn absence(&self) -> u8 {
 		match self {
 			Streak::Absent(count) => *count,
 			Streak::Attended(_) => 0,
@@ -116,7 +120,7 @@ impl Streak {
 	}
 
 	/// Used by test cases
-	pub fn set_attendance_to_at_least(&mut self, count: u32) {
+	pub fn set_attendance_to_at_least(&mut self, count: u8) {
 		*self = match self {
 			Streak::Attended(c) => Streak::Attended((*c).max(count)),
 			Streak::Absent(_) => Streak::Attended(count),
@@ -145,7 +149,9 @@ pub struct PersonhoodThresholdTier {
 	/// Upper bound (inclusive) of the active participants for this tier.
 	pub population_size_threshold: u32,
 	/// The score required to achieve personhood at this population level.
-	pub score_threshold: u32,
+	///
+	/// Validated to be in `1..=MAX_PERSONHOOD_THRESHOLD` (currently 21).
+	pub score_threshold: u8,
 }
 
 /// A bounded list of personhood-threshold tiers (at most
@@ -183,13 +189,14 @@ pub struct AbsenceGraceTier {
 /// schedule and as the input to `set_absence_grace_schedule`.
 pub type AbsenceGraceTiers = BoundedVec<AbsenceGraceTier, ConstU32<8>>;
 
-// TODO: change score and streak to u8.
-/// The participant informations.
+/// The participant information.
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Eq, PartialEq, Debug)]
 pub struct Participant<Balance> {
-	/// Cumulative score of the participant determining personhood
-	/// Persists across streak changes
-	pub score: u32,
+	/// Cumulative score of the participant determining personhood.
+	///
+	/// Capped at `MAX_PERSONHOOD_THRESHOLD` (currently 21). Persists across
+	/// streak changes.
+	pub score: u8,
 	/// The streak of the participant, referring to the current consecutive run of
 	/// attendances/absences
 	pub streak: Streak,
@@ -199,11 +206,11 @@ pub struct Participant<Balance> {
 	pub credit: Balance,
 	/// The participant has cashed out in this game, reset to false after next attendance.
 	pub cashed_out: bool,
-	/// Whether the participant has reached personhood score in its last attendance or onboarding.
+	/// Whether the participant has currently reached personhood.
 	pub reached_personhood: bool,
 	/// Whether the participant has ever reached personhood score.
 	pub has_ever_reached_personhood: bool,
-	/// The recognition status of the participant **in `People`**.
+	/// The recognition status of the participant **in `People` registry**.
 	pub recognition: Recognition,
 	/// The game index of the last attended game if any.
 	/// A non-attended game does not update this field.
@@ -251,25 +258,10 @@ pub struct PayoutSchedule<Balance, BlockNumber> {
 pub type RoundIndex = u32;
 
 /// An account or a person.
-#[derive(
-	PartialEq, Eq, Clone, Encode, Decode, Debug, TypeInfo, MaxEncodedLen, DecodeWithMemTracking,
-)]
-pub enum AccountOrPerson<AccountId> {
-	/// An account.
-	Account(AccountId),
-	/// A person.
-	Person(Alias),
-}
-
-impl<AccountId> AccountOrPerson<AccountId> {
-	/// Get the account if it is an account.
-	pub fn account(&self) -> Option<&AccountId> {
-		match &self {
-			AccountOrPerson::Account(account) => Some(account),
-			AccountOrPerson::Person(_) => None,
-		}
-	}
-}
+///
+/// Lives in `indiv-support` because the claim chain checks the very identity this pallet's
+/// consumers commit to.
+pub use indiv_support::identity::AccountOrPerson;
 
 /// The plannification of a round, points are accumulated in a different type.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, Debug, TypeInfo, MaxEncodedLen)]

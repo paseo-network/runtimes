@@ -29,9 +29,12 @@ use frame_support::{
 	DefaultNoBound, EqNoBound, PartialEqNoBound,
 };
 use frame_system::{CheckNonce, ValidNonceInfo};
-use indiv_support::traits::{Context, MembershipProver, RevisedContextualAlias};
+use indiv_support::{
+	traits::{Context, MembershipProver, RevisedContextualAlias, RevisionIndex},
+	tx_priority,
+};
 use scale_info::TypeInfo;
-use sp_io::hashing::twox_64;
+use sp_crypto_hashing::twox_64;
 use sp_runtime::{
 	traits::{DispatchInfoOf, TransactionExtension, ValidateResult},
 	transaction_validity::{InvalidTransaction, TransactionValidityError, ValidTransaction},
@@ -54,19 +57,23 @@ pub enum AsPersonInfo<T: Config + Send + Sync> {
 	///
 	/// Replay is only protected against resetting the same account during the tolerance period
 	/// after `call_valid_at` parameter.
-	/// If 2 transaction that set 2 different account are sent for an overlapping validity period,
-	/// then those 2 transactions can be replayed indefinitely for the duration of the overlapping
-	/// period.
-	AsPersonalAliasWithProof(ProofOf<T>, RingIndex, Context),
+	/// If 2 transactions that set 2 different accounts are sent for an overlapping validity
+	/// period, then those 2 transactions can be replayed indefinitely for the duration of the
+	/// overlapping period (the first transaction undoes the replay protection of the second and
+	/// vice versa). To avoid this, the caller must not craft 2 such transactions whose validity
+	/// periods overlap.
+	AsPersonalAliasWithProof(ProofOf<T>, RingIndex, RevisionIndex, Context),
 	/// The none origin will be transformed using signature.
 	///
 	/// This can only dispatch the call `set_personal_id_account`.
 	///
 	/// Replay is only protected against resetting the same account during the tolerance period
 	/// after `call_valid_at` parameter.
-	/// If 2 transaction that set 2 different account are sent for an overlapping validity period,
-	/// then those 2 transactions can be replayed indefinitely for the duration of the overlapping
-	/// period.
+	/// If 2 transactions that set 2 different accounts are sent for an overlapping validity
+	/// period, then those 2 transactions can be replayed indefinitely for the duration of the
+	/// overlapping period (the first transaction undoes the replay protection of the second and
+	/// vice versa). To avoid this, the caller must not craft 2 such transactions whose validity
+	/// periods overlap.
 	AsPersonalIdentityWithProof(SignatureOf<T>, PersonalId),
 	/// The signed origin will be transformed using account to personal id.
 	AsPersonalIdentityWithAccount(T::Nonce),
@@ -90,7 +97,7 @@ pub enum AsPersonInfo<T: Config + Send + Sync> {
 	/// dispatch.
 	/// The context must be the same context that was used when establishing the alias <-> account
 	/// pairing.
-	AsPersonalAliasWithAccountRevised(T::Nonce, ProofOf<T>, RingIndex, Context),
+	AsPersonalAliasWithAccountRevised(T::Nonce, ProofOf<T>, RingIndex, RevisionIndex, Context),
 }
 
 /// Transaction extension to transform an origin into a personal alias or personal identity.
@@ -150,7 +157,7 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 			Some(AsPersonInfo::AsPersonalAliasWithAccount(_)) =>
 				T::WeightInfo::as_person_alias_with_account(),
 			// Alias with proof
-			Some(AsPersonInfo::AsPersonalAliasWithProof(_, _, _)) =>
+			Some(AsPersonInfo::AsPersonalAliasWithProof(..)) =>
 				T::WeightInfo::as_person_alias_with_proof(),
 			// Personal Identity with proof
 			Some(AsPersonInfo::AsPersonalIdentityWithProof(_, _)) =>
@@ -197,6 +204,10 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 
 				let ValidNonceInfo { requires, provides } =
 					CheckNonce::<T>::validate_nonce_for_account(&who, *nonce)?;
+				// Account-based, fee-paying path (authenticated by signed account + nonce, not a
+				// feeless ring-VRF proof origin), so it keeps the default priority and is ordered
+				// by the normal fee-based priority — unlike the *WithProof variants which set an
+				// explicit tier. lint:allow-default-priority
 				let validity = ValidTransaction { requires, provides, ..Default::default() };
 
 				Ok((validity, Val::UsingAccount(who, *nonce), origin))
@@ -205,6 +216,7 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 				nonce,
 				proof,
 				ring_index,
+				revision,
 				context,
 			)) => {
 				let Some(frame_system::Origin::<T>::Signed(who)) = origin.as_system_ref() else {
@@ -220,14 +232,20 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 				let msg = (inherited_implication, "revise", &who, nonce)
 					.using_encoded(sp_io::hashing::blake2_256);
 
-				let validated_rev_ca = T::MemberService::verify_membership(
+				let validated_ca = T::MemberService::verify_membership(
 					PEOPLE_MEMBER_IDENTIFIER,
 					proof,
 					*ring_index,
+					*revision,
 					*context,
 					&msg[..],
 				)
 				.map_err(|_| InvalidTransaction::BadProof)?;
+				let validated_rev_ca = RevisedContextualAlias {
+					revision: *revision,
+					ring: *ring_index,
+					ca: validated_ca,
+				};
 				ensure!(
 					validated_rev_ca.ca.alias == old_rev_ca.ca.alias,
 					InvalidTransaction::BadSigner
@@ -241,6 +259,10 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 
 				let ValidNonceInfo { requires, provides } =
 					CheckNonce::<T>::validate_nonce_for_account(&who, *nonce)?;
+				// Account-based, fee-paying path (authenticated by signed account + nonce, not a
+				// feeless ring-VRF proof origin), so it keeps the default priority and is ordered
+				// by the normal fee-based priority — unlike the *WithProof variants which set an
+				// explicit tier. lint:allow-default-priority
 				let validity = ValidTransaction { requires, provides, ..Default::default() };
 
 				Ok((
@@ -263,11 +285,15 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 
 				let ValidNonceInfo { requires, provides } =
 					CheckNonce::<T>::validate_nonce_for_account(&who, *nonce)?;
+				// Account-based, fee-paying path (authenticated by signed account + nonce, not a
+				// feeless ring-VRF proof origin), so it keeps the default priority and is ordered
+				// by the normal fee-based priority — unlike the *WithProof variants which set an
+				// explicit tier. lint:allow-default-priority
 				let validity = ValidTransaction { requires, provides, ..Default::default() };
 
 				Ok((validity, Val::UsingAccount(who, *nonce), origin))
 			},
-			Some(AsPersonInfo::AsPersonalAliasWithProof(proof, ring_index, context)) => {
+			Some(AsPersonInfo::AsPersonalAliasWithProof(proof, ring_index, revision, context)) => {
 				ensure!(
 					matches!(origin.as_system_ref(), Some(frame_system::RawOrigin::None)),
 					InvalidTransaction::BadSigner
@@ -292,26 +318,34 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 
 				let msg = inherited_implication.using_encoded(sp_io::hashing::blake2_256);
 
-				let validated_rev_ca = T::MemberService::verify_membership(
+				let validated_ca = T::MemberService::verify_membership(
 					PEOPLE_MEMBER_IDENTIFIER,
 					proof,
 					*ring_index,
+					*revision,
 					*context,
 					&msg[..],
 				)
 				.map_err(|_| InvalidTransaction::BadProof)?;
+				let validated_rev_ca = RevisedContextualAlias {
+					revision: *revision,
+					ring: *ring_index,
+					ca: validated_ca,
+				};
 
-				// This protects again replay attack.
+				// This protects against replay attack.
 				if AccountToAlias::<T>::get(account)
-					.is_some_and(|stored_rev_ca| stored_rev_ca == validated_rev_ca)
+					.is_some_and(|stored_rev_ca| stored_rev_ca.supersedes(&validated_rev_ca))
 				{
 					return Err(InvalidTransaction::Stale.into());
 				}
 
 				// The extrinsic provides the setup of the account for the alias.
 				let provides = twox_64(&("setup", &validated_rev_ca, &account).encode()[..]);
-				let valid_transaction =
-					ValidTransaction::with_tag_prefix("Ppl:Alias").and_provides(provides).into();
+				let valid_transaction = ValidTransaction::with_tag_prefix("Ppl:Alias")
+					.and_provides(provides)
+					.priority(tx_priority::USER_DEFAULT)
+					.into();
 
 				// We transmute the origin.
 				let local_origin = Origin::PersonalAlias(validated_rev_ca);
@@ -360,8 +394,10 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 
 				// The extrinsic provides the setup of the account for the personal id.
 				let provides = twox_64(&("setup", index, &account).encode()[..]);
-				let valid_transaction =
-					ValidTransaction::with_tag_prefix("Ppl:Id").and_provides(provides).into();
+				let valid_transaction = ValidTransaction::with_tag_prefix("Ppl:Id")
+					.and_provides(provides)
+					.priority(tx_priority::USER_DEFAULT)
+					.into();
 
 				// We transmute the origin.
 				let local_origin = Origin::PersonalIdentity(*index);
@@ -370,6 +406,8 @@ impl<T: Config + Send + Sync> TransactionExtension<<T as frame_system::Config>::
 
 				Ok((valid_transaction, Val::UsingProof, origin))
 			},
+			// Extension not in use by this transaction: pass through with default validity. The
+			// effective priority comes from whichever extension authorizes the call.
 			None => Ok((ValidTransaction::default(), Val::NotUsing, origin)),
 		}
 	}

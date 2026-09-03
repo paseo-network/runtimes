@@ -40,11 +40,12 @@ fn build_infallible_unpaid_ext(
 	signer: u64,
 	nonce: u32,
 	preservation: CodecPreservation,
-	value: CoinValue,
+	value: Denomination,
 	member_key: MemberOf<Test>,
 	proof_of_ownership: SignatureOf<Test>,
 ) -> Extrinsic {
 	let call = crate::Call::load_recycler_with_external_asset_unpaid {
+		instance_id: TEST_INSTANCE_ID,
 		preservation,
 		value,
 		member_key,
@@ -76,20 +77,16 @@ fn infallible_unpaid_invalid_call() {
 }
 
 #[test]
-fn infallible_unpaid_asset_id_not_set_rejected_in_validation() {
-	new_test_ext().execute_with(|| {
-		setup_asset();
-		Coinage::do_initialize().unwrap();
+fn infallible_unpaid_instance_not_found_rejected_in_validation() {
+	new_test_ext_no_instance().execute_with(|| {
 		let user = 42;
-		fund_asset(user, 10_000);
-		crate::UnderlyingAssetId::<Test>::kill();
 
 		let secret = get_secret(1);
 		let member = CryptoOf::<Test>::member_from_secret(&secret);
 		let proof = CryptoOf::<Test>::sign(&secret, &user.encode()).unwrap();
 
 		let ext = build_infallible_unpaid_ext(user, 0, Protect, 0, member, proof);
-		assert_invalid(ext, CustomInvalidity::AssetIdNotSet);
+		assert_invalid(ext, CustomInvalidity::InstanceNotFound);
 	});
 }
 
@@ -97,7 +94,6 @@ fn infallible_unpaid_asset_id_not_set_rejected_in_validation() {
 fn infallible_unpaid_insufficient_balance_zero() {
 	new_test_ext().execute_with(|| {
 		setup_asset();
-		Coinage::do_initialize().unwrap();
 		let user = 42;
 		// User has zero asset balance.
 
@@ -114,9 +110,8 @@ fn infallible_unpaid_insufficient_balance_zero() {
 fn infallible_unpaid_insufficient_balance_just_below() {
 	new_test_ext().execute_with(|| {
 		setup_asset();
-		Coinage::do_initialize().unwrap();
 		let user = 42;
-		let amount = Coinage::coin_value_to_asset_amount(0i8).unwrap();
+		let amount = Coinage::denomination_to_asset_amount(UNDERLYING_ASSET_UNIT, 0i8).unwrap();
 		assert!(amount > 0, "amount must be non-zero for this test to be meaningful");
 
 		// Fund user with exactly amount - 1 (not enough).
@@ -135,9 +130,8 @@ fn infallible_unpaid_insufficient_balance_just_below() {
 fn infallible_unpaid_sufficient_balance() {
 	new_test_ext().execute_with(|| {
 		setup_asset();
-		Coinage::do_initialize().unwrap();
 		let user = 42;
-		let amount = Coinage::coin_value_to_asset_amount(0i8).unwrap();
+		let amount = Coinage::denomination_to_asset_amount(UNDERLYING_ASSET_UNIT, 0i8).unwrap();
 
 		// Fund with extra to cover the existential deposit (Protect preservation).
 		fund_asset(user, amount + 1);
@@ -193,7 +187,6 @@ fn infallible_unpaid_wrong_nonce_stale() {
 fn infallible_unpaid_future_nonce_has_requires() {
 	new_test_ext().execute_with(|| {
 		setup_asset();
-		Coinage::do_initialize().unwrap();
 		let user = 1;
 		fund_asset(user, 10_000);
 
@@ -214,32 +207,6 @@ fn infallible_unpaid_future_nonce_has_requires() {
 	});
 }
 
-#[test]
-fn infallible_unpaid_recycler_collection_not_created() {
-	new_test_ext().execute_with(|| {
-		setup_asset();
-		// Intentionally skip `Coinage::do_initialize()` so no recycler collection exists.
-		let user = 1;
-		fund_asset(user, 10_000);
-
-		let secret = get_secret(1);
-		let member = CryptoOf::<Test>::member_from_secret(&secret);
-		let proof = CryptoOf::<Test>::sign(&secret, &user.encode()).unwrap();
-
-		let ext = build_infallible_unpaid_ext(user, 0, Protect, 0, member, proof);
-		assert_eq!(
-			Executive::validate_transaction(
-				sp_runtime::transaction_validity::TransactionSource::External,
-				ext,
-				Default::default(),
-			),
-			Err(TransactionValidityError::Invalid(InvalidTransaction::Custom(
-				CustomInvalidity::RecyclerCollectionNotCreated as u8
-			)))
-		);
-	});
-}
-
 // ==================== Success path tests ====================
 
 #[test]
@@ -249,7 +216,8 @@ fn infallible_unpaid_load_recycler_success_protect() {
 		setup_asset();
 		let user = 1;
 		let value = 0;
-		let asset_amount = Coinage::coin_value_to_asset_amount(value).unwrap();
+		let asset_amount =
+			Coinage::denomination_to_asset_amount(UNDERLYING_ASSET_UNIT, value).unwrap();
 		// Fund with extra to cover the existential deposit (Protect preservation).
 		fund_asset(user, asset_amount + 1);
 
@@ -275,6 +243,7 @@ fn infallible_unpaid_load_recycler_success_protect() {
 		// Event emitted.
 		System::assert_has_event(
 			crate::Event::<Test>::RecyclerLoadedWithExternalAsset {
+				instance_id: TEST_INSTANCE_ID,
 				who: user,
 				value,
 				amount: asset_amount,
@@ -291,7 +260,8 @@ fn infallible_unpaid_load_recycler_success_expendable() {
 		setup_asset();
 		let user = 1;
 		let value = 0;
-		let asset_amount = Coinage::coin_value_to_asset_amount(value).unwrap();
+		let asset_amount =
+			Coinage::denomination_to_asset_amount(UNDERLYING_ASSET_UNIT, value).unwrap();
 		// Fund with exactly the asset amount (Expendable allows draining the account).
 		fund_asset(user, asset_amount);
 
@@ -314,9 +284,125 @@ fn infallible_unpaid_load_recycler_success_expendable() {
 		// Event emitted.
 		System::assert_has_event(
 			crate::Event::<Test>::RecyclerLoadedWithExternalAsset {
+				instance_id: TEST_INSTANCE_ID,
 				who: user,
 				value,
 				amount: asset_amount,
+			}
+			.into(),
+		);
+	});
+}
+
+/// Build an infallible-unpaid extrinsic for `load_recycler_with_external_asset_unpaid` on an
+/// arbitrary instance.
+fn build_unpaid_ext_for(
+	instance_id: InstanceId,
+	signer: u64,
+	nonce: u32,
+	value: Denomination,
+	member_key: MemberOf<Test>,
+	proof_of_ownership: SignatureOf<Test>,
+) -> Extrinsic {
+	let call = crate::Call::load_recycler_with_external_asset_unpaid {
+		instance_id,
+		preservation: Expendable,
+		value,
+		member_key,
+		proof_of_ownership,
+	};
+	let info = Some(AsCoinageInfo::InfallibleUnpaidSigned { nonce });
+	let extension = (AuthorizeCall::<Test>::new(), AsCoinage::<Test>::new(info));
+	Extrinsic::new_signed(call.into(), signer, UintAuthorityId(signer), extension)
+}
+
+/// Build an infallible-unpaid extrinsic for `load_recycler_with_external_asset_unpaid_batch`
+/// on an arbitrary instance.
+fn build_unpaid_batch_ext_for(
+	instance_id: InstanceId,
+	signer: u64,
+	nonce: u32,
+	items: Vec<UnpaidLoadInput<Test>>,
+) -> Extrinsic {
+	let call = crate::Call::load_recycler_with_external_asset_unpaid_batch {
+		instance_id,
+		items: items.try_into().expect("items fit in bounds"),
+	};
+	let info = Some(AsCoinageInfo::InfallibleUnpaidSigned { nonce });
+	let extension = (AuthorizeCall::<Test>::new(), AsCoinage::<Test>::new(info));
+	Extrinsic::new_signed(call.into(), signer, UintAuthorityId(signer), extension)
+}
+
+#[test]
+fn sponsored_unpaid_load_requires_and_charges_the_load_deposit() {
+	new_test_ext().execute_with(|| {
+		let instance_id = setup_sponsored_instance();
+		set_load_deposit(NATIVE_DEPOSIT_ID, 10);
+		let user = 42u64;
+		assert_ok!(Assets::mint(RuntimeOrigin::signed(1), SPONSORED_ASSET_ID, user, 10_000));
+
+		let secret = get_unique_secret();
+		let member = CryptoOf::<Test>::member_from_secret(&secret);
+		let proof = CryptoOf::<Test>::sign(&secret, &user.encode()).unwrap();
+
+		// An unfunded pot cannot collateralize the load: the transaction is invalid.
+		let ext = build_unpaid_ext_for(instance_id, user, 0, 0, member, proof);
+		assert_invalid(ext, CustomInvalidity::PotCannotCoverLoadDeposit);
+
+		// Funding the pot makes the same transaction valid, and dispatch takes the deposit
+		// from the pot.
+		fund_pot(instance_id, NATIVE_DEPOSIT_ID, 100);
+		let free_before = pot_free(instance_id, NATIVE_DEPOSIT_ID);
+		let ext = build_unpaid_ext_for(instance_id, user, 0, 0, member, proof);
+		assert_eq!(Executive::apply_extrinsic(ext), Ok(Ok(())));
+		assert_eq!(pot_held(instance_id, NATIVE_DEPOSIT_ID), 10);
+		assert_eq!(free_before - pot_free(instance_id, NATIVE_DEPOSIT_ID), 10);
+		check_load_deposit_invariant(instance_id, 1);
+	});
+}
+
+#[test]
+fn sponsored_unpaid_batch_load_charges_the_deposit_per_item() {
+	new_test_ext().execute_with(|| {
+		System::set_block_number(1);
+		let instance_id = setup_sponsored_instance();
+		set_load_deposit(NATIVE_DEPOSIT_ID, 10);
+		let user = 43u64;
+		assert_ok!(Assets::mint(RuntimeOrigin::signed(1), SPONSORED_ASSET_ID, user, 10_000));
+
+		let items = (0..2)
+			.map(|_| {
+				let secret = get_unique_secret();
+				let member_key = CryptoOf::<Test>::member_from_secret(&secret);
+				let proof_of_ownership = CryptoOf::<Test>::sign(&secret, &user.encode()).unwrap();
+				UnpaidLoadInput::<Test> {
+					preservation: Expendable,
+					value: 0,
+					member_key,
+					proof_of_ownership,
+				}
+			})
+			.collect::<Vec<_>>();
+
+		// A pot covering a single deposit cannot collateralize a batch of two: the whole
+		// batch is invalid, showing the check counts every item.
+		fund_pot(instance_id, NATIVE_DEPOSIT_ID, 12);
+		assert!(Coinage::ensure_can_charge_load_deposit(instance_id, 1).is_ok());
+		let ext = build_unpaid_batch_ext_for(instance_id, user, 0, items.clone());
+		assert_invalid(ext, CustomInvalidity::PotCannotCoverLoadDeposit);
+
+		// A funded pot collateralizes both items with a single charge summed over the batch.
+		fund_pot(instance_id, NATIVE_DEPOSIT_ID, 100);
+		let ext = build_unpaid_batch_ext_for(instance_id, user, 0, items);
+		assert_eq!(Executive::apply_extrinsic(ext), Ok(Ok(())));
+		assert_eq!(pot_held(instance_id, NATIVE_DEPOSIT_ID), 20);
+		check_load_deposit_invariant(instance_id, 2);
+		System::assert_has_event(
+			crate::Event::<Test>::LoadDepositsHeld {
+				instance_id,
+				currency: NATIVE_DEPOSIT_ID,
+				price: 10,
+				count: 2,
 			}
 			.into(),
 		);

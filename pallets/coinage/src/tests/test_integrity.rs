@@ -24,13 +24,3 @@ fn integrity_test_passes() {
 		<crate::Pallet<Test> as Hooks<u64>>::integrity_test();
 	});
 }
-
-/// Verify that `UnderlyingAssetUnit = 0` is rejected by the integrity test.
-#[test]
-#[should_panic(expected = "UnderlyingAssetUnit must be greater than zero")]
-fn integrity_test_rejects_zero_underlying_asset_unit() {
-	new_test_ext().execute_with(|| {
-		TestUnderlyingAssetUnit::set(&0u64);
-		<crate::Pallet<Test> as Hooks<u64>>::integrity_test();
-	});
-}

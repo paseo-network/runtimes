@@ -188,8 +188,8 @@ The pallet exposes two trait interfaces for other pallets:
 - `delete_collection(owner, identifier)`: Mark a collection for asynchronous deletion.
 - `add_members(identifier, members)`: Add members to the onboarding queue. Re-adding a suspended
   member resumes their membership.
-- `verify_membership(identifier, proof, ring_index, context, msg)`: Validate a ring-VRF proof
-  and return a revised contextual alias.
+- `verify_membership(identifier, proof, ring_index, revision, context, msg)`: Validate a
+  ring-VRF proof against a specific ring revision and return a contextual alias.
 - `remove_ring(identifier, ring_index)`: Queue a ring for deletion.
 - `active_count`, `ring_status`, `ring_revision`, `member_status`, `ring_members`: Query
   functions.

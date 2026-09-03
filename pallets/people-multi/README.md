@@ -43,6 +43,8 @@ when used.
   offchain worker as an authorized transaction when aliases become stale (context removed or ring
   revision changed).
 - `create_people_collection`: Create the people collection. Valid only if it doesn't exist yet.
+  The collection is also created by the `migration::CreatePeopleCollection` runtime upgrade, so
+  the call is only needed on chains that do not wire the migration.
 - `under_alias`: Dispatch a call under an alias origin, using a stored alias-to-account mapping.
 
 Note: Ring management (onboarding, building, merging, key migration) is handled by the

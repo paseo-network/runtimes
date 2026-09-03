@@ -26,7 +26,7 @@ use frame_support::{
 };
 use frame_system::{
 	offchain::{CreateAuthorizedTransaction, CreateBare, CreateTransaction, CreateTransactionBase},
-	EnsureRoot,
+	AuthorizeCall, EnsureRoot,
 };
 use indiv_support::traits::RingExponent;
 use sp_core::{ConstU32, ConstU64, ConstUint, H256};
@@ -45,7 +45,7 @@ impl UnixTime for MockTime {
 	}
 }
 
-pub type TransactionExtension = (crate::ScoreAsParticipant<Test>,);
+pub type TransactionExtension = (crate::ScoreAsParticipant<Test>, AuthorizeCall<Test>);
 
 pub type Header = sp_runtime::generic::Header<u64, sp_runtime::traits::BlakeTwo256>;
 pub type Block = sp_runtime::generic::Block<Header, Extrinsic>;
@@ -198,7 +198,7 @@ where
 	RuntimeCall: From<LocalCall>,
 {
 	fn create_extension() -> Self::Extension {
-		(crate::ScoreAsParticipant::new(None),)
+		(crate::ScoreAsParticipant::new(None), AuthorizeCall::new())
 	}
 }
 
@@ -216,8 +216,14 @@ impl indiv_pallet_people::Config for Test {
 	type BenchmarkHelper = ();
 }
 
+parameter_types! {
+	pub NetworkSuffix: indiv_support::context::ProductContextNetworkSuffix =
+		b"paseo".to_vec().try_into().expect("network suffix fits");
+}
+
 impl crate::Config for Test {
 	type WeightInfo = ();
+	type Suffix = NetworkSuffix;
 	type EnsurePerson = indiv_pallet_people::EnsurePersonalAliasInContext<Test>;
 	type ScorePotId = ScorePotId;
 	type Currency = Balances;
@@ -333,10 +339,12 @@ pub fn exec_tx(x: Extrinsic) -> Result<(), TransactionExecutionError> {
 	Ok(())
 }
 
-/// Execute a bare extrinsic with the given call.
-pub fn exec_bare_tx(call: impl Into<RuntimeCall>) -> Result<(), TransactionExecutionError> {
-	let x = Extrinsic::new_bare(call.into());
-
+/// Execute an authorized transaction with the given call.
+pub fn exec_authorized_tx(call: impl Into<RuntimeCall>) -> Result<(), TransactionExecutionError> {
+	let x = Extrinsic::new_transaction(
+		call.into(),
+		(crate::ScoreAsParticipant::<Test>::new(None), AuthorizeCall::new()),
+	);
 	exec_tx(x)
 }
 
@@ -350,7 +358,7 @@ pub fn exec_signed_tx(
 		call.into(),
 		account,
 		UintAuthorityId(account),
-		(crate::ScoreAsParticipant::<Test>::new(None),),
+		(crate::ScoreAsParticipant::<Test>::new(None), AuthorizeCall::new()),
 	);
 
 	exec_tx(x)
@@ -366,7 +374,7 @@ pub fn exec_participant_score_tx(
 		call.into(),
 		account,
 		UintAuthorityId(account),
-		(crate::ScoreAsParticipant::<Test>::new(Some(tx_ext)),),
+		(crate::ScoreAsParticipant::<Test>::new(Some(tx_ext)), AuthorizeCall::new()),
 	);
 
 	exec_tx(x)

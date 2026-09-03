@@ -16,6 +16,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 codec = { workspace = true, features = ["derive"] }
+log = { workspace = true }
 scale-info = { workspace = true, features = ["derive"] }
 frame-benchmarking = { workspace = true, optional = true }
 frame-support = { workspace = true }
@@ -29,6 +30,7 @@ verifiable = { workspace = true }
 
 [dev-dependencies]
 pallet-assets = { workspace = true }
+parking_lot = { workspace = true }
 pallet-balances = { workspace = true }
 xcm = { workspace = true }
 
@@ -40,6 +42,7 @@ std = [
 	"frame-support/std",
 	"frame-system/std",
 	"indiv-support/std",
+	"log/std",
 	"pallet-assets/std",
 	"pallet-balances/std",
 	"scale-info/std",

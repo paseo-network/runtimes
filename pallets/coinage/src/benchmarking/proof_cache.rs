@@ -44,7 +44,7 @@ where
 	P: codec::Decode,
 {
 	use codec::Encode;
-	use sp_io::hashing::blake2_256;
+	use sp_crypto_hashing::blake2_256;
 
 	let key = blake2_256(&(member, all_members, msg).encode());
 	let (proof_bytes, alias) = get_cache_entry(ring_exp, &key)?;

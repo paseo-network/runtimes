@@ -63,8 +63,11 @@ use frame_support::{
 	traits::{fungibles, IsSubType, OriginTrait, UnixTime},
 };
 use indiv_support::{
+	context::{build_product_context, personhood},
 	traits::{Alias, Context, MembershipProver},
+	tx_priority,
 	utils::BigEndianU32,
+	weight_budget::OcwWeightBudget,
 };
 use sp_runtime::SaturatedConversion;
 use verifiable::GenerateVerifiable;
@@ -79,9 +82,6 @@ pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 	use fungibles::{Create as _, Inspect as _, Mutate as _};
-
-	/// Prefix for PGAS claim contexts.
-	pub const PGAS_CONTEXT_PREFIX: [u8; 8] = *b"pop:gas:";
 
 	/// Day index type. Uses big-endian encoding so that `Identity`-hashed storage
 	/// iteration yields days in ascending chronological order.
@@ -118,6 +118,9 @@ pub mod pallet {
 	{
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
+
+		/// Runtime-wide network suffix used to derive product contexts.
+		type Suffix: Get<indiv_support::context::ProductContextNetworkSuffix>;
 
 		/// Source of ring-VRF proof verification against subscribed ring roots.
 		///
@@ -270,6 +273,17 @@ pub mod pallet {
 				"`PgasClaimAmount` must be >= `PgasMinBalance`, otherwise the first claim to a \
 				 fresh account would fail the asset's existential-deposit check",
 			);
+
+			// `clean_pgas_claim_records` is submitted by the offchain worker as an authorized
+			// transaction, with the dispatch weight bounded by `MaxPgasClaimRecordCleanupPerCall`.
+			// If the weight exceeds Normal.max_extrinsic, it is silently dropped and the claim
+			// record cleanup flow stalls.
+			let worst_case = <T as Config>::WeightInfo::clean_pgas_claim_records(
+				T::MaxPgasClaimRecordCleanupPerCall::get(),
+			)
+			.saturating_add(<T as Config>::WeightInfo::authorize_clean_pgas_claim_records());
+			OcwWeightBudget::from_normal_max::<T>()
+				.assert_fits("clean_pgas_claim_records", worst_case);
 		}
 	}
 
@@ -399,6 +413,9 @@ pub mod pallet {
 			ValidTransaction::with_tag_prefix("PgasAssetCreation")
 				.and_provides(b"create_pgas")
 				.propagate(true)
+				// Bootstrap transaction: no PGAS claim can proceed until the asset
+				// exists, so it must be included before any other PGAS work.
+				.priority(tx_priority::PROTOCOL_LIVENESS)
 				.build()
 				.map(|v| (v, Weight::zero()))
 		}
@@ -429,20 +446,20 @@ pub mod pallet {
 			ValidTransaction::with_tag_prefix("pgas:clean-pgas-claims")
 				.and_provides((day_index, first_alias))
 				.propagate(false)
+				.priority(tx_priority::CLEANUP)
 				.build()
 				.map(|v| (v, <T as Config>::WeightInfo::authorize_clean_pgas_claim_records()))
 		}
 
 		/// Build the context bytes for a PGAS claim.
 		///
-		/// Format: [`PGAS_CONTEXT_PREFIX`] (8 bytes) + day (u32 LE, 4 bytes) + slot_index (u32
-		/// LE, 4 bytes) + zeros (16 bytes).
+		/// The raw suffix contains the allocated family followed by the day and slot index.
 		pub fn build_gas_context(day: u32, slot_index: u32) -> Context {
-			let mut context = [0u8; 32];
-			context[..8].copy_from_slice(&PGAS_CONTEXT_PREFIX);
-			context[8..12].copy_from_slice(&day.to_le_bytes());
-			context[12..16].copy_from_slice(&slot_index.to_le_bytes());
-			context
+			build_product_context(
+				personhood::PRODUCT_NAME,
+				&T::Suffix::get(),
+				personhood::pgas_claim(day, slot_index),
+			)
 		}
 
 		/// The current day index derived from [`Config::Clock`].

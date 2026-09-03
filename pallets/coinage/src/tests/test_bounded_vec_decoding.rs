@@ -31,7 +31,7 @@
 
 use crate::{
 	extension::AsCoinageInfo,
-	mock::{new_test_ext, LitePeopleProof, PeopleProof, Proof, Test, MAX_CONSOLIDATION},
+	mock::{new_test_ext, MembershipProof, Proof, Test, MAX_CONSOLIDATION, TEST_INSTANCE_ID},
 	Call,
 };
 use codec::{Decode, Encode};
@@ -115,6 +115,7 @@ fn unload_recycler_into_coin_bounded_vec_decoding() {
 		// Create a valid call with 2 aliases
 		let aliases: BoundedVec<Alias, _> = bounded_vec![mock_alias(0), mock_alias(1)];
 		let call = Call::<Test>::unload_recycler_into_coin {
+			instance_id: TEST_INSTANCE_ID,
 			aliases,
 			value: 0i8,
 			index: 0u32,
@@ -123,7 +124,7 @@ fn unload_recycler_into_coin_bounded_vec_decoding() {
 		};
 
 		let encoded = call.encode();
-		let vec_start_offset = 1; // After call index
+		let vec_start_offset = 5; // After call index and instance id
 
 		// Test at max bound - should decode
 		let at_max = replace_vec_with_longer(
@@ -163,15 +164,17 @@ fn unload_recycler_into_external_asset_bounded_vec_decoding() {
 	new_test_ext().execute_with(|| {
 		let aliases: BoundedVec<Alias, _> = bounded_vec![mock_alias(0), mock_alias(1)];
 		let call = Call::<Test>::unload_recycler_into_external_asset {
+			instance_id: TEST_INSTANCE_ID,
 			aliases,
 			value: 0i8,
 			index: 0u32,
 			revision: 0u32,
 			to: 1u64,
+			max_fee: 0,
 		};
 
 		let encoded = call.encode();
-		let vec_start_offset = 1;
+		let vec_start_offset = 5; // After call index and instance id
 
 		// Test at max bound - should decode
 		let at_max = replace_vec_with_longer(
@@ -211,6 +214,7 @@ fn unload_recycler_into_coins_bounded_vec_decoding() {
 	new_test_ext().execute_with(|| {
 		let aliases: BoundedVec<Alias, _> = bounded_vec![mock_alias(0), mock_alias(1)];
 		let call = Call::<Test>::unload_recycler_into_coins {
+			instance_id: TEST_INSTANCE_ID,
 			aliases,
 			value: 0i8,
 			index: 0u32,
@@ -220,7 +224,7 @@ fn unload_recycler_into_coins_bounded_vec_decoding() {
 		};
 
 		let encoded = call.encode();
-		let vec_start_offset = 1;
+		let vec_start_offset = 5; // After call index and instance id
 
 		// Test at max bound - should decode
 		let at_max = replace_vec_with_longer(
@@ -263,7 +267,7 @@ fn unload_recycler_into_coins_bounded_vec_decoding() {
 fn as_unload_token_people_bounded_vec_decoding() {
 	new_test_ext().execute_with(|| {
 		let alias_proofs: BoundedVec<Proof, _> = bounded_vec![mock_proof(0), mock_proof(1)];
-		let proof = PeopleProof { context: vec![], msg: vec![], alias: mock_alias(0) };
+		let proof = MembershipProof { context: vec![], msg: vec![], alias: mock_alias(0) };
 		let info = AsCoinageInfo::<Test>::AsUnloadTokenPeople {
 			proof: proof.clone(),
 			period: 0u32,
@@ -312,7 +316,7 @@ fn as_unload_token_people_bounded_vec_decoding() {
 fn as_unload_token_lite_people_bounded_vec_decoding() {
 	new_test_ext().execute_with(|| {
 		let alias_proofs: BoundedVec<Proof, _> = bounded_vec![mock_proof(0), mock_proof(1)];
-		let proof = LitePeopleProof { context: vec![], msg: vec![], alias: mock_alias(0) };
+		let proof = MembershipProof { context: vec![], msg: vec![], alias: mock_alias(0) };
 		let info = AsCoinageInfo::<Test>::AsUnloadTokenLitePeople {
 			proof: proof.clone(),
 			period: 0u32,
@@ -414,12 +418,13 @@ fn as_unload_token_from_output_bounded_vec_decoding() {
 			fee_recycler_value: 0i8,
 			fee_recycler_index: 0u32,
 			fee_recycler_revision: 0u32,
+			retry_counter: 0u8,
 			alias_proofs,
 		};
 
 		let encoded = info.encode();
-		// variant (1) + value (1) + index (4) + revision (4)
-		let vec_start_offset = 1 + 1 + 4 + 4;
+		// variant (1) + value (1) + index (4) + revision (4) + retry_counter (1)
+		let vec_start_offset = 1 + 1 + 4 + 4 + 1;
 
 		// Test at max bound - should decode
 		let at_max = replace_vec_with_longer(

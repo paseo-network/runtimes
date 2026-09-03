@@ -25,6 +25,7 @@ indiv-support = { workspace = true }
 log = { workspace = true }
 scale-info = { workspace = true, features = ["derive"] }
 sp-core = { workspace = true }
+sp-crypto-hashing = { workspace = true }
 sp-io = { workspace = true }
 sp-runtime = { workspace = true }
 verifiable = { workspace = true }
@@ -47,6 +48,7 @@ std = [
 	"log/std",
 	"scale-info/std",
 	"sp-core/std",
+	"sp-crypto-hashing/std",
 	"sp-io/std",
 	"sp-runtime/std",
 	"verifiable/std",

@@ -22,16 +22,15 @@ use alloc::vec::Vec;
 use frame_benchmarking::v2::{benchmarks, *};
 use frame_support::{
 	dispatch::{DispatchInfo, PostDispatchInfo},
-	traits::{fungible::InspectHold, UnfilteredDispatchable},
+	traits::{fungible::InspectHold, Authorize},
 	BoundedVec,
 };
-// TODO: remove once the score pallet migrates to `#[pallet::authorize]` (deadline April 2027).
-// See https://github.com/paritytech/polkadot-sdk/issues/2415.
-#[allow(deprecated)]
-use frame_support::pallet_prelude::ValidateUnsigned;
 use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin as SystemOrigin};
 use sp_core::Get;
-use sp_runtime::traits::{AsTransactionAuthorizedOrigin, DispatchTransaction, Dispatchable, Zero};
+use sp_runtime::{
+	traits::{AsTransactionAuthorizedOrigin, DispatchTransaction, Dispatchable, Zero},
+	transaction_validity::TransactionSource,
+};
 
 const BENCHMARK_MAX_OPERATE: u32 = 10_000;
 
@@ -137,7 +136,6 @@ mod benches {
 		Ok(())
 	}
 
-	// Includes the cost of `ValidateUnsigned::pre_dispatch`
 	#[benchmark]
 	fn transition_round() -> Result<(), BenchmarkError> {
 		// Put the chain a few blocks ahead so the current round is expired.
@@ -169,15 +167,8 @@ mod benches {
 		RoundSchedules::<T>::put(bounded);
 		let current_round_index = CurrentRoundIndex::<T>::get();
 
-		let call = Call::<T>::transition_round { round_index: current_round_index };
-
-		#[block]
-		{
-			#[allow(deprecated)]
-			<Pallet<T> as ValidateUnsigned>::pre_dispatch(&call)
-				.expect("pre-dispatch must succeed");
-			call.dispatch_bypass_filter(SystemOrigin::None.into())?;
-		}
+		#[extrinsic_call]
+		_(SystemOrigin::Authorized, current_round_index);
 
 		// A new payout entry for previous round (index 0)
 		let payout = RoundPayouts::<T>::get(0).expect("payout must be created");
@@ -202,7 +193,26 @@ mod benches {
 		Ok(())
 	}
 
-	// Includes the cost of `ValidateUnsigned::pre_dispatch`
+	#[benchmark]
+	fn authorize_transition_round() -> Result<(), BenchmarkError> {
+		frame_system::Pallet::<T>::set_block_number(10u32.into());
+
+		let finished_credit: BalanceOf<T> = 100u32.into();
+		RoundPlanning::<T>::put(RoundInfo { finish_at: 5u32.into(), credit: finished_credit });
+		CurrentRoundPoints::<T>::put(10);
+
+		let current_round_index = CurrentRoundIndex::<T>::get();
+		let call = Call::<T>::transition_round { round_index: current_round_index };
+
+		#[block]
+		{
+			call.authorize(TransactionSource::External)
+				.ok_or("call must require authorization")??;
+		}
+
+		Ok(())
+	}
+
 	#[benchmark]
 	fn operate_payout_round(l: Linear<1, { BENCHMARK_MAX_OPERATE }>) -> Result<(), BenchmarkError> {
 		T::BenchmarkHelper::setup_currency();
@@ -245,15 +255,8 @@ mod benches {
 			},
 		);
 
-		let call = Call::<T>::operate_payout_round { round_index, limit };
-
-		#[block]
-		{
-			#[allow(deprecated)]
-			<Pallet<T> as ValidateUnsigned>::pre_dispatch(&call)
-				.expect("pre-dispatch must succeed");
-			call.dispatch_bypass_filter(SystemOrigin::None.into())?;
-		}
+		#[extrinsic_call]
+		_(SystemOrigin::Authorized, round_index, limit);
 
 		// Expected credited amount this call:
 		let credited: BalanceOf<T> = point_price * (limit * points_per_user).into();
@@ -277,6 +280,49 @@ mod benches {
 	}
 
 	#[benchmark]
+	fn authorize_operate_payout_round(
+		l: Linear<1, { BENCHMARK_MAX_OPERATE }>,
+	) -> Result<(), BenchmarkError> {
+		frame_system::Pallet::<T>::set_block_number(1u32.into());
+		let limit = l;
+		let round_index = 0;
+		let points_per_user = 10;
+		let point_price = T::Currency::minimum_balance();
+
+		for i in 0..=limit {
+			let user: T::AccountId = account("user", i, 0);
+			Score::<T>::onboard_for_recognition(&user)?;
+			RoundsPointsForParticipant::<T>::insert(
+				round_index,
+				AccountOrPerson::Account(user),
+				points_per_user,
+			);
+		}
+
+		let total_points = (limit + 1) * points_per_user;
+		let total_balance: BalanceOf<T> = point_price * total_points.into();
+		RoundPayouts::<T>::insert(
+			round_index,
+			RoundPayout {
+				remaining_balance: total_balance,
+				point_price,
+				remainder: 0u32.into(),
+				total_points,
+			},
+		);
+
+		let call = Call::<T>::operate_payout_round { round_index, limit };
+
+		#[block]
+		{
+			call.authorize(TransactionSource::External)
+				.ok_or("call must require authorization")??;
+		}
+
+		Ok(())
+	}
+
+	#[benchmark]
 	fn cash_out() -> Result<(), BenchmarkError> {
 		frame_system::Pallet::<T>::set_block_number(1u32.into());
 		let caller: T::AccountId = whitelisted_caller();
@@ -285,8 +331,8 @@ mod benches {
 		let key = AccountOrPerson::Account(caller.clone());
 		Participants::<T>::mutate(&key, |maybe_p| {
 			let mut p = maybe_p.take().expect("participant must exist");
-			p.score = 10;
-			p.streak = Streak::Attended(3); // Just to test the reset.
+			p.score = 10u8;
+			p.streak = Streak::Attended(3u8); // Just to test the reset.
 			p.cashed_out = false;
 			*maybe_p = Some(p);
 		});
@@ -295,9 +341,9 @@ mod benches {
 		_(SystemOrigin::Signed(caller.clone()));
 
 		let after = Participants::<T>::get(&key).expect("entry must exist");
-		assert_eq!(after.score, 5, "score reduced by half (rounded up)");
+		assert_eq!(after.score, 5u8, "score reduced by half (rounded up)");
 		assert!(after.cashed_out, "cash-out flag set");
-		assert_eq!(after.streak, Streak::Attended(0), "attendance streak reset");
+		assert_eq!(after.streak, Streak::Attended(0u8), "attendance streak reset");
 
 		assert_eq!(RoundsPointsForParticipant::<T>::get(CurrentRoundIndex::<T>::get(), &key), 5);
 		assert_eq!(CurrentRoundPoints::<T>::get(), 5);

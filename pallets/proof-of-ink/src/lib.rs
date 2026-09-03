@@ -19,7 +19,7 @@
 //! Warning: This pallet must be configured with some spam prevention mechanism.
 //! The spam prevention mechanism must limit how many calls the origin
 //! `ReferredCandidate` can do.
-//! The recommended approach is to use pallet-origins-restriction.
+//! The recommended approach is to use pallet-origin-restriction.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![recursion_limit = "128"]
@@ -87,7 +87,7 @@ pub mod pallet {
 	/// Warning: This pallet must be configured with some spam prevention mechanism.
 	/// The spam prevention mechanism must limit how many calls the origin
 	/// `ReferredCandidate` can do.
-	/// The recommended approach is to use pallet-origins-restriction.
+	/// The recommended approach is to use pallet-origin-restriction.
 	#[pallet::config]
 	pub trait Config:
 		frame_system::Config<
@@ -1577,9 +1577,8 @@ pub mod pallet {
 						Err(Error::<T>::WrongFamily)?
 					};
 					let a32 = account.using_encoded(|d| {
-						// TODO: https://github.com/paritytech/individuality/issues/227
-						// We may want to bound an explicit conversion to `[u8; 32]` for the type
-						// `AccountId` such as `AsRef<[u8; 32]>`.
+						// TODO(paritytech/individuality#227): bound an explicit conversion to `[u8;
+						// 32]` for the type `AccountId` such as `AsRef<[u8; 32]>`.
 						// Currently we simply take the first 32 bytes of the account id.
 						let mut buf: [u8; 32] = Default::default();
 						let upper_bound = core::cmp::min(d.len(), buf.len());

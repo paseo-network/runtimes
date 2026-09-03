@@ -31,7 +31,7 @@ use verifiable::GenerateVerifiable;
 
 /// Type of free unload token (people or lite people).
 #[derive(Clone, Copy)]
-enum FreeTokenType {
+pub(super) enum FreeTokenType {
 	People,
 	LitePeople,
 }
@@ -39,18 +39,18 @@ enum FreeTokenType {
 /// Builds the unload extrinsic for people or lite-people
 ///
 /// The counter is local per person per period, ranging from 0..limit
-/// with limit = Coinage::free_unload_token_limit_for_people().ok().
+/// with limit = Coinage::free_unload_token_limit_for_people().
 ///
 /// The counter resets each period.
 ///
 /// Each free unload token is identified by the tuple `(period, counter)`
 /// and cannot be reused.
-fn build_unload_free_token_ext(
+pub(super) fn build_unload_free_token_ext(
 	call: RuntimeCall,
 	period: u32,
 	counter: u32,
 	recycler_secrets: &[Secret],
-	value: CoinValue,
+	value: Denomination,
 	index: u32,
 	alias: [u8; 32],
 	token_type: FreeTokenType,
@@ -63,7 +63,7 @@ fn build_unload_free_token_ext(
 	// Alias proofs must be created BEFORE the people/lite proof because the people/lite
 	// proof signs intent_msg which depends on alias_proofs.
 	let mut alias_proofs_vec = Vec::new();
-	let ring_members = Coinage::get_recycler_members(value, index);
+	let ring_members = Coinage::get_recycler_members(TEST_INSTANCE_ID, value, index);
 
 	for secret in recycler_secrets {
 		let member = CryptoOf::<Test>::member_from_secret(secret);
@@ -89,12 +89,13 @@ fn build_unload_free_token_ext(
 
 	let info = match token_type {
 		FreeTokenType::People => {
-			let proof = PeopleProof { context: context.to_vec(), msg: intent_msg.to_vec(), alias };
+			let proof =
+				MembershipProof { context: context.to_vec(), msg: intent_msg.to_vec(), alias };
 			AsCoinageInfo::AsUnloadTokenPeople { proof, period, counter, alias_proofs }
 		},
 		FreeTokenType::LitePeople => {
 			let proof =
-				LitePeopleProof { context: context.to_vec(), msg: intent_msg.to_vec(), alias };
+				MembershipProof { context: context.to_vec(), msg: intent_msg.to_vec(), alias };
 			AsCoinageInfo::AsUnloadTokenLitePeople { proof, period, counter, alias_proofs }
 		},
 	};
@@ -104,9 +105,9 @@ fn build_unload_free_token_ext(
 }
 
 /// Helper to validate whether a free unload token counter is accepted for a token type.
-fn test_free_unload_counter_validity(
+pub(super) fn test_free_unload_counter_validity(
 	token_type: FreeTokenType,
-	value: CoinValue,
+	value: Denomination,
 	current_period: u32,
 	counter: u32,
 	seed_offset: u8,
@@ -116,6 +117,7 @@ fn test_free_unload_counter_validity(
 	let (secrets, index, revision) = setup_recycler(value, 1, seed_offset);
 	let dest = dest_base + seed_offset as u64;
 	let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coin {
+		instance_id: TEST_INSTANCE_ID,
 		aliases: bounded_vec![CryptoOf::<Test>::alias_in_context(
 			&secrets[0],
 			UNLOADING_RECYCLER_CONTEXT.as_ref(),
@@ -160,6 +162,7 @@ fn free_unload_token_lifecycle() {
 
 		// 2. Consume Free Token: Unload recycler using People token
 		let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coin {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: bounded_vec![CryptoOf::<Test>::alias_in_context(
 				&secrets[0],
 				UNLOADING_RECYCLER_CONTEXT.as_ref(),
@@ -234,6 +237,7 @@ fn free_unload_token_consumption_events_emit_for_people_and_lite_people() {
 		let (people_secrets, people_index, people_revision) = setup_recycler(value, 1, 11);
 		let people_dest = 101u64;
 		let people_call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coin {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: bounded_vec![CryptoOf::<Test>::alias_in_context(
 				&people_secrets[0],
 				UNLOADING_RECYCLER_CONTEXT.as_ref(),
@@ -262,6 +266,7 @@ fn free_unload_token_consumption_events_emit_for_people_and_lite_people() {
 		let (lite_secrets, lite_index, lite_revision) = setup_recycler(value, 1, 12);
 		let lite_dest = 102u64;
 		let lite_call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coin {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: bounded_vec![CryptoOf::<Test>::alias_in_context(
 				&lite_secrets[0],
 				UNLOADING_RECYCLER_CONTEXT.as_ref(),
@@ -317,6 +322,7 @@ fn free_unload_token_period_validity() {
 		let (secrets_1, index_1, revision_1) = setup_recycler(value, 1, 10);
 		let dest_1 = 1001u64;
 		let call_1 = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coin {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: bounded_vec![CryptoOf::<Test>::alias_in_context(
 				&secrets_1[0],
 				UNLOADING_RECYCLER_CONTEXT.as_ref(),
@@ -348,6 +354,7 @@ fn free_unload_token_period_validity() {
 		let (secrets_2, index_2, revision_2) = setup_recycler(value, 1, 20);
 		let dest_2 = 1002u64;
 		let call_2 = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coin {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: bounded_vec![CryptoOf::<Test>::alias_in_context(
 				&secrets_2[0],
 				UNLOADING_RECYCLER_CONTEXT.as_ref(),
@@ -379,6 +386,7 @@ fn free_unload_token_period_validity() {
 		let (secrets_3, index_3, revision_3) = setup_recycler(value, 1, 30);
 		let dest_3 = 1003u64;
 		let call_3 = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coin {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: bounded_vec![CryptoOf::<Test>::alias_in_context(
 				&secrets_3[0],
 				UNLOADING_RECYCLER_CONTEXT.as_ref(),
@@ -411,6 +419,7 @@ fn free_unload_token_period_validity() {
 		let (secrets_4, index_4, revision_4) = setup_recycler(value, 1, 40);
 		let dest_4 = 1004u64;
 		let call_4 = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coin {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: bounded_vec![CryptoOf::<Test>::alias_in_context(
 				&secrets_4[0],
 				UNLOADING_RECYCLER_CONTEXT.as_ref(),
@@ -459,7 +468,7 @@ fn free_unload_token_counter_limit_people_changes_with_fee() {
 		// Limit = 10 / 2 = 5
 		// Valid counters: 0, 1, 2, 3, 4 (counter < 5)
 		// ============================================================
-		assert_eq!(Coinage::free_unload_token_limit_for_people().ok(), Some(5));
+		assert_eq!(Coinage::free_unload_token_limit_for_people(), 5);
 
 		// Counter 4 (max valid) should be valid
 		assert!(
@@ -495,7 +504,7 @@ fn free_unload_token_counter_limit_people_changes_with_fee() {
 		// Valid counters: 0..7 (counter < 8)
 		// ============================================================
 		MockPaidUnloadTokenFeeOverride::set(&Some(1));
-		assert_eq!(Coinage::free_unload_token_limit_for_people().ok(), Some(8));
+		assert_eq!(Coinage::free_unload_token_limit_for_people(), 8);
 
 		// Counter 7 (max valid) should be valid
 		assert!(
@@ -530,7 +539,7 @@ fn free_unload_token_counter_limit_people_changes_with_fee() {
 		// Valid counters: 0, 1 (counter < 2)
 		// ============================================================
 		MockPaidUnloadTokenFeeOverride::set(&Some(5));
-		assert_eq!(Coinage::free_unload_token_limit_for_people().ok(), Some(2));
+		assert_eq!(Coinage::free_unload_token_limit_for_people(), 2);
 
 		// Counter 1 (max valid) should be valid
 		assert!(
@@ -581,7 +590,7 @@ fn free_unload_token_counter_limit_lite_people_changes_with_fee() {
 		// Lite people allowance = 4, fee = 2, limit = 4 / 2 = 2
 		// Valid counters: 0, 1 (counter < 2)
 		// ============================================================
-		assert_eq!(Coinage::free_unload_token_limit_for_lite_people().ok(), Some(2));
+		assert_eq!(Coinage::free_unload_token_limit_for_lite_people(), 2);
 
 		// Counter 1 (max valid) should be valid
 		assert!(
@@ -616,7 +625,7 @@ fn free_unload_token_counter_limit_lite_people_changes_with_fee() {
 		// Valid counters: 0, 1, 2, 3 (counter < 4)
 		// ============================================================
 		MockPaidUnloadTokenFeeOverride::set(&Some(1));
-		assert_eq!(Coinage::free_unload_token_limit_for_lite_people().ok(), Some(4));
+		assert_eq!(Coinage::free_unload_token_limit_for_lite_people(), 4);
 
 		// Counter 3 (max valid) should be valid
 		assert!(
@@ -651,7 +660,7 @@ fn free_unload_token_counter_limit_lite_people_changes_with_fee() {
 		// Valid counters: 0 (counter < 1)
 		// ============================================================
 		MockPaidUnloadTokenFeeOverride::set(&Some(4));
-		assert_eq!(Coinage::free_unload_token_limit_for_lite_people().ok(), Some(1));
+		assert_eq!(Coinage::free_unload_token_limit_for_lite_people(), 1);
 
 		// Counter 0 (max valid) should be valid
 		assert!(
@@ -688,8 +697,8 @@ fn free_unload_token_limit_returns_zero_when_fee_is_zero() {
 		setup_asset();
 		MockPaidUnloadTokenFeeOverride::set(&Some(0));
 
-		assert_eq!(Coinage::free_unload_token_limit_for_people().ok(), Some(0));
-		assert_eq!(Coinage::free_unload_token_limit_for_lite_people().ok(), Some(0));
+		assert_eq!(Coinage::free_unload_token_limit_for_people(), 0);
+		assert_eq!(Coinage::free_unload_token_limit_for_lite_people(), 0);
 	});
 }
 
@@ -708,8 +717,8 @@ fn free_unload_token_counter_is_rejected_when_fee_is_zero() {
 
 		MockPaidUnloadTokenFeeOverride::set(&Some(0));
 
-		assert_eq!(Coinage::free_unload_token_limit_for_people().ok(), Some(0));
-		assert_eq!(Coinage::free_unload_token_limit_for_lite_people().ok(), Some(0));
+		assert_eq!(Coinage::free_unload_token_limit_for_people(), 0);
+		assert_eq!(Coinage::free_unload_token_limit_for_lite_people(), 0);
 
 		// With zero limit, even counter=0 must be rejected for both token types.
 		assert!(
@@ -746,12 +755,12 @@ fn free_unload_token_limit_handles_flooring_and_fee_above_allowance() {
 
 		// Integer division should floor: people=10/3=3, lite=4/3=1.
 		MockPaidUnloadTokenFeeOverride::set(&Some(3));
-		assert_eq!(Coinage::free_unload_token_limit_for_people().ok(), Some(3));
-		assert_eq!(Coinage::free_unload_token_limit_for_lite_people().ok(), Some(1));
+		assert_eq!(Coinage::free_unload_token_limit_for_people(), 3);
+		assert_eq!(Coinage::free_unload_token_limit_for_lite_people(), 1);
 
 		// A non-zero fee above allowance should still yield zero free tokens.
 		MockPaidUnloadTokenFeeOverride::set(&Some(11));
-		assert_eq!(Coinage::free_unload_token_limit_for_people().ok(), Some(0));
-		assert_eq!(Coinage::free_unload_token_limit_for_lite_people().ok(), Some(0));
+		assert_eq!(Coinage::free_unload_token_limit_for_people(), 0);
+		assert_eq!(Coinage::free_unload_token_limit_for_lite_people(), 0);
 	});
 }

@@ -21,16 +21,18 @@ use crate::{
 	*,
 };
 use codec::Encode;
-use frame_support::{assert_err, assert_ok, traits::fungibles::Inspect, BoundedVec};
+use frame_support::{
+	assert_err, assert_err_ignore_postinfo, assert_ok, traits::fungibles::Inspect, BoundedVec,
+};
 use frame_system::AuthorizeCall;
 use indiv_support::traits::Alias;
 use sp_runtime::{bounded_vec, testing::UintAuthorityId, transaction_validity::TransactionSource};
 use verifiable::GenerateVerifiable;
 
 fn bounded_split(
-	split_into: Vec<(CoinValue, Vec<u64>)>,
+	split_into: Vec<(Denomination, Vec<u64>)>,
 ) -> BoundedVec<
-	(CoinValue, BoundedVec<u64, <Test as Config>::MaxSplitOutputs>),
+	(Denomination, BoundedVec<u64, <Test as Config>::MaxSplitOutputs>),
 	<Test as Config>::MaxSplitOutputs,
 > {
 	split_into
@@ -46,7 +48,7 @@ fn build_ext(
 	period: u32,
 	counter: u32,
 	recycler_secrets: &[Secret],
-	value: CoinValue,
+	value: Denomination,
 	index: u32,
 	people_alias_override: Option<Alias>,
 ) -> Extrinsic {
@@ -54,7 +56,7 @@ fn build_ext(
 	let proven_msg = sp_io::hashing::blake2_256(&inherited_implication.encode());
 
 	let mut alias_proofs_vec = Vec::new();
-	let ring_members = Coinage::get_recycler_members(value, index);
+	let ring_members = Coinage::get_recycler_members(TEST_INSTANCE_ID, value, index);
 
 	for secret in recycler_secrets {
 		let member = CryptoOf::<Test>::member_from_secret(secret);
@@ -79,8 +81,11 @@ fn build_ext(
 
 	let context = crate::pallet::free_unload_token_context(period, counter);
 	let people_alias = people_alias_override.unwrap_or([0u8; 32]);
-	let people_proof =
-		PeopleProof { context: context.to_vec(), msg: intent_msg.to_vec(), alias: people_alias };
+	let people_proof = MembershipProof {
+		context: context.to_vec(),
+		msg: intent_msg.to_vec(),
+		alias: people_alias,
+	};
 
 	let info =
 		AsCoinageInfo::AsUnloadTokenPeople { proof: people_proof, period, counter, alias_proofs };
@@ -113,6 +118,7 @@ fn success_unload_and_split() {
 		let split_into = bounded_split(vec![(-1, vec![dest1, dest2])]);
 
 		let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coins {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: aliases.clone(),
 			value: 0,
 			index,
@@ -125,13 +131,20 @@ fn success_unload_and_split() {
 		assert_eq!(Executive::apply_extrinsic(ext), Ok(Ok(())));
 
 		let coin1 = CoinsByOwner::<Test>::get(dest1).unwrap();
-		assert_eq!(coin1, Coin { value: -1, age: 1 });
+		assert_eq!(coin1, Coin { instance_id: TEST_INSTANCE_ID, value: -1, age: 1 });
 		let coin2 = CoinsByOwner::<Test>::get(dest2).unwrap();
-		assert_eq!(coin2, Coin { value: -1, age: 1 });
+		assert_eq!(coin2, Coin { instance_id: TEST_INSTANCE_ID, value: -1, age: 1 });
 
-		assert!(RecyclersUnloaded::<Test>::contains_key((0, index, aliases[0])));
+		assert!(matches!(
+			RecyclerAliasStates::<Test>::get((TEST_INSTANCE_ID, 0, index, aliases[0])),
+			Some(AliasState::Unloaded),
+		));
 		System::assert_has_event(
-			crate::Event::<Test>::RecyclerUnloadedIntoCoins { output_count: 2 }.into(),
+			crate::Event::<Test>::RecyclerUnloadedIntoCoins {
+				instance_id: TEST_INSTANCE_ID,
+				output_count: 2,
+			}
+			.into(),
 		);
 	});
 }
@@ -152,6 +165,7 @@ fn split_invalid_sum_fail() {
 		let split_into = bounded_split(vec![(-1, vec![dest1])]);
 
 		let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coins {
+			instance_id: TEST_INSTANCE_ID,
 			aliases,
 			value: 0,
 			index,
@@ -183,11 +197,15 @@ fn dest_has_coin_invalid() {
 		.unwrap()];
 
 		let dest1 = 1;
-		CoinsByOwner::<Test>::insert(dest1, Coin { value: 0, age: 0 });
+		CoinsByOwner::<Test>::insert(
+			dest1,
+			Coin { instance_id: TEST_INSTANCE_ID, value: 0, age: 0 },
+		);
 
 		let split_into = bounded_split(vec![(0, vec![dest1])]); // 0 -> 0 (sum ok)
 
 		let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coins {
+			instance_id: TEST_INSTANCE_ID,
 			aliases,
 			value: 0,
 			index,
@@ -225,6 +243,7 @@ fn split_into_multiple_values() {
 		let split_into = bounded_split(vec![(-1, vec![dest1, dest2]), (0, vec![dest3])]);
 
 		let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coins {
+			instance_id: TEST_INSTANCE_ID,
 			aliases,
 			value: 1,
 			index,
@@ -236,9 +255,18 @@ fn split_into_multiple_values() {
 		let ext = build_ext(call, 0, 0, &secrets, 1, index, None);
 		assert_eq!(Executive::apply_extrinsic(ext), Ok(Ok(())));
 
-		assert_eq!(CoinsByOwner::<Test>::get(dest1).unwrap(), Coin { value: -1, age: 1 });
-		assert_eq!(CoinsByOwner::<Test>::get(dest2).unwrap(), Coin { value: -1, age: 1 });
-		assert_eq!(CoinsByOwner::<Test>::get(dest3).unwrap(), Coin { value: 0, age: 1 });
+		assert_eq!(
+			CoinsByOwner::<Test>::get(dest1).unwrap(),
+			Coin { instance_id: TEST_INSTANCE_ID, value: -1, age: 1 }
+		);
+		assert_eq!(
+			CoinsByOwner::<Test>::get(dest2).unwrap(),
+			Coin { instance_id: TEST_INSTANCE_ID, value: -1, age: 1 }
+		);
+		assert_eq!(
+			CoinsByOwner::<Test>::get(dest3).unwrap(),
+			Coin { instance_id: TEST_INSTANCE_ID, value: 0, age: 1 }
+		);
 	});
 }
 
@@ -264,6 +292,7 @@ fn consolidate_and_split() {
 		let split_into = bounded_split(vec![(-1, vec![dest1, dest2, dest3, dest4])]);
 
 		let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coins {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: aliases.clone().try_into().unwrap(),
 			value: 0,
 			index,
@@ -275,13 +304,28 @@ fn consolidate_and_split() {
 		let ext = build_ext(call, 0, 0, &secrets, 0, index, None);
 		assert_eq!(Executive::apply_extrinsic(ext), Ok(Ok(())));
 
-		assert_eq!(CoinsByOwner::<Test>::get(dest1).unwrap(), Coin { value: -1, age: 1 });
-		assert_eq!(CoinsByOwner::<Test>::get(dest2).unwrap(), Coin { value: -1, age: 1 });
-		assert_eq!(CoinsByOwner::<Test>::get(dest3).unwrap(), Coin { value: -1, age: 1 });
-		assert_eq!(CoinsByOwner::<Test>::get(dest4).unwrap(), Coin { value: -1, age: 1 });
+		assert_eq!(
+			CoinsByOwner::<Test>::get(dest1).unwrap(),
+			Coin { instance_id: TEST_INSTANCE_ID, value: -1, age: 1 }
+		);
+		assert_eq!(
+			CoinsByOwner::<Test>::get(dest2).unwrap(),
+			Coin { instance_id: TEST_INSTANCE_ID, value: -1, age: 1 }
+		);
+		assert_eq!(
+			CoinsByOwner::<Test>::get(dest3).unwrap(),
+			Coin { instance_id: TEST_INSTANCE_ID, value: -1, age: 1 }
+		);
+		assert_eq!(
+			CoinsByOwner::<Test>::get(dest4).unwrap(),
+			Coin { instance_id: TEST_INSTANCE_ID, value: -1, age: 1 }
+		);
 
 		for alias in &aliases {
-			assert!(RecyclersUnloaded::<Test>::contains_key((0, index, *alias)));
+			assert!(matches!(
+				RecyclerAliasStates::<Test>::get((TEST_INSTANCE_ID, 0, index, *alias)),
+				Some(AliasState::Unloaded),
+			));
 		}
 	});
 }
@@ -300,6 +344,7 @@ fn empty_split_invalid() {
 		let split_into = bounded_split(vec![(0, vec![])]);
 
 		let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coins {
+			instance_id: TEST_INSTANCE_ID,
 			aliases,
 			value: 0,
 			index,
@@ -329,7 +374,7 @@ fn empty_split_fail() {
 
 		// Build alias proofs for the origin
 		let msg_hash = [0u8; 32];
-		let ring_members = Coinage::get_recycler_members(0, index);
+		let ring_members = Coinage::get_recycler_members(TEST_INSTANCE_ID, 0, index);
 		let mut alias_proofs_vec = Vec::new();
 		for secret in &secrets {
 			let member = CryptoOf::<Test>::member_from_secret(secret);
@@ -351,10 +396,11 @@ fn empty_split_fail() {
 		let alias_proofs = BoundedVec::try_from(alias_proofs_vec).unwrap();
 
 		// Call the pallet directly and check the error
-		assert_err!(
+		assert_err_ignore_postinfo!(
 			Coinage::unload_recycler_into_coins(
 				Origin::UnloadToken { alias_proofs, proven_msg: msg_hash, fee: UnloadFee::Prepaid }
 					.into(),
+				TEST_INSTANCE_ID,
 				aliases,
 				0,
 				index,
@@ -384,6 +430,7 @@ fn many_empty_splits_rejected_early() {
 		let split_into = bounded_split(vec![(0, vec![1]), (0, vec![])]);
 
 		let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coins {
+			instance_id: TEST_INSTANCE_ID,
 			aliases,
 			value: 0,
 			index,
@@ -414,6 +461,7 @@ fn duplicate_destinations_fail() {
 		let split_into = bounded_split(vec![(-1, vec![dest1, dest1])]);
 
 		let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coins {
+			instance_id: TEST_INSTANCE_ID,
 			aliases,
 			value: 0,
 			index,
@@ -448,6 +496,7 @@ fn split_not_sorted_fail() {
 		let split_into = bounded_split(vec![(0, vec![dest1]), (-1, vec![dest2, dest2])]);
 
 		let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coins {
+			instance_id: TEST_INSTANCE_ID,
 			aliases,
 			value: 1,
 			index,
@@ -477,6 +526,7 @@ fn invalid_revision_invalid() {
 		let split_into = bounded_split(vec![(0, vec![1])]);
 
 		let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coins {
+			instance_id: TEST_INSTANCE_ID,
 			aliases,
 			value: 0,
 			index,
@@ -488,6 +538,141 @@ fn invalid_revision_invalid() {
 		let ext = build_ext(call, 0, 0, &secrets, 0, index, None);
 		// Validation check (revision IS checked in validation)
 		assert_invalid(ext, CustomInvalidity::InvalidRecyclerRevision);
+	});
+}
+
+// The `#[pallet::weight]` charges the worst case `max(prepaid, from_output)`; a Prepaid coins
+// unload refunds down to the `Prepaid` benchmarked weight via `PostDispatchInfo`.
+#[test]
+fn success_unload_and_split_refunds_prepaid() {
+	new_test_ext().execute_with(|| {
+		System::set_block_number(1);
+		let (secrets, index, revision) = setup_recycler(0, 1, 0);
+		let aliases: BoundedVec<Alias, _> = bounded_vec![CryptoOf::<Test>::alias_in_context(
+			&secrets[0],
+			UNLOADING_RECYCLER_CONTEXT.as_ref(),
+		)
+		.unwrap()];
+		// Two coins of value -1 unload recycler value 0 exactly (output_count = 2).
+		let split_into = bounded_split(vec![(-1, vec![1, 2])]);
+
+		// Build alias proofs for the Prepaid origin (all aliases are validated in the call).
+		let msg_hash = [0u8; 32];
+		let ring_members = Coinage::get_recycler_members(TEST_INSTANCE_ID, 0, index);
+		let mut alias_proofs_vec = Vec::new();
+		for secret in &secrets {
+			let member = CryptoOf::<Test>::member_from_secret(secret);
+			let commitment = CryptoOf::<Test>::open(
+				recycler_ring_size(),
+				&member,
+				ring_members.clone().into_iter(),
+			)
+			.unwrap();
+			let (proof, _) = CryptoOf::<Test>::create(
+				commitment,
+				secret,
+				UNLOADING_RECYCLER_CONTEXT.as_ref(),
+				&msg_hash,
+			)
+			.unwrap();
+			alias_proofs_vec.push(proof);
+		}
+		let alias_proofs = BoundedVec::try_from(alias_proofs_vec).unwrap();
+
+		let post = Coinage::unload_recycler_into_coins(
+			Origin::UnloadToken { alias_proofs, proven_msg: msg_hash, fee: UnloadFee::Prepaid }
+				.into(),
+			TEST_INSTANCE_ID,
+			aliases,
+			0,
+			index,
+			revision,
+			split_into,
+			0,
+		)
+		.expect("unload should succeed");
+
+		// 1 alias, output_count = 2: refunded to the Prepaid weight plus the instance read, below
+		// the charged worst case.
+		assert_eq!(
+			post.actual_weight,
+			Some(
+				Coinage::unload_recycler_into_coins_prepaid_weight(1, 2)
+					.saturating_add(<Test as Config>::WeightInfo::read_instance())
+			)
+		);
+		assert!(post.actual_weight.unwrap().all_lte(
+			Coinage::unload_recycler_into_coins_prepaid_weight(1, 2)
+				.max(Coinage::unload_recycler_into_coins_from_output_weight(1, 2))
+				.saturating_add(<Test as Config>::WeightInfo::read_instance()),
+		));
+	});
+}
+
+// FromOutput counterpart of `success_unload_and_split_refunds_prepaid`: a coins unload run in
+// `FromOutput` mode refunds down to the `FromOutput` benchmarked weight via `PostDispatchInfo`.
+#[test]
+fn success_unload_and_split_refunds_from_output() {
+	new_test_ext().execute_with(|| {
+		System::set_block_number(1);
+		setup_balances();
+		let value: Denomination = 0;
+		let (secrets, index, revision) = setup_recycler(value, 1, 0);
+		let alias =
+			CryptoOf::<Test>::alias_in_context(&secrets[0], UNLOADING_RECYCLER_CONTEXT.as_ref())
+				.unwrap();
+		let aliases: BoundedVec<Alias, _> = bounded_vec![alias];
+		// value 0 = 4 units; max_fee 250 = 1 unit; output = 3 units = value -1 (2) + value -2 (1).
+		let split_into = bounded_split(vec![(-2, vec![101]), (-1, vec![100])]);
+
+		// Build the single alias proof and pre-mark it unloaded (the extension does this in
+		// prepare).
+		let msg_hash = [0u8; 32];
+		let ring_members = Coinage::get_recycler_members(TEST_INSTANCE_ID, value, index);
+		let member = CryptoOf::<Test>::member_from_secret(&secrets[0]);
+		let commitment =
+			CryptoOf::<Test>::open(recycler_ring_size(), &member, ring_members.into_iter())
+				.unwrap();
+		let (proof, _) = CryptoOf::<Test>::create(
+			commitment,
+			&secrets[0],
+			UNLOADING_RECYCLER_CONTEXT.as_ref(),
+			&msg_hash,
+		)
+		.unwrap();
+		RecyclerManager::<Test>::mark_alias_unloaded(TEST_INSTANCE_ID, value, index, alias);
+
+		let post = Coinage::unload_recycler_into_coins(
+			Origin::UnloadToken {
+				alias_proofs: bounded_vec![proof],
+				proven_msg: msg_hash,
+				fee: UnloadFee::FromOutput { fee_recycler_value: value, fee_recycler_index: index },
+			}
+			.into(),
+			TEST_INSTANCE_ID,
+			aliases,
+			value,
+			index,
+			revision,
+			split_into,
+			250,
+		)
+		.expect("unload should succeed");
+
+		// 1 alias, output_count = 2: refunded to the FromOutput weight plus the instance read,
+		// below the charged worst case.
+		assert_eq!(
+			post.actual_weight,
+			Some(
+				Coinage::unload_recycler_into_coins_from_output_weight(1, 2)
+					.saturating_add(<Test as Config>::WeightInfo::read_instance())
+			),
+		);
+		assert!(post.actual_weight.unwrap().all_lte(
+			Coinage::unload_recycler_into_coins_prepaid_weight(1, 2)
+				.max(Coinage::unload_recycler_into_coins_from_output_weight(1, 2))
+				.saturating_add(<Test as Config>::WeightInfo::read_instance()),
+		));
 	});
 }
 
@@ -520,6 +705,7 @@ fn success_unload_and_split_non_power_of_two() {
 		let split_into = bounded_split(vec![(0, vec![dest2]), (1, vec![dest1])]);
 
 		let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coins {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: aliases.clone().try_into().unwrap(),
 			value: 0,
 			index,
@@ -532,12 +718,15 @@ fn success_unload_and_split_non_power_of_two() {
 		assert_eq!(Executive::apply_extrinsic(ext), Ok(Ok(())));
 
 		let coin1 = CoinsByOwner::<Test>::get(dest1).unwrap();
-		assert_eq!(coin1, Coin { value: 1, age: 1 });
+		assert_eq!(coin1, Coin { instance_id: TEST_INSTANCE_ID, value: 1, age: 1 });
 		let coin2 = CoinsByOwner::<Test>::get(dest2).unwrap();
-		assert_eq!(coin2, Coin { value: 0, age: 1 });
+		assert_eq!(coin2, Coin { instance_id: TEST_INSTANCE_ID, value: 0, age: 1 });
 
 		for alias in &aliases {
-			assert!(RecyclersUnloaded::<Test>::contains_key((0, index, *alias)));
+			assert!(matches!(
+				RecyclerAliasStates::<Test>::get((TEST_INSTANCE_ID, 0, index, *alias)),
+				Some(AliasState::Unloaded),
+			));
 		}
 	});
 }
@@ -550,6 +739,7 @@ fn empty_inputs_fail() {
 		let split_into = bounded_split(vec![]);
 
 		let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coins {
+			instance_id: TEST_INSTANCE_ID,
 			aliases,
 			value: 0,
 			index,
@@ -595,7 +785,10 @@ fn too_many_outputs_stops_early() {
 		// Example: if `num_dests = 5`, this produces `vec![100, 101, 102, 103, 104]`.
 		let dests: Vec<u64> = (100u64..).take(num_dests).collect();
 		let dest_with_coin = *dests.last().unwrap();
-		CoinsByOwner::<Test>::insert(dest_with_coin, Coin { value: 0, age: 0 });
+		CoinsByOwner::<Test>::insert(
+			dest_with_coin,
+			Coin { instance_id: TEST_INSTANCE_ID, value: 0, age: 0 },
+		);
 
 		let split_into = bounded_split(vec![
 			(-2, dests[0..max_split_outputs as usize].to_vec()),
@@ -603,6 +796,7 @@ fn too_many_outputs_stops_early() {
 		]);
 
 		let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coins {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: aliases.try_into().unwrap(),
 			value: 0,
 			index,
@@ -631,12 +825,12 @@ fn success_with_previous_revision() {
 		.unwrap()];
 
 		// Capture the ring members BEFORE adding more coins
-		let ring_members_v1 = Coinage::get_recycler_members(0, index);
+		let ring_members_v1 = Coinage::get_recycler_members(TEST_INSTANCE_ID, 0, index);
 
 		// Step 2: Add more coins and build again (this rotates the revision)
 		let new_secret = get_secret(100);
 		let new_member = CryptoOf::<Test>::member_from_secret(&new_secret);
-		assert_ok!(RecyclerManager::<Test>::load(0, new_member));
+		assert_ok!(RecyclerManager::<Test>::load(TEST_INSTANCE_ID, 0, new_member));
 		Members::process_maintenance();
 
 		// Step 3: Use proof generated against the OLD revision (previous_root)
@@ -646,6 +840,7 @@ fn success_with_previous_revision() {
 		let split_into = bounded_split(vec![(-1, vec![dest1, dest2])]);
 
 		let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coins {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: aliases.clone(),
 			value: 0,
 			index,
@@ -681,8 +876,11 @@ fn success_with_previous_revision() {
 		);
 
 		let context = crate::pallet::free_unload_token_context(0, 0);
-		let people_proof =
-			PeopleProof { context: context.to_vec(), msg: intent_msg.to_vec(), alias: [0u8; 32] };
+		let people_proof = MembershipProof {
+			context: context.to_vec(),
+			msg: intent_msg.to_vec(),
+			alias: [0u8; 32],
+		};
 
 		let info = AsCoinageInfo::AsUnloadTokenPeople {
 			proof: people_proof,
@@ -698,12 +896,17 @@ fn success_with_previous_revision() {
 		assert_eq!(Executive::apply_extrinsic(ext), Ok(Ok(())));
 
 		let coin1 = CoinsByOwner::<Test>::get(dest1).unwrap();
-		assert_eq!(coin1, Coin { value: -1, age: 1 });
+		assert_eq!(coin1, Coin { instance_id: TEST_INSTANCE_ID, value: -1, age: 1 });
 		let coin2 = CoinsByOwner::<Test>::get(dest2).unwrap();
-		assert_eq!(coin2, Coin { value: -1, age: 1 });
+		assert_eq!(coin2, Coin { instance_id: TEST_INSTANCE_ID, value: -1, age: 1 });
 
 		// Verify recycler state
-		assert_eq!(RecyclersUnloaded::<Test>::iter_prefix((0i8, index)).count(), 1);
+		assert_eq!(
+			RecyclerAliasStates::<Test>::iter_prefix((TEST_INSTANCE_ID, 0i8, index))
+				.filter(|(_, state)| matches!(state, AliasState::Unloaded))
+				.count(),
+			1
+		);
 	});
 }
 
@@ -718,7 +921,7 @@ fn from_output_success_with_max_fee_above_unload_token_fee() {
 	//
 	// Setup:
 	// - MinimumExponent = -2, UNDERLYING_ASSET_UNIT = 1000
-	// - coin_value_to_asset_amount(-2) = 1000 >> 2 = 250 asset units per min unit
+	// - denomination_to_asset_amount(-2) = 1000 >> 2 = 250 asset units per min unit
 	// - MockPaidUnloadTokenFeeOverride = 2 (fee is 2 asset units)
 	// - max_fee = 250 asset units
 	// - 250 > 2, so fee is covered and 248 is burned
@@ -732,7 +935,7 @@ fn from_output_success_with_max_fee_above_unload_token_fee() {
 		System::set_block_number(1);
 		setup_balances();
 
-		let value: CoinValue = 0;
+		let value: Denomination = 0;
 		let (secrets, index, revision) = setup_recycler(value, 1, 0);
 		let alias =
 			CryptoOf::<Test>::alias_in_context(&secrets[0], UNLOADING_RECYCLER_CONTEXT.as_ref())
@@ -744,10 +947,11 @@ fn from_output_success_with_max_fee_above_unload_token_fee() {
 
 		// Input: 1 coin of value 0 = 4 units
 		// max_fee: 250 asset units = 1 unit
-		// Output: 3 units = 1 coin value -1 (2 units) + 1 coin value -2 (1 unit)
+		// Output: 3 units = 1 denomination -1 (2 units) + 1 denomination -2 (1 unit)
 		let split_into = bounded_split(vec![(-2, vec![dest2]), (-1, vec![dest1])]);
 
 		let call = crate::Call::<Test>::unload_recycler_into_coins {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: aliases.clone(),
 			value,
 			index,
@@ -756,8 +960,8 @@ fn from_output_success_with_max_fee_above_unload_token_fee() {
 			max_fee: 250,
 		};
 
-		let fee_dest_before = AssetsWithHolder::balance(10, &FEE_DESTINATION);
-		let destroyed_before = TotalValueOfDestroyedCoins::<Test>::get();
+		let market_before = AssetsWithHolder::balance(10, &MOCK_MARKET);
+		let destroyed_before = TotalValueOfDestroyedCoins::<Test>::get(TEST_INSTANCE_ID);
 
 		let ext = build_unload_from_output_ext(call, value, index, revision, &secrets);
 		let result = Executive::apply_extrinsic(ext);
@@ -765,23 +969,36 @@ fn from_output_success_with_max_fee_above_unload_token_fee() {
 		assert!(result.unwrap().is_ok(), "Dispatch should succeed");
 
 		// Check coins were created
-		assert_eq!(CoinsByOwner::<Test>::get(dest1).unwrap(), Coin { value: -1, age: 1 });
-		assert_eq!(CoinsByOwner::<Test>::get(dest2).unwrap(), Coin { value: -2, age: 1 });
+		assert_eq!(
+			CoinsByOwner::<Test>::get(dest1).unwrap(),
+			Coin { instance_id: TEST_INSTANCE_ID, value: -1, age: 1 }
+		);
+		assert_eq!(
+			CoinsByOwner::<Test>::get(dest2).unwrap(),
+			Coin { instance_id: TEST_INSTANCE_ID, value: -2, age: 1 }
+		);
 
-		// Check fee was transferred (2 asset units)
-		let fee_dest_after = AssetsWithHolder::balance(10, &FEE_DESTINATION);
-		assert_eq!(fee_dest_after - fee_dest_before, 2);
+		// Check the fee was converted: 2 asset units went to the market.
+		let market_after = AssetsWithHolder::balance(10, &MOCK_MARKET);
+		assert_eq!(market_after - market_before, 2);
 
 		// Check remainder was burned (250 - 2 = 248 asset units)
-		let destroyed_after = TotalValueOfDestroyedCoins::<Test>::get();
+		let destroyed_after = TotalValueOfDestroyedCoins::<Test>::get(TEST_INSTANCE_ID);
 		assert_eq!(destroyed_after - destroyed_before, 248);
 
 		// Check alias was marked as unloaded
-		assert!(RecyclersUnloaded::<Test>::contains_key((value, index, alias)));
+		assert!(matches!(
+			RecyclerAliasStates::<Test>::get((TEST_INSTANCE_ID, value, index, alias)),
+			Some(AliasState::Unloaded),
+		));
 
 		// Check event
 		System::assert_has_event(
-			crate::Event::<Test>::RecyclerUnloadedIntoCoins { output_count: 2 }.into(),
+			crate::Event::<Test>::RecyclerUnloadedIntoCoins {
+				instance_id: TEST_INSTANCE_ID,
+				output_count: 2,
+			}
+			.into(),
 		);
 	});
 }
@@ -799,7 +1016,7 @@ fn from_output_invalid_when_max_fee_below_unload_token_fee() {
 		// Set fee higher than max_fee can cover
 		MockPaidUnloadTokenFeeOverride::set(&Some(300));
 
-		let value: CoinValue = 0;
+		let value: Denomination = 0;
 		let (secrets, index, revision) = setup_recycler(value, 1, 0);
 		let alias =
 			CryptoOf::<Test>::alias_in_context(&secrets[0], UNLOADING_RECYCLER_CONTEXT.as_ref())
@@ -812,6 +1029,7 @@ fn from_output_invalid_when_max_fee_below_unload_token_fee() {
 		let split_into = bounded_split(vec![(-2, vec![dest1]), (-1, vec![dest1 + 1])]);
 
 		let call = crate::Call::<Test>::unload_recycler_into_coins {
+			instance_id: TEST_INSTANCE_ID,
 			aliases,
 			value,
 			index,
@@ -838,7 +1056,7 @@ fn from_output_fail_split_plus_max_fee_more_than_input() {
 	new_test_ext().execute_with(|| {
 		setup_balances();
 
-		let value: CoinValue = 0;
+		let value: Denomination = 0;
 		let (secrets, index, revision) = setup_recycler(value, 1, 0);
 		let alias =
 			CryptoOf::<Test>::alias_in_context(&secrets[0], UNLOADING_RECYCLER_CONTEXT.as_ref())
@@ -853,6 +1071,7 @@ fn from_output_fail_split_plus_max_fee_more_than_input() {
 		let split_into = bounded_split(vec![(0, vec![dest1])]);
 
 		let call = crate::Call::<Test>::unload_recycler_into_coins {
+			instance_id: TEST_INSTANCE_ID,
 			aliases,
 			value,
 			index,
@@ -863,7 +1082,8 @@ fn from_output_fail_split_plus_max_fee_more_than_input() {
 
 		let ext = build_unload_from_output_ext(call, value, index, revision, &secrets);
 
-		// Validation passes, dispatch fails with InvalidSplit
+		// This is specifically a dispatch-time failure. The extension should accept the fee alias,
+		// then the call should fail once it checks the split math.
 		assert_ok!(Executive::validate_transaction(
 			TransactionSource::External,
 			ext.clone(),
@@ -873,6 +1093,31 @@ fn from_output_fail_split_plus_max_fee_more_than_input() {
 		let result = Executive::apply_extrinsic(ext);
 		assert!(result.is_ok(), "apply_extrinsic should succeed");
 		assert_err!(result.unwrap(), Error::<Test>::InvalidSplit);
+		assert_eq!(TotalValueOfDestroyedCoins::<Test>::get(TEST_INSTANCE_ID), 0);
+		// The fee alias must be restored out of the unloaded set before the retry lock is applied.
+		assert!(!matches!(
+			RecyclerAliasStates::<Test>::get((TEST_INSTANCE_ID, value, index, alias)),
+			Some(AliasState::Unloaded),
+		));
+		// The visible outcome is a temporary lock that blocks immediate reuse.
+		let lock_until = super::get_recycler_alias_lock_until(value, index, alias)
+			.expect("failed dispatch should lock the fee alias");
+
+		let retry_call = crate::Call::<Test>::unload_recycler_into_coins {
+			instance_id: TEST_INSTANCE_ID,
+			aliases: bounded_vec![alias],
+			value,
+			index,
+			revision,
+			split_into: bounded_split(vec![(0, vec![dest1])]),
+			max_fee: 250,
+		};
+		let retry_ext = build_unload_from_output_ext(retry_call, value, index, revision, &secrets);
+		assert_invalid(retry_ext, CustomInvalidity::AliasTemporarilyLocked);
+
+		// After the timeout the lock disappears and a later retry can proceed normally.
+		advance_until_time(lock_until as u32);
+		assert_eq!(super::get_recycler_alias_lock_until(value, index, alias), None);
 	});
 }
 
@@ -887,7 +1132,7 @@ fn from_output_fail_split_plus_max_fee_less_than_input() {
 	new_test_ext().execute_with(|| {
 		setup_balances();
 
-		let value: CoinValue = 0;
+		let value: Denomination = 0;
 		let (secrets, index, revision) = setup_recycler(value, 1, 0);
 		let alias =
 			CryptoOf::<Test>::alias_in_context(&secrets[0], UNLOADING_RECYCLER_CONTEXT.as_ref())
@@ -902,6 +1147,7 @@ fn from_output_fail_split_plus_max_fee_less_than_input() {
 		let split_into = bounded_split(vec![(-1, vec![dest1])]);
 
 		let call = crate::Call::<Test>::unload_recycler_into_coins {
+			instance_id: TEST_INSTANCE_ID,
 			aliases,
 			value,
 			index,
@@ -927,8 +1173,9 @@ fn from_output_fail_split_plus_max_fee_less_than_input() {
 
 #[test]
 fn prepaid_with_nonzero_max_fee_invalid() {
-	// Test that using Prepaid fee mode with a non-zero max_fee is rejected at validation
-	// with MaxFeeNotAllowedForPrepaid.
+	// A prepaid unload token takes no fee out of the output, so the split takes the whole
+	// unloaded value and `max_fee` must be zero. The extension rejects any other value, keeping
+	// the requirement that the split plus `max_fee` equals the unloaded value.
 	new_test_ext().execute_with(|| {
 		let (secrets, index, revision) = setup_recycler(0, 1, 0);
 		let aliases: BoundedVec<Alias, _> = bounded_vec![CryptoOf::<Test>::alias_in_context(
@@ -941,30 +1188,29 @@ fn prepaid_with_nonzero_max_fee_invalid() {
 		let dest2 = 2;
 
 		// Valid split: value 0 (4 units) -> 2 coins of value -1 (2 units each)
-		// This would succeed with max_fee: 0, but we use max_fee: 250 to trigger the error.
 		let split_into = bounded_split(vec![(-1, vec![dest1, dest2])]);
 
 		let call = RuntimeCall::Coinage(crate::Call::unload_recycler_into_coins {
+			instance_id: TEST_INSTANCE_ID,
 			aliases,
 			value: 0,
 			index,
 			revision,
 			split_into,
-			max_fee: 250, // Non-zero max_fee with Prepaid mode should fail
+			max_fee: 250,
 		});
 
 		// build_ext uses Prepaid fee mode (via AsUnloadTokenPeople)
 		let ext = build_ext(call, 0, 0, &secrets, 0, index, None);
 
-		// Transaction should be invalid at validation
 		assert_invalid(ext, CustomInvalidity::MaxFeeNotAllowedForPrepaid);
 	});
 }
 
 #[test]
-fn prepaid_with_nonzero_max_fee_dispatch_fail() {
-	// Test that direct dispatch with Prepaid fee mode and non-zero max_fee fails with
-	// MaxFeeNotAllowedForPrepaid error.
+fn prepaid_with_nonzero_max_fee_dispatch_fails() {
+	// The dispatch enforces the same requirement, since it does not go through the extension's
+	// validation.
 	new_test_ext().execute_with(|| {
 		let (secrets, index, revision) = setup_recycler(0, 1, 0);
 		let aliases: BoundedVec<Alias, _> = secrets
@@ -984,7 +1230,7 @@ fn prepaid_with_nonzero_max_fee_dispatch_fail() {
 
 		// Build alias proofs for direct dispatch
 		let msg_hash = [0u8; 32];
-		let ring_members = Coinage::get_recycler_members(0, index);
+		let ring_members = Coinage::get_recycler_members(TEST_INSTANCE_ID, 0, index);
 		let mut alias_proofs_vec = Vec::new();
 		for secret in &secrets {
 			let member = CryptoOf::<Test>::member_from_secret(secret);
@@ -1006,22 +1252,26 @@ fn prepaid_with_nonzero_max_fee_dispatch_fail() {
 		let alias_proofs = BoundedVec::try_from(alias_proofs_vec).expect("Too many proofs");
 
 		// Direct dispatch with Prepaid fee mode and non-zero max_fee
-		let result = Coinage::unload_recycler_into_coins(
+		let err = Coinage::unload_recycler_into_coins(
 			pallet::Origin::<Test>::UnloadToken {
 				alias_proofs,
 				proven_msg: msg_hash,
 				fee: UnloadFee::Prepaid,
 			}
 			.into(),
+			TEST_INSTANCE_ID,
 			aliases,
 			0,
 			index,
 			revision,
 			split_into,
-			250, // Non-zero max_fee with Prepaid mode should fail
-		);
+			250,
+		)
+		.expect_err("a prepaid unload must not set a fee aside");
 
-		assert_err!(result, Error::<Test>::MaxFeeNotAllowedForPrepaid);
+		assert_eq!(err.error, Error::<Test>::MaxFeeNotAllowedForPrepaid.into());
+		assert_eq!(CoinsByOwner::<Test>::get(dest1), None);
+		assert_eq!(CoinsByOwner::<Test>::get(dest2), None);
 	});
 }
 
@@ -1032,7 +1282,7 @@ fn from_output_fail_max_fee_not_multiple_of_min_coin() {
 	//
 	// Setup:
 	// - MinimumExponent = -2, UNDERLYING_ASSET_UNIT = 1000
-	// - coin_value_to_asset_amount(-2) = 1000 >> 2 = 250 asset units per min unit
+	// - denomination_to_asset_amount(-2) = 1000 >> 2 = 250 asset units per min unit
 	// - max_fee = 251 (not a multiple of 250, remainder = 1)
 	//
 	// Without the check, 251 / 250 would silently truncate to 1 unit,
@@ -1040,7 +1290,7 @@ fn from_output_fail_max_fee_not_multiple_of_min_coin() {
 	new_test_ext().execute_with(|| {
 		setup_balances();
 
-		let value: CoinValue = 0;
+		let value: Denomination = 0;
 		let (secrets, index, revision) = setup_recycler(value, 1, 0);
 		let alias =
 			CryptoOf::<Test>::alias_in_context(&secrets[0], UNLOADING_RECYCLER_CONTEXT.as_ref())
@@ -1056,6 +1306,7 @@ fn from_output_fail_max_fee_not_multiple_of_min_coin() {
 		let split_into = bounded_split(vec![(-2, vec![dest2]), (-1, vec![dest1])]);
 
 		let call = crate::Call::<Test>::unload_recycler_into_coins {
+			instance_id: TEST_INSTANCE_ID,
 			aliases,
 			value,
 			index,
@@ -1078,4 +1329,74 @@ fn from_output_fail_max_fee_not_multiple_of_min_coin() {
 		assert!(result.is_ok(), "apply_extrinsic should succeed");
 		assert_err!(result.unwrap(), Error::<Test>::InvalidMaxFee);
 	});
+}
+
+/// Sponsored-instance settle flow of `unload_recycler_into_coins` through the given
+/// unload-token extension flavor: unloading releases the key's deposit, and after a switch to
+/// sufficient the remaining sponsored-loaded key still unloads while settling nothing.
+///
+/// A prepaid token must split the whole input with a zero `max_fee`, while `FromOutput`
+/// leaves a `max_fee` remainder covering the fee, so the split shape follows the flavor.
+fn sponsored_unload_into_coins_settles(make_variant: impl FnOnce() -> UnloadTokenVariant) {
+	new_test_ext().execute_with(|| {
+		System::set_block_number(1);
+		let variant = make_variant();
+		let (instance_id, secrets, index, revision) = setup_sponsored_recycler(10, 100, 2, 0);
+		assert_eq!(pot_held(instance_id, NATIVE_DEPOSIT_ID), 20);
+
+		let (split_value, max_fee) = match variant {
+			UnloadTokenVariant::FromOutput => (-1, 500),
+			_ => (0, 0),
+		};
+		let build_call = |alias, dest: u64| crate::Call::<Test>::unload_recycler_into_coins {
+			instance_id,
+			aliases: bounded_vec![alias],
+			value: 0,
+			index,
+			revision,
+			split_into: bounded_split(vec![(split_value, vec![dest])]),
+			max_fee,
+		};
+
+		// Unloading one key releases its deposit to the pot's free balance.
+		let call = build_call(recycler_alias(&secrets[0]), 9_401);
+		let free_before = pot_free(instance_id, NATIVE_DEPOSIT_ID);
+		let ext = variant.build_ext(instance_id, call, &secrets[0..1], 0, index, revision, 0);
+		assert_eq!(Executive::apply_extrinsic(ext), Ok(Ok(())));
+		assert_eq!(pot_held(instance_id, NATIVE_DEPOSIT_ID), 10);
+		assert_eq!(pot_free(instance_id, NATIVE_DEPOSIT_ID), free_before + 10);
+		check_load_deposit_invariant(instance_id, 1);
+
+		// Switching to sufficient releases the remaining deposit; the other key, loaded while
+		// the instance was sponsored, still unloads and settles nothing.
+		assert_ok!(Coinage::make_instance_sufficient(RuntimeOrigin::root(), instance_id));
+		assert_eq!(pot_held(instance_id, NATIVE_DEPOSIT_ID), 0);
+		let free_after_switch = pot_free(instance_id, NATIVE_DEPOSIT_ID);
+		let call = build_call(recycler_alias(&secrets[1]), 9_402);
+		let ext = variant.build_ext(instance_id, call, &secrets[1..2], 0, index, revision, 1);
+		assert_eq!(Executive::apply_extrinsic(ext), Ok(Ok(())));
+		assert!(CoinsByOwner::<Test>::contains_key(9_402));
+		assert_eq!(pot_held(instance_id, NATIVE_DEPOSIT_ID), 0);
+		assert_eq!(pot_free(instance_id, NATIVE_DEPOSIT_ID), free_after_switch);
+	});
+}
+
+#[test]
+fn sponsored_unload_into_coins_settles_the_load_deposit_people_token() {
+	sponsored_unload_into_coins_settles(|| UnloadTokenVariant::People);
+}
+
+#[test]
+fn sponsored_unload_into_coins_settles_the_load_deposit_lite_people_token() {
+	sponsored_unload_into_coins_settles(|| UnloadTokenVariant::LitePeople);
+}
+
+#[test]
+fn sponsored_unload_into_coins_settles_the_load_deposit_paid_token() {
+	sponsored_unload_into_coins_settles(|| paid_unload_token_variant(2));
+}
+
+#[test]
+fn sponsored_unload_into_coins_settles_the_load_deposit_from_output() {
+	sponsored_unload_into_coins_settles(|| UnloadTokenVariant::FromOutput);
 }

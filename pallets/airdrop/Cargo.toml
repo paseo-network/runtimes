@@ -27,6 +27,7 @@ pallet-assets-holder = { workspace = true }
 rand_core = { workspace = true, optional = true }
 schnorrkel = { workspace = true, optional = true }
 sp-core = { workspace = true }
+sp-crypto-hashing = { workspace = true }
 sp-io = { workspace = true }
 sp-runtime = { workspace = true }
 indiv-support = { workspace = true }
@@ -57,6 +58,7 @@ std = [
 	"scale-info/std",
 	"schnorrkel?/std",
 	"sp-core/std",
+	"sp-crypto-hashing/std",
 	"sp-io/std",
 	"sp-keystore/std",
 	"sp-runtime/std",

@@ -68,14 +68,14 @@ fn coinage_paid_full_story() {
 		let asset_id = TEST_ASSET_ID;
 
 		// Values
-		let coin_value_initial: i8 = 1; // 2 units
-		let coin_value_split: i8 = 0; // 1 unit
-		let asset_unit = get_u64::<<Test as Config>::UnderlyingAssetUnit>();
+		let denomination_initial: i8 = 1; // 2 units
+		let denomination_split: i8 = 0; // 1 unit
+		let asset_unit = UNDERLYING_ASSET_UNIT;
 
 		// Initial asset amount: 2 units * 1000 = 2000
-		let asset_amount_initial = asset_unit << (coin_value_initial as u32);
+		let asset_amount_initial = asset_unit << (denomination_initial as u32);
 
-		let fee_amount = Coinage::paid_unload_token_fee_in_asset().ok().unwrap();
+		let fee_amount = Coinage::quote_paid_unload_token_fee_in_asset(TEST_INSTANCE_ID).unwrap();
 		let fund_amount = asset_amount_initial + fee_amount * 3 + 1000;
 
 		// Fund Alice
@@ -89,16 +89,17 @@ fn coinage_paid_full_story() {
 			CryptoOf::<Test>::sign(&alice_recycler_secret_0, &alice.encode()).unwrap();
 
 		let load_call = RuntimeCall::Coinage(crate::Call::load_recycler_with_external_asset {
+			instance_id: TEST_INSTANCE_ID,
 			preservation: CodecPreservation::Expendable,
-			value: coin_value_initial,
+			value: denomination_initial,
 			member_key: alice_recycler_member_0,
 			proof_of_ownership,
 		});
 
 		exec_signed(alice, load_call);
 
-		let r_val = RecyclersCoinToRecycler::<Test>::get(alice_recycler_member_0).unwrap();
-		assert_eq!(r_val, coin_value_initial);
+		let (_, r_val) = RecyclersCoinToRecycler::<Test>::get(alice_recycler_member_0).unwrap();
+		assert_eq!(r_val, denomination_initial);
 		let r_idx_0 = 0u32; // first ring after loading
 
 		// Action 2: Pay for Unload Token
@@ -109,8 +110,10 @@ fn coinage_paid_full_story() {
 
 		let pay_fee_call = RuntimeCall::Coinage(
 			crate::Call::pay_for_recycler_unload_fee_token_with_external_asset {
+				instance_id: TEST_INSTANCE_ID,
 				member_key: alice_payment_member_1,
 				proof_of_ownership: payment_proof_1,
+				max_fee: unload_token_fee_in_asset(),
 			},
 		);
 
@@ -138,14 +141,16 @@ fn coinage_paid_full_story() {
 			)
 			.unwrap()];
 
-		let recycler_identifier_0 = Coinage::recycler_collection_identifier(coin_value_initial);
+		let recycler_identifier_0 =
+			Coinage::recycler_collection_identifier(TEST_INSTANCE_ID, denomination_initial);
 		let r_rev_0 =
 			<Test as Config>::MemberService::ring_revision(&recycler_identifier_0, r_idx_0)
 				.unwrap();
 
 		let unload_call = crate::Call::unload_recycler_into_coin {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: aliases_vec,
-			value: coin_value_initial,
+			value: denomination_initial,
 			index: r_idx_0,
 			revision: r_rev_0,
 			to: fresh_alice_coin_0,
@@ -158,7 +163,7 @@ fn coinage_paid_full_story() {
 			payment_revision,
 			period,
 			&[alice_recycler_secret_0],
-			coin_value_initial,
+			denomination_initial,
 			r_idx_0,
 		);
 
@@ -167,7 +172,7 @@ fn coinage_paid_full_story() {
 			.expect("Execution successful");
 
 		let coin0 = CoinsByOwner::<Test>::get(fresh_alice_coin_0).unwrap();
-		assert_eq!(coin0.value, coin_value_initial);
+		assert_eq!(coin0.value, denomination_initial);
 
 		// Action 5: Split ($2 -> $1 + $1)
 		let fresh_alice_coin_1 = 101u64;
@@ -175,7 +180,7 @@ fn coinage_paid_full_story() {
 
 		let split_call = RuntimeCall::Coinage(crate::Call::split {
 			split_into: bounded_vec![(
-				coin_value_split,
+				denomination_split,
 				bounded_vec![fresh_alice_coin_1, fresh_alice_coin_2],
 			)],
 		});
@@ -222,8 +227,10 @@ fn coinage_paid_full_story() {
 
 		let pay_fee_call_2 = RuntimeCall::Coinage(
 			crate::Call::pay_for_recycler_unload_fee_token_with_external_asset {
+				instance_id: TEST_INSTANCE_ID,
 				member_key: alice_payment_member_2,
 				proof_of_ownership: payment_proof_2,
+				max_fee: unload_token_fee_in_asset(),
 			},
 		);
 		exec_signed(alice, pay_fee_call_2);
@@ -239,8 +246,8 @@ fn coinage_paid_full_story() {
 		.unwrap();
 
 		// Unload (Consolidate)
-		let val_cons = RecyclersCoinToRecycler::<Test>::get(alice_recycler_member_1).unwrap();
-		let identifier_cons = Coinage::recycler_collection_identifier(val_cons);
+		let (_, val_cons) = RecyclersCoinToRecycler::<Test>::get(alice_recycler_member_1).unwrap();
+		let identifier_cons = Coinage::recycler_collection_identifier(TEST_INSTANCE_ID, val_cons);
 		let idx_cons = 0u32; // members are in the first ring
 		let rev_cons =
 			<Test as Config>::MemberService::ring_revision(&identifier_cons, idx_cons).unwrap();
@@ -256,6 +263,7 @@ fn coinage_paid_full_story() {
 			.expect("should fit in MaxConsolidation");
 
 		let unload_call = crate::Call::unload_recycler_into_coin {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: aliases_vec,
 			value: val_cons,
 			index: idx_cons,
@@ -278,7 +286,7 @@ fn coinage_paid_full_story() {
 			.expect("Execution successful");
 
 		let consolidated_coin = CoinsByOwner::<Test>::get(fresh_consolidated).unwrap();
-		assert_eq!(consolidated_coin.value, coin_value_initial);
+		assert_eq!(consolidated_coin.value, denomination_initial);
 
 		// Action 7: Offboard
 		let current_offboard = fresh_consolidated;
@@ -306,8 +314,10 @@ fn coinage_paid_full_story() {
 
 		let pay_fee_call_3 = RuntimeCall::Coinage(
 			crate::Call::pay_for_recycler_unload_fee_token_with_external_asset {
+				instance_id: TEST_INSTANCE_ID,
 				member_key: alice_payment_member_3,
 				proof_of_ownership: payment_proof_3,
+				max_fee: unload_token_fee_in_asset(),
 			},
 		);
 		exec_signed(alice, pay_fee_call_3);
@@ -322,8 +332,8 @@ fn coinage_paid_full_story() {
 		)
 		.unwrap();
 
-		let val_off = RecyclersCoinToRecycler::<Test>::get(alice_recycler_member_off).unwrap();
-		let identifier_off = Coinage::recycler_collection_identifier(val_off);
+		let (_, val_off) = RecyclersCoinToRecycler::<Test>::get(alice_recycler_member_off).unwrap();
+		let identifier_off = Coinage::recycler_collection_identifier(TEST_INSTANCE_ID, val_off);
 		let idx_off = 0u32; // members are in the first ring
 		let rev_off =
 			<Test as Config>::MemberService::ring_revision(&identifier_off, idx_off).unwrap();
@@ -335,11 +345,13 @@ fn coinage_paid_full_story() {
 			.unwrap()];
 
 		let unload_call = crate::Call::unload_recycler_into_external_asset {
+			instance_id: TEST_INSTANCE_ID,
 			aliases: aliases_vec,
 			value: val_off,
 			index: idx_off,
 			revision: rev_off,
 			to: alice,
+			max_fee: 0,
 		};
 
 		let uxt = build_unload_paid_ext(

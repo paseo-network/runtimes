@@ -37,6 +37,7 @@ pallet-identity = { workspace = true }
 pallet-message-queue = { workspace = true }
 pallet-migrations = { workspace = true }
 pallet-multisig = { workspace = true }
+pallet-parameters = { workspace = true }
 pallet-proxy = { workspace = true }
 pallet-session = { workspace = true }
 pallet-skip-feeless-payment = { workspace = true }
@@ -68,6 +69,11 @@ sp-version = { workspace = true }
 verifiable = { workspace = true }
 indiv-support = { features = ["genesis"], workspace = true }
 indiv-pallet-airdrop = { workspace = true }
+# Traits only (`Swap` / `QuotePrice`) for `CoinageFeeConversion`; the AMM pallet itself is NOT
+# added to this runtime. See `CoinageFeeConversion` in people.rs.
+pallet-asset-conversion = { workspace = true }
+indiv-pallet-network-suffix = { workspace = true }
+indiv-pallet-relay-randomness = { workspace = true }
 indiv-pallet-chunks-manager = { workspace = true }
 indiv-pallet-coinage = { workspace = true }
 indiv-pallet-dummy-dim = { workspace = true }
@@ -113,7 +119,10 @@ parachains-common = { workspace = true }
 system-parachains-constants = { workspace = true }
 
 [dev-dependencies]
+frame-remote-externalities = { workspace = true }
 parachains-runtimes-test-utils = { workspace = true }
+sp-tracing = { workspace = true, default-features = true }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 
 [build-dependencies]
 substrate-wasm-builder = { optional = true, workspace = true }
@@ -151,16 +160,19 @@ std = [
 	"indiv-pallet-members-notifier/std",
 	"indiv-pallet-members/std",
 	"indiv-pallet-mob-rule/std",
+	"indiv-pallet-network-suffix/std",
 	"indiv-pallet-origin-restriction/std",
 	"indiv-pallet-people-lite/std",
 	"indiv-pallet-people/std",
 	"indiv-pallet-proof-of-ink/std",
+	"indiv-pallet-relay-randomness/std",
 	"indiv-pallet-resources/std",
 	"indiv-pallet-score/std",
 	"indiv-pallet-storage-initialization/std",
 	"indiv-pallet-value-transfer-auth/std",
 	"indiv-support/std",
 	"log/std",
+	"pallet-asset-conversion/std",
 	"pallet-asset-rate/std",
 	"pallet-asset-tx-payment/std",
 	"pallet-assets-holder/std",
@@ -173,6 +185,7 @@ std = [
 	"pallet-message-queue/std",
 	"pallet-migrations/std",
 	"pallet-multisig/std",
+	"pallet-parameters/std",
 	"pallet-proxy/std",
 	"pallet-session/std",
 	"pallet-skip-feeless-payment/std",
@@ -239,15 +252,18 @@ runtime-benchmarks = [
 	"indiv-pallet-members-notifier/runtime-benchmarks",
 	"indiv-pallet-members/runtime-benchmarks",
 	"indiv-pallet-mob-rule/runtime-benchmarks",
+	"indiv-pallet-network-suffix/runtime-benchmarks",
 	"indiv-pallet-origin-restriction/runtime-benchmarks",
 	"indiv-pallet-people-lite/runtime-benchmarks",
 	"indiv-pallet-people/runtime-benchmarks",
 	"indiv-pallet-proof-of-ink/runtime-benchmarks",
+	"indiv-pallet-relay-randomness/runtime-benchmarks",
 	"indiv-pallet-resources/runtime-benchmarks",
 	"indiv-pallet-score/runtime-benchmarks",
 	"indiv-pallet-storage-initialization/runtime-benchmarks",
 	"indiv-pallet-value-transfer-auth/runtime-benchmarks",
 	"indiv-support/runtime-benchmarks",
+	"pallet-asset-conversion/runtime-benchmarks",
 	"pallet-asset-rate/runtime-benchmarks",
 	"pallet-asset-tx-payment/runtime-benchmarks",
 	"pallet-assets-holder/runtime-benchmarks",
@@ -258,6 +274,7 @@ runtime-benchmarks = [
 	"pallet-message-queue/runtime-benchmarks",
 	"pallet-migrations/runtime-benchmarks",
 	"pallet-multisig/runtime-benchmarks",
+	"pallet-parameters/runtime-benchmarks",
 	"pallet-proxy/runtime-benchmarks",
 	"pallet-session/runtime-benchmarks",
 	"pallet-skip-feeless-payment/runtime-benchmarks",
@@ -304,14 +321,17 @@ try-runtime = [
 	"indiv-pallet-members-notifier/try-runtime",
 	"indiv-pallet-members/try-runtime",
 	"indiv-pallet-mob-rule/try-runtime",
+	"indiv-pallet-network-suffix/try-runtime",
 	"indiv-pallet-origin-restriction/try-runtime",
 	"indiv-pallet-people-lite/try-runtime",
 	"indiv-pallet-people/try-runtime",
 	"indiv-pallet-proof-of-ink/try-runtime",
+	"indiv-pallet-relay-randomness/try-runtime",
 	"indiv-pallet-resources/try-runtime",
 	"indiv-pallet-score/try-runtime",
 	"indiv-pallet-storage-initialization/try-runtime",
 	"indiv-pallet-value-transfer-auth/try-runtime",
+	"pallet-asset-conversion/try-runtime",
 	"pallet-asset-rate/try-runtime",
 	"pallet-asset-tx-payment/try-runtime",
 	"pallet-assets-holder/try-runtime",
@@ -324,6 +344,7 @@ try-runtime = [
 	"pallet-message-queue/try-runtime",
 	"pallet-migrations/try-runtime",
 	"pallet-multisig/try-runtime",
+	"pallet-parameters/try-runtime",
 	"pallet-proxy/try-runtime",
 	"pallet-session/try-runtime",
 	"pallet-skip-feeless-payment/try-runtime",

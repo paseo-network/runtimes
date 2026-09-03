@@ -62,13 +62,14 @@ use frame_system::{
 };
 use indiv_support::{
 	traits::{
-		Context, CurrentBlockRandomness, MembershipProver, RevisionIndex, RingIndex,
-		PEOPLE_IDENTIFIER,
+		Context, MembershipProver, MomentRandomness, RevisionIndex, RingIndex, PEOPLE_IDENTIFIER,
 	},
+	tx_priority,
 	utils::BigEndianU64,
+	weight_budget::OcwWeightBudget,
 };
 use sp_core::{hexdisplay::HexDisplay, sr25519};
-use sp_io::hashing::blake2_256;
+use sp_crypto_hashing::blake2_256;
 use sp_runtime::{
 	traits::{AccountIdConversion, TryConvert},
 	Saturating,
@@ -170,8 +171,8 @@ pub mod pallet {
 		/// Unix time source.
 		type UnixTime: UnixTime;
 
-		/// Per-block randomness source used to seed the winner draw.
-		type Randomness: CurrentBlockRandomness;
+		/// Randomness source used to seed the winner draw.
+		type Randomness: MomentRandomness<u32>;
 
 		/// Try to derive an sr25519 public key from a runtime `AccountId`.
 		///
@@ -232,6 +233,15 @@ pub mod pallet {
 			event_id: EventId,
 			slot: BigEndianU256,
 			account_id: T::AccountId,
+		},
+		SlotRegistered {
+			event_id: EventId,
+			slot: BigEndianU256,
+			entry: RegistrationEntryOf<T>,
+		},
+		RegistrationClosed {
+			event_id: EventId,
+			effective_winners: u32,
 		},
 		DrawingWinners {
 			event_id: EventId,
@@ -301,6 +311,8 @@ pub mod pallet {
 		AssetNotEnabled,
 		/// `enable_asset` was called for an asset that is already enabled.
 		AssetAlreadyEnabled,
+		/// No randomness produced after registration closed is available yet.
+		EntropyNotReady,
 	}
 
 	/// Custom transaction-validity errors.
@@ -314,6 +326,8 @@ pub mod pallet {
 		WrongStatus = 202,
 		/// Action is not yet due (timestamp gate).
 		NotYetDue = 203,
+		/// No randomness fresher than the event's watermark is available yet.
+		EntropyNotReady = 204,
 	}
 
 	impl From<AuthorizeInvalidity> for TransactionValidityError {
@@ -342,6 +356,48 @@ pub mod pallet {
 				!T::OffchainWorkerInterval::get().is_zero(),
 				"airdrop: `OffchainWorkerInterval` must be > 0",
 			);
+
+			let budget = OcwWeightBudget::from_normal_max::<T>();
+
+			let authorize = T::WeightInfo::authorize_lifecycle_call();
+			let draw_limit = T::DrawLimit::get();
+			let clear_limit = T::ClearLimit::get();
+			budget.assert_fits(
+				"start_registration_authorized",
+				T::WeightInfo::start_registration().saturating_add(authorize),
+			);
+			budget.assert_fits(
+				"close_registration_authorized",
+				T::WeightInfo::close_registration().saturating_add(authorize),
+			);
+			budget.assert_fits(
+				"draw_winners_authorized",
+				T::WeightInfo::draw_winners(draw_limit).saturating_add(authorize),
+			);
+			budget.assert_fits(
+				"close_drawing_authorized",
+				T::WeightInfo::close_drawing().saturating_add(authorize),
+			);
+			budget.assert_fits(
+				"close_claiming_authorized",
+				T::WeightInfo::close_claiming().saturating_add(authorize),
+			);
+			budget.assert_fits(
+				"clean_up_registrations_authorized",
+				T::WeightInfo::clean_up_registrations(clear_limit)
+					.saturating_add(T::WeightInfo::transition_clean_up_phase())
+					.saturating_add(authorize),
+			);
+			budget.assert_fits(
+				"clean_up_winners_authorized",
+				T::WeightInfo::clean_up_winners(clear_limit)
+					.saturating_add(T::WeightInfo::transition_clean_up_phase())
+					.saturating_add(authorize),
+			);
+			budget.assert_fits(
+				"finalize_authorized",
+				T::WeightInfo::finalize().saturating_add(authorize),
+			);
 		}
 
 		fn offchain_worker(block_number: BlockNumberFor<T>) {
@@ -366,6 +422,16 @@ pub mod pallet {
 						Call::start_registration_authorized { event_id, discriminator },
 					Status::Registering { .. } =>
 						Call::close_registration_authorized { event_id, discriminator },
+					Status::AwaitingEntropy { last_moment, .. } => {
+						// Submit only once the randomness source reports a value fresher than
+						// the watermark; `authorize` rejects the transaction otherwise.
+						let fresh = T::Randomness::randomness()
+							.is_some_and(|(_, moment)| moment > last_moment);
+						if !fresh {
+							continue;
+						}
+						Call::capture_entropy_authorized { event_id, discriminator }
+					},
 					Status::DrawWinners { winners_added, effective_winners, .. } =>
 						if winners_added == effective_winners {
 							Call::close_drawing_authorized { event_id, discriminator }
@@ -401,7 +467,7 @@ pub mod pallet {
 			info: EventInfoOf<T>,
 		) -> DispatchResult {
 			T::ManagerOrigin::ensure_origin(origin)?;
-			Self::do_schedule(event_id, info)
+			Self::do_schedule(event_id, info, None)
 		}
 
 		/// Remove a previously scheduled event. The event must not have already
@@ -496,12 +562,12 @@ pub mod pallet {
 
 		/// OCW-driven: at `draw_time`:
 		/// - close registration
-		/// - capture randomness
 		/// - compute the target winner count
 		/// - release the unused-slot prize allocation up-front
-		/// - transition `Registering → DrawWinners`
+		/// - record the randomness source's current moment as a watermark
+		/// - transition `Registering → AwaitingEntropy`
 		///
-		/// The draw itself is performed in batches by `draw_winners_authorized`.
+		/// The entropy capture and the winner draws are performed in later stages.
 		///
 		/// `discriminator` is any `u32`; it lets the OCW send a different transaction when a
 		/// previous one is banned by the pool because it was validated against a different state
@@ -531,19 +597,6 @@ pub mod pallet {
 				return Ok(Pays::No.into());
 			}
 
-			// Seed the draw. If no usable randomness is available we leave the event in
-			// `Registering` and let the OCW retry on the next block. This may mean that the event
-			// doesn't actually happen if randomness is unavailable for a long time.
-			let Some(entropy) = T::Randomness::randomness() else {
-				log::warn!(
-					target: LOG_TARGET,
-					"airdrop: no randomness available for event 0x{}; retrying next block",
-					HexDisplay::from(&event_id),
-				);
-				return Ok(Pays::No.into());
-			};
-			let target = BigEndianU256::from(entropy);
-
 			let capped = event.info.prize.winner_cap.mul_floor(total_participants);
 			let effective_winners = event.info.prize.max_winners.min(capped).max(1);
 
@@ -552,8 +605,63 @@ pub mod pallet {
 			let unused_winner_slots =
 				event.info.prize.max_winners.saturating_sub(effective_winners);
 			if unused_winner_slots > 0 {
-				Self::release_remaining_prizes(&event.info.prize, unused_winner_slots);
+				Self::release_remaining_prizes(
+					event.source.as_ref(),
+					&event.info.prize,
+					unused_winner_slots,
+				);
 			}
+
+			// Record the moment of latest commitment to the airdrop, then wait for the randomness
+			// source to produce a randomness that is determinable after this moment.
+			let last_moment = T::Randomness::current_moment();
+			Self::transition(
+				&mut event,
+				Status::AwaitingEntropy { total_participants, effective_winners, last_moment },
+			);
+			Events::<T>::insert(event_id, event);
+
+			Self::deposit_event(Event::<T>::RegistrationClosed { event_id, effective_winners });
+			Ok(Pays::No.into())
+		}
+
+		/// OCW-driven: seed the draw with fresh randomness produced after registration closed and
+		/// transition `AwaitingEntropy → DrawWinners`.
+		///
+		/// The `authorize` gate only lets this call through once the randomness source
+		/// reports a value with a moment strictly greater than the watermark recorded
+		/// when registration closed; until then the transaction is invalid.
+		///
+		/// `discriminator` is any `u32`; it lets the OCW send a different transaction when a
+		/// previous one is banned by the pool because it was validated against a different state
+		/// after a re-org, or invalidated because the randomness is not fresh yet. As the accepted
+		/// transaction source is only local, it cannot be used to spam the pool.
+		#[pallet::authorize(Pallet::<T>::authorize_capture_entropy)]
+		#[pallet::call_index(12)]
+		#[pallet::weight(T::WeightInfo::capture_entropy())]
+		#[pallet::weight_of_authorize(T::WeightInfo::authorize_capture_entropy())]
+		pub fn capture_entropy_authorized(
+			origin: OriginFor<T>,
+			event_id: EventId,
+			_discriminator: u32,
+		) -> DispatchResultWithPostInfo {
+			ensure_authorized(origin)?;
+			let mut event = Events::<T>::get(event_id).ok_or(Error::<T>::UnknownEvent)?;
+			let Status::AwaitingEntropy { total_participants, effective_winners, last_moment } =
+				event.status
+			else {
+				defensive!("capture_entropy: authorize verified Status::AwaitingEntropy");
+				return Err(Error::<T>::WrongStatus.into());
+			};
+
+			let entropy = match T::Randomness::randomness() {
+				Some((entropy, moment)) if moment > last_moment => entropy,
+				_ => {
+					defensive!("capture_entropy: authorize verified fresh randomness");
+					return Err(Error::<T>::EntropyNotReady.into());
+				},
+			};
+			let target = BigEndianU256::from(entropy);
 
 			EventEntropy::<T>::insert(event_id, target);
 			Self::transition(
@@ -776,7 +884,7 @@ pub mod pallet {
 
 			let unclaimed = effective_winners.saturating_sub(claimed);
 			if unclaimed > 0 {
-				Self::release_remaining_prizes(&event.info.prize, unclaimed);
+				Self::release_remaining_prizes(event.source.as_ref(), &event.info.prize, unclaimed);
 			}
 			let timestamp = Self::next_action_scheduled_at(&event.status, &event.info);
 			ActionSchedule::<T>::remove(BigEndianU64(timestamp), event_id);
@@ -802,7 +910,7 @@ pub mod pallet {
 			if now < Self::next_action_scheduled_at(&event.status, &event.info) {
 				return Err(AuthorizeInvalidity::NotYetDue.into());
 			}
-			Self::valid_for("airdrop:start", event_id)
+			Self::valid_for("airdrop:start", event_id, tx_priority::BACKGROUND_PROGRESS)
 		}
 
 		pub(crate) fn authorize_close_registration(
@@ -819,7 +927,25 @@ pub mod pallet {
 			if now < Self::next_action_scheduled_at(&event.status, &event.info) {
 				return Err(AuthorizeInvalidity::NotYetDue.into());
 			}
-			Self::valid_for("airdrop:close-reg", event_id)
+			Self::valid_for("airdrop:close-reg", event_id, tx_priority::BACKGROUND_PROGRESS)
+		}
+
+		pub(crate) fn authorize_capture_entropy(
+			source: TransactionSource,
+			event_id: &EventId,
+			_discriminator: &u32,
+		) -> TransactionValidityWithRefund {
+			Self::ensure_local(source)?;
+			let event = Events::<T>::get(event_id).ok_or(AuthorizeInvalidity::UnknownEvent)?;
+			let Status::AwaitingEntropy { last_moment, .. } = event.status else {
+				return Err(AuthorizeInvalidity::WrongStatus.into());
+			};
+			let fresh = T::Randomness::randomness().is_some_and(|(_, moment)| moment > last_moment);
+			if !fresh {
+				// The OCW checks this condition before submitting.
+				return Err(AuthorizeInvalidity::EntropyNotReady.into());
+			}
+			Self::valid_for("airdrop:capture-entropy", event_id, tx_priority::BACKGROUND_PROGRESS)
 		}
 
 		pub(crate) fn authorize_draw_winners(
@@ -834,7 +960,11 @@ pub mod pallet {
 			};
 			// Tag the tx with `winners_added` so consecutive OCW submissions for the same event are
 			// distinct in the tx pool.
-			Self::valid_for("airdrop:draw-winners", (event_id, winners_added))
+			Self::valid_for(
+				"airdrop:draw-winners",
+				(event_id, winners_added),
+				tx_priority::BACKGROUND_PROGRESS,
+			)
 		}
 
 		pub(crate) fn authorize_close_drawing(
@@ -850,7 +980,7 @@ pub mod pallet {
 			if winners_added != effective_winners {
 				return Err(AuthorizeInvalidity::WrongStatus.into());
 			}
-			Self::valid_for("airdrop:close-drawing", event_id)
+			Self::valid_for("airdrop:close-drawing", event_id, tx_priority::BACKGROUND_PROGRESS)
 		}
 
 		pub(crate) fn authorize_close_claiming(
@@ -867,7 +997,7 @@ pub mod pallet {
 			if now < Self::next_action_scheduled_at(&event.status, &event.info) {
 				return Err(AuthorizeInvalidity::NotYetDue.into());
 			}
-			Self::valid_for("airdrop:close-claim", event_id)
+			Self::valid_for("airdrop:close-claim", event_id, tx_priority::BACKGROUND_PROGRESS)
 		}
 
 		pub(crate) fn authorize_clean_up_registrations(
@@ -882,7 +1012,11 @@ pub mod pallet {
 			};
 			// Tag the tx with `cleaned_registrations` so consecutive OCW submissions for the same
 			// event are distinct in the tx pool.
-			Self::valid_for("airdrop:clean-up-regs", (event_id, cleaned_registrations))
+			Self::valid_for(
+				"airdrop:clean-up-regs",
+				(event_id, cleaned_registrations),
+				tx_priority::CLEANUP,
+			)
 		}
 
 		pub(crate) fn authorize_clean_up_winners(
@@ -895,7 +1029,11 @@ pub mod pallet {
 			let Status::ClearingWinners { cleaned_winners, .. } = event.status else {
 				return Err(AuthorizeInvalidity::WrongStatus.into());
 			};
-			Self::valid_for("airdrop:clean-up-winners", (event_id, cleaned_winners))
+			Self::valid_for(
+				"airdrop:clean-up-winners",
+				(event_id, cleaned_winners),
+				tx_priority::CLEANUP,
+			)
 		}
 
 		pub(crate) fn authorize_finalize(
@@ -908,11 +1046,15 @@ pub mod pallet {
 			if !matches!(event.status, Status::Finalizing { .. }) {
 				return Err(AuthorizeInvalidity::WrongStatus.into());
 			}
-			Self::valid_for("airdrop:finalize", event_id)
+			Self::valid_for("airdrop:finalize", event_id, tx_priority::BACKGROUND_PROGRESS)
 		}
 
 		/// Schedule an event.
-		pub(crate) fn do_schedule(event_id: EventId, info: EventInfoOf<T>) -> DispatchResult {
+		pub(crate) fn do_schedule(
+			event_id: EventId,
+			info: EventInfoOf<T>,
+			source: Option<T::AccountId>,
+		) -> DispatchResult {
 			ensure!(info.prize.max_winners > 0, Error::<T>::NoWinnersConfigured);
 			ensure!(info.prize.max_winners <= MAX_WINNERS, Error::<T>::TooManyWinners);
 			ensure!(
@@ -946,7 +1088,7 @@ pub mod pallet {
 			let next_timestamp = info.registration_starts;
 			Events::<T>::insert(
 				event_id,
-				ActiveEvent { id: event_id, info, status: Status::Scheduled },
+				ActiveEvent { id: event_id, info, status: Status::Scheduled, source },
 			);
 			ActionSchedule::<T>::insert(BigEndianU64(next_timestamp), event_id, ());
 
@@ -972,11 +1114,11 @@ pub mod pallet {
 		///   full prize allocation is released here at the cancel transition (mirroring the
 		///   unused-slot release `close_registration` would have performed); the event then enters
 		///   `ClearingRegistrations` with `effective_winners: 0`, so `Finalizing` releases 0 more.
-		/// - `DrawWinners` / `Claiming`: `close_registration` already released the unused slots, so
-		///   only `effective_winners - claimed` remains held. The cancel routes the event into
-		///   `ClearingRegistrations` and the `Finalizing` step releases that remainder. From this
-		///   point `claim` is rejected (wrong status), and the pallet's offchain worker drains
-		///   `Registrations`/`Winners`.
+		/// - `AwaitingEntropy` / `DrawWinners` / `Claiming`: `close_registration` already released
+		///   the unused slots, so only `effective_winners - claimed` remains held. The cancel
+		///   routes the event into `ClearingRegistrations` and the `Finalizing` step releases that
+		///   remainder. From this point `claim` is rejected (wrong status), and the pallet's
+		///   offchain worker drains `Registrations`/`Winners`.
 		/// - Already terminating or unknown: no-op.
 		pub(crate) fn do_cancel(event_id: EventId) -> DispatchResult {
 			let Some(mut event) = Events::<T>::get(event_id) else {
@@ -995,7 +1137,11 @@ pub mod pallet {
 				// `close_registration` never ran — release the full allocation here so funds are
 				// freed promptly rather than waiting on the clean-up pipeline.
 				Status::Registering { total_participants } => {
-					Self::release_remaining_prizes(&event.info.prize, event.info.prize.max_winners);
+					Self::release_remaining_prizes(
+						event.source.as_ref(),
+						&event.info.prize,
+						event.info.prize.max_winners,
+					);
 					Status::ClearingRegistrations {
 						total_participants,
 						effective_winners: 0,
@@ -1003,6 +1149,7 @@ pub mod pallet {
 						cleaned_registrations: 0,
 					}
 				},
+				Status::AwaitingEntropy { total_participants, effective_winners, .. } |
 				Status::DrawWinners { total_participants, effective_winners, .. } =>
 					Status::ClearingRegistrations {
 						total_participants,
@@ -1031,7 +1178,11 @@ pub mod pallet {
 		/// Useful when an event terminates without ever distributing prizes.
 		fn refund_and_drop_event(event: ActiveEventOf<T>) {
 			let event_id = event.id;
-			Self::release_remaining_prizes(&event.info.prize, event.info.prize.max_winners);
+			Self::release_remaining_prizes(
+				event.source.as_ref(),
+				&event.info.prize,
+				event.info.prize.max_winners,
+			);
 			let timestamp = Self::next_action_scheduled_at(&event.status, &event.info);
 			ActionSchedule::<T>::remove(BigEndianU64(timestamp), event_id);
 			Events::<T>::remove(event_id);
@@ -1042,7 +1193,9 @@ pub mod pallet {
 		pub(crate) fn next_action_scheduled_at(status: &Status, info: &EventInfoOf<T>) -> u64 {
 			match status {
 				Status::Scheduled => info.registration_starts,
-				Status::Registering { .. } | Status::DrawWinners { .. } => info.draw_time,
+				Status::Registering { .. } |
+				Status::AwaitingEntropy { .. } |
+				Status::DrawWinners { .. } => info.draw_time,
 				Status::Claiming { .. } |
 				Status::ClearingRegistrations { .. } |
 				Status::ClearingWinners { .. } |
@@ -1185,8 +1338,12 @@ pub mod pallet {
 		pub(crate) fn valid_for(
 			tag_prefix: &'static str,
 			info: impl Encode,
+			priority: sp_runtime::transaction_validity::TransactionPriority,
 		) -> Result<(ValidTransaction, Weight), TransactionValidityError> {
-			let v = ValidTransaction::with_tag_prefix(tag_prefix).and_provides(info).build()?;
+			let v = ValidTransaction::with_tag_prefix(tag_prefix)
+				.and_provides(info)
+				.priority(priority)
+				.build()?;
 			Ok((v, Weight::zero()))
 		}
 
@@ -1232,7 +1389,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let context = context_for_event(&event_id);
 			let msg = participant_origin.encode();
-			let event_alias = T::MemberService::verify_membership_at_rev(
+			let event_alias = T::MemberService::verify_membership(
 				PEOPLE_IDENTIFIER,
 				&proof,
 				ring_index,
@@ -1272,6 +1429,18 @@ pub mod pallet {
 				RegistrationEntry::Account { account_id: account_id.clone() },
 			)?;
 			Self::deposit_event(Event::<T>::AccountRegistered { event_id, slot, account_id });
+			Ok(())
+		}
+
+		/// Register with a caller-supplied entropy slot; slot derivation rules are described in
+		/// [`crate::types::Airdrop::participate_with_slot`].
+		pub(crate) fn do_participate_with_slot(
+			event_id: EventId,
+			slot: BigEndianU256,
+			entry: RegistrationEntryOf<T>,
+		) -> DispatchResult {
+			Self::register_slot(event_id, slot, entry.clone())?;
+			Self::deposit_event(Event::<T>::SlotRegistered { event_id, slot, entry });
 			Ok(())
 		}
 
@@ -1346,29 +1515,62 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn release_remaining_prizes(prize: &AirdropPrizeOf<T>, count: u32) {
+		/// Release `count` slots' worth of held prize funds and, for source-funded events, refund
+		/// the released amount to `source`. Best-effort: failures are logged, not propagated.
+		fn release_remaining_prizes(
+			source: Option<&T::AccountId>,
+			prize: &AirdropPrizeOf<T>,
+			count: u32,
+		) {
+			use sp_runtime::traits::Zero;
 			if count == 0 {
 				return;
 			}
 			let to_release = prize.asset_amount.saturating_mul(count.into());
 			let pot = Self::airdrop_pot_id();
-			match T::Fungibles::release(
+			let released = match T::Fungibles::release(
 				prize.asset_id.clone(),
 				&HoldReason::Airdrop.into(),
 				&pot,
 				to_release,
 				Precision::BestEffort,
 			) {
-				Ok(released) if released < to_release => log::warn!(
-					target: LOG_TARGET,
-					"airdrop: released {released:?} of {to_release:?} held prize funds; \
-					 expected to release the full amount",
-				),
-				Err(e) => log::warn!(
-					target: LOG_TARGET,
-					"airdrop: failed to release {to_release:?} of held prize funds: {e:?}",
-				),
-				_ => {},
+				Ok(released) => {
+					if released < to_release {
+						log::warn!(
+							target: LOG_TARGET,
+							"airdrop: released {released:?} of {to_release:?} held prize funds; \
+							 expected to release the full amount",
+						);
+					}
+					released
+				},
+				Err(e) => {
+					log::warn!(
+						target: LOG_TARGET,
+						"airdrop: failed to release {to_release:?} of held prize funds: {e:?}",
+					);
+					return;
+				},
+			};
+
+			if released.is_zero() {
+				return;
+			}
+			if let Some(source) = source {
+				if let Err(e) = T::Fungibles::transfer(
+					prize.asset_id.clone(),
+					&pot,
+					source,
+					released,
+					Preservation::Expendable,
+				) {
+					log::warn!(
+						target: LOG_TARGET,
+						"airdrop: failed to refund {released:?} released prize funds to source: \
+						 {e:?}",
+					);
+				}
 			}
 		}
 
@@ -1378,6 +1580,8 @@ pub mod pallet {
 					("start_registration_authorized", *event_id),
 				Call::close_registration_authorized { event_id, .. } =>
 					("close_registration_authorized", *event_id),
+				Call::capture_entropy_authorized { event_id, .. } =>
+					("capture_entropy_authorized", *event_id),
 				Call::draw_winners_authorized { event_id, .. } =>
 					("draw_winners_authorized", *event_id),
 				Call::close_drawing_authorized { event_id, .. } =>
@@ -1436,7 +1640,8 @@ pub mod pallet {
 					to_transfer,
 					Preservation::Expendable,
 				)?;
-				Self::do_schedule(event_id, info)
+				// Record the funder so released prize funds are refunded to it.
+				Self::do_schedule(event_id, info, Some(source))
 			})
 		}
 
@@ -1470,6 +1675,14 @@ pub mod pallet {
 			signature: VrfSignature,
 		) -> DispatchResult {
 			Self::do_participate_with_account(account_id, event_id, signature)
+		}
+
+		fn participate_with_slot(
+			event_id: EventId,
+			slot: BigEndianU256,
+			entry: RegistrationEntryOf<T>,
+		) -> DispatchResult {
+			Self::do_participate_with_slot(event_id, slot, entry)
 		}
 
 		fn claim(

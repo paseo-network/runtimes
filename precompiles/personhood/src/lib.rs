@@ -197,7 +197,6 @@ where
 							target: LOG_TARGET,
 							"personhoodInfoByProof: failed to SCALE-decode proof bytes",
 						);
-						env.adjust_gas(charged, Weight::zero());
 						return Ok(IPersonhood::personhoodInfoByProofCall::abi_encode_returns(
 							&false,
 						));

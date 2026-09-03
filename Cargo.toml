@@ -35,7 +35,20 @@ len_zero = { level = "allow", priority = 2 }
 [workspace.dependencies]
 
 # ---- Individuality (proof-of-personhood) external deps ----
-verifiable = { git = "https://github.com/paritytech/verifiable", rev = "93464a69a9aeb0db5d392aae5963ca1d8b5d6fa5", default-features = false, version = "*" }
+# NOTE (PCF, individuality v0.3.1 port): `verifiable` moves from the git rev `93464a6` to
+# crates.io 0.3.0. The version number goes DOWN (the git rev self-reports 0.5.0) but 0.3.0 is
+# 42 commits NEWER: the maintainers reset the dev version for the first crates.io release
+# (`6a2cad6 "Set version to 0.3"`).
+# The move is FORCED, not optional: individuality v0.3.x's `pallets/members` and
+# `pallets/members-subscriber` do not compile against the git rev (`BatchProofItem` gained
+# `config`/`members` fields plus two generics, and `batch_validate` changed arity).
+# Ring builder-params / SRS blobs are byte-identical across the two revisions, so
+# `ChunkPageHashesInitialization` still no-ops over People's existing chunk page hashes and
+# ring verifier keys are unaffected.
+# WARNING: the stored `Members`/`MembersCommitment` shape is NOT identical (768 B -> 288 B);
+# that is a storage-migration concern handled per-pallet, not a pin concern.
+# See guides/_recon/INDIVIDUALITY_STAGE0_RESULT.md section 5.
+verifiable = { version = "0.3.0", default-features = false }
 alloy-core = { version = "1.2.1", default-features = false }
 ethereum-standards = { version = "0.1.3", default-features = false }
 bounded-collections = { version = "0.3.2", default-features = false }
@@ -50,6 +63,24 @@ sp-statement-store = { version = "28.0.0", default-features = false }
 pallet-assets-freezer = { version = "0.17.0", default-features = false }
 pallet-verify-signature = { version = "0.12.0", default-features = false }
 pallet-pgas-allowance = { version = "0.4.0", default-features = false }
+# needed by the individuality pallets from v0.3.x on (all `sp_core::blake2_256` call sites moved here)
+sp-crypto-hashing = { version = "0.1.0", default-features = false }
+# ---- arkworks / EC host-call split, required by `support/src/crypto*` from v0.3.x on ----
+# ⚠ `sp-crypto-ec-utils` is NOT frame-independent: it tracks `sp-runtime-interface`.
+#      0.21.1 -> sp-runtime-interface ^35  (polkadot-sdk 2603)
+#      0.23.0 -> sp-runtime-interface ^37  (polkadot-sdk 2606)
+#   This workspace is now on 2606 / frame 48, so 0.23.0 is the matching pin -- and it is the one
+#   individuality itself uses. 0.21.1 was correct only while the workspace was on 2603; keeping it
+#   here would drag sp-runtime-interface 35 into a 2606 graph.
+sp-crypto-ec-utils = { version = "0.23.0", default-features = false }
+ark-bls12-381-ext = { version = "0.6", default-features = false }
+ark-ec = { version = "0.6", default-features = false }
+ark-ed-on-bls12-381-bandersnatch-ext = { version = "0.6", default-features = false }
+ark-ff = { version = "0.6", default-features = false }
+ark-scale = { version = "0.0.14", default-features = false }
+getrandom = { version = "0.2", default-features = false }
+spin = { version = "0.9", default-features = false, features = ["once"] }
+
 
 # ---- Individuality (proof-of-personhood) local crates ----
 indiv-support = { path = "support", default-features = false }
@@ -66,17 +97,19 @@ indiv-pallet-members = { path = "pallets/members", default-features = false }
 indiv-pallet-members-notifier = { path = "pallets/members-notifier", default-features = false }
 indiv-pallet-members-subscriber = { path = "pallets/members-subscriber", default-features = false }
 indiv-pallet-mob-rule = { path = "pallets/mob-rule", default-features = false }
+indiv-pallet-network-suffix = { path = "pallets/network-suffix", default-features = false }
 indiv-pallet-origin-restriction = { path = "pallets/origin-restriction", default-features = false }
 indiv-pallet-people-lite = { path = "pallets/people-lite", default-features = false }
 indiv-pallet-people = { path = "pallets/people-multi", default-features = false }
 indiv-pallet-pgas = { path = "pallets/pgas", default-features = false }
 indiv-pallet-proof-of-ink = { path = "pallets/proof-of-ink", default-features = false }
+indiv-pallet-relay-randomness = { path = "pallets/relay-randomness", default-features = false }
 indiv-pallet-resources = { path = "pallets/resources", default-features = false }
 indiv-pallet-score = { path = "pallets/score", default-features = false }
 indiv-pallet-storage-initialization = { path = "pallets/storage-initialization", default-features = false }
 indiv-pallet-value-transfer-auth = { path = "pallets/value-transfer-auth", default-features = false }
-pallet-rc-migrator = { git = "https://github.com/polkadot-fellows/runtimes", branch = "kiz-release-2.5", default-features = false }
-pallet-ah-ops = { git = "https://github.com/polkadot-fellows/runtimes", branch = "kiz-release-2.5", default-features = false }
+pallet-rc-migrator = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.4.0", default-features = false }
+pallet-ah-ops = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.4.0", default-features = false }
 pallet-election-provider-multi-block = { version = "0.11.0", default-features = false }
 pallet-staking-async = { version = "0.14.0", default-features = false }
 hex = { version = "0.4.3", default-features = false }
@@ -88,11 +121,11 @@ impl-trait-for-tuples = { version = "0.2.3", default-features = false }
 # publishes a compatible version.
 pallet-revive-proc-macro = "0.10.0"
 
-kusama-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", branch = "kiz-release-2.5", package = "kusama-runtime-constants", default-features = false }
-bp-bridge-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", branch = "kiz-release-2.5", package = "bp-bridge-hub-kusama", default-features = false }
-bp-bridge-hub-polkadot = { git = "https://github.com/polkadot-fellows/runtimes", branch = "kiz-release-2.5", package = "bp-bridge-hub-polkadot", default-features = false }
-bp-asset-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", branch = "kiz-release-2.5", package = "bp-asset-hub-kusama", default-features = false }
-collectives-polkadot-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", branch = "kiz-release-2.5", package = "collectives-polkadot-runtime-constants", default-features = false }
+kusama-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.4.0", package = "kusama-runtime-constants", default-features = false }
+bp-bridge-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.4.0", package = "bp-bridge-hub-kusama", default-features = false }
+bp-bridge-hub-polkadot = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.4.0", package = "bp-bridge-hub-polkadot", default-features = false }
+bp-asset-hub-kusama = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.4.0", package = "bp-asset-hub-kusama", default-features = false }
+collectives-polkadot-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.4.0", package = "collectives-polkadot-runtime-constants", default-features = false }
 
 # Local dependencies
 
@@ -167,6 +200,7 @@ frame-system = { version = "48.0.0", default-features = false }
 frame-system-benchmarking = { version = "49.0.0", default-features = false }
 frame-system-rpc-runtime-api = { version = "43.0.0", default-features = false }
 frame-try-runtime = { version = "0.54.0", default-features = false }
+frame-remote-externalities = { version = "0.60.0" }
 grandpa = { version = "0.43.1", package = "sc-consensus-grandpa" }
 grandpa-primitives = { version = "30.0.0", default-features = false, package = "sp-consensus-grandpa" }
 hex-literal = { version = "0.4.1" }
@@ -230,7 +264,7 @@ pallet-proxy = { version = "49.0.0", default-features = false }
 pallet-ranked-collective = { version = "49.0.0", default-features = false }
 pallet-recovery = { version = "49.0.0", default-features = false }
 pallet-referenda = { version = "49.0.0", default-features = false }
-pallet-remote-proxy = { git = "https://github.com/polkadot-fellows/runtimes", branch = "kiz-release-2.5", package = "pallet-remote-proxy", default-features = false }
+pallet-remote-proxy = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.4.0", package = "pallet-remote-proxy", default-features = false }
 pallet-revive = { version = "0.19.0", default-features = false }
 pallet-salary = { version = "34.0.0", default-features = false }
 pallet-scheduler = { version = "50.0.0", default-features = false }
@@ -283,6 +317,18 @@ sc-chain-spec = { version = "51.0.0" }
 sc-network = { version = "0.58.0" }
 scale-info = { version = "2.11.6", default-features = false }
 separator = { version = "0.4.1" }
+# ⚠ DEFAULT FEATURES ARE ON (std). The relay chain and all system parachains rely on that, so
+# do NOT flip it. But individuality's own workspace pins this `default-features = false`, and
+# its `pallets/members-notifier` declares `serde = { workspace = true }` + `"serde/std"` in its
+# own `std` feature — coherent only under individuality's pin. Cargo IGNORES a member-level
+# `default-features = false` when the workspace entry has default features on, so under this pin
+# `serde/std` is unconditionally enabled and the **wasm** build of that pallet fails with ~1900
+# `can't find crate for std` errors while the native build stays perfectly green.
+# When `pallets/members-notifier` is ported (port plan v2, chunk C4), replace its
+#   serde = { workspace = true }
+# with
+#   serde = { version = "1.0.214", default-features = false, features = ["alloc", "derive"] }
+# That 1-line member-local pin is the whole fix. See INDIVIDUALITY_STAGE0_RESULT.md §3 class (c).
 serde = { version = "1.0.214" }
 serde_json = { version = "1.0.132", default-features = false }
 smallvec = { version = "1.13.1" }
@@ -337,7 +383,7 @@ sp-version = { version = "46.0.0", default-features = false }
 sp-weights = { version = "36.0.0", default-features = false }
 substrate-wasm-builder = { version = "34.0.0" }
 system-parachains-constants = { path = "system-parachains/constants", default-features = false }
-system-parachains-common = { git = "https://github.com/polkadot-fellows/runtimes", branch = "kiz-release-2.5", package = "system-parachains-common", default-features = false }
+system-parachains-common = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.4.0", package = "system-parachains-common", default-features = false }
 tokio = { version = "1.45.0" }
 xcm = { version = "24.0.0", default-features = false, package = "staging-xcm" }
 xcm-builder = { version = "29.0.0", default-features = false, package = "staging-xcm-builder" }
@@ -368,11 +414,13 @@ members = [
 	"pallets/members-notifier",
 	"pallets/members-subscriber",
 	"pallets/mob-rule",
+	"pallets/network-suffix",
 	"pallets/origin-restriction",
 	"pallets/people-lite",
 	"pallets/people-multi",
 	"pallets/pgas",
 	"pallets/proof-of-ink",
+	"pallets/relay-randomness",
 	"pallets/resources",
 	"pallets/score",
 	"pallets/storage-initialization",

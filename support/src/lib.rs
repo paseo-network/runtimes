@@ -18,13 +18,20 @@
 
 extern crate alloc;
 
+pub mod context;
+pub mod credit_trees;
+pub mod crypto;
 pub mod fungibles;
 #[cfg(feature = "genesis")]
 pub mod genesis;
+pub mod identity;
 pub mod labels;
 pub mod members_notifier_subscriber;
+pub mod parameters;
 pub mod pgas;
 pub mod traits;
+pub mod tx_priority;
+pub mod weight_budget;
 
 pub mod utils {
 	use alloc::vec::Vec;

@@ -35,10 +35,7 @@ use frame_system::RawOrigin as SystemOrigin;
 use indiv_support::traits::{Judgement, JudgementContext};
 #[cfg(feature = "std")]
 use sp_runtime::testing::{TestSignature, UintAuthorityId};
-use sp_runtime::{
-	traits::{DispatchTransaction, TrailingZeroInput},
-	BoundedVec,
-};
+use sp_runtime::{traits::DispatchTransaction, BoundedVec};
 
 const BENCHMARKING_UPPER_LIMIT: u32 = 100_000;
 
@@ -125,9 +122,8 @@ fn register_people_with_referrals<T: Config>(
 		.map(|c| {
 			let who: T::AccountId = account("person", c, SEED);
 			let personal_id = T::People::reserve_new_id();
-			let key = Decode::decode(&mut TrailingZeroInput::new(&personal_id.encode()))
-				.expect("Fail to generate member key from personal id");
-			T::People::recognize_personhood(personal_id, Some(key));
+			let (key, _secret) = T::People::mock_key(personal_id);
+			assert_ok!(T::People::recognize_personhood(personal_id, Some(key)));
 			let design = generate_ink_spec::<T>(who.clone(), personal_id);
 			let referrals: Vec<T::AccountId> =
 				(0..referrals).map(|c| account("init_referrals", c, SEED)).collect::<Vec<_>>();
@@ -159,7 +155,6 @@ fn register_candidates<T: Config>(count: u32) -> Vec<T::AccountId> {
 		(0..count).map(|c| account("candidate", c, SEED)).collect::<Vec<_>>();
 
 	for who in candidates.iter() {
-		let personal_id = T::People::reserve_new_id();
 		let footprint = Pallet::<T>::apply_footprint();
 		T::Deposit::ensure_successful(who, footprint);
 		let Ok(deposit) = T::Deposit::new(who, footprint) else {
@@ -212,7 +207,8 @@ mod benches {
 		register_people::<T>(PEOPLE_COUNT as u32);
 		register_candidates::<T>(CANDIDATE_COUNT as u32);
 
-		let caller: T::AccountId = whitelisted_caller();
+		let caller: T::AccountId = account("apply", 0, SEED);
+		let _ = frame_system::Pallet::<T>::inc_providers(&caller);
 		T::Deposit::ensure_successful(&caller, Pallet::<T>::apply_footprint());
 
 		#[extrinsic_call]
@@ -350,6 +346,7 @@ mod benches {
 			was_invited: false,
 		};
 		<Candidates<T>>::insert(&caller, status);
+		frame_system::Pallet::<T>::inc_sufficients(&caller);
 
 		let sk = T::Crypto::new_secret([12; 32]);
 		let pk = T::Crypto::member_from_secret(&sk);
@@ -368,7 +365,7 @@ mod benches {
 			People::<T>::get(reserved),
 			Some(Person { design: Some(actual_design), .. }) if design == actual_design
 		));
-		assert_last_event::<T>(
+		frame_system::Pallet::<T>::assert_has_event(
 			Event::PersonRegistered { account_id: caller, personal_id: reserved }.into(),
 		);
 		Ok(())

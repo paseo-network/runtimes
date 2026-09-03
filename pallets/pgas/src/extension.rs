@@ -34,11 +34,14 @@ use frame_support::{
 	weights::Weight,
 	CloneNoBound, DefaultNoBound, EqNoBound, PartialEqNoBound,
 };
-use indiv_support::traits::{
-	MembershipProver, RevisionIndex, RingIndex, PEOPLE_IDENTIFIER, PEOPLE_LITE_IDENTIFIER,
+use indiv_support::{
+	traits::{
+		MembershipProver, RevisionIndex, RingIndex, PEOPLE_IDENTIFIER, PEOPLE_LITE_IDENTIFIER,
+	},
+	tx_priority,
 };
 use scale_info::TypeInfo;
-use sp_io::hashing::twox_64;
+use sp_crypto_hashing::twox_64;
 use sp_runtime::{
 	traits::{DispatchInfoOf, Get, TransactionExtension, ValidateResult},
 	transaction_validity::{InvalidTransaction, TransactionValidityError, ValidTransaction},
@@ -110,8 +113,8 @@ impl PgasCollection {
 /// - `collection` selects which ring collection the proof targets.
 /// - `ring_index` must point to the ring used to create the proof.
 /// - `revision` must be the specific ring revision the proof was built against. The extension
-///   verifies via [`MembershipProver::verify_membership_at_rev`]. Callers are expected to know
-///   their proof's revision (readable from the prover via [`MembershipProver::ring_revision`]).
+///   verifies via [`MembershipProver::verify_membership`]. Callers are expected to know their
+///   proof's revision (readable from the prover via [`MembershipProver::ring_revision`]).
 /// - `day` is the day index the proof's context was built against; must equal either the current
 ///   day or (while within [`crate::pallet::PGAS_DAY_GRACE_WINDOW`]) the previous day.
 /// - The proof context is derived on-chain from `day` and the call's `slot_index` via
@@ -200,7 +203,7 @@ impl<T: Config> AsPgas<T> {
 		let context = Pallet::<T>::build_gas_context(day, slot_index);
 		let msg = inherited_implication.using_encoded(sp_io::hashing::blake2_256);
 
-		let ca = T::MembershipProver::verify_membership_at_rev(
+		let ca = T::MembershipProver::verify_membership(
 			&identifier,
 			proof,
 			ring_index,
@@ -219,7 +222,9 @@ impl<T: Config> AsPgas<T> {
 		);
 
 		let provides = twox_64(&("pgas-slot", identifier, alias, day, slot_index).encode());
-		let validity = ValidTransaction::with_tag_prefix("Pgas:Claim").and_provides(provides);
+		let validity = ValidTransaction::with_tag_prefix("Pgas:Claim")
+			.and_provides(provides)
+			.priority(tx_priority::USER_DEFAULT);
 
 		let local_origin = Origin::ClaimAlias { alias, day: day_be, collection };
 		let mut origin = origin;
@@ -264,6 +269,8 @@ impl<T: Config> TransactionExtension<<T as frame_system::Config>::RuntimeCall> f
 					*collection,
 					*day,
 				),
+			// Extension not in use by this transaction: pass through with default validity. The
+			// effective priority comes from whichever extension authorizes the call.
 			None => Ok((ValidTransaction::default(), (), origin)),
 		}
 	}

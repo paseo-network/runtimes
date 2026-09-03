@@ -25,7 +25,10 @@ use frame_support::{
 	traits::{IsSubType, OriginTrait, UnixTime},
 	CloneNoBound, DefaultNoBound, EqNoBound, PartialEqNoBound,
 };
-use indiv_support::traits::{RevisionIndex, RingIndex};
+use indiv_support::{
+	traits::{RevisionIndex, RingIndex},
+	tx_priority,
+};
 use scale_info::TypeInfo;
 use sp_core::Get;
 use sp_runtime::{
@@ -105,6 +108,8 @@ impl<T: Config + Send + Sync> TransactionExtension<RuntimeCallOf<T>> for VoterAu
 		_source: TransactionSource,
 	) -> ValidateResult<Self::Val, RuntimeCallOf<T>> {
 		let Some(VoterAuthData { proof, ring_index, revision }) = &self.0 else {
+			// Extension not in use by this transaction: pass through with default validity. The
+			// effective priority comes from whichever extension authorizes the call.
 			return Ok((ValidTransaction::default(), (), origin));
 		};
 
@@ -128,7 +133,7 @@ impl<T: Config + Send + Sync> TransactionExtension<RuntimeCallOf<T>> for VoterAu
 			return Err(InvalidTransaction::Stale.into());
 		}
 
-		let message = inherited_implication.using_encoded(sp_io::hashing::blake2_256);
+		let message = inherited_implication.using_encoded(sp_crypto_hashing::blake2_256);
 
 		let aliases =
 			Pallet::<T>::validate_vote_proof(vote, &message, proof, *ring_index, *revision)
@@ -144,6 +149,7 @@ impl<T: Config + Send + Sync> TransactionExtension<RuntimeCallOf<T>> for VoterAu
 
 		let validity = ValidTransaction::with_tag_prefix(VALIDATION_TAG)
 			.and_provides(aliases.point_alias)
+			.priority(tx_priority::USER_HIGH)
 			.into();
 
 		let local_origin = Origin::Voter { aliases };

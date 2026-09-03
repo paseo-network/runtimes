@@ -16,7 +16,7 @@
 
 use super::*;
 use codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
-use frame_support::{pallet_prelude::Get, BoundedVec};
+use frame_support::{pallet_prelude::Get, traits::ConstU32, BoundedVec};
 use indiv_pallet_airdrop::{types::AirdropPrize, RegistrationEntry};
 use indiv_pallet_score::AccountOrPerson;
 use indiv_support::traits::{Alias, RevisionIndex, RingIndex};
@@ -25,11 +25,32 @@ use sp_core::sr25519::vrf::VrfSignature;
 
 /// The index of a player in a round in a game.
 ///
-/// A player have one index per round, this index determines the group the players play in.
+/// A player has one index per round, this index determines the group the players play in.
 pub type PlayerIndex = u32;
 
 /// The index of a round in a game.
 pub type RoundIndex = u8;
+
+/// The index of a group in a round of a game.
+pub type GroupIndex = u32;
+
+/// The position of one of a claimant's co-players among their group's other members, which is
+/// what makes the co-player's credit distinct from the rest of the round's.
+pub type AttesterPosition = u32;
+
+/// The index of a game, handed out by the `GameIndex` storage value and used as the game's
+/// identifier.
+///
+/// Game indices are unique. The abbreviated name leaves the plain one to that storage value,
+/// which both this module and the pallet module export from the crate root.
+pub type GameIdx = u32;
+
+/// 32-byte ordering key used as the second key of `ShuffleRecognized`/
+/// `ShuffleNotRecognized`.
+///
+/// Computed as `blake2_256((parent_hash, player_id, round))` — randomises position within a round
+/// while remaining deterministic.
+pub type ShufflePositionKey = [u8; 32];
 
 /// The report made by one player about another player.
 #[derive(
@@ -65,7 +86,7 @@ pub type FullReport<T> =
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, DecodeWithMemTracking)]
 pub struct Player<PlayDeposit> {
 	/// The index of the first game this player was eligible to play.
-	pub first_game: u32,
+	pub first_game: GameIdx,
 	/// The player has registered for the current game.
 	pub registered: bool,
 	/// The player sent a report for the current game.
@@ -158,43 +179,59 @@ pub enum AttendanceStatus {
 	Pending,
 }
 
-/// Per-event airdrop registration data supplied by the player at game sign-up.
+/// The airdrop registration entries supplied by the player at game sign-up.
 ///
-/// If the player is recognized (pallet-score `Recognition` is `Recognized` or
-/// `ExternallyRecognized`) then they must provide the alias variant, otherwise they must provide
-/// the account variant.
+/// The variant picks the identity path: if the player is recognized (pallet-score `Recognition`
+/// is `Recognized` or `ExternallyRecognized`) then they must provide the alias variant,
+/// otherwise they must provide the account variant. The variant holds exactly one entry per
+/// scheduled airdrop event of the game, in airdrop-index order: the entry at position `i` is
+/// bound to the event id of airdrop index `i` (see `Pallet::airdrop_event_id`).
 #[derive(Encode, Decode, TypeInfo, Debug, Clone, PartialEq, Eq)]
 #[scale_info(skip_type_params(P))]
-pub enum AirdropVrf<P> {
-	/// VRF for non-recognized players.
+pub enum AirdropVrfs<P> {
+	/// VRFs for non-recognized players.
 	///
-	/// When used with `indiv-pallet-airdrop`, this is the sr25519 VRF signature from the
-	/// player's acount key (meaning only account id from sr25519 keys are supported) for the
-	/// transcript built by `indiv_pallet_airdrop::vrf::transcript_for_event`. So the transcipt
+	/// When used with `indiv-pallet-airdrop`, each entry is the sr25519 VRF signature from the
+	/// player's account key (meaning only account id from sr25519 keys are supported) for the
+	/// transcript built by `indiv_pallet_airdrop::vrf::transcript_for_event`. So the transcript
 	/// has the data "domain" with the value `VRF_TRANSCRIPT_LABEL ++ event_id` (`event_id` is
-	/// `b"pop:game:airdrop:           " ++ game_index.to_be_bytes()`) and the data
+	/// the id of the entry's airdrop event, see `Pallet::airdrop_event_id`) and the data
 	/// "signer" with the value the sr25519 public key.
 	///
 	/// This is used by `Config::Airdrop::participate_with_account`.
-	Account(VrfSignature),
-	/// VRF for recognized players.
+	Account(BoundedVec<VrfSignature, ConstU32<{ MAX_GAME_AIRDROPS as u32 }>>),
+	/// VRFs for recognized players.
 	///
-	/// When used with `indiv-pallet-airdrop`, this is the proof of membership in the
+	/// When used with `indiv-pallet-airdrop`, each entry is the proof of membership in the
 	/// collection `PEOPLE_IDENTIFIER` of the participant. It verifies the proof in the collection
 	/// `PEOPLE_IDENTIFIER` at ring `ring_index` and revision `revision` for the context
-	/// `blake2_256(AIRDROP_CONTEXT_BASE ++ event_id)` (`event_id` is
-	/// `b"pop:game:airdrop:           " ++ game_index.to_be_bytes()`) for the message
-	/// the scale encoded registration entry of the participant (so for alias-based player `0u8 ++
-	/// alias`, for account-based player `1u8 ++ account_id`).
+	/// `blake2_256(AIRDROP_CONTEXT_BASE ++ event_id)` (`event_id` is the id of the entry's
+	/// airdrop event, see `Pallet::airdrop_event_id`) for the message the scale encoded
+	/// registration entry of the participant (so for alias-based player `0u8 ++ alias`, for
+	/// account-based player `1u8 ++ account_id`).
 	///
 	/// This is used by `Config::Airdrop::participate_with_alias` and
 	/// `Config::Airdrop::participate_with_account`.
-	Alias { proof: P, ring_index: RingIndex, revision: RevisionIndex },
+	Alias {
+		proofs: BoundedVec<P, ConstU32<{ MAX_GAME_AIRDROPS as u32 }>>,
+		ring_index: RingIndex,
+		revision: RevisionIndex,
+	},
+}
+
+impl<P> AirdropVrfs<P> {
+	/// The number of per-event entries.
+	pub fn count(&self) -> usize {
+		match self {
+			Self::Account(vrfs) => vrfs.len(),
+			Self::Alias { proofs, .. } => proofs.len(),
+		}
+	}
 }
 
 // `VrfSignature` doesn't derive `DecodeWithMemTracking`, but it decodes from fixed-size arrays
-// without heap allocation, so we can implement `DecodeWithMemTracking` for `AirdropVrf`.
-impl<P: DecodeWithMemTracking> DecodeWithMemTracking for AirdropVrf<P> {}
+// without heap allocation, so we can implement `DecodeWithMemTracking` for `AirdropVrfs`.
+impl<P: DecodeWithMemTracking> DecodeWithMemTracking for AirdropVrfs<P> {}
 
 /// The sign-up variants for the call `sign_up_inner`.
 pub(crate) enum SignUpArgs<AccountId, Signature, Proof> {
@@ -204,14 +241,14 @@ pub(crate) enum SignUpArgs<AccountId, Signature, Proof> {
 		identifier_key: CommunicationIdentifier,
 		statement_account: AccountId,
 		statement_account_signature: Signature,
-		airdrop: Option<AirdropVrf<Proof>>,
+		airdrops: Option<AirdropVrfs<Proof>>,
 	},
 	/// The player is an account.
 	Account {
 		who: AccountId,
 		identifier_key: CommunicationIdentifier,
 		new_invited: bool,
-		airdrop: Option<AirdropVrf<Proof>>,
+		airdrops: Option<AirdropVrfs<Proof>>,
 	},
 }
 
@@ -229,8 +266,8 @@ pub enum PlayerCredibility<PlayDeposit> {
 /// The information for a player that has been archived, when its score is zero.
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug)]
 pub enum ArchivedPlayer<BlockNumber> {
-	Kickable { first_game: u32, archived_since: BlockNumber },
-	Unkickable { first_game: u32 },
+	Kickable { first_game: GameIdx, archived_since: BlockNumber },
+	Unkickable { first_game: GameIdx },
 }
 
 impl<BlockNumber> ArchivedPlayer<BlockNumber> {
@@ -246,7 +283,7 @@ impl<BlockNumber> ArchivedPlayer<BlockNumber> {
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, DecodeWithMemTracking)]
 pub struct GameInfo<AccountId: Into<sp_statement_store::AccountId>> {
 	/// The index of the game, used as an identifier.
-	pub index: u32,
+	pub index: GameIdx,
 	/// The end of the registration period in seconds since Unix epoch.
 	pub registration_ends: u32,
 	/// The shuffle deadline in seconds since Unix epoch.
@@ -272,10 +309,10 @@ pub struct GameInfo<AccountId: Into<sp_statement_store::AccountId>> {
 	/// When the counter reaches zero before `report_ends`, `process_reporting`
 	/// leaves the reporting phase early instead of waiting for the deadline.
 	pub pending_attendance: u32,
-	/// Whether an airdrop event was successfully scheduled for this game. When `false`,
-	/// registration for airdrop at sign-up is skipped and no cancel is dispatched on
-	/// game cancellation.
-	pub airdrop_scheduled: bool,
+	/// The number of airdrop events successfully scheduled for this game; the events carry the
+	/// airdrop indices `0..airdrops_scheduled`. Scheduling stops at the first failure, so this
+	/// can be less than the schedule's airdrop count. Bounded by `MAX_GAME_AIRDROPS`.
+	pub airdrops_scheduled: u8,
 }
 
 /// The state of a game.
@@ -303,7 +340,7 @@ pub struct GameInfo<AccountId: Into<sp_statement_store::AccountId>> {
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, PartialEq)]
 pub enum GameState<AccountId: Into<sp_statement_store::AccountId>> {
 	/// The game is in registration period. Players can sign-up.
-	Registration { next_player_index: u32 },
+	Registration { next_player_index: PlayerIndex },
 	/// The game finished registration and is shuffling the players.
 	Shuffle { step: ShuffleStep<AccountId> },
 	/// The game is in the reporting period. Players can report each other.
@@ -311,8 +348,19 @@ pub enum GameState<AccountId: Into<sp_statement_store::AccountId>> {
 	/// The game finished the reporting period and is processing the result.
 	/// See [`PlayerProcessStep`] for the internal sub-steps.
 	PlayerProcess { step: PlayerProcessStep<AccountId> },
-	/// The game is cancelled and cleaning itself.
-	Cancelling { last_iteration: Option<AccountOrPerson<AccountId>> },
+	/// The game is cancelled and cleaning itself. See [`CancellingStep`].
+	Cancelling { step: CancellingStep<AccountId> },
+}
+
+/// The steps for the cancellation phase. Cancellation drains the shuffle
+/// maps first, then drains players.
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, PartialEq)]
+pub enum CancellingStep<AccountId: Into<sp_statement_store::AccountId>> {
+	/// Drain `ShuffleRecognized` and `ShuffleNotRecognized` in bounded chunks.
+	Step1DrainShuffle,
+	/// Drain [`Players`], `PlayerToIndex` and `IndexToPlayer`, one player
+	/// per iteration.
+	Step2DrainPlayers { last_iteration: Option<AccountOrPerson<AccountId>> },
 }
 
 /// The steps for the player-process phase.
@@ -331,13 +379,37 @@ pub enum ShuffleStep<AccountId: Into<sp_statement_store::AccountId>> {
 	/// Insertion of players into storage.
 	Step1Insert { last_iteration: Option<AccountOrPerson<AccountId>> },
 	/// Retrieval of player from storage to get their order.
-	/// First we index recognized players, then not recognized players.
-	Step2Retrieve { next_player_index: u32, recognized_finished: bool },
+	/// First we index recognized players, then not recognized players; see
+	/// [`ShuffleRetrievePhase`].
+	Step2Retrieve { next_player_index: PlayerIndex, phase: ShuffleRetrievePhase },
 	/// Iterate over each registered player and compute their `expected_max_vote_weight`
 	/// from the actual group composition produced by [`Self::Step2Retrieve`].
-	Step3ComputeWeights { last_iteration: Option<AccountOrPerson<AccountId>>, player_count: u32 },
+	///
+	/// `recognized_count` is the number of recognized players registered in the current game.
+	/// Because recognized players have the first indices, it is also the index boundary between
+	/// recognized and not-recognized players.
+	Step3ComputeWeights {
+		last_iteration: Option<AccountOrPerson<AccountId>>,
+		player_count: u32,
+		recognized_count: u32,
+	},
 	/// All players have been indexed. We now try to start the attendance report session.
 	Step4AwaitSession { player_count: u32 },
+}
+
+/// Which population the shuffle retrieve step (`Pallet::shuffle_step_retrieve`) is currently
+/// draining.
+///
+/// Recognized players are indexed first, then not-recognized players. Once the recognized
+/// population is drained, `recognized_count` is known and the not-recognized players are drained.
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, PartialEq)]
+pub enum ShuffleRetrievePhase {
+	/// The first phase: draining `ShuffleRecognized`, assigning the lowest indices to recognized
+	/// players.
+	Recognized,
+	/// The second phase: draining `ShuffleNotRecognized`. `recognized_count` is the number of
+	/// recognized players that were indexed.
+	NotRecognized { recognized_count: u32 },
 }
 
 /// A setting for a distribution of players in groups.
@@ -388,12 +460,12 @@ impl GroupsSetting {
 	}
 
 	/// Calculate the group of a player, given its position.
-	pub fn group_index_from_player_index(&self, shuffled_position: u32) -> u32 {
+	pub fn group_index_from_player_index(&self, shuffled_position: PlayerIndex) -> GroupIndex {
 		shuffled_position.checked_rem(self.number_of_group()).unwrap_or(0)
 	}
 
 	/// Calculate the members of a group, given its index.
-	pub fn group_members(&self, group_index: u32) -> impl Iterator<Item = u32> {
+	pub fn group_members(&self, group_index: GroupIndex) -> impl Iterator<Item = PlayerIndex> {
 		let number_of_group = self.number_of_group();
 		let max_per_group = self.max_per_group;
 		let number_of_player = self.player_count;
@@ -401,6 +473,28 @@ impl GroupsSetting {
 			.map(move |i| group_index.saturating_add(i.saturating_mul(number_of_group)))
 			.filter(move |&x| x < number_of_player)
 	}
+}
+
+/// The maximum number of airdrop events that can be scheduled alongside one game.
+pub const MAX_GAME_AIRDROPS: u8 = 16;
+
+/// One airdrop event to schedule alongside a game, with its timing relative to the game play
+/// time.
+#[derive(
+	Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Clone, PartialEq, DecodeWithMemTracking,
+)]
+pub struct GameAirdrop<AssetId, Balance> {
+	/// Seconds after the game play time at which the airdrop winners are drawn.
+	pub draw_offset: u32,
+	/// Claim-window duration in seconds; the airdrop event's `end_time` is set to
+	/// `draw_time + claim_window`.
+	///
+	/// Claims only become possible once the claimant's attendance is recorded, which happens
+	/// during the game's reporting phase at the earliest; pick `draw_offset` and `claim_window`
+	/// such that the window extends past the reporting phase.
+	pub claim_window: u32,
+	/// The prize specification for the airdrop event.
+	pub prize: AirdropPrize<AssetId, Balance>,
 }
 
 /// Defines the schedule of a game.
@@ -417,8 +511,9 @@ pub struct GameSchedule<AssetId, Balance> {
 	/// Groups are ensured to be at least `max_group_size - 1` players, so this value must be at
 	/// least 3 in order to ensure that groups contains at least 2 players.
 	pub max_group_size: u32,
-	/// Prize spec for the per-game airdrop event. `None` skips airdrop scheduling for this game.
-	pub airdrop_prize: Option<AirdropPrize<AssetId, Balance>>,
+	/// The airdrop events to schedule for this game, each drawn at its own offset relative to
+	/// the game play time. Empty skips airdrop scheduling for this game.
+	pub airdrops: BoundedVec<GameAirdrop<AssetId, Balance>, ConstU32<{ MAX_GAME_AIRDROPS as u32 }>>,
 }
 
 /// `GameSchedule` for the runtime.
@@ -514,11 +609,6 @@ pub struct PhaseDurationValues {
 	pub reporting: u32,
 	/// Player process phase duration in seconds
 	pub player_process: u32,
-	/// Airdrop claim-window duration in seconds.
-	///
-	/// The scheduled airdrop's `end_time` is set to
-	/// `game_play_time + reporting + airdrop_claim_window`.
-	pub airdrop_claim_window: u32,
 }
 
 /// A step result for a process in multiple step.
@@ -530,9 +620,6 @@ pub enum StepResult {
 	/// The step is finished.
 	Finished,
 }
-
-/// A type alias for the NFT type used in the game.
-pub type Nft = [u8; 32];
 
 /// The reason why a statement is invalid for indiv-pallet-game.
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Debug, Clone, PartialEq)]

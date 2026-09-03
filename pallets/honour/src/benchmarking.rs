@@ -67,7 +67,7 @@ mod benches {
 		traits::IsSubType,
 	};
 	use frame_system::RawOrigin;
-	use sp_io::hashing::blake2_256;
+	use sp_crypto_hashing::blake2_256;
 	use sp_runtime::{generic::ExtensionVersion, traits::Dispatchable};
 
 	use crate::extension::{VoterAuth, VoterAuthData};

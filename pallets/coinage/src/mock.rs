@@ -15,7 +15,7 @@
 // limitations under the License.
 
 use crate::{
-	extension::{AsCoinage, AsCoinageInfo},
+	extension::{AsCoinage, AsCoinageInfo, FreeTokenKind},
 	*,
 };
 use alloc::sync::Arc;
@@ -27,8 +27,11 @@ use core::{
 use frame_support::{
 	assert_ok, derive_impl, parameter_types,
 	traits::{
-		fungibles::{InspectHold, MutateHold},
-		AsEnsureOriginWithArg, ConstU16, ConstU32, ConstU64, Currency, OffchainWorker, UnixTime,
+		fungible::{HoldConsideration, Mutate as _},
+		fungibles::{self, Inspect, InspectHold, MutateHold},
+		tokens::Preservation,
+		AsEnsureOriginWithArg, ConstU32, ConstU64, ConstantStoragePrice, Currency, OffchainWorker,
+		UnixTime,
 	},
 	BoundedVec,
 };
@@ -37,6 +40,7 @@ use frame_system::{
 	AuthorizeCall,
 };
 use indiv_support::{
+	crypto::{BandersnatchVrfVerifiable, GenerateVerifiable},
 	fungibles::CombineAssetsWithHolder,
 	traits::{AppendOnlyMembers, RingExponent},
 };
@@ -49,10 +53,7 @@ use sp_runtime::{
 	transaction_validity::{InvalidTransaction, TransactionSource, TransactionValidityError},
 	BuildStorage,
 };
-use verifiable::{
-	ring::{bandersnatch::BandersnatchVrfVerifiable, RingDomainSize},
-	GenerateVerifiable,
-};
+use verifiable::ring::RingDomainSize;
 
 pub type TransactionExtension = (AuthorizeCall<Test>, crate::extension::AsCoinage<Test>);
 
@@ -73,9 +74,16 @@ pub const ALICE: u64 = 1;
 pub const BOB: u64 = 2;
 pub const CHARLIE: u64 = 3;
 
-/// Asset id used across mock test helpers. The pallet's `UnderlyingAssetId` storage is set to
-/// this value inside [`setup_asset`] (and the benchmark helper) before any coinage operation.
+/// Asset id used across mock test helpers. The coinage instance wrapping it is created inside
+/// [`setup_asset`] (and the benchmark helper) before any coinage operation.
 pub const TEST_ASSET_ID: u32 = 10;
+
+/// The instance wrapping [`TEST_ASSET_ID`], which every mock test helper operates on.
+pub const TEST_INSTANCE_ID: InstanceId = 0;
+
+/// Base id for the extra assets of `BenchmarkHelper::create_extra_asset` and the deposit
+/// currencies derived from them.
+pub const EXTRA_ASSET_ID_BASE: u32 = 1_000;
 
 frame_support::construct_runtime!(
 	pub enum Test {
@@ -115,6 +123,31 @@ impl pallet_assets_holder::Config for Test {
 
 pub type AssetsWithHolder = CombineAssetsWithHolder<Assets, AssetsHolder>;
 
+/// The [`crate::Config::Fungibles`] id of the native token in tests, usable both as a deposit
+/// currency and as the asset an instance's coins wrap.
+pub const NATIVE_DEPOSIT_ID: u32 = u32::MAX;
+
+/// Criterion routing [`NATIVE_DEPOSIT_ID`] to `Balances` and every other id to the assets.
+pub struct NativeFromDepositId;
+impl sp_runtime::traits::Convert<u32, sp_runtime::Either<(), u32>> for NativeFromDepositId {
+	fn convert(id: u32) -> sp_runtime::Either<(), u32> {
+		if id == NATIVE_DEPOSIT_ID {
+			sp_runtime::Either::Left(())
+		} else {
+			sp_runtime::Either::Right(id)
+		}
+	}
+}
+
+/// Native plus assets, the mock's [`crate::Config::Fungibles`].
+pub type NativeAndAssets = frame_support::traits::fungible::UnionOf<
+	Balances,
+	AssetsWithHolder,
+	NativeFromDepositId,
+	u32,
+	u64,
+>;
+
 impl indiv_pallet_chunks_manager::Config for Test {
 	type WeightInfo = ();
 	type Chunk = <BandersnatchVrfVerifiable as GenerateVerifiable>::StaticChunk;
@@ -143,13 +176,12 @@ impl
 
 parameter_types! {
 	pub const FlexibleRingExp: RingExponent = RingExponent::R2e9;
-	pub const MockCollectionOwner: u32 = 1;
 }
 
 impl indiv_pallet_members::Config for Test {
 	type WeightInfo = ();
 	type Crypto = BandersnatchVrfVerifiable;
-	type Location = u32;
+	type Location = xcm::v5::Location;
 	type ChunksManager = ChunksManager;
 	type Clock = MockTime;
 	type MaxCollections = ConstU32<20>;
@@ -173,8 +205,24 @@ parameter_types! {
 	pub const TestRecyclerRingExponent: RingExponent = RingExponent::R2e10;
 	pub const TestPaidTokenRingExponent: RingExponent = RingExponent::R2e10;
 	pub storage MinimumExponentForOutputUnloadFee: i8 = 0;
-	pub storage TestUnderlyingAssetUnit: u64 = UNDERLYING_ASSET_UNIT;
+	/// The native amount [`InstanceCreationDeposit`] takes per instance, whatever the footprint.
+	pub storage InstanceCreationDepositAmount: u64 = 100;
+	pub const CoinageInstanceCreationHoldReason: RuntimeHoldReason =
+		RuntimeHoldReason::Coinage(crate::HoldReason::InstanceCreationDeposit);
+	/// The chain-wide load deposit, changed at will by [`set_load_deposit`].
+	pub storage LoadDeposit: (u32, u64) = (NATIVE_DEPOSIT_ID, 10);
+	/// Whether sponsored instances can be created, flipped by [`set_enable_permissionless`].
+	pub storage EnablePermissionless: bool = true;
 }
+
+/// The mock's [`crate::Config::InstanceCreationDeposit`]: a native hold of a fixed amount,
+/// ignoring the footprint so tests can predict it from [`InstanceCreationDepositAmount`].
+pub type InstanceCreationDeposit = HoldConsideration<
+	u64,
+	Balances,
+	CoinageInstanceCreationHoldReason,
+	ConstantStoragePrice<InstanceCreationDepositAmount, u64>,
+>;
 
 pub const MAXIMUM_AGE: u16 = 20;
 pub const UNDERLYING_ASSET_UNIT: u64 = 1_000;
@@ -224,20 +272,25 @@ where
 
 parameter_types! {
 	/// Overrides the normal token fee that is calculated using weight.
-	/// When `Some(fee)`, `MockWeightToFee` returns `fee * 2` (to account for the mock
-	/// `ConversionToAssetBalance` which divides by 2). When `None`, falls back to weight's
+	/// When `Some(fee)`, `MockWeightToFee` returns it. When `None`, falls back to weight's
 	/// `ref_time()`.
 	pub storage MockPaidUnloadTokenFeeOverride: Option<u64> = Some(2);
 	/// Monotonic counter used to keep benchmark recycler setups distinct inside one externalities
 	/// context.
 	pub storage MockBatchVerifyCounter: u32 = 0;
+	pub storage MaximumAge: u16 = MAXIMUM_AGE;
+	pub storage UnloadTokenAllowancePerTimePeriodForPeople: u64 =
+		UNLOAD_TOKEN_ALLOWANCE_PER_TIME_PERIOD_FOR_PEOPLE;
+	pub storage UnloadTokenAllowancePerTimePeriodForLitePeople: u64 =
+		UNLOAD_TOKEN_ALLOWANCE_PER_TIME_PERIOD_FOR_LITE_PEOPLE;
+	pub storage MaxFreeUnloadTokensPerTimePeriod: u32 = MAX_FREE_UNLOAD_TOKENS_PER_TIME_PERIOD;
 }
 
 pub struct MockWeightToFee;
 impl sp_runtime::traits::Convert<frame_support::weights::Weight, u64> for MockWeightToFee {
 	fn convert(w: frame_support::weights::Weight) -> u64 {
 		if let Some(fee) = MockPaidUnloadTokenFeeOverride::get() {
-			fee * 2
+			fee
 		} else {
 			w.ref_time()
 		}
@@ -246,36 +299,37 @@ impl sp_runtime::traits::Convert<frame_support::weights::Weight, u64> for MockWe
 
 impl crate::Config for Test {
 	type MemberService = Members;
-	type CollectionOwner = MockCollectionOwner;
 	type RecyclerRingExponent = TestRecyclerRingExponent;
 	type PaidUnloadTokenRingExponent = TestPaidTokenRingExponent;
 	type UnixTime = MockTime;
 	type PalletId = CoinagePalletId;
 	type WeightInfo = ();
-	type MaximumAge = ConstU16<MAXIMUM_AGE>;
-	type Fungibles = AssetsWithHolder;
+	type MaximumAge = MaximumAge;
+	type Fungibles = NativeAndAssets;
 	type NativeFungible = Balances;
-	type UnderlyingAssetUnit = TestUnderlyingAssetUnit;
-	type UnderlyingAssetIdManager = frame_system::EnsureRoot<u64>;
+	type AdminOrigin = frame_system::EnsureRoot<u64>;
+	type SponsorOrigin = frame_system::EnsureSigned<u64>;
+	type EnablePermissionless = EnablePermissionless;
+	type LoadDeposit = LoadDeposit;
+	type InstanceCreationDeposit = InstanceCreationDeposit;
 	type MinimumExponent = MinimumExponent;
 	type MaximumExponent = MaximumExponent;
 	type MinimumExponentForOutputUnloadFee = MinimumExponentForOutputUnloadFee;
-	type LitePeopleProof = LitePeopleProof;
-	type PeopleProof = PeopleProof;
+	type MembershipProof = MembershipProof;
 	type MaxSplitOutputs = ConstU32<MAX_SPLIT_OUTPUTS>;
 	type RecyclerExpirationTime = ConstU32<RECYCLER_EXPIRATION_TIME>;
-	type UnloadTokenAllowancePerTimePeriodForPeople =
-		ConstU64<UNLOAD_TOKEN_ALLOWANCE_PER_TIME_PERIOD_FOR_PEOPLE>;
+	type UnloadTokenAllowancePerTimePeriodForPeople = UnloadTokenAllowancePerTimePeriodForPeople;
 	type UnloadTokenTimePeriodPeopleLitePeople =
 		ConstU32<UNLOAD_TOKEN_TIME_PERIOD_PEOPLE_LITE_PEOPLE>;
 	type UnloadTokenAllowancePerTimePeriodForLitePeople =
-		ConstU64<UNLOAD_TOKEN_ALLOWANCE_PER_TIME_PERIOD_FOR_LITE_PEOPLE>;
-	type MaxFreeUnloadTokensPerTimePeriod = ConstU32<MAX_FREE_UNLOAD_TOKENS_PER_TIME_PERIOD>;
+		UnloadTokenAllowancePerTimePeriodForLitePeople;
+	type MaxFreeUnloadTokensPerTimePeriod = MaxFreeUnloadTokensPerTimePeriod;
 	type MaxConsolidation = ConstU32<MAX_CONSOLIDATION>;
 	type MaxBatchUnpaidLoad = ConstU32<MAX_BATCH_UNPAID_LOAD>;
 	type PaidUnloadTokenRingExpirationTime = ConstU32<PAID_UNLOAD_TOKEN_RING_EXPIRATION_TIME>;
 	type PaidUnloadTokenTimePeriod = ConstU32<100>;
-	type ConversionToAssetBalance = TestConversionToAssetBalance;
+	type FeeConversion = TestFeeConversion;
+	type NativeAssetKind = NativeAssetKind;
 	type WeightToFee = MockWeightToFee;
 	type FeeDestination = ConstU64<FEE_DESTINATION>;
 	type OffchainWorkerInterval = ConstU64<1>;
@@ -285,65 +339,211 @@ impl crate::Config for Test {
 }
 
 thread_local! {
-	/// When set to `Some(n)`, `TestConversionToAssetBalance` will fail starting from the
-	/// n-th call (0-indexed). The counter resets each time this is set via
-	/// `set_conversion_to_asset_fail_at`.
-	static CONVERSION_TO_ASSET_FAIL_AT: Cell<Option<u32>> = const { Cell::new(None) };
-	static CONVERSION_TO_ASSET_CALL_COUNT: Cell<u32> = const { Cell::new(0) };
+	/// When set to `Some(n)`, [`TestFeeConversion`] reports the conversion as unavailable starting
+	/// from the n-th quote (0-indexed). The counter resets each time this is set via
+	/// `set_fee_conversion_unavailable_at`.
+	static FEE_CONVERSION_FAIL_AT: Cell<Option<u32>> = const { Cell::new(None) };
+	static FEE_CONVERSION_QUOTE_COUNT: Cell<u32> = const { Cell::new(0) };
+	/// When set to `Some((n, surcharge))`, [`TestFeeConversion`] quotes `surcharge` above its normal
+	/// rate from the n-th quote (0-indexed) on, so that tests can move the price between the quote
+	/// validation takes and the one the dispatch takes. Set via
+	/// `set_fee_conversion_quote_surcharge_at`.
+	static FEE_CONVERSION_QUOTE_SURCHARGE_AT: Cell<Option<(u32, u64)>> = const { Cell::new(None) };
+	/// How much less of the asset a swap takes than the quote said it would, so that tests can
+	/// reach the paths the pallet keeps for a market that undercharges a quote.
+	static FEE_CONVERSION_SWAP_DISCOUNT: Cell<u64> = const { Cell::new(0) };
+	/// How much more of the asset a swap takes than the quote said it would, so that tests can
+	/// reach the dispatch failure of a market that moved past the bound the quote set.
+	static FEE_CONVERSION_SWAP_SURCHARGE: Cell<u64> = const { Cell::new(0) };
+	/// When set, the market prices an asset against its own reserve of it, as a real pool does:
+	/// whatever grows that reserve between a quote and the swap the quote bounds makes the swap
+	/// cost more than the quote said.
+	static FEE_CONVERSION_RESERVE_PRICING: Cell<bool> = const { Cell::new(false) };
 }
 
-/// Configure `TestConversionToAssetBalance` to fail starting from the n-th call (0-indexed).
-/// Pass `None` to disable. Resets the internal call counter.
-pub fn set_conversion_to_asset_fail_at(n: Option<u32>) {
-	CONVERSION_TO_ASSET_FAIL_AT.set(n);
-	CONVERSION_TO_ASSET_CALL_COUNT.set(0);
+/// Configure [`TestFeeConversion`] to report the conversion as unavailable starting from the n-th
+/// quote (0-indexed). Pass `None` to disable. Resets the internal quote counter.
+pub fn set_fee_conversion_unavailable_at(n: Option<u32>) {
+	FEE_CONVERSION_FAIL_AT.set(n);
+	FEE_CONVERSION_QUOTE_COUNT.set(0);
 }
 
-pub struct TestConversionToAssetBalance;
-impl ConversionToAssetBalance<u64, u32, u64> for TestConversionToAssetBalance {
-	type Error = DispatchError;
-	fn to_asset_balance(balance: u64, _asset_id: u32) -> Result<u64, Self::Error> {
-		if let Some(fail_at) = CONVERSION_TO_ASSET_FAIL_AT.get() {
-			let count = CONVERSION_TO_ASSET_CALL_COUNT.with(|c| {
-				let v = c.get();
-				c.set(v + 1);
-				v
-			});
-			if count >= fail_at {
-				return Err(DispatchError::Other("conversion failed"));
-			}
-		}
-		Ok(balance / 2)
-	}
+/// Configure [`TestFeeConversion`] to quote `surcharge` above its normal rate from the n-th quote
+/// (0-indexed) on, so that the price validation quoted has moved by the time the dispatch quotes it
+/// again. Pass `None` to disable. Resets the internal quote counter.
+///
+/// Only quotes are surcharged, not swaps: the paths this reaches reject the quote before swapping
+/// on it. Use [`set_fee_conversion_swap_surcharge`] for a swap that costs more than its quote.
+pub fn set_fee_conversion_quote_surcharge_at(n_and_surcharge: Option<(u32, u64)>) {
+	FEE_CONVERSION_QUOTE_SURCHARGE_AT.set(n_and_surcharge);
+	FEE_CONVERSION_QUOTE_COUNT.set(0);
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Encode, Decode, DecodeWithMemTracking, TypeInfo)]
-pub struct LitePeopleProof {
-	pub context: Vec<u8>,
-	pub msg: Vec<u8>,
-	pub alias: Alias,
+/// Make [`TestFeeConversion`]'s swaps take `discount` less of the asset than their quote, leaving
+/// the payer with asset the pallet has already set aside for the fee. Pass 0 to disable.
+pub fn set_fee_conversion_swap_discount(discount: u64) {
+	FEE_CONVERSION_SWAP_DISCOUNT.set(discount);
 }
-impl ValidateProof for LitePeopleProof {
-	type Proof = LitePeopleProof;
-	fn validate_proof(proof: &Self::Proof, context: &[u8], msg: &[u8]) -> Result<Alias, ()> {
-		if proof.context == context && proof.msg == msg {
-			Ok(proof.alias)
+
+/// Make [`TestFeeConversion`]'s swaps take `surcharge` more of the asset than their quote, so the
+/// bound the quote set no longer covers them and the swap fails. Pass 0 to disable.
+pub fn set_fee_conversion_swap_surcharge(surcharge: u64) {
+	FEE_CONVERSION_SWAP_SURCHARGE.set(surcharge);
+}
+
+/// Make [`TestFeeConversion`] price an asset against the market's own reserve of it, so that a
+/// quote taken before the reserve grows no longer covers the swap it bounds. Pass `false` for the
+/// fixed price.
+pub fn set_fee_conversion_reserve_pricing(enabled: bool) {
+	FEE_CONVERSION_RESERVE_PRICING.set(enabled);
+}
+
+/// Stands in for the market the asset is converted through: it receives the asset the payer gives
+/// up, and the native it hands out is minted, so it has unlimited depth and a fixed price.
+pub const MOCK_MARKET: u64 = 998;
+
+/// Turns the market's reserve of an asset into the surcharge it prices that asset at, under
+/// [`set_fee_conversion_reserve_pricing`].
+const RESERVE_PRICE_DIVISOR: u64 = 4;
+
+pub struct TestFeeConversion;
+
+impl TestFeeConversion {
+	/// One unit of native costs one unit of the asset, the same rate the mock used before
+	/// conversion was a swap, plus the market's surcharge on its own reserve when it prices
+	/// against it.
+	fn asset_for_native(asset: u32, native_amount: u64) -> u64 {
+		let surcharge = if FEE_CONVERSION_RESERVE_PRICING.get() {
+			<AssetsWithHolder as fungibles::Inspect<_>>::balance(asset, &MOCK_MARKET) /
+				RESERVE_PRICE_DIVISOR
 		} else {
-			Err(())
+			0
+		};
+		native_amount.saturating_add(surcharge)
+	}
+}
+
+/// The asset kind the mock market knows the native currency by. It is the same id
+/// [`crate::Config::Fungibles`] routes to the native currency, as in a real runtime: the market
+/// and the fungibles union name one asset the same way.
+pub const NATIVE_ASSET_KIND: u32 = NATIVE_DEPOSIT_ID;
+
+parameter_types! {
+	pub const NativeAssetKind: u32 = NATIVE_ASSET_KIND;
+}
+
+impl QuotePrice for TestFeeConversion {
+	type Balance = u64;
+	type AssetKind = u32;
+
+	fn quote_price_tokens_for_exact_tokens(
+		asset1: u32,
+		asset2: u32,
+		amount: u64,
+		_include_fee: bool,
+	) -> Option<u64> {
+		assert_eq!(asset2, NATIVE_ASSET_KIND, "coinage only ever quotes an asset against native");
+		// A swap of nothing is not a swap, so there is no price for it. Matches
+		// `pallet-asset-conversion`, and checked before the failure switch because a quote the
+		// market never priced must not consume one of its failures.
+		if amount == 0 {
+			return None;
 		}
+		let count = FEE_CONVERSION_QUOTE_COUNT.with(|c| {
+			let v = c.get();
+			c.set(v + 1);
+			v
+		});
+		if FEE_CONVERSION_FAIL_AT.get().is_some_and(|fail_at| count >= fail_at) {
+			return None;
+		}
+		let surcharge = match FEE_CONVERSION_QUOTE_SURCHARGE_AT.get() {
+			Some((from, surcharge)) if count >= from => surcharge,
+			_ => 0,
+		};
+		Some(TestFeeConversion::asset_for_native(asset1, amount).saturating_add(surcharge))
+	}
+
+	fn quote_price_exact_tokens_for_tokens(
+		_asset1: u32,
+		_asset2: u32,
+		_amount: u64,
+		_include_fee: bool,
+	) -> Option<u64> {
+		unimplemented!("coinage only quotes for an exact amount of native out")
+	}
+}
+
+impl Swap<u64> for TestFeeConversion {
+	type Balance = u64;
+	type AssetKind = u32;
+
+	fn max_path_len() -> u32 {
+		2
+	}
+
+	fn swap_exact_tokens_for_tokens(
+		_sender: u64,
+		_path: Vec<u32>,
+		_amount_in: u64,
+		_amount_out_min: Option<u64>,
+		_send_to: u64,
+		_keep_alive: bool,
+	) -> Result<u64, DispatchError> {
+		unimplemented!("coinage only swaps for an exact amount of native out")
+	}
+
+	fn swap_tokens_for_exact_tokens(
+		sender: u64,
+		path: Vec<u32>,
+		amount_out: u64,
+		amount_in_max: Option<u64>,
+		send_to: u64,
+		keep_alive: bool,
+	) -> Result<u64, DispatchError> {
+		let [asset, native] = path[..] else {
+			panic!("coinage always swaps a single hop, got {path:?}")
+		};
+		assert_eq!(native, NATIVE_ASSET_KIND, "the last hop must be the native currency");
+
+		// Deliberately not going through `quote_price_tokens_for_exact_tokens`: the failure switch
+		// counts quotes, and a swap that a quote already priced must not consume another one.
+		let asset_in = TestFeeConversion::asset_for_native(asset, amount_out)
+			.saturating_sub(FEE_CONVERSION_SWAP_DISCOUNT.get())
+			.saturating_add(FEE_CONVERSION_SWAP_SURCHARGE.get());
+		if amount_in_max.is_some_and(|max| asset_in > max) {
+			return Err(DispatchError::Other("fee conversion above the maximum"));
+		}
+		// The same mapping `pallet-asset-conversion` applies to the flag.
+		let preservation =
+			if keep_alive { Preservation::Preserve } else { Preservation::Expendable };
+		<AssetsWithHolder as fungibles::Mutate<_>>::transfer(
+			asset,
+			&sender,
+			&MOCK_MARKET,
+			asset_in,
+			preservation,
+		)?;
+		Balances::mint_into(&send_to, amount_out)?;
+		Ok(asset_in)
 	}
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Encode, Decode, DecodeWithMemTracking, TypeInfo)]
-pub struct PeopleProof {
+pub struct MembershipProof {
 	pub context: Vec<u8>,
 	pub msg: Vec<u8>,
 	pub alias: Alias,
 }
-impl ValidateProof for PeopleProof {
-	type Proof = PeopleProof;
-	fn validate_proof(proof: &Self::Proof, context: &[u8], msg: &[u8]) -> Result<Alias, ()> {
-		if proof.context == context && proof.msg == msg {
+impl ValidateProof for MembershipProof {
+	type Proof = MembershipProof;
+	fn validate_proof(
+		_identifier: &indiv_support::traits::Identifier,
+		proof: &Self::Proof,
+		context: &indiv_support::traits::Context,
+		msg: &[u8],
+	) -> Result<Alias, ()> {
+		if proof.context == *context && proof.msg == msg {
 			Ok(proof.alias)
 		} else {
 			Err(())
@@ -399,20 +599,18 @@ fn initialize_chunks_for_ring(ring_exp: RingExponent) {
 	}
 }
 
-/// Default test externalities: matches production where `UnderlyingAssetId` is set by
-/// governance before any Coinage extrinsic is admitted. Use [`new_test_ext_no_asset_id`]
-/// for tests that exercise the unset state.
+/// Default test externalities, with the instance wrapping [`TEST_ASSET_ID`] already created.
+/// Use [`new_test_ext_no_instance`] for tests that must run without one.
 #[allow(dead_code)]
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	let mut ext = new_test_ext_no_asset_id();
+	let mut ext = new_test_ext_no_instance();
 	ext.execute_with(setup_asset);
 	ext
 }
 
-/// Test externalities without `UnderlyingAssetId` set — for tests that explicitly exercise
-/// the pre-governance state (e.g. the setter's own tests, "asset id unset" rejection tests).
+/// Test externalities without any instance created.
 #[allow(dead_code)]
-pub fn new_test_ext_no_asset_id() -> sp_io::TestExternalities {
+pub fn new_test_ext_no_instance() -> sp_io::TestExternalities {
 	let storage = RuntimeGenesisConfig::default().build_storage().unwrap();
 
 	let mut ext: sp_io::TestExternalities = storage.into();
@@ -426,10 +624,11 @@ pub fn new_test_ext_no_asset_id() -> sp_io::TestExternalities {
 	ext
 }
 
-/// Test externalities for benchmarks that require the underlying asset to exist.
+/// Test externalities for the benchmark suite, with no instance, so the
+/// `create_sufficient_instance` benchmark can create one. The others go through `common_setup`.
 #[cfg(feature = "runtime-benchmarks")]
 pub fn new_test_ext_bench() -> sp_io::TestExternalities {
-	new_test_ext()
+	new_test_ext_no_instance()
 }
 
 /// Advance the chain to `target_block`.
@@ -532,11 +731,11 @@ pub fn assert_invalid(ext: Extrinsic, error: CustomInvalidity) {
 
 /// Helper to build an extrinsic.
 ///
-/// If `as_coin` is true, the extension is configured with `AsCoinageInfo::AsCoin`.
-/// Otherwise, it is configured with `None` (passthrough), which should result in a BadOrigin
-/// when the pallet expects a Coin origin.
+/// If `as_coin` is true, the extension is configured with `AsCoinageInfo::AsCoin` for
+/// [`TEST_INSTANCE_ID`]. Otherwise, it is configured with `None` (passthrough), which
+/// should result in a BadOrigin when the pallet expects a Coin origin.
 pub fn build_signed_as_coin_ext(signer: u64, call: crate::Call<Test>, as_coin: bool) -> Extrinsic {
-	let info = if as_coin { Some(AsCoinageInfo::AsCoin) } else { None };
+	let info = as_coin.then_some(AsCoinageInfo::AsCoin);
 	let extension = (AuthorizeCall::<Test>::new(), AsCoinage::<Test>::new(info));
 	Extrinsic::new_signed(call.into(), signer, UintAuthorityId(signer), extension)
 }
@@ -560,27 +759,13 @@ pub fn get_secret(seed: u8) -> Secret {
 	CryptoOf::<Test>::new_secret([seed; 32])
 }
 
-/// Force-create [`TEST_ASSET_ID`] in `pallet-assets` if it doesn't yet exist, and write it
-/// into the coinage pallet's `UnderlyingAssetId` storage if unset.
-///
-/// Idempotent. Every test helper that touches coinage operations must go through this so the
-/// pallet's "asset id must be set by governance" contract is satisfied in one place.
-fn ensure_underlying_asset_id_set() {
-	if !pallet_assets::Asset::<Test>::contains_key(TEST_ASSET_ID) {
-		assert_ok!(Assets::force_create(RuntimeOrigin::root(), TEST_ASSET_ID, ALICE, true, 1));
-	}
-	if !crate::UnderlyingAssetId::<Test>::exists() {
-		crate::UnderlyingAssetId::<Test>::put(TEST_ASSET_ID);
-	}
-}
-
 /// Create a coin for an owner, ensuring asset backing is correct.
 /// Mints asset to owner, transfers to pallet hold, inserts coin.
-pub fn create_coin(owner: u64, value: CoinValue, age: u16) {
-	let amount = Coinage::coin_value_to_asset_amount(value).unwrap();
+pub fn create_coin(owner: u64, value: Denomination, age: u16) {
+	let amount = Coinage::denomination_to_asset_amount(UNDERLYING_ASSET_UNIT, value).unwrap();
 	let asset_id = TEST_ASSET_ID;
 
-	ensure_underlying_asset_id_set();
+	setup_asset();
 
 	// Mint to owner
 	assert_ok!(Assets::mint(RuntimeOrigin::signed(ALICE), asset_id, owner, amount));
@@ -598,7 +783,10 @@ pub fn create_coin(owner: u64, value: CoinValue, age: u16) {
 	));
 
 	// Insert coin
-	CoinsByOwner::<Test>::insert(owner, crate::pallet::Coin { value, age });
+	CoinsByOwner::<Test>::insert(
+		owner,
+		crate::pallet::Coin { instance_id: TEST_INSTANCE_ID, value, age },
+	);
 }
 
 /// Setup a recycler with `count` members loaded.
@@ -608,19 +796,44 @@ pub fn create_coin(owner: u64, value: CoinValue, age: u16) {
 /// This ensures assets are minted and backed properly by calling the pallet extrinsic.
 /// After loading, triggers `Members::process_maintenance()` to build the ring.
 pub fn setup_recycler(
-	value: CoinValue,
+	value: Denomination,
+	count: u32,
+	seed_offset: u8,
+) -> (Vec<Secret>, RingIndex, RevisionIndex) {
+	setup_asset();
+	setup_recycler_for(TEST_INSTANCE_ID, TEST_ASSET_ID, value, count, seed_offset)
+}
+
+/// Give `who` `amount` of the asset an instance's coins wrap, whichever side of
+/// [`NativeAndAssets`] it lives on.
+///
+/// The native side is topped up with the existential deposit, which the assets side gets from
+/// the asset's own minimum balance being 1 in the mock.
+pub fn fund_wrapped_asset(asset_id: u32, who: u64, amount: u64) {
+	if asset_id == NATIVE_DEPOSIT_ID {
+		fund_native(who, amount + <Balances as Currency<u64>>::minimum_balance());
+	} else {
+		assert_ok!(Assets::mint(RuntimeOrigin::signed(ALICE), asset_id, who, amount));
+	}
+}
+
+/// [`setup_recycler`] for an arbitrary instance.
+///
+/// The instance must already exist and, if it is sponsored, its loads must be collateralizable
+/// (load deposit set and pot funded), since members are loaded through the pallet extrinsic.
+pub fn setup_recycler_for(
+	instance_id: InstanceId,
+	asset_id: u32,
+	value: Denomination,
 	count: u32,
 	seed_offset: u8,
 ) -> (Vec<Secret>, RingIndex, RevisionIndex) {
 	let mut secrets = Vec::new();
-	let asset_id = TEST_ASSET_ID;
-	let amount = Coinage::coin_value_to_asset_amount(value).unwrap();
-
-	ensure_underlying_asset_id_set();
+	let amount = Coinage::denomination_to_asset_amount(UNDERLYING_ASSET_UNIT, value).unwrap();
 
 	for i in 0..count {
 		let user = 10000 + (seed_offset as u64) * 100 + i as u64;
-		assert_ok!(Assets::mint(RuntimeOrigin::signed(ALICE), asset_id, user, amount));
+		fund_wrapped_asset(asset_id, user, amount);
 
 		let secret = get_unique_secret();
 		let member = CryptoOf::<Test>::member_from_secret(&secret);
@@ -628,6 +841,7 @@ pub fn setup_recycler(
 
 		assert_ok!(Coinage::load_recycler_with_external_asset(
 			RuntimeOrigin::signed(user),
+			instance_id,
 			crate::pallet::CodecPreservation::Expendable,
 			value,
 			member,
@@ -640,7 +854,7 @@ pub fn setup_recycler(
 	Members::process_maintenance();
 
 	// Find the ring index and revision for the loaded members.
-	let identifier = Coinage::recycler_collection_identifier(value);
+	let identifier = Coinage::recycler_collection_identifier(instance_id, value);
 	// The first member should be in ring 0 after building.
 	let ring_index = 0u32;
 	let revision =
@@ -649,12 +863,260 @@ pub fn setup_recycler(
 	(secrets, ring_index, revision)
 }
 
-/// Setup the underlying external asset for tests.
+/// Asset wrapped by the sponsored instance mock helpers create.
+pub const SPONSORED_ASSET_ID: u32 = 11;
+
+/// Creator and default funder of the sponsored mock instance.
+pub const SPONSOR: u64 = 4;
+
+/// Create the sponsored instance wrapping [`SPONSORED_ASSET_ID`], if it does not yet exist,
+/// and return its id.
 ///
-/// Also populates the pallet's [`crate::UnderlyingAssetId`] storage with [`TEST_ASSET_ID`] so
-/// that coin operations don't bail with `Error::AssetIdNotSet`.
+/// The privileged [`TEST_INSTANCE_ID`] is created first, so the sponsored instance always gets
+/// a distinct id and the privileged paths stay exercised alongside the sponsored ones.
+pub fn setup_sponsored_instance() -> InstanceId {
+	setup_asset();
+	create_asset(SPONSORED_ASSET_ID);
+	if let Some(instance_id) =
+		crate::AssetToInstance::<Test>::iter_key_prefix(SPONSORED_ASSET_ID).next()
+	{
+		return instance_id;
+	}
+	fund_native(SPONSOR, 1_000_000);
+	assert_ok!(Assets::mint(RuntimeOrigin::signed(ALICE), SPONSORED_ASSET_ID, SPONSOR, 1_000_000));
+	let instance_id = crate::NextInstanceId::<Test>::get();
+	assert_ok!(Coinage::create_sponsored_instance(
+		RuntimeOrigin::signed(SPONSOR),
+		SPONSORED_ASSET_ID,
+		UNDERLYING_ASSET_UNIT,
+		None
+	));
+	instance_id
+}
+
+/// Set the chain-wide load deposit, which a real chain changes through governance.
+pub fn set_load_deposit(currency: u32, price: u64) {
+	LoadDeposit::set(&(currency, price));
+}
+
+/// Fund the pot of `instance_id` with a tracked contribution from [`SPONSOR`], who is funded
+/// with the necessary balance first.
+pub fn fund_pot(instance_id: InstanceId, currency: u32, amount: u64) {
+	if currency == NATIVE_DEPOSIT_ID {
+		fund_native(SPONSOR, amount + 100);
+	} else {
+		create_asset(currency);
+		// One unit above the funded amount: the funding transfers with `Protect`, so the
+		// sponsor's account must survive at the asset's minimum balance.
+		assert_ok!(Assets::mint(RuntimeOrigin::signed(ALICE), currency, SPONSOR, amount + 1));
+	}
+	assert_ok!(Coinage::fund_pot(RuntimeOrigin::signed(SPONSOR), instance_id, currency, amount));
+}
+
+/// Check the load-deposit invariant for a sponsored instance: per currency, the pot's held
+/// balance under `HoldReason::LoadDeposit` equals `Σ price * count` over that currency's tiers,
+/// and the tier counts sum to `expected_keys`.
+///
+/// Every currency that exists is queried, not only the ones with a live tier, so collateral
+/// stranded in a currency whose tiers are all gone fails the check too.
+#[track_caller]
+pub fn check_load_deposit_invariant(instance_id: InstanceId, expected_keys: u32) {
+	let pot = Coinage::pot_account(instance_id);
+	let record = crate::Instances::<Test>::get(instance_id).expect("instance exists");
+
+	let mut held_by_currency = alloc::collections::BTreeMap::<u32, u64>::new();
+	let mut keys = 0u32;
+	for tier in record.old_load_deposit.iter().chain(record.current_load_deposit.iter()) {
+		keys += tier.count;
+		*held_by_currency.entry(tier.asset_id).or_default() += tier.price * u64::from(tier.count);
+	}
+	assert_eq!(keys, expected_keys, "redeemable key count mismatch");
+
+	let currencies = pallet_assets::Asset::<Test>::iter_keys()
+		.chain(core::iter::once(NATIVE_DEPOSIT_ID))
+		.collect::<alloc::collections::BTreeSet<_>>();
+	for currency in currencies {
+		let held = <NativeAndAssets as InspectHold<_>>::balance_on_hold(
+			currency,
+			&HoldReason::LoadDeposit.into(),
+			&pot,
+		);
+		let expected = held_by_currency.get(&currency).copied().unwrap_or(0);
+		assert_eq!(held, expected, "held balance mismatch for currency {currency}");
+	}
+}
+
+/// The tier the instance last loaded at.
+pub fn current_tier(instance_id: InstanceId) -> Option<DepositTier<u32, u64>> {
+	Instances::<Test>::get(instance_id)
+		.expect("instance exists")
+		.current_load_deposit
+}
+
+/// The instance's superseded tier, if it still holds deposits.
+pub fn old_tier(instance_id: InstanceId) -> Option<DepositTier<u32, u64>> {
+	Instances::<Test>::get(instance_id).expect("instance exists").old_load_deposit
+}
+
+/// Mint the load amount to a fresh user and load one member key into `instance_id` at
+/// denomination 0 through the plain signed call.
+pub fn try_load(
+	instance_id: InstanceId,
+	asset_id: u32,
+	seed: u64,
+) -> frame_support::dispatch::DispatchResultWithPostInfo {
+	try_load_with_unit(instance_id, asset_id, UNDERLYING_ASSET_UNIT, seed)
+}
+
+/// [`try_load`] for an instance whose coin of denomination 0 is worth `asset_unit`.
+pub fn try_load_with_unit(
+	instance_id: InstanceId,
+	asset_id: u32,
+	asset_unit: u64,
+	seed: u64,
+) -> frame_support::dispatch::DispatchResultWithPostInfo {
+	let user = 20_000 + seed;
+	assert_ok!(Assets::mint(RuntimeOrigin::signed(ALICE), asset_id, user, asset_unit));
+	let secret = get_unique_secret();
+	let member = CryptoOf::<Test>::member_from_secret(&secret);
+	let proof = CryptoOf::<Test>::sign(&secret, &user.encode()).unwrap();
+	Coinage::load_recycler_with_external_asset(
+		RuntimeOrigin::signed(user),
+		instance_id,
+		CodecPreservation::Expendable,
+		0,
+		member,
+		proof,
+	)
+}
+
+/// The pot's balance held under `HoldReason::LoadDeposit` in `currency`.
+pub fn pot_held(instance_id: InstanceId, currency: u32) -> u64 {
+	let pot = Coinage::pot_account(instance_id);
+	<NativeAndAssets as InspectHold<_>>::balance_on_hold(
+		currency,
+		&HoldReason::LoadDeposit.into(),
+		&pot,
+	)
+}
+
+/// The pot's reducible balance in `currency`, which is what a withdrawal or a fresh load
+/// deposit can draw from.
+pub fn pot_free(instance_id: InstanceId, currency: u32) -> u64 {
+	let pot = Coinage::pot_account(instance_id);
+	<NativeAndAssets as Inspect<_>>::reducible_balance(
+		currency,
+		&pot,
+		frame_support::traits::tokens::Preservation::Preserve,
+		frame_support::traits::tokens::Fortitude::Polite,
+	)
+}
+
+/// Withdraw the pot's whole reducible balance in `currency` back to [`SPONSOR`], so the next
+/// sponsored load cannot be collateralized.
+pub fn drain_pot(instance_id: InstanceId, currency: u32) {
+	let free = pot_free(instance_id, currency);
+	assert_ok!(Coinage::withdraw_pot_funds(
+		RuntimeOrigin::signed(SPONSOR),
+		instance_id,
+		currency,
+		free
+	));
+	assert_eq!(pot_free(instance_id, currency), 0);
+}
+
+/// A sponsored instance with [`Config::LoadDeposit`] set to `(NATIVE_DEPOSIT_ID, price)`, its
+/// pot funded with `funding` and a denomination-0 recycler of `count` keys, each key
+/// collateralized by one load deposit from the pot.
+pub fn setup_sponsored_recycler(
+	price: u64,
+	funding: u64,
+	count: u32,
+	seed_offset: u8,
+) -> (InstanceId, Vec<Secret>, RingIndex, RevisionIndex) {
+	let instance_id = setup_sponsored_instance();
+	set_load_deposit(NATIVE_DEPOSIT_ID, price);
+	fund_pot(instance_id, NATIVE_DEPOSIT_ID, funding);
+	let (secrets, index, revision) =
+		setup_recycler_for(instance_id, SPONSORED_ASSET_ID, 0, count, seed_offset);
+	check_load_deposit_invariant(instance_id, count);
+	(instance_id, secrets, index, revision)
+}
+
+/// The alias of `secret` in the recycler unloading context.
+pub fn recycler_alias(secret: &Secret) -> indiv_support::traits::Alias {
+	CryptoOf::<Test>::alias_in_context(secret, UNLOADING_RECYCLER_CONTEXT.as_ref())
+		.expect("alias derivation succeeds")
+}
+
+/// Register `count` paid unload token member keys, paying each fee in native, and build the
+/// paid-token ring. Returns the members' secrets and the `(period, ring_index, revision)`
+/// coordinates needed to build an [`AsCoinageInfo::AsUnloadTokenPaid`] extension.
+///
+/// Call this before setting up the recyclers under test: it runs the members maintenance,
+/// which would bump the revision of any ring with queued members.
+pub fn setup_paid_unload_tokens(count: u32) -> (Vec<Secret>, u32, u32, u32) {
+	let payer = 30_000u64;
+	fund_native(payer, 1_000_000);
+	fund_native(FEE_DESTINATION, 1_000);
+	let mut secrets = Vec::new();
+	for _ in 0..count {
+		let secret = get_unique_secret();
+		let member = CryptoOf::<Test>::member_from_secret(&secret);
+		let proof = CryptoOf::<Test>::sign(&secret, &payer.encode()).unwrap();
+		assert_ok!(Coinage::pay_for_recycler_unload_fee_token_with_native(
+			RuntimeOrigin::signed(payer),
+			member,
+			proof
+		));
+		secrets.push(secret);
+	}
+	Members::process_maintenance();
+
+	let period = (MockTime::now().as_secs() as u32) /
+		get_u32::<<Test as crate::Config>::PaidUnloadTokenTimePeriod>();
+	let ring_index = 0u32;
+	let revision = <Test as crate::Config>::MemberService::ring_revision(
+		&Coinage::paid_token_collection_identifier(period),
+		ring_index,
+	)
+	.expect("paid token ring exists");
+	(secrets, period, ring_index, revision)
+}
+
+/// Create `asset_id` without the instance wrapping it, if it doesn't yet exist.
+pub fn create_asset(asset_id: u32) {
+	if !pallet_assets::Asset::<Test>::contains_key(asset_id) {
+		assert_ok!(Assets::force_create(RuntimeOrigin::root(), asset_id, ALICE, true, 1));
+	}
+}
+
+/// Create [`TEST_ASSET_ID`] and the coinage instance wrapping it, if they don't yet exist.
+///
+/// The only place mock helpers create the instance, so that coin operations don't bail with
+/// `Error::InstanceNotFound`.
 pub fn setup_asset() {
-	ensure_underlying_asset_id_set();
+	create_asset(TEST_ASSET_ID);
+
+	if crate::AssetToInstance::<Test>::iter_key_prefix(TEST_ASSET_ID).next().is_none() {
+		// What governance is expected to do before creating an instance: give the pallet
+		// account a balance buffer so fee flows that empty its free balance cannot kill it.
+		let min_balance =
+			<Assets as frame_support::traits::fungibles::Inspect<u64>>::minimum_balance(
+				TEST_ASSET_ID,
+			);
+		assert_ok!(Assets::mint(
+			RuntimeOrigin::signed(ALICE),
+			TEST_ASSET_ID,
+			Coinage::pallet_account(),
+			min_balance
+		));
+		assert_ok!(Coinage::create_sufficient_instance(
+			RuntimeOrigin::root(),
+			TEST_ASSET_ID,
+			UNDERLYING_ASSET_UNIT
+		));
+	}
 }
 
 /// Setup balances for accounts (native and external asset).
@@ -689,12 +1151,31 @@ pub fn setup_balances() {
 	));
 }
 
+/// The asset amount that pays exactly one unload token fee at the mock rate. Tests pass this as
+/// `max_fee` when they expect the fee to be paid with the asset.
+pub fn unload_token_fee_in_asset() -> u64 {
+	Coinage::get_paid_unload_token_fee_in_asset(TEST_INSTANCE_ID)
+		.expect("the mock fee conversion is available")
+}
+
+/// A `max_fee` bound that comfortably covers the unload token fees of a signed call, for tests
+/// that assert the fee actually charged rather than the bound.
+pub fn max_fee_bound() -> u64 {
+	unload_token_fee_in_asset() * 8
+}
+
+/// The same bound for a call paying its fees in the native currency, i.e. with
+/// [`crate::FeeCurrency::Native`].
+pub fn native_max_fee_bound() -> u64 {
+	Coinage::get_paid_unload_token_fee_in_native() * 8
+}
+
 pub fn fund_native(who: u64, amount: u64) {
 	let _ = Balances::mint_into(&who, amount);
 }
 
 /// Check the accounting invariant:
-/// Total Funds (Held) == Coins + Active Recyclers (Net) + Destroyed
+/// Total Funds (Held) == Coins + Active Recyclers (Net) + Archived + Destroyed
 #[track_caller]
 pub fn check_accounting() {
 	let asset_id = TEST_ASSET_ID;
@@ -706,32 +1187,48 @@ pub fn check_accounting() {
 
 	// 1. Value of all Coins
 	let coins_value: u64 = CoinsByOwner::<Test>::iter_values()
-		.map(|c| Coinage::coin_value_to_asset_amount(c.value).unwrap())
+		.filter(|c| c.instance_id == TEST_INSTANCE_ID)
+		.map(|c| Coinage::denomination_to_asset_amount(UNDERLYING_ASSET_UNIT, c.value).unwrap())
 		.sum();
 
 	// 2. Net Value of Active Recyclers
 	// Count members in recycler collections via MemberService.
 	let mut recyclers_value: u64 = 0;
-	for (value, ()) in RecyclerCollectionCreated::<Test>::iter() {
-		let unit = crate::Pallet::<Test>::coin_value_to_asset_amount(value).unwrap();
-		let identifier = Coinage::recycler_collection_identifier(value);
+	for (value, ()) in RecyclerCollectionCreated::<Test>::iter_prefix(TEST_INSTANCE_ID) {
+		let asset_amount =
+			Coinage::denomination_to_asset_amount(UNDERLYING_ASSET_UNIT, value).unwrap();
+		let identifier = Coinage::recycler_collection_identifier(TEST_INSTANCE_ID, value);
 		let active = <Test as Config>::MemberService::active_count(&identifier) as u64;
 		// Subtract unloaded aliases for all rings.
 		// For simplicity, count total unloaded across all rings for this value.
-		let unloaded: u64 = RecyclersUnloaded::<Test>::iter_prefix((value,)).count() as u64;
+		let unloaded: u64 = RecyclerAliasStates::<Test>::iter_prefix((TEST_INSTANCE_ID, value))
+			.filter(|(_, state)| matches!(state, AliasState::Unloaded))
+			.count() as u64;
 		let net_members = active.saturating_sub(unloaded);
-		recyclers_value += net_members * unit;
+		recyclers_value += net_members * asset_amount;
 	}
 
-	// 3. Total Value of Destroyed Coins
-	let destroyed_value = TotalValueOfDestroyedCoins::<Test>::get();
+	// 3. Value of Archived Recyclers (recoverable, not destroyed): remaining coins per archive.
+	// The archive key is a single tuple rather than a double map, so this filters instead of
+	// iterating an instance prefix.
+	let archived_value: u64 = RecyclersArchives::<Test>::iter()
+		.filter(|((instance_id, _, _), _)| *instance_id == TEST_INSTANCE_ID)
+		.map(|((_, value, _ring), info)| {
+			Coinage::denomination_to_asset_amount(UNDERLYING_ASSET_UNIT, value).unwrap() *
+				info.remaining as u64
+		})
+		.sum();
 
-	let total_in_pallet = coins_value + recyclers_value + destroyed_value;
+	// 4. Total Value of Destroyed Coins
+	let destroyed_value = TotalValueOfDestroyedCoins::<Test>::get(TEST_INSTANCE_ID);
+
+	let total_in_pallet = coins_value + recyclers_value + archived_value + destroyed_value;
 
 	assert_eq!(
 		total_held, total_in_pallet,
 		"Invariant violation: Held {total_held} != In pallet {total_in_pallet} \n\
-		detail: Coins: {coins_value}, Recyclers: {recyclers_value}, Destroyed: {destroyed_value}",
+		detail: Coins: {coins_value}, Recyclers: {recyclers_value}, Archived: {archived_value}, \
+		Destroyed: {destroyed_value}",
 	);
 }
 
@@ -773,11 +1270,31 @@ pub fn create_unload_proof(
 	.expect("should create proof")
 }
 
-/// Build an unsigned extrinsic with `AsUnloadTokenFromOutput` extension.
-/// Computes the correct inherited_implication and creates proofs that sign over it.
+/// Build an unsigned extrinsic with `AsUnloadTokenFromOutput` extension against
+/// [`TEST_INSTANCE_ID`].
 pub fn build_unload_from_output_ext(
 	call: crate::Call<Test>,
-	fee_recycler_value: CoinValue,
+	fee_recycler_value: Denomination,
+	fee_recycler_index: RingIndex,
+	fee_recycler_revision: RevisionIndex,
+	secrets: &[Secret],
+) -> Extrinsic {
+	build_unload_from_output_ext_for(
+		TEST_INSTANCE_ID,
+		call,
+		fee_recycler_value,
+		fee_recycler_index,
+		fee_recycler_revision,
+		secrets,
+	)
+}
+
+/// Build an unsigned extrinsic with `AsUnloadTokenFromOutput` extension against an arbitrary
+/// instance. Computes the correct inherited_implication and creates proofs that sign over it.
+pub fn build_unload_from_output_ext_for(
+	instance_id: InstanceId,
+	call: crate::Call<Test>,
+	fee_recycler_value: Denomination,
 	fee_recycler_index: RingIndex,
 	fee_recycler_revision: RevisionIndex,
 	secrets: &[Secret],
@@ -786,8 +1303,24 @@ pub fn build_unload_from_output_ext(
 
 	let inherited_implication = ((0u8, &runtime_call), (), ());
 	let proven_msg = sp_io::hashing::blake2_256(&inherited_implication.encode());
+	let first_alias =
+		CryptoOf::<Test>::alias_in_context(&secrets[0], UNLOADING_RECYCLER_CONTEXT.as_ref())
+			.expect("should derive alias");
+	let retry_counter = match RecyclerAliasStates::<Test>::get((
+		instance_id,
+		fee_recycler_value,
+		fee_recycler_index,
+		first_alias,
+	)) {
+		Some(AliasState::Locked(LockInfo {
+			reason: LockReason::FailedDispatch { retries },
+			..
+		})) => retries.saturating_add(1),
+		_ => 0,
+	};
 
-	let ring_members = Coinage::get_recycler_members(fee_recycler_value, fee_recycler_index);
+	let ring_members =
+		Coinage::get_recycler_members(instance_id, fee_recycler_value, fee_recycler_index);
 
 	// Create the other alias proofs (all secrets except the first).
 	let mut other_alias_proofs_vec = Vec::new();
@@ -806,10 +1339,9 @@ pub fn build_unload_from_output_ext(
 		other_alias_proofs_vec.push(proof);
 	}
 
-	// Create first alias proof signing (other_alias_proofs ++ inherited_implication)
-	let intent_msg = sp_io::hashing::blake2_256(
-		&[other_alias_proofs_vec.encode(), inherited_implication.encode()].concat(),
-	);
+	// Create first alias proof signing the other proofs, retry counter, and inherited implication.
+	let intent_msg = (&other_alias_proofs_vec, retry_counter, &inherited_implication)
+		.using_encoded(sp_io::hashing::blake2_256);
 	let first_member = CryptoOf::<Test>::member_from_secret(&secrets[0]);
 	let first_commitment =
 		CryptoOf::<Test>::open(recycler_ring_size(), &first_member, ring_members.into_iter())
@@ -829,13 +1361,15 @@ pub fn build_unload_from_output_ext(
 		fee_recycler_value,
 		fee_recycler_index,
 		fee_recycler_revision,
+		retry_counter,
 		alias_proofs: alias_proofs_vec.try_into().expect("proofs should fit in bounds"),
 	});
 	let extension = (AuthorizeCall::<Test>::new(), AsCoinage::<Test>::new(info));
 	Extrinsic::new_transaction(runtime_call, extension)
 }
 
-/// Helper to build the unload extrinsic using a Paid Unload Token.
+/// Helper to build the unload extrinsic using a Paid Unload Token against
+/// [`TEST_INSTANCE_ID`].
 pub fn build_unload_paid_ext(
 	call: crate::Call<Test>,
 	paid_token_secret: &Secret,
@@ -843,7 +1377,33 @@ pub fn build_unload_paid_ext(
 	paid_token_ring_revision: u32,
 	period: u32,
 	recycler_secrets: &[Secret],
-	value: CoinValue,
+	value: Denomination,
+	index: u32,
+) -> Extrinsic {
+	build_unload_paid_ext_for(
+		TEST_INSTANCE_ID,
+		call,
+		paid_token_secret,
+		paid_token_ring_index,
+		paid_token_ring_revision,
+		period,
+		recycler_secrets,
+		value,
+		index,
+	)
+}
+
+/// Helper to build the unload extrinsic using a Paid Unload Token against an arbitrary
+/// instance.
+pub fn build_unload_paid_ext_for(
+	instance_id: InstanceId,
+	call: crate::Call<Test>,
+	paid_token_secret: &Secret,
+	paid_token_ring_index: u32,
+	paid_token_ring_revision: u32,
+	period: u32,
+	recycler_secrets: &[Secret],
+	value: Denomination,
 	index: u32,
 ) -> Extrinsic {
 	let runtime_call: RuntimeCall = call.into();
@@ -855,7 +1415,7 @@ pub fn build_unload_paid_ext(
 	// 2. Generate Alias Proofs (must be created before the paid token proof so we can include them
 	//    in the intent message)
 	let mut alias_proofs_vec = Vec::new();
-	let ring_members = Coinage::get_recycler_members(value, index);
+	let ring_members = Coinage::get_recycler_members(instance_id, value, index);
 
 	for secret in recycler_secrets {
 		let (proof, _) = create_unload_proof(secret, &ring_members, &proven_msg);
@@ -899,6 +1459,183 @@ pub fn build_unload_paid_ext(
 	Extrinsic::new_signed(runtime_call, 0, UintAuthorityId(0), extension)
 }
 
+/// Build an unload extrinsic authenticated by a people or lite-people free unload token,
+/// against an arbitrary instance.
+///
+/// The mock membership proof accepts whatever `people_alias` is given, so distinct aliases
+/// simulate distinct persons.
+pub fn build_unload_free_token_ext_for(
+	instance_id: InstanceId,
+	call: crate::Call<Test>,
+	kind: FreeTokenKind,
+	period: u32,
+	counter: u32,
+	people_alias: indiv_support::traits::Alias,
+	recycler_secrets: &[Secret],
+	value: Denomination,
+	index: RingIndex,
+) -> Extrinsic {
+	let runtime_call: RuntimeCall = call.into();
+	let inherited_implication = ((0u8, &runtime_call), (), ());
+	let proven_msg = sp_io::hashing::blake2_256(&inherited_implication.encode());
+
+	// The alias proofs must be created before the people proof, which signs over them.
+	let ring_members = Coinage::get_recycler_members(instance_id, value, index);
+	let mut alias_proofs_vec = Vec::new();
+	for secret in recycler_secrets {
+		let (proof, _) = create_unload_proof(secret, &ring_members, &proven_msg);
+		alias_proofs_vec.push(proof);
+	}
+	let alias_proofs = BoundedVec::try_from(alias_proofs_vec).expect("proofs fit in bounds");
+
+	let intent_msg = sp_io::hashing::blake2_256(
+		&[alias_proofs.encode(), inherited_implication.encode()].concat(),
+	);
+	let context = crate::pallet::free_unload_token_context(period, counter);
+	let proof = MembershipProof {
+		context: context.to_vec(),
+		msg: intent_msg.to_vec(),
+		alias: people_alias,
+	};
+	let info = match kind {
+		FreeTokenKind::People =>
+			AsCoinageInfo::AsUnloadTokenPeople { proof, period, counter, alias_proofs },
+		FreeTokenKind::LitePeople =>
+			AsCoinageInfo::AsUnloadTokenLitePeople { proof, period, counter, alias_proofs },
+	};
+	let extension = (AuthorizeCall::<Test>::new(), AsCoinage::<Test>::new(Some(info)));
+	Extrinsic::new_signed(runtime_call, 0, UintAuthorityId(0), extension)
+}
+
+/// The unload-token extension flavor a load-deposit test drives a recycler unload call with.
+pub enum UnloadTokenVariant {
+	People,
+	LitePeople,
+	Paid { secrets: Vec<Secret>, period: u32, ring_index: u32, revision: u32 },
+	FromOutput,
+}
+
+/// [`UnloadTokenVariant::Paid`] with `count` freshly registered paid unload tokens.
+///
+/// Like [`setup_paid_unload_tokens`], call this before setting up the recyclers under test.
+pub fn paid_unload_token_variant(count: u32) -> UnloadTokenVariant {
+	let (secrets, period, ring_index, revision) = setup_paid_unload_tokens(count);
+	UnloadTokenVariant::Paid { secrets, period, ring_index, revision }
+}
+
+impl UnloadTokenVariant {
+	/// Build the `nth` unload extrinsic of this flavor for `call`, proving `recycler_secrets`
+	/// against the recycler `(instance_id, value, index, revision)`.
+	///
+	/// `nth` distinguishes consecutive tokens of one test: the free-token flavors derive a
+	/// distinct person and counter from it, and the paid flavor consumes the `nth` registered
+	/// token.
+	pub fn build_ext(
+		&self,
+		instance_id: InstanceId,
+		call: crate::Call<Test>,
+		recycler_secrets: &[Secret],
+		value: Denomination,
+		index: RingIndex,
+		revision: RevisionIndex,
+		nth: u32,
+	) -> Extrinsic {
+		match self {
+			UnloadTokenVariant::People => build_unload_free_token_ext_for(
+				instance_id,
+				call,
+				FreeTokenKind::People,
+				0,
+				nth,
+				[(nth as u8).saturating_add(1); 32],
+				recycler_secrets,
+				value,
+				index,
+			),
+			UnloadTokenVariant::LitePeople => build_unload_free_token_ext_for(
+				instance_id,
+				call,
+				FreeTokenKind::LitePeople,
+				0,
+				nth,
+				[(nth as u8).saturating_add(1); 32],
+				recycler_secrets,
+				value,
+				index,
+			),
+			UnloadTokenVariant::Paid {
+				secrets,
+				period,
+				ring_index,
+				revision: paid_token_revision,
+			} => build_unload_paid_ext_for(
+				instance_id,
+				call,
+				&secrets[nth as usize],
+				*ring_index,
+				*paid_token_revision,
+				*period,
+				recycler_secrets,
+				value,
+				index,
+			),
+			UnloadTokenVariant::FromOutput => build_unload_from_output_ext_for(
+				instance_id,
+				call,
+				value,
+				index,
+				revision,
+				recycler_secrets,
+			),
+		}
+	}
+}
+
+/// The input and proofs unloading `secrets` from the denomination-`value` recycler
+/// `(instance_id, index)` non-anonymously, bound to `signer` and `to`.
+///
+/// The proven message covers the input, which carries the aliases, so the aliases are derived
+/// first (they do not depend on the message) and the proofs rebuilt over the final input.
+pub fn build_non_anonymous_unload(
+	instance_id: InstanceId,
+	secrets: &[Secret],
+	value: Denomination,
+	index: RingIndex,
+	signer: u64,
+	to: u64,
+) -> (
+	UnloadRecyclerInput<<Test as crate::Config>::MaxConsolidation>,
+	BoundedVec<Proof, <Test as crate::Config>::MaxConsolidation>,
+) {
+	type RInput = UnloadRecyclerInput<<Test as crate::Config>::MaxConsolidation>;
+
+	let revision = <Test as crate::Config>::MemberService::ring_revision(
+		&Coinage::recycler_collection_identifier(instance_id, value),
+		index,
+	)
+	.expect("ring exists");
+	// The whole ring, not just the keys under test: earlier setups may have put members in it,
+	// and the proofs are built against the ring the root commits to.
+	let members = Coinage::get_recycler_members(instance_id, value, index);
+
+	let aliases = secrets.iter().map(recycler_alias).collect::<Vec<_>>();
+	let input: RInput = UnloadRecyclerInput {
+		value,
+		index,
+		revision,
+		aliases: BoundedVec::try_from(aliases).expect("aliases fit in bounds"),
+	};
+	let proven_msg = sp_io::hashing::blake2_256(
+		&(instance_id, &alloc::vec![input.clone()], &to, &signer).encode(),
+	);
+	let proofs = secrets
+		.iter()
+		.map(|secret| create_unload_proof(secret, &members, &proven_msg).0)
+		.collect::<Vec<_>>();
+
+	(input, BoundedVec::try_from(proofs).expect("proofs fit in bounds"))
+}
+
 /// Build a signed extrinsic for non-anonymous unload calls.
 /// The signer pays the fee, and the extension is configured with None (passthrough).
 pub fn build_signed_ext(signer: u64, call: crate::Call<Test>) -> Extrinsic {
@@ -919,7 +1656,24 @@ pub struct TestBenchmarkHelper;
 #[cfg(feature = "runtime-benchmarks")]
 impl crate::BenchmarkHelper<Test> for TestBenchmarkHelper {
 	fn setup_assets() {
-		ensure_underlying_asset_id_set();
+		setup_asset();
+	}
+
+	fn setup_asset_without_instance() -> u32 {
+		use frame_support::{
+			assert_ok,
+			traits::fungibles::{Inspect, Mutate},
+		};
+		let asset_id = TEST_ASSET_ID;
+		create_asset(asset_id);
+		// What governance does before `create_sufficient_instance`: the pallet account's balance
+		// buffer.
+		assert_ok!(AssetsWithHolder::mint_into(
+			asset_id,
+			&Coinage::pallet_account(),
+			<AssetsWithHolder as Inspect<u64>>::minimum_balance(asset_id)
+		));
+		asset_id
 	}
 
 	fn fund_account(who: &u64, amount: u64) {
@@ -928,37 +1682,49 @@ impl crate::BenchmarkHelper<Test> for TestBenchmarkHelper {
 		assert_ok!(AssetsWithHolder::mint_into(asset_id, who, amount));
 	}
 
+	fn create_extra_asset(seed: u32, who: &u64) -> u32 {
+		use frame_support::{assert_ok, traits::fungibles::Mutate};
+		let asset_id = EXTRA_ASSET_ID_BASE + seed;
+		create_asset(asset_id);
+		assert_ok!(AssetsWithHolder::mint_into(asset_id, who, 1_000_000_000));
+		asset_id
+	}
+
+	fn extra_asset_id(seed: u32) -> u32 {
+		EXTRA_ASSET_ID_BASE + seed
+	}
+
 	fn set_time(now: core::time::Duration) {
 		TIME.with(|t| {
 			*t.borrow_mut() = now;
 		});
 	}
 
-	fn setup_conversion_rate() {
-		// TestConversionFromAssetBalance always succeeds, no setup needed
+	fn setup_fee_conversion() {
+		// `TestFeeConversion` has a fixed rate and unlimited depth, so there is nothing to set up.
 	}
 
 	fn create_people_proof(
 		context: &[u8],
 		msg: &[u8],
 		alias: indiv_support::traits::Alias,
-	) -> PeopleProof {
-		PeopleProof { context: context.to_vec(), msg: msg.to_vec(), alias }
+	) -> MembershipProof {
+		MembershipProof { context: context.to_vec(), msg: msg.to_vec(), alias }
 	}
 
 	fn create_lite_people_proof(
 		context: &[u8],
 		msg: &[u8],
 		alias: indiv_support::traits::Alias,
-	) -> LitePeopleProof {
-		LitePeopleProof { context: context.to_vec(), msg: msg.to_vec(), alias }
+	) -> MembershipProof {
+		MembershipProof { context: context.to_vec(), msg: msg.to_vec(), alias }
 	}
 
 	fn setup_batch_verify(
 		count: u32,
 	) -> Result<
 		(
-			CoinValue,
+			Denomination,
 			indiv_support::traits::RingIndex,
 			Vec<indiv_support::traits::Alias>,
 			Vec<ProofOf<Test>>,
@@ -970,19 +1736,19 @@ impl crate::BenchmarkHelper<Test> for TestBenchmarkHelper {
 		// runner may call this helper multiple times with different proof counts.
 		let offset = MockBatchVerifyCounter::get();
 		MockBatchVerifyCounter::set(&offset.saturating_add(1));
-		let min = <Test as crate::Config>::MinimumExponent::get();
-		let max = <Test as crate::Config>::MaximumExponent::get();
-		let value_span = u32::try_from(i16::from(max) - i16::from(min) + 1)
+		let min_exp = <Test as crate::Config>::MinimumExponent::get();
+		let max_exp = <Test as crate::Config>::MaximumExponent::get();
+		let value_span = u32::try_from(i16::from(max_exp) - i16::from(min_exp) + 1)
 			.map_err(|_| frame_benchmarking::BenchmarkError::Weightless)?;
 		let value_offset = i16::try_from(offset % value_span)
 			.map_err(|_| frame_benchmarking::BenchmarkError::Weightless)?;
-		let value = i8::try_from(i16::from(min) + value_offset)
+		let value = i8::try_from(i16::from(min_exp) + value_offset)
 			.map_err(|_| frame_benchmarking::BenchmarkError::Weightless)?;
 		let seed_offset = u8::try_from(offset % (u32::from(u8::MAX) + 1))
 			.map_err(|_| frame_benchmarking::BenchmarkError::Weightless)?;
 		let (secrets, ring_index, _revision) = setup_recycler(value, count, seed_offset);
-		let identifier = Coinage::recycler_collection_identifier(value);
-		let ring_members = Coinage::get_recycler_members(value, ring_index);
+		let identifier = Coinage::recycler_collection_identifier(TEST_INSTANCE_ID, value);
+		let ring_members = Coinage::get_recycler_members(TEST_INSTANCE_ID, value, ring_index);
 		let ring_exp = <Test as crate::Config>::RecyclerRingExponent::get();
 		let capacity = <CryptoOf<Test> as GenerateVerifiable>::Config::try_from(ring_exp)
 			.map_err(|_| frame_benchmarking::BenchmarkError::Weightless)?;

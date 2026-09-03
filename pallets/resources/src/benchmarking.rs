@@ -223,9 +223,10 @@ mod benches {
 		UsernameReservationQueue::<T>::insert(&other_reserved, queue);
 		ReservationOf::<T>::insert(&lite_account, &other_reserved);
 
-		let origin = T::EnsurePerson::try_successful_origin(&RESOURCES_CONTEXT)
+		let context = Pallet::<T>::resources_context();
+		let origin = T::EnsurePerson::try_successful_origin(&context)
 			.map_err(|_| BenchmarkError::Weightless)?;
-		let Ok(alias) = T::EnsurePerson::try_origin(origin.clone(), &RESOURCES_CONTEXT) else {
+		let Ok(alias) = T::EnsurePerson::try_origin(origin.clone(), &context) else {
 			panic!("origin was created with `try_successful_origin`; qed");
 		};
 		let (_, proof) = <T as Config>::BenchmarkHelper::sign_message(&alias[..]);
@@ -274,9 +275,10 @@ mod benches {
 			BoundedVec::try_from(entries).unwrap();
 		UsernameReservationQueue::<T>::insert(&reserved, queue);
 
-		let origin = T::EnsurePerson::try_successful_origin(&RESOURCES_CONTEXT)
+		let context = Pallet::<T>::resources_context();
+		let origin = T::EnsurePerson::try_successful_origin(&context)
 			.map_err(|_| BenchmarkError::Weightless)?;
-		let Ok(alias) = T::EnsurePerson::try_origin(origin.clone(), &RESOURCES_CONTEXT) else {
+		let Ok(alias) = T::EnsurePerson::try_origin(origin.clone(), &context) else {
 			panic!("origin was created with `try_successful_origin`; qed");
 		};
 		let (_, proof) = <T as Config>::BenchmarkHelper::sign_message(&alias[..]);
@@ -311,9 +313,10 @@ mod benches {
 		ReservationOf::<T>::insert(&account, &reserved);
 		UsernameOwnerOf::<T>::insert(&username, &account);
 
-		let origin = T::EnsurePerson::try_successful_origin(&RESOURCES_CONTEXT)
+		let context = Pallet::<T>::resources_context();
+		let origin = T::EnsurePerson::try_successful_origin(&context)
 			.map_err(|_| BenchmarkError::Weightless)?;
-		let Ok(alias) = T::EnsurePerson::try_origin(origin.clone(), &RESOURCES_CONTEXT) else {
+		let Ok(alias) = T::EnsurePerson::try_origin(origin.clone(), &context) else {
 			panic!("origin was created with `try_successful_origin`; qed");
 		};
 
@@ -531,82 +534,82 @@ mod benches {
 	}
 
 	#[benchmark]
-	fn set_friend_request_statement_account_for_sequence() -> Result<(), BenchmarkError> {
-		let period_duration = T::FriendRequestPeriodDuration::get().max(1) as u64;
+	fn set_notification_statement_account_for_sequence() -> Result<(), BenchmarkError> {
+		let period_duration = T::NotificationPeriodDuration::get().max(1) as u64;
 		<T as Config>::BenchmarkHelper::set_time(Duration::from_secs(period_duration + 1));
 
-		let period = Pallet::<T>::friend_request_period_from_timestamp(T::Clock::now().as_secs());
-		let reference = crate::types::FriendRequestReference { period, seq: 0 };
+		let period = Pallet::<T>::notification_period_from_timestamp(T::Clock::now().as_secs());
+		let reference = crate::types::NotificationReference { period, seq: 0 };
 		let alias: Alias = [1u8; 32];
 		let origin = <T as frame_system::Config>::RuntimeOrigin::from(
-			crate::Origin::FriendRequestAlias(alias),
+			crate::Origin::NotificationAlias(alias),
 		);
 		let account: T::AccountId = whitelisted_caller();
 
 		#[extrinsic_call]
 		_(origin, reference, account.clone());
 
-		let registration = FriendRequestRegistrationByAlias::<T>::get(alias)
+		let registration = NotificationRegistrationByAlias::<T>::get(alias)
 			.expect("registration should be stored");
 		assert_eq!(registration.account_id, account.clone());
 		assert_eq!(registration.reference, reference);
-		assert_eq!(FriendRequestAliasByAccount::<T>::get(&account), Some(alias));
+		assert_eq!(NotificationAliasByAccount::<T>::get(&account), Some(alias));
 		Ok(())
 	}
 
 	#[benchmark]
-	fn clear_expired_friend_request_sequence() -> Result<(), BenchmarkError> {
-		let period_duration = T::FriendRequestPeriodDuration::get().max(1) as u64;
+	fn clear_expired_notification_sequence() -> Result<(), BenchmarkError> {
+		let period_duration = T::NotificationPeriodDuration::get().max(1) as u64;
 		<T as Config>::BenchmarkHelper::set_time(Duration::from_secs(period_duration + 1));
 
-		let period = Pallet::<T>::friend_request_period_from_timestamp(T::Clock::now().as_secs());
-		let reference = crate::types::FriendRequestReference { period, seq: 0 };
+		let period = Pallet::<T>::notification_period_from_timestamp(T::Clock::now().as_secs());
+		let reference = crate::types::NotificationReference { period, seq: 0 };
 		let alias: Alias = [2u8; 32];
 		let origin = <T as frame_system::Config>::RuntimeOrigin::from(
-			crate::Origin::FriendRequestAlias(alias),
+			crate::Origin::NotificationAlias(alias),
 		);
 		let account: T::AccountId = whitelisted_caller();
 
-		assert_ok!(Pallet::<T>::set_friend_request_statement_account_for_sequence(
+		assert_ok!(Pallet::<T>::set_notification_statement_account_for_sequence(
 			origin,
 			reference,
 			account.clone(),
 		));
 
-		let cleanup_time = Pallet::<T>::friend_request_expiration_time(period).saturating_add(1);
+		let cleanup_time = Pallet::<T>::notification_expiration_time(period).saturating_add(1);
 		<T as Config>::BenchmarkHelper::set_time(Duration::from_secs(cleanup_time));
 
 		#[extrinsic_call]
 		_(SystemOrigin::Authorized, account.clone(), reference.seq);
 
-		assert_eq!(FriendRequestAliasByAccount::<T>::get(&account), None);
-		assert_eq!(FriendRequestRegistrationByAlias::<T>::get(alias), None);
+		assert_eq!(NotificationAliasByAccount::<T>::get(&account), None);
+		assert_eq!(NotificationRegistrationByAlias::<T>::get(alias), None);
 		Ok(())
 	}
 
 	#[benchmark]
-	fn authorize_clear_expired_friend_request_sequence() -> Result<(), BenchmarkError> {
-		let period_duration = T::FriendRequestPeriodDuration::get().max(1) as u64;
+	fn authorize_clear_expired_notification_sequence() -> Result<(), BenchmarkError> {
+		let period_duration = T::NotificationPeriodDuration::get().max(1) as u64;
 		<T as Config>::BenchmarkHelper::set_time(Duration::from_secs(period_duration + 1));
 
-		let period = Pallet::<T>::friend_request_period_from_timestamp(T::Clock::now().as_secs());
-		let reference = crate::types::FriendRequestReference { period, seq: 0 };
+		let period = Pallet::<T>::notification_period_from_timestamp(T::Clock::now().as_secs());
+		let reference = crate::types::NotificationReference { period, seq: 0 };
 		let alias: Alias = [3u8; 32];
 		let origin = <T as frame_system::Config>::RuntimeOrigin::from(
-			crate::Origin::FriendRequestAlias(alias),
+			crate::Origin::NotificationAlias(alias),
 		);
 		let account: T::AccountId = whitelisted_caller();
 
-		assert_ok!(Pallet::<T>::set_friend_request_statement_account_for_sequence(
+		assert_ok!(Pallet::<T>::set_notification_statement_account_for_sequence(
 			origin,
 			reference,
 			account.clone(),
 		));
 
-		let cleanup_time = Pallet::<T>::friend_request_expiration_time(period).saturating_add(1);
+		let cleanup_time = Pallet::<T>::notification_expiration_time(period).saturating_add(1);
 		<T as Config>::BenchmarkHelper::set_time(Duration::from_secs(cleanup_time));
 
-		let call = Call::<T>::clear_expired_friend_request_sequence { account, seq: reference.seq };
+		let call = Call::<T>::clear_expired_notification_sequence { account, seq: reference.seq };
 
 		#[block]
 		{
@@ -623,11 +626,11 @@ mod benches {
 		<T as Config>::BenchmarkHelper::set_time(now);
 
 		let (secret, member) = setup_people_ring_with_one_member::<T>()?;
-		let reference = crate::types::FriendRequestReference {
-			period: Resources::<T>::friend_request_period_from_timestamp(now.as_secs()),
+		let reference = crate::types::NotificationReference {
+			period: Resources::<T>::notification_period_from_timestamp(now.as_secs()),
 			seq: 0,
 		};
-		let call = Call::<T>::set_friend_request_statement_account_for_sequence {
+		let call = Call::<T>::set_notification_statement_account_for_sequence {
 			reference,
 			account_id: whitelisted_caller(),
 		};
@@ -636,7 +639,7 @@ mod benches {
 
 		let msg =
 			TxBaseImplication((extension_version, &call)).using_encoded(sp_io::hashing::blake2_256);
-		let context = Resources::<T>::friend_request_context(reference);
+		let context = Resources::<T>::notification_context(reference);
 		let ring_members = <T as indiv_pallet_people::Config>::MemberService::ring_members(
 			indiv_pallet_people::PEOPLE_MEMBER_IDENTIFIER,
 			0,
@@ -653,7 +656,7 @@ mod benches {
 				.map_err(|_| BenchmarkError::Stop("failed to create proof"))?;
 
 		let tx_ext = crate::extension::AsResources::<T>::new(Some(
-			crate::extension::AsResourcesInfo::RegisterFriendRequestWithProof(proof, 0),
+			crate::extension::AsResourcesInfo::RegisterNotificationWithProof(proof, 0, 0),
 		));
 		let len = call.encode().len();
 
@@ -675,11 +678,11 @@ mod benches {
 		<T as Config>::BenchmarkHelper::set_time(now);
 
 		let (secret, member) = setup_lite_ring_with_one_member::<T>()?;
-		let reference = crate::types::FriendRequestReference {
-			period: Resources::<T>::friend_request_period_from_timestamp(now.as_secs()),
+		let reference = crate::types::NotificationReference {
+			period: Resources::<T>::notification_period_from_timestamp(now.as_secs()),
 			seq: 0,
 		};
-		let call = Call::<T>::set_friend_request_statement_account_for_sequence {
+		let call = Call::<T>::set_notification_statement_account_for_sequence {
 			reference,
 			account_id: whitelisted_caller(),
 		};
@@ -688,7 +691,7 @@ mod benches {
 
 		let msg =
 			TxBaseImplication((extension_version, &call)).using_encoded(sp_io::hashing::blake2_256);
-		let context = Resources::<T>::friend_request_context(reference);
+		let context = Resources::<T>::notification_context(reference);
 		let ring_members = <T as indiv_pallet_people_lite::Config>::MemberService::ring_members(
 			indiv_pallet_people_lite::LITE_PEOPLE_MEMBER_IDENTIFIER,
 			0,
@@ -705,8 +708,9 @@ mod benches {
 				.map_err(|_| BenchmarkError::Stop("failed to create lite proof"))?;
 
 		let tx_ext = crate::extension::AsResources::<T>::new(Some(
-			crate::extension::AsResourcesInfo::RegisterFriendRequestForCollection(
+			crate::extension::AsResourcesInfo::RegisterNotificationForCollection(
 				proof,
+				0,
 				0,
 				crate::types::MembershipCollection::LitePeople,
 			),
@@ -910,6 +914,7 @@ mod benches {
 		let tx_ext = crate::extension::AsResources::<T>::new(Some(
 			crate::extension::AsResourcesInfo::RegisterStatementStoreAllowance(
 				proof,
+				0,
 				0,
 				crate::types::MembershipCollection::LitePeople,
 			),

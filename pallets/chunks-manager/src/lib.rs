@@ -32,6 +32,7 @@ pub use weights::WeightInfo;
 
 use alloc::vec::Vec;
 use codec::Decode;
+use verifiable::DecodeUnchecked;
 
 // Re-export RingExponent and RingSize from the support crate.
 pub use indiv_support::traits::{PageIndex, RingExponent, RingSize};
@@ -69,6 +70,7 @@ pub mod pallet {
 	use core::cmp;
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
+	use indiv_support::tx_priority;
 
 	/// Maximum allowed chunks per page.
 	const MAX_PAGE_SIZE: u32 = 1 << 16;
@@ -96,7 +98,7 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 
 		/// The type of a single chunk.
-		type Chunk: Parameter + MaxEncodedLen + TypeInfo + verifiable::DecodeUnchecked;
+		type Chunk: Parameter + MaxEncodedLen + TypeInfo + DecodeUnchecked;
 
 		/// Number of chunks per page. Must be a power of two.
 		#[pallet::constant]
@@ -152,7 +154,7 @@ pub mod pallet {
 
 	impl<T: Config> codec::Decode for UncheckedChunk<T> {
 		fn decode<I: codec::Input>(input: &mut I) -> Result<Self, codec::Error> {
-			<T::Chunk as verifiable::DecodeUnchecked>::decode_unchecked(input).map(Self)
+			<T::Chunk as DecodeUnchecked>::decode_unchecked(input).map(Self)
 		}
 	}
 
@@ -347,6 +349,7 @@ pub mod pallet {
 			}
 			let validity = ValidTransaction::with_tag_prefix("pallet-chunk-manager")
 				.and_provides((ring_exponent, page_index))
+				.priority(tx_priority::BACKGROUND_PROGRESS)
 				.into();
 			Ok((validity, Weight::zero()))
 		}

@@ -126,6 +126,43 @@ impl From<[u8; 65]> for ChatKey {
 	}
 }
 
+/// A dotNS label an account acquired through this gateway.
+#[derive(
+	Clone, PartialEq, Eq, Debug, Encode, Decode, MaxEncodedLen, TypeInfo, DecodeWithMemTracking,
+)]
+pub struct NameEntry {
+	/// The label.
+	pub label: BaseLabel,
+	/// The ECDH chat key the contracts hold for this label. `None` when the
+	/// pallet never saw the key: a label backfilled by migration, or a full
+	/// label linked to a lite label other than the recorded one.
+	pub chat: Option<ChatKey>,
+}
+
+/// The dotNS labels an account acquired through this gateway.
+///
+/// `lite` is the most recently registered lite-person label. `full` is the
+/// registered full-person label; the [`crate::AsDotnsGateway`] extension
+/// admits at most one full registration per account.
+#[derive(
+	Clone,
+	PartialEq,
+	Eq,
+	Debug,
+	Default,
+	Encode,
+	Decode,
+	MaxEncodedLen,
+	TypeInfo,
+	DecodeWithMemTracking,
+)]
+pub struct AccountNameRecord {
+	/// The lite-person label (`<dns-stem>.<digits>`), if one was registered.
+	pub lite: Option<NameEntry>,
+	/// The full-person label, if one was registered.
+	pub full: Option<NameEntry>,
+}
+
 /// Which ring membership collection the proof targets.
 #[derive(
 	Clone, PartialEq, Eq, Debug, Encode, Decode, MaxEncodedLen, TypeInfo, DecodeWithMemTracking,

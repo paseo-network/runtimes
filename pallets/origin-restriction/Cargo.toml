@@ -20,6 +20,10 @@ scale-info = { workspace = true, features = ["derive"] }
 frame-benchmarking = { workspace = true, optional = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
+# PASEO-LOCAL: not an upstream dependency of this pallet. Required by the Paseo-local
+# `src/migration.rs`, which logs per-entity recovery times so an operator can see what the
+# `used` policy costs. See that file's header.
+log = { workspace = true }
 sp-core = { workspace = true }
 sp-io = { workspace = true }
 sp-runtime = { workspace = true }
@@ -32,6 +36,7 @@ std = [
 	"frame-benchmarking?/std",
 	"frame-support/std",
 	"frame-system/std",
+	"log/std",
 	"pallet-transaction-payment/std",
 	"scale-info/std",
 	"sp-core/std",

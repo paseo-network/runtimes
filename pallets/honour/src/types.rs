@@ -161,14 +161,14 @@ pub mod context {
 	pub fn point(point: PointId) -> Context {
 		let mut input = POINT_CONTEXT_PREFIX.to_vec();
 		input.push(point);
-		sp_io::hashing::twox_256(&input).into()
+		sp_crypto_hashing::twox_256(&input).into()
 	}
 
 	/// Canonical context of a subject.
 	pub fn subject(subject: &SubjectId) -> Context {
 		let mut input = SUBJECT_CONTEXT_PREFIX.to_vec();
 		input.extend_from_slice(subject);
-		sp_io::hashing::twox_256(&input).into()
+		sp_crypto_hashing::twox_256(&input).into()
 	}
 }
 

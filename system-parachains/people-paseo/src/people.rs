@@ -14,7 +14,18 @@
 // limitations under the License.
 
 use super::*;
-use crate::xcm_config::LocationToAccountId;
+use crate::{
+	parameters::{
+		AccountsApiAllowance, LiteNotificationSlotsPerPeriod, LitePersonRegistrationFee,
+		LitePersonStatementLimit, LiteStmtStoreSlotsPerPeriod,
+		LongTermStorageAllowanceForLitePeople, LongTermStorageAllowanceForPeople,
+		LongTermStorageClaimsPerPeriod, LongTermStorageCleanupLimit, LongTermStorageGraceWindow,
+		LongTermStoragePeriodDuration, NotificationAllowance, NotificationPeriodDuration,
+		NotificationSlotsPerPeriod, PersonStatementLimit, StmtStoreCleanupLimit,
+		StmtStoreGraceWindow, StmtStoreReplacementCooldown, StmtStoreSlotsPerPeriod,
+	},
+	xcm_config::LocationToAccountId,
+};
 use codec::{Decode, Encode, MaxEncodedLen};
 use enumflags2::{bitflags, BitFlags};
 use frame_support::{parameter_types, CloneNoBound, DebugNoBound, EqNoBound, PartialEqNoBound};
@@ -247,29 +258,30 @@ impl Default for IdentityInfo {
 
 use crate::xcm_config;
 use assets_common::local_and_foreign_assets::ForeignAssetReserveData;
-use cumulus_primitives_core::Junction::{GeneralIndex, PalletInstance, Parachain};
+use cumulus_primitives_core::Junction::{PalletInstance, Parachain};
 use frame_support::{
 	pallet_prelude::PhantomData,
 	traits::{
 		fungible::{HoldConsideration, ItemOf},
-		ConstU128, ConstU32, ConstU64, ConstU8, ConstUint, ContainsPair, Get, LinearStoragePrice,
+		ConstU128, ConstU32, ConstU64, ConstUint, ContainsPair, Get, LinearStoragePrice,
 		Randomness,
 	},
 };
 use indiv_pallet_game::PhaseDurationValues;
 use indiv_pallet_origin_restriction::Allowance;
 #[cfg(feature = "runtime-benchmarks")]
-use indiv_support::traits::PersonalId;
+use indiv_support::traits::{PersonalId, RingIndex};
 use indiv_support::{
 	fungibles::CombineAssetsWithHolder,
-	traits::{Alias, AllocateStorage, Context, RingIndex},
+	traits::{Alias, AllocateStorage, Context},
 	utils::TypedGetToGet,
 };
+#[cfg(feature = "runtime-benchmarks")]
 use paseo_runtime_constants::system_parachain::ASSET_HUB_ID;
 #[cfg(feature = "runtime-benchmarks")]
 use sp_runtime::BoundedVec;
 use sp_runtime::{
-	traits::{ConstI8, ConstU16, IdentifyAccount},
+	traits::{ConstI8, ConstU16},
 	DispatchResult, MultiSignature, MultiSigner, Percent,
 };
 use sp_statement_store::StatementAllowance;
@@ -298,9 +310,30 @@ pub type FungibleExternalAsset = ItemOf<AssetsWithHolder, ExternalAssetLocation,
 pub struct AccountContexts;
 impl frame_support::traits::Contains<Context> for AccountContexts {
 	fn contains(l: &Context) -> bool {
+		// individuality v0.3.1 deleted the `RESOURCES_CONTEXT` and `SCORE_CONTEXT` constants.
+		// Their replacements, `Pallet::<Runtime>::resources_context()` and
+		// `Pallet::<Runtime>::score_context()`, are FUNCTIONS, not consts: the contexts are now
+		// derived from the runtime's network suffix rather than being fixed byte strings.
+		// They must therefore be CALLED here — binding one as a value would not compile, and
+		// hard-coding an old constant would silently split the context namespace.
+		//
+		// 🔴 Every context a pallet gates its calls on must appear in this list. A pallet whose
+		// context is missing here is completely unreachable on chain — its dispatchables fail
+		// with `InvalidTransaction::Call` — while its unit tests keep passing.
 		l == &indiv_pallet_mob_rule::MOB_CONTEXT ||
-			l == &indiv_pallet_score::SCORE_CONTEXT ||
-			l == &indiv_pallet_resources::RESOURCES_CONTEXT
+			l == &indiv_pallet_score::Pallet::<Runtime>::score_context() ||
+			l == &indiv_pallet_resources::Pallet::<Runtime>::resources_context()
+	}
+}
+
+/// The contexts in which lite people may set up account aliases: the pallet's own
+/// authentication context, and the score context, in which a lite person can designate an
+/// account to play the game. Both are functions for the same reason as above.
+pub struct LitePeopleAccountContexts;
+impl frame_support::traits::Contains<Context> for LitePeopleAccountContexts {
+	fn contains(l: &Context) -> bool {
+		l == &indiv_pallet_people_lite::Pallet::<Runtime>::auth_context() ||
+			l == &indiv_pallet_score::Pallet::<Runtime>::score_context()
 	}
 }
 
@@ -326,6 +359,8 @@ parameter_types! {
 		indiv_support::traits::RingExponent::R2e9;
 	/// Onboarding size for lite people collection.
 	pub const LitePeopleOnboardingSize: u32 = 3;
+	/// Receives `register_with_fee` payments. Matches upstream's `plitefee`.
+	pub const LitePeoplePotId: frame_support::PalletId = frame_support::PalletId(*b"plitefee");
 	/// The page size for chunks manager.
 	pub const ChunkPageSize: u32 = 255;
 	/// Self-inclusion delay: 60 minutes.
@@ -750,6 +785,9 @@ impl indiv_pallet_score::benchmarking::BenchmarkHelper<Runtime> for ScoreBenchma
 
 impl indiv_pallet_score::Config for Runtime {
 	type WeightInfo = indiv_pallet_score::weights::SubstrateWeight<Runtime>;
+	// Same source of truth as every other `Suffix` binding in this runtime: the on-chain
+	// `NetworkSuffix` pallet, whose default is the shared `system-parachains-constants` value.
+	type Suffix = NetworkSuffix;
 	type EnsurePerson = indiv_pallet_people::EnsurePersonalAliasInContext<Runtime>;
 	type ScorePotId = ScorePotId;
 	type Currency = FungibleExternalAsset;
@@ -783,6 +821,7 @@ impl indiv_pallet_game::Config for Runtime {
 	type MaxRounds = ConstU32<3>;
 	type ManagerOrigin = EnsureRoot<Self::AccountId>;
 	type InviteIssuer = EnsureRoot<Self::AccountId>;
+	type EnsureLiteAlias = indiv_pallet_people_lite::EnsureLiteAliasInContext<Runtime>;
 	type NonPlayingKickoutTime = ConstU32<{ 90 * DAYS }>;
 	type NativeFungible = Balances;
 	type PlayDeposit = HoldConsideration<
@@ -798,6 +837,11 @@ impl indiv_pallet_game::Config for Runtime {
 	// ~6 months ahead, so the top-up keeper runs at most twice a year.
 	type MaxGameSchedules = ConstU32<26>;
 	type MaxAttendanceHistoryDepth = ConstU32<12>;
+	// This runtime plays games but mints nothing from them, which is the case upstream
+	// documents for `()`: "A runtime that plays games without minting anything sets this to
+	// `()`" (`pallets/game/src/lib.rs`). `indiv-pallet-nft-credits` and the Asset Hub
+	// `indiv-pallet-nft-claims` half of that pipeline are not adopted here.
+	type NftClaimCredits = ();
 	type DefaultPhaseDurations = GamePhaseDurations;
 	type AccountSignature = Signature;
 	type PlayerStatementLimit = PlayerStatementLimit;
@@ -909,7 +953,11 @@ impl indiv_pallet_airdrop::Config for Runtime {
 	type ManagerOrigin = EnsureRoot<Self::AccountId>;
 	type PalletId = AirdropPalletId;
 	type UnixTime = Timestamp;
-	type Randomness = ParentHashRandomness<Runtime>;
+	// Real relay-chain randomness, replacing the grindable `ParentHashRandomness` placeholder.
+	// This is HALF the fix: it only produces a value if `pallet-relay-randomness` is actually
+	// fed by `OnSystemEvent` in lib.rs. Without that, this compiles, runs, never populates,
+	// and every airdrop stalls in `AwaitingEntropy` forever with no error.
+	type Randomness = indiv_pallet_relay_randomness::RelayBlockRandomness<Runtime>;
 	type AccountIdToPublic = AccountIdToSr25519Public;
 	type ClearLimit = ConstU32<100>;
 	type DrawLimit = ConstU32<100>;
@@ -918,24 +966,13 @@ impl indiv_pallet_airdrop::Config for Runtime {
 	type BenchmarkHelper = AirdropBenchmarkHelper;
 }
 
-/// Placeholder [`indiv_support::traits::CurrentBlockRandomness`] using the parent block
-/// hash. **Not** the relay-chain per-block VRF the trait documents — the parent hash is
-/// chosen by the parachain block author and is grindable. Acceptable as a stand-in until
-/// the proper relay-chain randomness adapter is wired up; revisit before mainnet.
-// TODO: Make the proper implementation.
-pub struct ParentHashRandomness<R>(core::marker::PhantomData<R>);
-impl<R> indiv_support::traits::CurrentBlockRandomness for ParentHashRandomness<R>
-where
-	R: frame_system::Config,
-	[u8; 32]: From<<R as frame_system::Config>::Hash>,
-{
-	fn randomness() -> Option<[u8; 32]> {
-		Some(frame_system::Pallet::<R>::parent_hash().into())
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn setup_randomness() {}
-}
+// `ParentHashRandomness` was DELETED here, not re-shimmed.
+//
+// It implemented `indiv_support::traits::CurrentBlockRandomness`, a trait individuality v0.3.1
+// removed. It was always a placeholder: the parent block hash is chosen by the parachain block
+// author and is grindable, so it was never safe for the airdrop draw it fed. The real relay-chain
+// randomness now arrives via `pallet-relay-randomness` (see `RelayBlockRandomness` below and
+// `OnSystemEvent` in lib.rs). Do not reintroduce a parent-hash shim to "make it compile".
 
 /// Direct byte-level reinterpretation of an `AccountId32` as an sr25519 public key.
 pub struct AccountIdToSr25519Public;
@@ -1137,7 +1174,6 @@ impl Get<PhaseDurationValues> for GamePhaseDurations {
 			post_shuffle_margin: 30,
 			reporting: 10 * 60,
 			player_process: 60,
-			airdrop_claim_window: 3 * 24 * 60 * 60,
 		}
 	}
 }
@@ -1213,8 +1249,41 @@ mod bench_xcm_sender {
 	}
 }
 
+parameter_types! {
+	/// The suffix spliced into every product context on this chain.
+	///
+	/// Bound to the shared `system-parachains-constants` value, NOT to a literal, and to the
+	/// SAME constant Asset Hub binds. If the two chains disagree, the same human derives a
+	/// different alias on each and the personhood namespace splits. Upstream's default is
+	/// `b"paseo"`; Paseo uses `b"dot"`.
+	pub DefaultNetworkSuffix: indiv_support::context::ProductContextNetworkSuffix =
+		system_parachains_constants::paseo::individuality::NETWORK_SUFFIX
+			.to_vec()
+			.try_into()
+			.expect("NETWORK_SUFFIX fits MAX_NETWORK_SUFFIX_LENGTH; qed");
+}
+
+impl indiv_pallet_network_suffix::Config for Runtime {
+	type UpdateOrigin = EnsureRoot<Self::AccountId>;
+	type DefaultSuffix = DefaultNetworkSuffix;
+	type WeightInfo = indiv_pallet_network_suffix::weights::SubstrateWeight<Runtime>;
+}
+
+impl indiv_pallet_relay_randomness::Config for Runtime {
+	type WeightInfo = indiv_pallet_relay_randomness::weights::SubstrateWeight<Runtime>;
+}
+
 impl indiv_pallet_people_lite::Config for Runtime {
 	type WeightInfo = indiv_pallet_people_lite::weights::SubstrateWeight<Runtime>;
+	type Currency = Balances;
+	type PotId = LitePeoplePotId;
+	// POLICY, FLAGGED. Gates `register_with_fee` (call index 3), which is NEW in v0.3.1 -- it
+	// did not exist on Paseo before, so no existing behaviour is being made costly. The value
+	// is upstream's. It is the only thing rate-limiting a brand-new PERMISSIONLESS path into
+	// the lite-people ring, on a chain whose native token is faucet-dispensed. See the
+	// remaining-risk list in RUNTIME_WIRING_RESULT.md before enactment.
+	type RegistrationFee = LitePersonRegistrationFee;
+	type Suffix = NetworkSuffix;
 	type AttestationAllowanceManager = EnsureRoot<Self::AccountId>;
 	type MemberService = Members;
 	type CollectionOwner = LitePeopleCollectionOwner;
@@ -1222,62 +1291,28 @@ impl indiv_pallet_people_lite::Config for Runtime {
 	type LiteOnboardingSize = LitePeopleOnboardingSize;
 	type AttestationSignature = Signature;
 	type LiteConsumerRegistrar = Resources;
+	type AccountContexts = LitePeopleAccountContexts;
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = ();
 }
 
+// The eighteen statement-store and long-term-storage limits that used to live here are now
+// `pallet_parameters` dynamic parameters, declared in `crate::parameters` with defaults
+// byte-identical to the values this block held. See that module.
 parameter_types! {
-	pub const MaxUsernameLength: u32 = 32;
 	pub const MinUsernameLength: u32 = 6;
 	pub const PersonAuthDuration: u32 = 2 * 24 * 60 * 60; // 2 days
 	pub const MinPersonAuthUpdateInterval: u32 = 24 * 60 * 60; // 1 day
-	pub const FriendRequestSlotsPerPeriod: u8 = 16;
-	pub const LiteFriendRequestSlotsPerPeriod: u8 = 8;
-	pub const FriendRequestPeriodDuration: u32 = 24 * 60 * 60; // 1 day
-	pub const FriendRequestGraceWindow: u32 = 60 * 60; // 1 hour
-	pub const LongTermStorageGraceWindow: u32 = 60 * 60; // 1 hour
-	pub const FriendRequestRetentionDuration: u64 = 7 * 24 * 60 * 60; // 1 week
 	pub const MaxReservationQueueLength: u32 = 10;
-	pub const StmtStoreSlotsPerPeriod: u32 = 20;
-	pub const LiteStmtStoreSlotsPerPeriod: u32 = 10;
-	pub const StmtStoreCleanupLimit: u32 = 50;
-	pub const StmtStoreReplacementCooldown: u32 = 60; // 1 minute
-	pub const StmtStoreGraceWindow: u32 = 2 * 24 * 60 * 60; // 2 days
-	pub AccountsApiAllowance: StatementAllowance = StatementAllowance {
-		max_size: 500 * 1024, // 500 KiB
-		max_count: 2,
-	};
-	pub FriendRequestAllowance: StatementAllowance = StatementAllowance {
-		max_size: 10 * 1024, // 10 KiB
-		max_count: 1,
-	};
-	pub LitePersonStatementLimit: StatementAllowance = StatementAllowance {
-		max_size: 500 * 1024, // 500 KiB
-		max_count: 50,
-	};
-	pub PersonStatementLimit: StatementAllowance = StatementAllowance {
-		max_size: 1024 * 1024, // 1 MiB
-		max_count: 200,
-	};
-	pub const LongTermStoragePeriodDuration: u32 = 14 * 24 * 60 * 60; // 2 weeks
-	pub const LongTermStorageClaimsPerPeriod: u8 = 100;
-	pub const LongTermStorageCleanupLimit: u32 = 20;
-	pub LongTermStorageAllowanceForPeople: indiv_pallet_resources::types::LongTermStorageAllocation =
-		indiv_pallet_resources::types::LongTermStorageAllocation {
-			transactions: 100,
-			bytes: 8 * 1024 * 1024, // 8 MiB
-		};
-	pub LongTermStorageAllowanceForLitePeople: indiv_pallet_resources::types::LongTermStorageAllocation =
-		indiv_pallet_resources::types::LongTermStorageAllocation {
-			transactions: 10,
-			bytes: 4 * 1024 * 1024, // 4 MiB
-		};
 }
 
 impl indiv_pallet_resources::Config for Runtime {
 	type WeightInfo = indiv_pallet_resources::weights::SubstrateWeight<Runtime>;
+	// Same source of truth as Asset Hub's `pgas`/`dotns-gateway` bindings: the on-chain
+	// `NetworkSuffix` pallet, whose default is the shared `system-parachains-constants` value.
+	type Suffix = NetworkSuffix;
 	type MemberService = Members;
-	type MaxUsernameLength = MaxUsernameLength;
+	// `MaxUsernameLength` was removed from the pallet's `Config` in individuality v0.3.1.
 	type MinUsernameLength = MinUsernameLength;
 	type PersonAuthDuration = PersonAuthDuration;
 	type AccountsApiAllowance = AccountsApiAllowance;
@@ -1286,12 +1321,15 @@ impl indiv_pallet_resources::Config for Runtime {
 	type StmtStoreCleanupLimit = StmtStoreCleanupLimit;
 	type StmtStoreReplacementCooldown = StmtStoreReplacementCooldown;
 	type StmtStoreGraceWindow = StmtStoreGraceWindow;
-	type FriendRequestAllowance = FriendRequestAllowance;
-	type FriendRequestSlotsPerPeriod = FriendRequestSlotsPerPeriod;
-	type LiteFriendRequestSlotsPerPeriod = LiteFriendRequestSlotsPerPeriod;
-	type FriendRequestPeriodDuration = FriendRequestPeriodDuration;
-	type FriendRequestGraceWindow = FriendRequestGraceWindow;
-	type FriendRequestRetentionDuration = FriendRequestRetentionDuration;
+	// individuality v0.3.1 renamed the "friend request" allowance family to "notification".
+	// The rename is nominal only: every value below is byte-identical to the `FriendRequest*`
+	// value Paseo runs today, AND to upstream's own v0.3.1 value, so no behaviour changes.
+	// `FriendRequestGraceWindow` and `FriendRequestRetentionDuration` have no `Notification*`
+	// counterpart — they were dropped from `Config` outright, not renamed.
+	type NotificationAllowance = NotificationAllowance;
+	type NotificationSlotsPerPeriod = NotificationSlotsPerPeriod;
+	type LiteNotificationSlotsPerPeriod = LiteNotificationSlotsPerPeriod;
+	type NotificationPeriodDuration = NotificationPeriodDuration;
 	type OffchainWorkerInterval = ConstU32<1>;
 	type MinPersonAuthUpdateInterval = MinPersonAuthUpdateInterval;
 	type EnsurePerson = indiv_pallet_people::EnsurePersonalAliasInContext<Runtime>;
@@ -1318,55 +1356,21 @@ parameter_types! {
 	pub CoinageCollectionOwner: Location = Location::new(0, [PalletInstance(68)]);
 }
 
-#[derive(
-	Clone, PartialEq, Eq, Debug, Encode, Decode, DecodeWithMemTracking, TypeInfo, MaxEncodedLen,
-)]
-pub struct LitePeopleProof {
-	pub proof: <BandersnatchVrfVerifiable as GenerateVerifiable>::Proof,
-	pub ring: RingIndex,
-}
-impl indiv_pallet_coinage::ValidateProof for LitePeopleProof {
-	type Proof = LitePeopleProof;
-	fn validate_proof(proof: &Self::Proof, context: &[u8], msg: &[u8]) -> Result<Alias, ()> {
-		use indiv_support::traits::MembershipProver;
-		let context_arr: [u8; 32] = context.try_into().map_err(|_| ())?;
-		let result = Members::verify_membership(
-			indiv_pallet_people_lite::LITE_PEOPLE_MEMBER_IDENTIFIER,
-			&proof.proof,
-			proof.ring,
-			context_arr,
-			msg,
-		)
-		.map_err(|_| ())?;
-		Ok(result.ca.alias)
-	}
-}
+/// The asset amount of a coin of denomination zero, used only when benchmarks create the coinage
+/// instance. The external asset (Asset Hub asset `50_000_413`) has 6 decimals, so this is $0.01.
+///
+/// Ported verbatim from individuality v0.3.1's `next-people-paseo`, which wraps the very same
+/// Asset Hub asset id.
+#[cfg(feature = "runtime-benchmarks")]
+pub const COINAGE_ASSET_UNIT: Balance = 10u128.pow(4);
 
-// TODO: move this in pallet-people
-// Runtime-local full-people proof wrapper for coinage integration
-#[derive(
-	Clone, PartialEq, Eq, Debug, Encode, Decode, DecodeWithMemTracking, TypeInfo, MaxEncodedLen,
-)]
-pub struct PeopleProof {
-	pub proof: <BandersnatchVrfVerifiable as GenerateVerifiable>::Proof,
-	pub ring: RingIndex,
-}
-impl indiv_pallet_coinage::ValidateProof for PeopleProof {
-	type Proof = PeopleProof;
-	fn validate_proof(proof: &Self::Proof, context: &[u8], msg: &[u8]) -> Result<Alias, ()> {
-		use indiv_support::traits::MembershipProver;
-		let context_arr: [u8; 32] = context.try_into().map_err(|_| ())?;
-		let result = Members::verify_membership(
-			indiv_pallet_people::PEOPLE_MEMBER_IDENTIFIER,
-			&proof.proof,
-			proof.ring,
-			context_arr,
-			msg,
-		)
-		.map_err(|_| ())?;
-		Ok(result.ca.alias)
-	}
-}
+// `LitePeopleProof` and `PeopleProof` were DELETED here.
+//
+// They were runtime-local wrappers implementing `indiv_pallet_coinage::ValidateProof`, bound to
+// the pallet's old `LitePeopleProof` / `PeopleProof` config pair. individuality v0.3.1 replaced
+// that pair with a single `Config::MembershipProof`, which this runtime binds to the `People`
+// pallet's own validator. `ValidateProof::validate_proof` also gained a fourth parameter, so
+// these impls no longer match the trait. Upstream has no counterpart to them.
 
 #[cfg(feature = "runtime-benchmarks")]
 pub struct CoinageBenchHelper;
@@ -1374,30 +1378,135 @@ pub struct CoinageBenchHelper;
 #[cfg(feature = "runtime-benchmarks")]
 impl indiv_pallet_coinage::BenchmarkHelper<Runtime> for CoinageBenchHelper {
 	fn setup_assets() {
+		use frame_support::traits::fungibles::{Inspect, Mutate};
 		benchmark_utils::ensure_external_asset_exists();
-		if !indiv_pallet_coinage::UnderlyingAssetId::<Runtime>::exists() {
-			indiv_pallet_coinage::UnderlyingAssetId::<Runtime>::put(ExternalAssetLocation::get());
+		// v0.3.1 replaced the single `UnderlyingAssetId` storage value with per-asset instances,
+		// so the benchmark set-up now has to create the instance rather than write a storage item.
+		if indiv_pallet_coinage::AssetToInstance::<Runtime>::iter_key_prefix(
+			ExternalAssetLocation::get(),
+		)
+		.next()
+		.is_none()
+		{
+			// What governance is expected to do before creating an instance: give the pallet
+			// account a balance buffer so fee flows that empty its free balance cannot kill it.
+			<AssetsWithHolder as Mutate<_>>::mint_into(
+				ExternalAssetLocation::get(),
+				&indiv_pallet_coinage::Pallet::<Runtime>::pallet_account(),
+				<AssetsWithHolder as Inspect<_>>::minimum_balance(ExternalAssetLocation::get()),
+			)
+			.expect("minting the pallet account buffer should succeed");
+			Coinage::create_sufficient_instance(
+				RuntimeOrigin::root(),
+				ExternalAssetLocation::get(),
+				COINAGE_ASSET_UNIT,
+			)
+			.expect("create_sufficient_instance should succeed");
 		}
 	}
+
+	fn setup_asset_without_instance() -> Location {
+		use frame_support::traits::fungibles::{Inspect, Mutate};
+		benchmark_utils::ensure_external_asset_exists();
+		// What governance does before `create_sufficient_instance`: the pallet account's balance
+		// buffer.
+		<AssetsWithHolder as Mutate<_>>::mint_into(
+			ExternalAssetLocation::get(),
+			&indiv_pallet_coinage::Pallet::<Runtime>::pallet_account(),
+			<AssetsWithHolder as Inspect<_>>::minimum_balance(ExternalAssetLocation::get()),
+		)
+		.expect("minting the pallet account buffer should succeed");
+		ExternalAssetLocation::get()
+	}
+
 	fn fund_account(who: &AccountId, amount: u128) {
 		use frame_support::traits::fungibles::Mutate;
 		<AssetsWithHolder as Mutate<_>>::mint_into(ExternalAssetLocation::get(), who, amount)
 			.expect("Failed to fund account");
 	}
+
+	fn create_extra_asset(seed: u32, who: &AccountId) -> Location {
+		use frame_support::traits::{
+			fungibles::{Create, Inspect, Mutate},
+			PalletInfoAccess,
+		};
+		let location = Self::extra_asset_id(seed);
+		if !<Assets as Inspect<_>>::asset_exists(location.clone()) {
+			<Assets as Create<_>>::create(
+				location.clone(),
+				ParaId::new(<Assets as PalletInfoAccess>::index() as u32).into_account_truncating(),
+				true,
+				1u32.into(),
+			)
+			.expect("Failed to create extra asset");
+		}
+		<AssetsWithHolder as Mutate<_>>::mint_into(location.clone(), who, 1_000_000 * UNITS)
+			.expect("Failed to fund extra asset");
+		location
+	}
+
+	fn extra_asset_id(seed: u32) -> Location {
+		Location::new(
+			1,
+			[
+				xcm::latest::Junction::Parachain(ASSET_HUB_ID),
+				xcm::latest::Junction::PalletInstance(50),
+				xcm::latest::Junction::GeneralIndex(1_000_000u128 + seed as u128),
+			],
+		)
+	}
+
 	fn set_time(now: core::time::Duration) {
 		pallet_timestamp::Now::<Runtime>::put(now.as_millis() as u64);
 	}
-	fn setup_conversion_rate() {
-		use sp_runtime::FixedU128;
-		// Native has 10 decimals, external asset has 6 decimals.
-		// 1 raw external asset ($10^-6) = 10^4 raw native ($10^-10), so rate = 10^4.
-		pallet_asset_rate::ConversionRateToNative::<Runtime>::insert(
-			ExternalAssetLocation::get(),
-			FixedU128::from_u32(10_000),
-		);
+
+	fn setup_fee_conversion() {
+		use frame_support::traits::fungible::Mutate as _;
+
+		let native = crate::xcm_config::RelayLocation::get();
+		let asset = ExternalAssetLocation::get();
+		if pallet_asset_conversion::Pools::<Runtime>::contains_key((native.clone(), asset.clone()))
+		{
+			return;
+		}
+
+		// Native has 10 decimals, the external asset has 6, and 1 raw asset ($10^-6) is worth
+		// 10^4 raw native ($10^-10), so the pool holds that ratio — the same 10^4 rate the
+		// deleted `setup_conversion_rate` wrote into `pallet_asset_rate`. The depth is far above
+		// any benchmarked fee so that the conversions do not move the price.
+		let native_liquidity: Balance = 1_000 * UNITS;
+		let asset_liquidity: Balance = native_liquidity / 10_000;
+
+		let provider: AccountId = [42u8; 32].into();
+		Balances::mint_into(&provider, native_liquidity.saturating_mul(2))
+			.expect("failed to fund the liquidity provider with native");
+		Self::fund_account(&provider, asset_liquidity.saturating_mul(2));
+
+		let origin = RuntimeOrigin::signed(provider.clone());
+		crate::AssetConversion::create_pool(
+			origin.clone(),
+			alloc::boxed::Box::new(native.clone()),
+			alloc::boxed::Box::new(asset.clone()),
+		)
+		.expect("failed to create the fee conversion pool");
+		crate::AssetConversion::add_liquidity(
+			origin,
+			alloc::boxed::Box::new(native),
+			alloc::boxed::Box::new(asset),
+			native_liquidity,
+			asset_liquidity,
+			1,
+			1,
+			provider,
+		)
+		.expect("failed to add liquidity to the fee conversion pool");
 	}
 
-	fn create_people_proof(context: &[u8], msg: &[u8], _alias: Alias) -> PeopleProof {
+	fn create_people_proof(
+		context: &[u8],
+		msg: &[u8],
+		_alias: Alias,
+	) -> indiv_pallet_people::MembershipProof<Runtime> {
 		use frame_support::dispatch::RawOrigin;
 		use indiv_support::traits::{AddOnlyPeopleTrait, AppendOnlyMembers};
 		use verifiable::ring::RingDomainSize;
@@ -1444,10 +1553,14 @@ impl indiv_pallet_coinage::BenchmarkHelper<Runtime> for CoinageBenchHelper {
 		let (proof, _alias) = BandersnatchVrfVerifiable::create(commitment, &secret, context, msg)
 			.expect("should create proof");
 
-		PeopleProof { proof, ring: ring_index }
+		indiv_pallet_people::MembershipProof { proof, ring: ring_index, revision: 0 }
 	}
 
-	fn create_lite_people_proof(context: &[u8], msg: &[u8], _alias: Alias) -> LitePeopleProof {
+	fn create_lite_people_proof(
+		context: &[u8],
+		msg: &[u8],
+		_alias: Alias,
+	) -> indiv_pallet_people::MembershipProof<Runtime> {
 		use indiv_support::traits::AppendOnlyMembers as _;
 		use sp_core::Pair;
 		use sp_runtime::traits::IdentifyAccount;
@@ -1508,13 +1621,53 @@ impl indiv_pallet_coinage::BenchmarkHelper<Runtime> for CoinageBenchHelper {
 		let (proof, _) = BandersnatchVrfVerifiable::create(commitment, &ring_secret, context, msg)
 			.expect("should create lite proof");
 
-		LitePeopleProof { proof, ring: ring_index }
+		indiv_pallet_people::MembershipProof { proof, ring: ring_index, revision: 0 }
 	}
+}
+
+/// Union of the native balance and the chain's assets, so a coinage instance can be denominated
+/// in the native token as well as in an asset. Mirrors upstream's `NativeAndAssets`.
+///
+/// Required by v0.3.1: `Config::Fungibles` now has to cover whatever `NativeAssetKind` names,
+/// because the fee paths short-circuit to a plain `Fungibles::transfer` when an instance's asset
+/// IS the native one. With the old assets-only binding that transfer could not be performed.
+pub type NativeAndAssets = frame_support::traits::fungible::UnionOf<
+	Balances,
+	AssetsWithHolder,
+	assets_common::local_and_foreign_assets::TargetFromLeft<
+		crate::xcm_config::RelayLocation,
+		Location,
+	>,
+	Location,
+	AccountId,
+>;
+
+pub struct CoinageInstanceCreationPrice;
+impl sp_runtime::traits::Convert<frame_support::traits::Footprint, Balance>
+	for CoinageInstanceCreationPrice
+{
+	fn convert(footprint: frame_support::traits::Footprint) -> Balance {
+		system_para_deposit(footprint.count as u32, footprint.size as u32)
+	}
+}
+
+parameter_types! {
+	pub const CoinageInstanceCreationHoldReason: RuntimeHoldReason =
+		RuntimeHoldReason::Coinage(indiv_pallet_coinage::HoldReason::InstanceCreationDeposit);
+	pub storage CoinageLoadDeposit: (Location, Balance) =
+		(crate::xcm_config::RelayLocation::get(), system_para_deposit(4, 300));
+	/// POLICY, FLAGGED — DELIBERATELY `false`, WHERE UPSTREAM USES `true`.
+	///
+	/// Gates `create_sponsored_instance`, which is NEW in individuality v0.3.1. Paseo has no
+	/// sponsored instances today because the call did not exist, so `false` is the setting that
+	/// preserves current on-chain behaviour. Setting it `true` at enactment would open
+	/// permissionless instance creation on a live chain in the same block as the upgrade,
+	/// silently and with no extrinsic. Root can turn it on deliberately afterwards.
+	pub storage CoinageEnablePermissionless: bool = false;
 }
 
 impl indiv_pallet_coinage::Config for Runtime {
 	type MemberService = Members;
-	type CollectionOwner = CoinageCollectionOwner;
 	type RecyclerRingExponent = RecyclerRingExponent;
 	type PaidUnloadTokenRingExponent = PaidUnloadTokenRingExponent;
 	type UnixTime = Timestamp;
@@ -1524,28 +1677,60 @@ impl indiv_pallet_coinage::Config for Runtime {
 	type BenchmarkHelper = CoinageBenchHelper;
 	type MaximumAge = ConstU16<16>;
 	type NativeFungible = Balances;
-	type Fungibles = AssetsWithHolder;
-	type UnderlyingAssetIdManager = EnsureRoot<AccountId>;
+	// Widened from `AssetsWithHolder`; see `NativeAndAssets` above.
+	type Fungibles = NativeAndAssets;
+	// Replaces `UnderlyingAssetIdManager`, which was also `EnsureRoot`.
+	type AdminOrigin = EnsureRoot<AccountId>;
+	type SponsorOrigin = frame_system::EnsureSigned<AccountId>;
+	type EnablePermissionless = CoinageEnablePermissionless;
+	type LoadDeposit = CoinageLoadDeposit;
+	type InstanceCreationDeposit = frame_support::traits::fungible::HoldConsideration<
+		AccountId,
+		Balances,
+		CoinageInstanceCreationHoldReason,
+		CoinageInstanceCreationPrice,
+	>;
 	type MinimumExponent = ConstI8<0>;
 	type MaximumExponent = ConstI8<14>;
 	type MinimumExponentForOutputUnloadFee = ConstI8<0>;
 	type MaxSplitOutputs = ConstU32<32>;
 	type MaxConsolidation = ConstU32<64>;
 	type MaxBatchUnpaidLoad = ConstU32<10>;
-	type UnderlyingAssetUnit = ConstUint<{ 10u128.pow(4) }>; // $0.01, the unit is 10^6.
 	type RecyclerExpirationTime = ConstU32<{ 90 * 24 * 60 * 60 }>; // ~3 months
 	type UnloadTokenTimePeriodPeopleLitePeople = ConstU32<{ 24 * 60 * 60 }>; // 1 day
 
-	// Allowance of $2 per time period (fee is dynamic based on multiplier)
-	type UnloadTokenAllowancePerTimePeriodForPeople = ConstU128<{ 200 * 10u128.pow(4) }>;
-	// Allowance of $0.5 per time period (fee is dynamic based on multiplier)
-	type UnloadTokenAllowancePerTimePeriodForLitePeople = ConstU128<{ 50 * 10u128.pow(4) }>;
+	// ####################################################################################
+	// POLICY, FLAGGED — SILENT DENOMINATION CHANGE. DO NOT "RESTORE" THE OLD NUMBERS.
+	//
+	// v0.3.1 changed the bound on these two from `Get<FungiblesBalanceOf>` to
+	// `Get<NativeBalanceOf>`; the pallet doc went from "expressed in the underlying asset" to
+	// "expressed in the native currency". Both are `u128`, so Paseo's old values
+	// (`200 * 10^4` and `50 * 10^4`, i.e. $2.00 and $0.50 against a 10^6-decimal asset) still
+	// COMPILE — they would just mean 0.0002 PAS and 0.00005 PAS, far below any real unload fee,
+	// giving every person and lite person ZERO free unloads with no error anywhere.
+	//
+	// The values below are upstream's. They are NOT a translation of Paseo's old economics:
+	// Paseo's people:lite ratio was 4:1 ($2.00 / $0.50); upstream's is 2:1. Nobody has
+	// calibrated a PAS-denominated free-unload budget for Paseo. MUST be sanity-checked
+	// against the actual native unload fee before enactment.
+	// ####################################################################################
+	// Allowance of 20 whole native tokens per period (fee is dynamic based on multiplier).
+	type UnloadTokenAllowancePerTimePeriodForPeople = ConstU128<{ 20 * UNITS }>;
+	// Allowance of 10 whole native tokens per period (fee is dynamic based on multiplier).
+	type UnloadTokenAllowancePerTimePeriodForLitePeople = ConstU128<{ 10 * UNITS }>;
 	// Bumped temporarily; revisit once the wallet handles `maxFee` and the
 	// "user ran out of free unloads" UX.
 	type MaxFreeUnloadTokensPerTimePeriod = ConstU32<1000>;
-	type LitePeopleProof = LitePeopleProof;
-	type PeopleProof = PeopleProof;
-	type ConversionToAssetBalance = AssetRate;
+	// Replaces the separate `LitePeopleProof` / `PeopleProof` pair.
+	type MembershipProof = People;
+	// Bound to the on-chain AMM, as both reference integrations do: individuality v0.3.1's
+	// `next-people-paseo` and polkadot-fellows' `people-polkadot` each bind their own
+	// `AssetConversion`. Reached only when a coin instance's asset is NOT the native asset;
+	// native-denominated instances short-circuit to a plain transfer.
+	// 🔴 A pool with no liquidity behaves exactly like the fail-closed adapter this replaces:
+	// paid unloads in a non-native asset fail until a native/asset pool is seeded.
+	type FeeConversion = AssetConversion;
+	type NativeAssetKind = crate::xcm_config::RelayLocation;
 	type WeightToFee = TransactionPayment;
 	type PaidUnloadTokenTimePeriod = ConstU32<{ 3 * 24 * 60 * 60 }>; // 3 days
 	type PaidUnloadTokenRingExpirationTime = ConstU32<{ 4 * 24 * 60 * 60 }>; // 4 days
@@ -1878,6 +2063,11 @@ impl indiv_pallet_origin_restriction::BenchmarkHelper<OriginCaller, RuntimeCall>
 
 impl indiv_pallet_origin_restriction::Config for Runtime {
 	type WeightInfo = indiv_pallet_origin_restriction::weights::SubstrateWeight<Runtime>;
+	// individuality v0.3.1 moved `Usages.at_block` from the local para clock to the relay
+	// clock. The type is unchanged (`u32`), so this compiles either way and the live values
+	// silently become far-future timestamps — see `migrations::RebaseOriginRestrictionUsages`,
+	// which rebases them. Do not enact one without the other.
+	type BlockNumberProvider = RelaychainDataProvider<Runtime>;
 	type RestrictedEntity = RestrictedEntity;
 	type OperationAllowedOneTimeExcess = OperationAllowedOneTimeExcess;
 	#[cfg(feature = "runtime-benchmarks")]

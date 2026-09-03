@@ -23,10 +23,11 @@ scale-info = { workspace = true, features = ["derive"] }
 sp-runtime = { workspace = true }
 indiv-support = { workspace = true }
 sp-core = { workspace = true }
+sp-crypto-hashing = { workspace = true }
 verifiable = { workspace = true }
-sp-io = { workspace = true }
 
 [dev-dependencies]
+sp-io = { workspace = true, default-features = true }
 verifiable = { workspace = true, features = ["mock"] }
 
 [features]
@@ -39,7 +40,7 @@ std = [
 	"indiv-support/std",
 	"scale-info/std",
 	"sp-core/std",
-	"sp-io/std",
+	"sp-crypto-hashing/std",
 	"sp-runtime/std",
 	"verifiable/std",
 ]
