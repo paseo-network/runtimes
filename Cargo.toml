@@ -82,7 +82,9 @@ spin = { version = "0.9", default-features = false, features = ["once"] }
 
 # ---- Individuality (proof-of-personhood) local crates ----
 indiv-support = { path = "support", default-features = false }
+indiv-precompile-nft-claims = { path = "precompiles/nft-claims", default-features = false }
 indiv-precompile-personhood = { path = "precompiles/personhood", default-features = false }
+indiv-precompile-scarcity = { path = "precompiles/scarcity", default-features = false }
 indiv-pallet-airdrop = { path = "pallets/airdrop", default-features = false }
 indiv-pallet-alias-accounts = { path = "pallets/alias-accounts", default-features = false }
 indiv-pallet-chunks-manager = { path = "pallets/chunks-manager", default-features = false }
@@ -431,7 +433,9 @@ members = [
 	"pallets/score",
 	"pallets/storage-initialization",
 	"pallets/value-transfer-auth",
+	"precompiles/nft-claims",
 	"precompiles/personhood",
+	"precompiles/scarcity",
 	"support",
 
 	"integration-tests/emulated/chains/parachains/assets/asset-hub-paseo",
