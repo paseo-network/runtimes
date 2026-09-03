@@ -78,16 +78,18 @@ use sp_version::RuntimeVersion;
 // must be sized for that cadence, and `asset-hub-paseo` — configured with the same
 // `SLOT_DURATION` and the same `elastic_scaling` parameters — already imports these two from
 // here. See the PR description.
-use system_parachains_constants::async_backing::{MAXIMUM_BLOCK_WEIGHT, NORMAL_DISPATCH_RATIO};
-use system_parachains_constants::paseo::{
-	consensus::{
-		elastic_scaling::{
-			BLOCK_PROCESSING_VELOCITY, RELAY_PARENT_OFFSET, UNINCLUDED_SEGMENT_CAPACITY,
+use system_parachains_constants::{
+	async_backing::{MAXIMUM_BLOCK_WEIGHT, NORMAL_DISPATCH_RATIO},
+	paseo::{
+		consensus::{
+			elastic_scaling::{
+				BLOCK_PROCESSING_VELOCITY, RELAY_PARENT_OFFSET, UNINCLUDED_SEGMENT_CAPACITY,
+			},
+			RELAY_CHAIN_SLOT_DURATION_MILLIS,
 		},
-		RELAY_CHAIN_SLOT_DURATION_MILLIS,
+		currency::*,
+		fee::WeightToFee as PasWeightToFee,
 	},
-	currency::*,
-	fee::WeightToFee as PasWeightToFee,
 };
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 use xcm::{
