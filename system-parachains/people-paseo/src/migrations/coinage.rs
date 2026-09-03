@@ -651,3 +651,265 @@ impl MigrateCoinageToInstances {
 		Ok(())
 	}
 }
+
+/// The 16 `pallet-members` storage items keyed by `Identifier`, all `Identity`-hashed.
+///
+/// `Identity` means the 32 identifier bytes appear verbatim in the key, so relocating a collection
+/// is a pure byte splice — `dest = item_prefix ++ new_id ++ tail` — with no value ever decoded.
+/// `IdentifiersOf` is deliberately absent: it is keyed by *owner*, not identifier, and is handled
+/// separately.
+const MEMBERS_ITEMS: [&str; 16] = [
+	"Collections",
+	"SuspendedCollections",
+	"Root",
+	"OldRoots",
+	"CurrentRingIndex",
+	"OnboardingSize",
+	"RingKeys",
+	"RingKeysStatus",
+	"PendingSuspensions",
+	"ActiveMembers",
+	"Members",
+	"RingsState",
+	"StaleRings",
+	"QueuePageIndices",
+	"OnboardingQueue",
+	"RingDeletionQueue",
+];
+
+/// Baseline identifier: `b"coinage/recycler" ++ [denomination] ++ [0u8; 15]`.
+fn legacy_recycler_identifier(denomination: i8) -> [u8; 32] {
+	let mut id = [0u8; 32];
+	id[0..16].copy_from_slice(&indiv_pallet_coinage::RECYCLER_COLLECTION_PREFIX);
+	id[16] = denomination as u8;
+	id
+}
+
+/// v0.3.1 identifier: the instance id is spliced in at `[16..20]` and the denomination moves to
+/// `[20]`. Even at instance 0 this differs from the baseline for every denomination but zero.
+fn instanced_recycler_identifier(denomination: i8) -> [u8; 32] {
+	let mut id = [0u8; 32];
+	id[0..16].copy_from_slice(&indiv_pallet_coinage::RECYCLER_COLLECTION_PREFIX);
+	id[16..20].copy_from_slice(&LEGACY_INSTANCE_ID.to_le_bytes());
+	id[20] = denomination as u8;
+	id
+}
+
+/// `twox128("Members") ++ twox128(item) ++ identifier`.
+fn members_item_prefix(item: &str, identifier: &[u8; 32]) -> alloc::vec::Vec<u8> {
+	let mut key = alloc::vec::Vec::with_capacity(64 + 32);
+	key.extend_from_slice(&sp_io::hashing::twox_128(b"Members"));
+	key.extend_from_slice(&sp_io::hashing::twox_128(item.as_bytes()));
+	key.extend_from_slice(identifier);
+	key
+}
+
+/// Where [`RelocateCoinageRecyclerCollections`] has got to.
+#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, Clone, PartialEq, Eq, Debug)]
+pub enum Relocation {
+	/// Splicing raw keys, item by item, denomination by denomination.
+	Keys {
+		/// Index into [`MEMBERS_ITEMS`].
+		item: u8,
+		/// The denomination being relocated.
+		denomination: i8,
+		/// The raw key last spliced, or `None` to start this prefix.
+		last: Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>>,
+	},
+	/// Rewriting each relocated collection's recorded owner.
+	Owners { denomination: i8 },
+	/// Re-pointing the owner index.
+	Index,
+}
+
+/// Unit C — relocate the 15 live recycler collections inside `pallet-members`.
+///
+/// v0.3.1 changed the identifier derivation from `id[16] = denomination` to
+/// `id[16..20] = instance_id; id[20] = denomination`, so every existing recycler ring sits at an
+/// address the new code never looks at. Unmigrated, loading or unloading recreates empty
+/// collections beside the old ones and the existing member rows are stranded.
+///
+/// `pallet-members` hashes `Identifier` with `Identity` in all 16 of the items below, so the
+/// identifier bytes appear verbatim in the key and relocation is a pure byte splice — no value is
+/// ever decoded, which is what makes this cheaper per row than unit B despite being larger.
+///
+/// The two things that are *not* prefix-movable are handled in their own phases: the owner
+/// recorded inside `CollectionInfo`, and `IdentifiersOf`, which is keyed by owner rather than by
+/// identifier.
+pub struct RelocateCoinageRecyclerCollections;
+
+impl SteppedMigration for RelocateCoinageRecyclerCollections {
+	type Cursor = Relocation;
+	type Identifier = MigrationId<32>;
+
+	fn id() -> Self::Identifier {
+		MigrationId {
+			pallet_id: *b"paseo-coinage-relocate-recycler-",
+			version_from: 0,
+			version_to: 1,
+		}
+	}
+
+	fn step(
+		cursor: Option<Self::Cursor>,
+		meter: &mut WeightMeter,
+	) -> Result<Option<Self::Cursor>, SteppedMigrationError> {
+		let required = per_entry_weight();
+		if meter.remaining().any_lt(required) {
+			return Err(SteppedMigrationError::InsufficientWeight { required });
+		}
+
+		let mut state =
+			cursor.unwrap_or(Relocation::Keys { item: 0, denomination: i8::MIN, last: None });
+
+		loop {
+			if meter.try_consume(required).is_err() {
+				return Ok(Some(state));
+			}
+
+			state = match state {
+				Relocation::Keys { item, denomination, last } =>
+					step_relocate_keys(item, denomination, last),
+				Relocation::Owners { denomination } => step_relocate_owner(denomination),
+				Relocation::Index =>
+					return {
+						relocate_identifier_index();
+						Ok(None)
+					},
+			};
+		}
+	}
+}
+
+/// Advance the (item, denomination) walk, wrapping denomination into the next item.
+fn advance(item: u8, denomination: i8) -> Relocation {
+	match denomination.checked_add(1) {
+		Some(next) => Relocation::Keys { item, denomination: next, last: None },
+		// Denominations exhausted for this item; move to the next one.
+		None => match item.checked_add(1) {
+			Some(next) if (next as usize) < MEMBERS_ITEMS.len() =>
+				Relocation::Keys { item: next, denomination: i8::MIN, last: None },
+			_ => Relocation::Owners { denomination: i8::MIN },
+		},
+	}
+}
+
+/// Splice one raw key from a collection's legacy prefix to its instanced prefix.
+fn step_relocate_keys(
+	item: u8,
+	denomination: i8,
+	last: Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>>,
+) -> Relocation {
+	let Some(name) = MEMBERS_ITEMS.get(item as usize) else {
+		return Relocation::Owners { denomination: i8::MIN };
+	};
+
+	// Only denominations this chain actually has a collection for. Derived from the double map
+	// unit A seeded, so it survives unit B dropping the legacy markers.
+	if !RecyclerCollectionCreated::<Runtime>::contains_key(LEGACY_INSTANCE_ID, denomination) {
+		return advance(item, denomination);
+	}
+
+	let src = members_item_prefix(name, &legacy_recycler_identifier(denomination));
+	let dst = members_item_prefix(name, &instanced_recycler_identifier(denomination));
+
+	let from = last.map(|k| k.to_vec()).unwrap_or_else(|| src.clone());
+	let Some(key) = sp_io::storage::next_key(&from) else {
+		return advance(item, denomination);
+	};
+	if !key.starts_with(&src) {
+		return advance(item, denomination);
+	}
+
+	// Pure splice: the identifier occupies a fixed 32-byte slot, so everything after the source
+	// prefix is the untouched remainder of the key.
+	let mut moved = dst;
+	moved.extend_from_slice(&key[src.len()..]);
+	if let Some(value) = sp_io::storage::get(&key) {
+		sp_io::storage::set(&moved, &value);
+		sp_io::storage::clear(&key);
+	}
+
+	match bound_key(key) {
+		Some(k) => Relocation::Keys { item, denomination, last: Some(k) },
+		None => advance(item, denomination),
+	}
+}
+
+/// Rewrite one relocated collection's recorded owner from the pallet account to the
+/// instance-scoped one, matching `Coinage::recycler_collection_owner(0)`.
+fn step_relocate_owner(denomination: i8) -> Relocation {
+	if !RecyclerCollectionCreated::<Runtime>::contains_key(LEGACY_INSTANCE_ID, denomination) {
+		return match denomination.checked_add(1) {
+			Some(next) => Relocation::Owners { denomination: next },
+			None => Relocation::Index,
+		};
+	}
+
+	let id = instanced_recycler_identifier(denomination);
+	indiv_pallet_members::Collections::<Runtime>::mutate(id, |maybe| {
+		if let Some(info) = maybe {
+			info.owner =
+				indiv_pallet_members::CollectionOwner::External(indiv_pallet_coinage::Pallet::<
+					Runtime,
+				>::recycler_collection_owner(
+					LEGACY_INSTANCE_ID
+				));
+		}
+	});
+
+	match denomination.checked_add(1) {
+		Some(next) => Relocation::Owners { denomination: next },
+		None => Relocation::Index,
+	}
+}
+
+/// Move the relocated identifiers from the pallet-account owner index to the instance-scoped one,
+/// leaving the paid-token collections — which did **not** move — where they are.
+///
+/// 🔴 This is the one place unit C can fail on a bound: both resulting lists are
+/// `BoundedVec<_, MaxCollections>`. Overflow is logged and the entry left untouched rather than
+/// panicking, because People freezes on a failed migration.
+fn relocate_identifier_index() {
+	use indiv_pallet_members::{CollectionOwner, IdentifiersOf};
+
+	let old_owner = CollectionOwner::External(xcm::v5::Location::new(
+		0,
+		[xcm::v5::Junction::PalletInstance(
+			<indiv_pallet_coinage::Pallet<Runtime> as frame_support::traits::PalletInfoAccess>::index() as u8,
+		)],
+	));
+	let new_owner = CollectionOwner::External(
+		indiv_pallet_coinage::Pallet::<Runtime>::recycler_collection_owner(LEGACY_INSTANCE_ID),
+	);
+
+	let relocated: alloc::vec::Vec<[u8; 32]> =
+		RecyclerCollectionCreated::<Runtime>::iter_key_prefix(LEGACY_INSTANCE_ID)
+			.map(instanced_recycler_identifier)
+			.collect();
+	let legacy: alloc::vec::Vec<[u8; 32]> =
+		RecyclerCollectionCreated::<Runtime>::iter_key_prefix(LEGACY_INSTANCE_ID)
+			.map(legacy_recycler_identifier)
+			.collect();
+
+	IdentifiersOf::<Runtime>::mutate(&old_owner, |maybe| {
+		if let Some(list) = maybe {
+			list.retain(|id| !legacy.contains(id));
+		}
+	});
+
+	IdentifiersOf::<Runtime>::mutate(&new_owner, |maybe| {
+		let list = maybe.get_or_insert_with(Default::default);
+		for id in &relocated {
+			if list.contains(id) {
+				continue;
+			}
+			if list.try_push(*id).is_err() {
+				log::error!(
+					target: "runtime::coinage-migration",
+					"IdentifiersOf overflow for the instanced owner; collection left unindexed",
+				);
+			}
+		}
+	});
+}
