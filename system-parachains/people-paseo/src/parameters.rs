@@ -26,14 +26,12 @@ use crate::{ExistentialDeposit, *};
 use frame_support::{
 	dynamic_params::{dynamic_pallet_params, dynamic_params},
 	traits::{ConstU32, EnsureOrigin, EnsureOriginWithArg},
-	PalletId,
 };
 use indiv_pallet_resources::types::LongTermStorageAllocation;
 use indiv_support::parameters::{
 	AtLeast, AtLeastOne, AtMost, BenchmarkMax, SaturatingSubOne, StatementAllowanceGetter,
 	StatementAllowanceParameter,
 };
-use sp_runtime::traits::AccountIdConversion;
 
 const SECONDS_PER_DAY: u32 = 24 * 60 * 60;
 
@@ -103,18 +101,6 @@ pub mod dynamic_params {
 		#[codec(index = 5)]
 		pub static LongTermStorageAllowanceForLitePeople: LongTermStorageAllocation =
 			LongTermStorageAllocation { transactions: 10, bytes: 4 * 1024 * 1024 };
-	}
-
-	/// People airdrop draw funding.
-	#[dynamic_pallet_params]
-	#[codec(index = 2)]
-	pub mod people_airdrops {
-		/// Account funding the prize allocation of scheduled draws. The airdrop pallet records
-		/// the source per draw at scheduling time, so an update only affects draws scheduled
-		/// after it; draws already scheduled refund to the account they were funded from.
-		#[codec(index = 0)]
-		pub static PrizeSource: sp_runtime::AccountId32 =
-			PalletId(*b"pop/pads").into_account_truncating();
 	}
 
 	/// Lite-person registration pricing.
@@ -216,9 +202,6 @@ pub type LongTermStorageAllowanceForLitePeople =
 /// pot account from existing.
 pub type LitePersonRegistrationFee =
 	AtLeast<dynamic_params::lite_personhood::RegistrationFee, ExistentialDeposit>;
-
-/// Any account is a valid prize source, so the value is read unclamped.
-pub type PeopleAirdropsPrizeSource = dynamic_params::people_airdrops::PrizeSource;
 
 /// The relay-chain Root origin and the Fellowship governance voice may update these parameters.
 pub struct DynamicParameterOrigin;
