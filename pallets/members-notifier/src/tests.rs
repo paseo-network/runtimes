@@ -20,19 +20,29 @@ use crate::{
 	mock::*,
 	pallet::{
 		CurrentBatch, LastReplayTime, PageState, PageUpdatesCount, PendingInit, PendingUpdates,
-		SealedBatchIndices, SealedBatchSequence, Subscribers, SubscribersWithCurrentBatch,
+		SealedBatchIndices, SealedBatchSequence, SubscribedCollections, Subscribers,
+		SubscribersWithCurrentBatch, SubscriptionWhitelist,
 	},
-	Error,
+	weights::WeightInfo,
+	Error, GenesisWhitelistEntry,
 };
 use alloc::vec::Vec;
 use cumulus_primitives_core::ParaId;
-use frame_support::{assert_noop, assert_ok, BoundedVec};
+use frame_support::{assert_noop, assert_ok, dispatch::GetDispatchInfo, traits::Hooks, BoundedVec};
 use indiv_support::traits::{Identifier, RingExponent};
 use sp_runtime::bounded_vec;
 
 // ============================================================================
 // Helpers
 // ============================================================================
+
+/// Asserts `do_try_state` fails with the given message.
+fn assert_try_state_error(expected: &'static str) {
+	match MembersNotifier::do_try_state() {
+		Err(sp_runtime::TryRuntimeError::Other(actual)) => assert_eq!(actual, expected),
+		other => panic!("expected try-state error {expected:?}, got {other:?}"),
+	}
+}
 
 /// Returns the current pending updates count for the write page.
 fn pending_updates_count() -> u32 {
@@ -92,6 +102,15 @@ fn finalize_subscriptions() {
 // ============================================================================
 // Tests
 // ============================================================================
+
+/// Verify that the default mock configuration passes all integrity checks,
+/// including the block-fit assertions for the OCW-submitted batch calls.
+#[test]
+fn integrity_test_passes() {
+	new_test_ext().execute_with(|| {
+		<crate::Pallet<Test> as Hooks<u64>>::integrity_test();
+	});
+}
 
 mod enqueue_updates {
 	use super::*;
@@ -190,7 +209,6 @@ mod enqueue_updates {
 			finalize_subscriptions();
 
 			TestCollection::people().add_pending_update(0, 1).add_pending_update(1, 1);
-			TestCollection::people_lite().add_pending_update(0, 1);
 
 			assert_ok!(do_enqueue_updates());
 
@@ -202,10 +220,62 @@ mod enqueue_updates {
 			let people_indices = SealedBatchIndices::<Test>::get(PEOPLE_IDENTIFIER);
 			assert!(people_indices.is_some());
 			assert_eq!(people_indices.unwrap().len(), 2);
+		});
+	}
 
-			let lite_indices = SealedBatchIndices::<Test>::get(PEOPLE_LITE_IDENTIFIER);
-			assert!(lite_indices.is_some());
-			assert_eq!(lite_indices.unwrap().len(), 1);
+	#[test]
+	fn seals_only_subscribed_collections() {
+		new_test_ext().execute_with(|| {
+			// Only `people` subscribed; `people_lite` has no subscriber.
+			TestSubscriber::new(1000).subscribe_to(&[PEOPLE_IDENTIFIER]);
+			finalize_subscriptions();
+
+			// Recorded directly, as `on_ring_root_change` would not record the unsubscribed
+			// collection at all.
+			TestCollection::people().add_pending_update(0, 1);
+			TestCollection::people_lite().add_pending_update(0, 1);
+
+			assert_ok!(do_enqueue_updates());
+
+			assert!(SealedBatchIndices::<Test>::get(PEOPLE_IDENTIFIER).is_some());
+			assert!(SealedBatchIndices::<Test>::get(PEOPLE_LITE_IDENTIFIER).is_none());
+		});
+	}
+
+	#[test]
+	fn drains_page_without_sealing_when_nothing_subscribed() {
+		new_test_ext().execute_with(|| {
+			TestSubscriber::new(1000).subscribe_to(&[PEOPLE_IDENTIFIER]);
+			finalize_subscriptions();
+
+			let seq_before = SealedBatchSequence::<Test>::get();
+			let send_page_before = PageState::<Test>::get().send_page;
+
+			TestCollection::people_lite().add_pending_update(0, 1).add_pending_update(1, 1);
+
+			let post = do_enqueue_updates().expect("drain succeeds");
+
+			assert_eq!(SealedBatchSequence::<Test>::get(), seq_before);
+			assert!(CurrentBatch::<Test>::get().is_none());
+			assert!(SealedBatchIndices::<Test>::get(PEOPLE_LITE_IDENTIFIER).is_none());
+
+			// Send buffer drained and the page advanced, so the next cycle makes progress.
+			let page_state = PageState::<Test>::get();
+			assert_eq!(page_state.send_page, send_page_before.wrapping_add(1));
+			assert!(page_state.send_page <= page_state.write_page);
+			assert_eq!(PageUpdatesCount::<Test>::get(send_page_before), 0);
+			assert_eq!(PendingUpdates::<Test>::iter_prefix((send_page_before,)).count(), 0);
+
+			// Charged for the two entries actually drained, and below the worst case.
+			assert_eq!(
+				post.actual_weight,
+				Some(<Test as crate::Config>::WeightInfo::enqueue_updates(2))
+			);
+			assert!(post.actual_weight.unwrap().all_lt(
+				crate::Call::<Test>::enqueue_updates { send_page: 0, discriminator: 0 }
+					.get_dispatch_info()
+					.call_weight
+			));
 		});
 	}
 
@@ -343,6 +413,7 @@ mod send_batch {
 			));
 			assert!(CurrentBatch::<Test>::get().is_none(), "batch cleared");
 			assert!(SealedBatchIndices::<Test>::get(PEOPLE_IDENTIFIER).is_none());
+			assert_eq!(SubscribersWithCurrentBatch::<Test>::iter().count(), 0);
 		});
 	}
 
@@ -727,10 +798,11 @@ mod offchain_worker {
 				MembersNotifier::authorize_enqueue_updates(TransactionSource::Local, &send_page)
 					.expect("authorizes with pending work");
 
-			// Priority tracks block height so a later retry strictly outbids an earlier,
-			// possibly-stranded enqueue for the same page.
-			assert_eq!(early.priority, 7);
-			assert_eq!(late.priority, 20);
+			// Priority stays in the background-progress tier and tracks block height so a
+			// later retry strictly outbids an earlier, possibly-stranded enqueue for the
+			// same page.
+			assert_eq!(early.priority, indiv_support::tx_priority::BACKGROUND_PROGRESS + 7);
+			assert_eq!(late.priority, indiv_support::tx_priority::BACKGROUND_PROGRESS + 20);
 			assert!(late.priority > early.priority);
 
 			// Longevity is finite so a stranded retry self-evicts from the pool.
@@ -796,8 +868,9 @@ mod offchain_worker {
 				assert!(!validity.propagate);
 				// Longevity is finite so stranded retries self-evict from the pool.
 				assert_eq!(validity.longevity, crate::TX_LONGEVITY);
-				// Priority tracks block height for pool replacement across retry windows.
-				assert!(validity.priority > 0);
+				// Priority tracks block height within the background-progress tier for pool
+				// replacement across retry windows.
+				assert!(validity.priority >= indiv_support::tx_priority::BACKGROUND_PROGRESS);
 			}
 		});
 	}
@@ -872,6 +945,86 @@ mod stuck_batch_timeout {
 			assert_ok!(MembersNotifier::abandon_stuck_batch(authorized_origin(), 0));
 			assert!(CurrentBatch::<Test>::get().is_none(), "batch should be abandoned");
 			Events::batch_abandoned().assert_count(1);
+		});
+	}
+}
+
+mod clear_batch {
+	use super::*;
+
+	fn collection(i: u8) -> Identifier {
+		[i; 32]
+	}
+
+	#[test]
+	fn sealed_batch_never_exceeds_page_bound() {
+		new_test_ext().execute_with(|| {
+			let max = MaxUpdatesPerBatch::get() as u8;
+			let per_subscriber = MaxCollectionsPerSubscriber::get() as u8;
+
+			// Every collection a full page could carry, spread over enough subscribers.
+			let mut para = 1000u32;
+			for start in (0..max).step_by(per_subscriber as usize) {
+				let end = start.saturating_add(per_subscriber).min(max);
+				let collections = (start..end).map(collection).collect::<Vec<_>>();
+				TestSubscriber::new(para).subscribe_to(&collections);
+				para = para.saturating_add(1000);
+			}
+			finalize_subscriptions();
+
+			// Page filled to its cap, one update per collection.
+			for i in 0..max {
+				TestCollection(collection(i)).add_pending_update(0, 1);
+			}
+			assert_eq!(pending_updates_count(), MaxUpdatesPerBatch::get());
+
+			assert_ok!(do_enqueue_updates());
+
+			// One sealed entry per collection, which is exactly the page bound.
+			assert_eq!(
+				SealedBatchIndices::<Test>::iter().count() as u32,
+				MaxUpdatesPerBatch::get()
+			);
+
+			assert_ok!(MembersNotifier::abandon_stuck_batch(authorized_origin(), 0));
+			assert_eq!(SealedBatchIndices::<Test>::iter().count(), 0);
+			assert_eq!(SubscribersWithCurrentBatch::<Test>::iter().count(), 0);
+		});
+	}
+
+	#[test]
+	fn clear_strands_entries_beyond_the_page_bound() {
+		let mut ext = new_test_ext();
+
+		ext.execute_with(|| {
+			TestSubscriber::new(1000).subscribe_to(&[PEOPLE_IDENTIFIER]);
+			finalize_subscriptions();
+
+			TestCollection::people().add_pending_update(0, 1);
+			assert_ok!(do_enqueue_updates());
+			assert_eq!(SealedBatchIndices::<Test>::iter().count(), 1);
+
+			// One entry past what a page could ever seal.
+			let indices: BoundedVec<u32, MaxUpdatesPerBatch> = bounded_vec![0u32];
+			for i in 0..MaxUpdatesPerBatch::get() {
+				SealedBatchIndices::<Test>::insert(
+					collection(100u8.saturating_add(i as u8)),
+					indices.clone(),
+				);
+			}
+			assert_eq!(
+				SealedBatchIndices::<Test>::iter().count() as u32,
+				MaxUpdatesPerBatch::get() + 1
+			);
+		});
+
+		ext.commit_all().expect("overlay commits");
+
+		ext.execute_with(|| {
+			assert_ok!(MembersNotifier::abandon_stuck_batch(authorized_origin(), 0));
+
+			// Cleared up to the limit, with the excess stranded rather than ignored.
+			assert_eq!(SealedBatchIndices::<Test>::iter().count(), 1);
 		});
 	}
 }
@@ -1027,6 +1180,228 @@ mod subscription {
 				Error::<Test>::AlreadySubscribed
 			);
 		});
+	}
+}
+
+mod whitelisted_subscription {
+	use super::*;
+	use sp_runtime::transaction_validity::{InvalidTransaction, TransactionSource};
+
+	/// Genesis whitelist with a single parachain 1000 subscribing to PEOPLE at exponent 9.
+	fn genesis_whitelist() -> Vec<GenesisWhitelistEntry> {
+		alloc::vec![GenesisWhitelistEntry {
+			para_id: ParaId::from(1000),
+			collections: alloc::vec![(PEOPLE_IDENTIFIER, RingExponent::R2e9.exponent())],
+			pallet_index: TEST_PALLET_INDEX,
+		}]
+	}
+
+	#[test]
+	fn genesis_seeds_the_whitelist() {
+		new_test_ext_with_whitelist(genesis_whitelist()).execute_with(|| {
+			let entry = SubscriptionWhitelist::<Test>::get(ParaId::from(1000))
+				.expect("parachain 1000 is whitelisted at genesis");
+
+			assert_eq!(
+				entry.collections.to_vec(),
+				alloc::vec![(PEOPLE_IDENTIFIER, RingExponent::R2e9)]
+			);
+			assert_eq!(entry.pallet_index, TEST_PALLET_INDEX);
+			assert!(!subscriber_exists(1000));
+		});
+	}
+
+	#[test]
+	fn anyone_can_subscribe_a_whitelisted_parachain() {
+		new_test_ext_with_whitelist(genesis_whitelist()).execute_with(|| {
+			assert_ok!(MembersNotifier::subscribe_whitelisted(
+				authorized_origin(),
+				ParaId::from(1000)
+			));
+
+			assert!(subscriber_exists(1000));
+			Events::subscribed().assert_count(1).assert_emitted_for(1000);
+
+			// Collections and pallet index come from the whitelist, not from the caller.
+			let info = Subscribers::<Test>::get(ParaId::from(1000)).expect("subscriber registered");
+			assert_eq!(
+				info.collections.to_vec(),
+				alloc::vec![(PEOPLE_IDENTIFIER, RingExponent::R2e9)]
+			);
+			assert_eq!(info.pallet_index, TEST_PALLET_INDEX);
+
+			// The entry is consumed.
+			assert!(!SubscriptionWhitelist::<Test>::contains_key(ParaId::from(1000)));
+		});
+	}
+
+	#[test]
+	fn subscribe_whitelisted_fails_for_a_parachain_that_is_not_whitelisted() {
+		new_test_ext_with_whitelist(genesis_whitelist()).execute_with(|| {
+			assert_noop!(
+				MembersNotifier::subscribe_whitelisted(authorized_origin(), ParaId::from(2000)),
+				Error::<Test>::NotWhitelisted
+			);
+			assert!(!subscriber_exists(2000));
+		});
+	}
+
+	#[test]
+	fn authorization_rejects_a_parachain_that_is_not_whitelisted() {
+		new_test_ext_with_whitelist(genesis_whitelist()).execute_with(|| {
+			assert_eq!(
+				MembersNotifier::authorize_subscribe_whitelisted(
+					TransactionSource::External,
+					&ParaId::from(2000)
+				),
+				Err(InvalidTransaction::Custom(crate::CustomInvalidity::NotWhitelisted as u8)
+					.into())
+			);
+		});
+	}
+
+	#[test]
+	fn authorization_rejects_a_parachain_that_is_already_subscribed() {
+		new_test_ext_with_whitelist(genesis_whitelist()).execute_with(|| {
+			// Subscribing consumes the entry, so it is read first and put back after.
+			let entry = SubscriptionWhitelist::<Test>::get(ParaId::from(1000))
+				.expect("parachain 1000 is whitelisted at genesis");
+			TestSubscriber::new(1000).subscribe_to(&[PEOPLE_IDENTIFIER]);
+			SubscriptionWhitelist::<Test>::insert(ParaId::from(1000), entry);
+
+			assert_eq!(
+				MembersNotifier::authorize_subscribe_whitelisted(
+					TransactionSource::External,
+					&ParaId::from(1000)
+				),
+				Err(InvalidTransaction::Custom(crate::CustomInvalidity::AlreadySubscribed as u8)
+					.into())
+			);
+		});
+	}
+
+	#[test]
+	fn authorization_rejects_a_whitelisted_parachain_when_the_subscriber_list_is_full() {
+		new_test_ext_with_whitelist(genesis_whitelist()).execute_with(|| {
+			for i in 0..MaxSubscribers::get() {
+				TestSubscriber::new(2000 + i).subscribe_to(&[PEOPLE_IDENTIFIER]);
+			}
+
+			assert_eq!(
+				MembersNotifier::authorize_subscribe_whitelisted(
+					TransactionSource::External,
+					&ParaId::from(1000)
+				),
+				Err(InvalidTransaction::Custom(crate::CustomInvalidity::TooManySubscribers as u8)
+					.into())
+			);
+		});
+	}
+
+	#[test]
+	fn subscribe_whitelisted_is_one_shot_across_unsubscribe() {
+		new_test_ext_with_whitelist(genesis_whitelist()).execute_with(|| {
+			assert_ok!(MembersNotifier::subscribe_whitelisted(
+				authorized_origin(),
+				ParaId::from(1000)
+			));
+
+			assert_ok!(MembersNotifier::unsubscribe(
+				RuntimeOrigin::signed(GOVERNANCE_ACCOUNT),
+				Some(ParaId::from(1000))
+			));
+			assert!(!subscriber_exists(1000));
+
+			assert_noop!(
+				MembersNotifier::subscribe_whitelisted(authorized_origin(), ParaId::from(1000)),
+				Error::<Test>::NotWhitelisted
+			);
+			assert!(!subscriber_exists(1000));
+		});
+	}
+
+	#[test]
+	fn governance_subscribe_also_consumes_the_whitelist_entry() {
+		new_test_ext_with_whitelist(genesis_whitelist()).execute_with(|| {
+			TestSubscriber::new(1000).subscribe_to(&[PEOPLE_IDENTIFIER]);
+			assert!(!SubscriptionWhitelist::<Test>::contains_key(ParaId::from(1000)));
+
+			assert_ok!(MembersNotifier::unsubscribe(
+				RuntimeOrigin::signed(GOVERNANCE_ACCOUNT),
+				Some(ParaId::from(1000))
+			));
+
+			assert_noop!(
+				MembersNotifier::subscribe_whitelisted(authorized_origin(), ParaId::from(1000)),
+				Error::<Test>::NotWhitelisted
+			);
+		});
+	}
+
+	#[test]
+	fn subscribe_whitelisted_keeps_the_entry_when_the_subscriber_list_is_full() {
+		new_test_ext_with_whitelist(genesis_whitelist()).execute_with(|| {
+			for i in 0..MaxSubscribers::get() {
+				TestSubscriber::new(2000 + i).subscribe_to(&[PEOPLE_IDENTIFIER]);
+			}
+
+			assert_noop!(
+				MembersNotifier::subscribe_whitelisted(authorized_origin(), ParaId::from(1000)),
+				Error::<Test>::TooManySubscribers
+			);
+
+			assert!(SubscriptionWhitelist::<Test>::contains_key(ParaId::from(1000)));
+		});
+	}
+
+	#[test]
+	#[should_panic(expected = "must be sorted by identifier")]
+	fn genesis_rejects_unordered_collections() {
+		new_test_ext_with_whitelist(alloc::vec![GenesisWhitelistEntry {
+			para_id: ParaId::from(1000),
+			collections: alloc::vec![
+				(PEOPLE_LITE_IDENTIFIER, RingExponent::R2e9.exponent()),
+				(PEOPLE_IDENTIFIER, RingExponent::R2e9.exponent()),
+			],
+			pallet_index: TEST_PALLET_INDEX,
+		}]);
+	}
+
+	#[test]
+	#[should_panic(expected = "must be without duplicates")]
+	fn genesis_rejects_duplicate_collections() {
+		new_test_ext_with_whitelist(alloc::vec![GenesisWhitelistEntry {
+			para_id: ParaId::from(1000),
+			collections: alloc::vec![
+				(PEOPLE_LITE_IDENTIFIER, RingExponent::R2e9.exponent()),
+				(PEOPLE_LITE_IDENTIFIER, RingExponent::R2e9.exponent()),
+			],
+			pallet_index: TEST_PALLET_INDEX,
+		}]);
+	}
+
+	#[test]
+	#[should_panic(expected = "invalid ring exponent")]
+	fn genesis_rejects_an_unsupported_ring_exponent() {
+		new_test_ext_with_whitelist(alloc::vec![GenesisWhitelistEntry {
+			para_id: ParaId::from(1000),
+			collections: alloc::vec![(PEOPLE_IDENTIFIER, 11)],
+			pallet_index: TEST_PALLET_INDEX,
+		}]);
+	}
+
+	#[test]
+	#[should_panic(expected = "more parachains than MaxSubscribers")]
+	fn genesis_rejects_more_parachains_than_max_subscribers() {
+		let whitelist = (0..=MaxSubscribers::get())
+			.map(|i| GenesisWhitelistEntry {
+				para_id: ParaId::from(1000 + i),
+				collections: alloc::vec![(PEOPLE_IDENTIFIER, RingExponent::R2e9.exponent())],
+				pallet_index: TEST_PALLET_INDEX,
+			})
+			.collect::<Vec<_>>();
+
+		new_test_ext_with_whitelist(whitelist);
 	}
 }
 
@@ -1431,6 +1806,40 @@ mod request_replay {
 	}
 }
 
+mod subscribed_collections {
+	use super::*;
+
+	#[test]
+	fn try_state_accepts_a_rebuilt_set() {
+		new_test_ext().execute_with(|| {
+			TestSubscriber::new(1000).subscribe_to(&[PEOPLE_IDENTIFIER, PEOPLE_LITE_IDENTIFIER]);
+			TestSubscriber::new(2000).subscribe_to(&[PEOPLE_LITE_IDENTIFIER]);
+
+			assert_ok!(MembersNotifier::do_try_state());
+		});
+	}
+
+	#[test]
+	fn try_state_rejects_subscribed_collection_missing_from_set() {
+		new_test_ext().execute_with(|| {
+			TestSubscriber::new(1000).subscribe_to(&[PEOPLE_IDENTIFIER]);
+			SubscribedCollections::<Test>::remove(PEOPLE_IDENTIFIER);
+
+			assert_try_state_error("subscribed collection missing from SubscribedCollections");
+		});
+	}
+
+	#[test]
+	fn try_state_rejects_set_entry_without_subscriber() {
+		new_test_ext().execute_with(|| {
+			TestSubscriber::new(1000).subscribe_to(&[PEOPLE_IDENTIFIER]);
+			SubscribedCollections::<Test>::insert(PEOPLE_LITE_IDENTIFIER, ());
+
+			assert_try_state_error("SubscribedCollections entry has no subscriber");
+		});
+	}
+}
+
 mod on_ring_root_change {
 	use super::*;
 	use indiv_support::traits::{OnRingRootChange, RingRootOp};
@@ -1438,6 +1847,7 @@ mod on_ring_root_change {
 	#[test]
 	fn adds_update_to_pending_updates() {
 		new_test_ext().execute_with(|| {
+			TestSubscriber::new(1000).subscribe_to(&[PEOPLE_IDENTIFIER]);
 			assert_eq!(pending_updates_count(), 0);
 
 			<MembersNotifier as OnRingRootChange<_>>::on_ring_root_change(
@@ -1458,6 +1868,7 @@ mod on_ring_root_change {
 	#[test]
 	fn deduplicates_same_ring_index_and_collection() {
 		new_test_ext().execute_with(|| {
+			TestSubscriber::new(1000).subscribe_to(&[PEOPLE_IDENTIFIER]);
 			<MembersNotifier as OnRingRootChange<_>>::on_ring_root_change(
 				PEOPLE_IDENTIFIER,
 				5,
@@ -1477,6 +1888,7 @@ mod on_ring_root_change {
 	#[test]
 	fn keeps_different_ring_indices_separate() {
 		new_test_ext().execute_with(|| {
+			TestSubscriber::new(1000).subscribe_to(&[PEOPLE_IDENTIFIER]);
 			<MembersNotifier as OnRingRootChange<_>>::on_ring_root_change(
 				PEOPLE_IDENTIFIER,
 				5,
@@ -1495,6 +1907,7 @@ mod on_ring_root_change {
 	#[test]
 	fn spills_to_next_page_when_current_full() {
 		new_test_ext().execute_with(|| {
+			TestSubscriber::new(1000).subscribe_to(&[PEOPLE_IDENTIFIER]);
 			for i in 0..MaxUpdatesPerBatch::get() {
 				<MembersNotifier as OnRingRootChange<_>>::on_ring_root_change(
 					PEOPLE_IDENTIFIER,
@@ -1512,6 +1925,201 @@ mod on_ring_root_change {
 			);
 			assert_eq!(PageState::<Test>::get().write_page, 1);
 			assert_eq!(PageUpdatesCount::<Test>::get(1), 1);
+		});
+	}
+
+	/// Drives the hook for a collection nobody subscribed to.
+	fn change_people_lite_root() {
+		<MembersNotifier as OnRingRootChange<_>>::on_ring_root_change(
+			PEOPLE_LITE_IDENTIFIER,
+			5,
+			RingRootOp::Built { revision: 1, root: &Default::default() },
+		);
+	}
+
+	#[test]
+	fn records_nothing_for_unsubscribed_collection() {
+		new_test_ext().execute_with(|| {
+			// Subscriber present, but for a different collection.
+			TestSubscriber::new(1000).subscribe_to(&[PEOPLE_IDENTIFIER]);
+
+			change_people_lite_root();
+
+			assert!(!PendingUpdates::<Test>::contains_key((
+				PageState::<Test>::get().write_page,
+				PEOPLE_LITE_IDENTIFIER,
+				5
+			)));
+			assert_eq!(pending_updates_count(), 0);
+		});
+	}
+
+	#[test]
+	fn records_once_collection_is_subscribed() {
+		new_test_ext().execute_with(|| {
+			// Not subscribed, so nothing is recorded.
+			change_people_lite_root();
+			assert_eq!(pending_updates_count(), 0);
+
+			TestSubscriber::new(1000).subscribe_to(&[PEOPLE_LITE_IDENTIFIER]);
+
+			change_people_lite_root();
+			assert_eq!(pending_updates_count(), 1);
+		});
+	}
+
+	#[test]
+	fn stops_recording_after_last_subscriber_leaves() {
+		new_test_ext().execute_with(|| {
+			TestSubscriber::new(1000).subscribe_to(&[PEOPLE_LITE_IDENTIFIER]);
+			change_people_lite_root();
+			assert_eq!(pending_updates_count(), 1);
+
+			assert_ok!(MembersNotifier::unsubscribe(
+				RuntimeOrigin::signed(GOVERNANCE_ACCOUNT),
+				Some(ParaId::from(1000))
+			));
+			let _ = PendingUpdates::<Test>::clear(u32::MAX, None);
+			let _ = PageUpdatesCount::<Test>::clear(u32::MAX, None);
+
+			change_people_lite_root();
+			assert_eq!(pending_updates_count(), 0);
+		});
+	}
+
+	#[test]
+	fn keeps_recording_while_another_subscriber_holds_collection() {
+		new_test_ext().execute_with(|| {
+			TestSubscriber::new(1000).subscribe_to(&[PEOPLE_LITE_IDENTIFIER]);
+			TestSubscriber::new(2000).subscribe_to(&[PEOPLE_LITE_IDENTIFIER]);
+
+			assert_ok!(MembersNotifier::unsubscribe(
+				RuntimeOrigin::signed(GOVERNANCE_ACCOUNT),
+				Some(ParaId::from(1000))
+			));
+			let _ = PendingUpdates::<Test>::clear(u32::MAX, None);
+			let _ = PageUpdatesCount::<Test>::clear(u32::MAX, None);
+
+			change_people_lite_root();
+			assert_eq!(pending_updates_count(), 1);
+		});
+	}
+}
+
+mod migration {
+	use super::*;
+	use crate::migration::SeedSubscriptionWhitelist;
+	use core::cell::RefCell;
+	use frame_support::traits::{Get, OnRuntimeUpgrade};
+
+	std::thread_local! {
+		static MIGRATION_ENTRIES: RefCell<Vec<GenesisWhitelistEntry>> =
+			const { RefCell::new(Vec::new()) };
+	}
+
+	pub struct MigrationEntries;
+	impl Get<Vec<GenesisWhitelistEntry>> for MigrationEntries {
+		fn get() -> Vec<GenesisWhitelistEntry> {
+			MIGRATION_ENTRIES.with(|entries| entries.borrow().clone())
+		}
+	}
+
+	fn set_migration_entries(entries: Vec<GenesisWhitelistEntry>) {
+		MIGRATION_ENTRIES.with(|slot| *slot.borrow_mut() = entries);
+	}
+
+	type Migration = SeedSubscriptionWhitelist<Test, MigrationEntries>;
+
+	fn entry(para_id: u32, collections: Vec<(Identifier, u8)>) -> GenesisWhitelistEntry {
+		GenesisWhitelistEntry {
+			para_id: ParaId::from(para_id),
+			collections,
+			pallet_index: TEST_PALLET_INDEX,
+		}
+	}
+
+	fn people_entry(para_id: u32) -> GenesisWhitelistEntry {
+		entry(para_id, alloc::vec![(PEOPLE_IDENTIFIER, RingExponent::R2e9.exponent())])
+	}
+
+	#[test]
+	fn seeds_the_whitelist_on_a_chain_that_launched_without_it() {
+		new_test_ext().execute_with(|| {
+			set_migration_entries(alloc::vec![people_entry(1000), people_entry(2000)]);
+			assert!(!SubscriptionWhitelist::<Test>::contains_key(ParaId::from(1000)));
+
+			Migration::on_runtime_upgrade();
+
+			for para_id in [1000, 2000] {
+				let stored = SubscriptionWhitelist::<Test>::get(ParaId::from(para_id))
+					.expect("migration whitelists the parachain");
+				assert_eq!(
+					stored.collections.to_vec(),
+					alloc::vec![(PEOPLE_IDENTIFIER, RingExponent::R2e9)]
+				);
+				assert_eq!(stored.pallet_index, TEST_PALLET_INDEX);
+			}
+		});
+	}
+
+	#[test]
+	fn seeded_entry_is_then_activatable_and_still_one_shot() {
+		new_test_ext().execute_with(|| {
+			set_migration_entries(alloc::vec![people_entry(1000)]);
+			Migration::on_runtime_upgrade();
+
+			assert_ok!(MembersNotifier::subscribe_whitelisted(
+				authorized_origin(),
+				ParaId::from(1000)
+			));
+			assert!(subscriber_exists(1000));
+
+			assert_ok!(MembersNotifier::unsubscribe(
+				RuntimeOrigin::signed(GOVERNANCE_ACCOUNT),
+				Some(ParaId::from(1000))
+			));
+			assert_noop!(
+				MembersNotifier::subscribe_whitelisted(authorized_origin(), ParaId::from(1000)),
+				Error::<Test>::NotWhitelisted
+			);
+		});
+	}
+
+	#[test]
+	fn skips_malformed_entries_without_panicking() {
+		new_test_ext().execute_with(|| {
+			set_migration_entries(alloc::vec![
+				// Unsorted.
+				entry(
+					1000,
+					alloc::vec![
+						(PEOPLE_LITE_IDENTIFIER, RingExponent::R2e9.exponent()),
+						(PEOPLE_IDENTIFIER, RingExponent::R2e9.exponent()),
+					]
+				),
+				// Duplicate identifiers.
+				entry(
+					2000,
+					alloc::vec![
+						(PEOPLE_IDENTIFIER, RingExponent::R2e9.exponent()),
+						(PEOPLE_IDENTIFIER, RingExponent::R2e9.exponent()),
+					]
+				),
+				// Unsupported ring exponent.
+				entry(3000, alloc::vec![(PEOPLE_IDENTIFIER, 11)]),
+				// Valid, and must still be applied despite the bad entries before it.
+				people_entry(4000),
+			]);
+
+			Migration::on_runtime_upgrade();
+
+			for para_id in [1000, 2000, 3000] {
+				assert!(
+					!SubscriptionWhitelist::<Test>::contains_key(ParaId::from(para_id)),
+					"malformed entry {para_id} must be skipped",
+				);
+			}
+			assert!(SubscriptionWhitelist::<Test>::contains_key(ParaId::from(4000)));
 		});
 	}
 }

@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![allow(clippy::unit_arg)] // TODO: Perhaps fix the need for this.
+#![allow(clippy::unit_arg)] // TODO(paritytech/individuality#1121): perhaps fix the need for this.
 
 // To simplify tests AccountId == PersonalId and account_id == personal_id for any given account_id
 
@@ -471,7 +471,8 @@ fn submit_evidence_works() {
 		));
 		assert_eq!(AllocationCount::<Test>::get(), initial_alloc_count);
 
-		// Test probable acceptable path (needs better judge_statement mock) - TODO
+		// TODO(paritytech/individuality#1121): test probable acceptable path (needs better
+		// judge_statement mock)
 
 		// Candidate can't call submit_evidence when they've already started
 		advance_by(1);
@@ -682,9 +683,11 @@ fn judged_happy_path_works() {
 				},
 				None => {
 					if *bannable {
-						// Check ticket was burnt (needs better consideration mock) - TODO
+						// TODO(paritytech/individuality#1121): check ticket was burnt (needs better
+						// consideration mock)
 					} else {
-						// Check ticket was dropped (needs better consideration mock) - TODO
+						// TODO(paritytech/individuality#1121): check ticket was dropped (needs
+						// better consideration mock)
 					}
 				},
 			}
@@ -997,8 +1000,8 @@ fn commit_works() {
 			Some(Candidate::Selected { allocation, .. })
 			if allocation == Allocation::Full
 		));
-		// Assert that correct storage has been allocated when it's implemented - TODO
-		// e.g.:
+		// TODO(paritytech/individuality#1121): assert that correct storage has been allocated when
+		// it's implemented e.g.:
 		// assert_eq!(DataStore::<Test>::check_storage(CANDIDATE),
 		// 	(config.full_alloc_len, config.full_alloc_count)
 		// );
@@ -1022,8 +1025,8 @@ fn commit_works() {
 			Some(Candidate::Selected { allocation, .. })
 			if allocation == Allocation::Initial
 		));
-		// Assert that correct storage has been allocated when it's implemented - TODO
-		// e.g.:
+		// TODO(paritytech/individuality#1121): assert that correct storage has been allocated when
+		// it's implemented e.g.:
 		// assert_eq!(DataStore::<Test>::check_storage(INITIAL_CANDIDATE),
 		// 	(config.init_alloc_len, config.init_alloc_count)
 		// );
@@ -1083,8 +1086,8 @@ fn commit_works() {
 			Some(Candidate::Selected { allocation, .. })
 			if allocation == Allocation::Initial
 		));
-		// Assert that correct storage has been allocated when it's implemented - TODO
-		// e.g.:
+		// TODO(paritytech/individuality#1121): assert that correct storage has been allocated when
+		// it's implemented e.g.:
 		// assert_eq!(DataStore::<Test>::check_storage(CANDIDATE),
 		// 	(config.full_alloc_len, config.full_alloc_count)
 		// );
@@ -1203,7 +1206,7 @@ fn timeout_works() {
 		System::assert_last_event(Event::TimedOut { account_id: CANDIDATE }.into());
 		assert_eq!(Candidates::<Test>::get(CANDIDATE), None);
 
-		// Check ticket was burnt (needs consideration mock) - TODO
+		// TODO(paritytech/individuality#1121): check ticket was burnt (needs consideration mock)
 
 		// Ensure referred applied candidate can be timed out
 		advance_by(1);
@@ -1266,7 +1269,7 @@ fn flakeout_works() {
 		assert_ok!(PoI::flakeout(RuntimeOrigin::signed(CANDIDATE)));
 		System::assert_last_event(Event::FlakedOut { account_id: CANDIDATE }.into());
 		assert_eq!(Candidates::<Test>::get(CANDIDATE), None);
-		// Check ticket was dropped (needs consideration mock) - TODO
+		// TODO(paritytech/individuality#1121): check ticket was dropped (needs consideration mock)
 
 		// Path for a referred candidate
 		advance_by(1);

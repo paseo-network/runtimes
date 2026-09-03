@@ -20,12 +20,11 @@ use crate::{
 	testing_utils::{constants, helpers},
 	*,
 };
-use frame_support::{assert_ok, traits::UnixTime};
+use frame_support::{
+	assert_ok, dispatch::GetDispatchInfo, pallet_prelude::Authorize, traits::UnixTime,
+	weights::Weight,
+};
 use sp_core::Get;
-// TODO: remove once mob-rule migrates to `#[pallet::authorize]` (deadline April 2027).
-// See https://github.com/paritytech/polkadot-sdk/issues/2415.
-#[allow(deprecated)]
-use sp_runtime::traits::ValidateUnsigned;
 use std::time::Duration;
 
 pub const VOTER_VALID: AccountId = 1;
@@ -36,6 +35,17 @@ const VOTER_VALID_3: AccountId = 3;
 const VOTER_VALID_4: AccountId = 3;
 
 const MOCK_ACCOUNT_ID1: AccountId = 11;
+
+fn authorized_origin() -> RuntimeOrigin {
+	frame_system::RawOrigin::Authorized.into()
+}
+
+/// Computes the exact weight of a ripe case's callback, i.e. the `max_callback_weight` value
+/// that `authorize_close_case` accepts for `close_case`.
+fn ripe_case_callback_weight(case_index: CaseIndex) -> Weight {
+	let case = RipeCases::<Test>::get(case_index).unwrap();
+	MobRule::callback_weight(case_index, &case.details.callback, case.details.context, case.verdict)
+}
 
 mod voting {
 	use super::*;
@@ -162,7 +172,7 @@ mod voting {
 mod case_lifecycle {
 	use super::*;
 	use core::time::Duration;
-	use frame_support::assert_noop;
+	use frame_support::{assert_noop, dispatch::Pays};
 	use indiv_support::traits::Truth;
 
 	#[test]
@@ -211,7 +221,7 @@ mod case_lifecycle {
 			));
 
 			assert_noop!(
-				MobRule::force_ripen_case(RuntimeOrigin::none(), case_index),
+				MobRule::force_ripen_case(authorized_origin(), case_index),
 				Error::<Test>::Recent
 			);
 
@@ -220,14 +230,14 @@ mod case_lifecycle {
 
 			// Still early.
 			assert_noop!(
-				MobRule::force_ripen_case(RuntimeOrigin::none(), case_index),
+				MobRule::force_ripen_case(authorized_origin(), case_index),
 				Error::<Test>::Recent
 			);
 
 			// AND the full period has passed now.
 			mock::Now::set(Duration::from_millis(constants::TWO_WEEKS_MS));
 
-			assert_ok!(MobRule::force_ripen_case(RuntimeOrigin::none(), case_index),);
+			assert_ok!(MobRule::force_ripen_case(authorized_origin(), case_index),);
 
 			// THEN the case is moved from open to ripe cases
 			assert!(OpenCases::<Test>::get(case_index).is_none());
@@ -267,7 +277,7 @@ mod case_lifecycle {
 			ActiveSince::<Test>::kill();
 			let case_1 = helpers::create_voting_case::<Test>();
 			assert_noop!(
-				MobRule::force_ripen_case(RuntimeOrigin::none(), case_1),
+				MobRule::force_ripen_case(authorized_origin(), case_1),
 				Error::<Test>::CaseExpirationDisabled
 			);
 
@@ -275,26 +285,26 @@ mod case_lifecycle {
 			let case_2 = helpers::create_voting_case::<Test>();
 			ActiveSince::<Test>::put(<Test as Config>::Clock::now().as_secs());
 			assert_noop!(
-				MobRule::force_ripen_case(RuntimeOrigin::none(), case_1),
+				MobRule::force_ripen_case(authorized_origin(), case_1),
 				Error::<Test>::Recent
 			);
 			assert_noop!(
-				MobRule::force_ripen_case(RuntimeOrigin::none(), case_2),
+				MobRule::force_ripen_case(authorized_origin(), case_2),
 				Error::<Test>::Recent
 			);
 
 			mock::Now::set(Duration::from_millis(constants::TWO_WEEKS_MS));
 			let case_3 = helpers::create_voting_case::<Test>();
 			assert_noop!(
-				MobRule::force_ripen_case(RuntimeOrigin::none(), case_1),
+				MobRule::force_ripen_case(authorized_origin(), case_1),
 				Error::<Test>::Recent
 			);
 			assert_noop!(
-				MobRule::force_ripen_case(RuntimeOrigin::none(), case_2),
+				MobRule::force_ripen_case(authorized_origin(), case_2),
 				Error::<Test>::Recent
 			);
 			assert_noop!(
-				MobRule::force_ripen_case(RuntimeOrigin::none(), case_3),
+				MobRule::force_ripen_case(authorized_origin(), case_3),
 				Error::<Test>::Recent
 			);
 
@@ -303,16 +313,16 @@ mod case_lifecycle {
 			// them to be reaped.
 			mock::Now::set(Duration::from_millis(constants::TWO_WEEKS_MS * 3 / 2));
 			let case_4 = helpers::create_voting_case::<Test>();
-			assert_ok!(MobRule::force_ripen_case(RuntimeOrigin::none(), case_1));
-			assert_ok!(MobRule::force_ripen_case(RuntimeOrigin::none(), case_2));
+			assert_ok!(MobRule::force_ripen_case(authorized_origin(), case_1));
+			assert_ok!(MobRule::force_ripen_case(authorized_origin(), case_2));
 
 			ActiveSince::<Test>::kill();
 			assert_noop!(
-				MobRule::force_ripen_case(RuntimeOrigin::none(), case_3),
+				MobRule::force_ripen_case(authorized_origin(), case_3),
 				Error::<Test>::CaseExpirationDisabled
 			);
 			assert_noop!(
-				MobRule::force_ripen_case(RuntimeOrigin::none(), case_4),
+				MobRule::force_ripen_case(authorized_origin(), case_4),
 				Error::<Test>::CaseExpirationDisabled
 			);
 
@@ -320,36 +330,36 @@ mod case_lifecycle {
 			ActiveSince::<Test>::put(<Test as Config>::Clock::now().as_secs());
 			let case_5 = helpers::create_voting_case::<Test>();
 			assert_noop!(
-				MobRule::force_ripen_case(RuntimeOrigin::none(), case_3),
+				MobRule::force_ripen_case(authorized_origin(), case_3),
 				Error::<Test>::Recent
 			);
 			assert_noop!(
-				MobRule::force_ripen_case(RuntimeOrigin::none(), case_4),
+				MobRule::force_ripen_case(authorized_origin(), case_4),
 				Error::<Test>::Recent
 			);
 			assert_noop!(
-				MobRule::force_ripen_case(RuntimeOrigin::none(), case_5),
+				MobRule::force_ripen_case(authorized_origin(), case_5),
 				Error::<Test>::Recent
 			);
 
 			mock::Now::set(Duration::from_millis(constants::TWO_WEEKS_MS * 5 / 2));
 			assert_noop!(
-				MobRule::force_ripen_case(RuntimeOrigin::none(), case_3),
+				MobRule::force_ripen_case(authorized_origin(), case_3),
 				Error::<Test>::Recent
 			);
 			assert_noop!(
-				MobRule::force_ripen_case(RuntimeOrigin::none(), case_4),
+				MobRule::force_ripen_case(authorized_origin(), case_4),
 				Error::<Test>::Recent
 			);
 			assert_noop!(
-				MobRule::force_ripen_case(RuntimeOrigin::none(), case_5),
+				MobRule::force_ripen_case(authorized_origin(), case_5),
 				Error::<Test>::Recent
 			);
 
 			mock::Now::set(Duration::from_millis(constants::TWO_WEEKS_MS * 3));
-			assert_ok!(MobRule::force_ripen_case(RuntimeOrigin::none(), case_3));
-			assert_ok!(MobRule::force_ripen_case(RuntimeOrigin::none(), case_4));
-			assert_ok!(MobRule::force_ripen_case(RuntimeOrigin::none(), case_5));
+			assert_ok!(MobRule::force_ripen_case(authorized_origin(), case_3));
+			assert_ok!(MobRule::force_ripen_case(authorized_origin(), case_4));
+			assert_ok!(MobRule::force_ripen_case(authorized_origin(), case_5));
 		});
 	}
 
@@ -423,7 +433,7 @@ mod case_lifecycle {
 			// WHEN close_case is called on it,
 			// THEN it fails with relevant error
 			assert_noop!(
-				MobRule::close_case(RuntimeOrigin::none(), case_index),
+				MobRule::close_case(authorized_origin(), case_index, Weight::MAX),
 				Error::<Test>::NotRipe
 			);
 		});
@@ -437,7 +447,7 @@ mod case_lifecycle {
 			let case_index = helpers::create_ripe_case::<Test>();
 
 			// WHEN close_case is called on it
-			assert!(MobRule::close_case(RuntimeOrigin::none(), case_index).is_ok());
+			assert!(MobRule::close_case(authorized_origin(), case_index, Weight::MAX).is_ok());
 
 			// THEN it is removed from RipeCases and inserted to DoneCases
 			assert!(OpenCases::<Test>::get(case_index).is_none());
@@ -446,6 +456,79 @@ mod case_lifecycle {
 			System::assert_has_event(
 				Event::CaseClosed { case_index, verdict: Judgement::Truth(Truth::True) }.into(),
 			);
+		});
+	}
+
+	#[test]
+	fn close_case_emits_structured_callback_error_for_invalid_callback() {
+		TestExt::new().execute_with(|| {
+			advance_to(1);
+			let case_index = helpers::create_ripe_case::<Test>();
+
+			RipeCases::<Test>::mutate(case_index, |case| {
+				case.as_mut().unwrap().details.callback = Callback::from_parts(u8::MAX, u8::MAX);
+			});
+
+			assert_ok!(MobRule::close_case(authorized_origin(), case_index, Weight::MAX));
+
+			System::assert_has_event(
+				Event::CallbackError { case_index, trigger: CallbackTrigger::CloseCase }.into(),
+			);
+		});
+	}
+
+	#[test]
+	fn close_case_refunds_unused_callback_weight() {
+		TestExt::new().execute_with(|| {
+			advance_to(1);
+			let case_index = helpers::create_ripe_case::<Test>();
+			let case = RipeCases::<Test>::get(case_index).unwrap();
+			let callback_weight = case
+				.details
+				.callback
+				.curry((case_index, case.details.context, case.verdict))
+				.unwrap()
+				.get_dispatch_info()
+				.call_weight;
+
+			// Declare a bound generously above the callback's actual weight so a refund is due.
+			let max_callback_weight =
+				callback_weight.saturating_add(Weight::from_parts(1_000, 1_000));
+			let declared = Call::<Test>::close_case { case_index, max_callback_weight }
+				.get_dispatch_info()
+				.call_weight;
+
+			let post = MobRule::close_case(authorized_origin(), case_index, max_callback_weight)
+				.expect("ripe case can be closed");
+
+			let expected =
+				<Test as Config>::WeightInfo::close_case().saturating_add(callback_weight);
+			assert_eq!(post.actual_weight, Some(expected));
+			assert!(post.actual_weight.unwrap().all_lt(declared));
+		});
+	}
+
+	#[test]
+	fn close_case_fails_when_callback_weight_bound_too_low() {
+		TestExt::new().execute_with(|| {
+			advance_to(1);
+			let case_index = helpers::create_ripe_case::<Test>();
+			let case = RipeCases::<Test>::get(case_index).unwrap();
+			let callback_weight = case
+				.details
+				.callback
+				.curry((case_index, case.details.context, case.verdict))
+				.unwrap()
+				.get_dispatch_info()
+				.call_weight;
+
+			// A bound below the callback weight must be rejected and the case left untouched.
+			let too_low = callback_weight.saturating_sub(Weight::from_parts(1, 0));
+			assert_noop!(
+				MobRule::close_case(authorized_origin(), case_index, too_low),
+				Error::<Test>::CallbackWeightTooLow
+			);
+			assert!(RipeCases::<Test>::contains_key(case_index));
 		});
 	}
 
@@ -460,7 +543,7 @@ mod case_lifecycle {
 			mock::Now::set(Duration::from_millis(constants::TWO_DAYS_MS));
 
 			// WHEN reap_case is called on it
-			assert!(MobRule::reap_case(RuntimeOrigin::none(), done_case_index).is_ok());
+			assert!(MobRule::reap_case(authorized_origin(), done_case_index).is_ok());
 
 			// Then it is removed from DoneCases
 			assert!(DoneCases::<Test>::get(done_case_index).is_none());
@@ -470,7 +553,7 @@ mod case_lifecycle {
 			let ripe_case_index = helpers::create_ripe_case::<Test>();
 
 			// WHEN reap_case is called on it
-			let reap_case_call_result = MobRule::reap_case(RuntimeOrigin::none(), ripe_case_index);
+			let reap_case_call_result = MobRule::reap_case(authorized_origin(), ripe_case_index);
 
 			// THEN the call fails
 			assert_noop!(reap_case_call_result, Error::<Test>::NotDone);
@@ -479,7 +562,7 @@ mod case_lifecycle {
 			let open_case_index = helpers::create_voting_case::<Test>();
 
 			// WHEN reap_case is called on it
-			let reap_case_call_result = MobRule::reap_case(RuntimeOrigin::none(), open_case_index);
+			let reap_case_call_result = MobRule::reap_case(authorized_origin(), open_case_index);
 
 			// THEN the call fails
 			assert_noop!(reap_case_call_result, Error::<Test>::NotDone);
@@ -497,7 +580,7 @@ mod case_lifecycle {
 
 			// WHEN reap_case is called on it
 			assert_noop!(
-				MobRule::reap_case(RuntimeOrigin::none(), done_case_index),
+				MobRule::reap_case(authorized_origin(), done_case_index),
 				Error::<Test>::Recent
 			);
 
@@ -517,7 +600,8 @@ mod case_lifecycle {
 			assert!(MobRule::intervene(
 				RuntimeOrigin::root(),
 				open_case_index,
-				Judgement::Truth(Truth::True)
+				Judgement::Truth(Truth::True),
+				Weight::MAX
 			)
 			.is_ok());
 
@@ -531,6 +615,63 @@ mod case_lifecycle {
 				}
 				.into(),
 			);
+		});
+	}
+
+	#[test]
+	fn intervene_emits_structured_callback_error_for_invalid_callback() {
+		TestExt::new().execute_with(|| {
+			advance_to(1);
+			let case_index = helpers::create_voting_case::<Test>();
+
+			OpenCases::<Test>::mutate(case_index, |case| {
+				case.as_mut().unwrap().details.callback = Callback::from_parts(u8::MAX, u8::MAX);
+			});
+
+			assert_ok!(MobRule::intervene(
+				RuntimeOrigin::root(),
+				case_index,
+				Judgement::Truth(Truth::True),
+				Weight::MAX,
+			));
+
+			System::assert_has_event(
+				Event::CallbackError { case_index, trigger: CallbackTrigger::Intervene }.into(),
+			);
+		});
+	}
+
+	#[test]
+	fn intervene_refunds_unused_callback_weight() {
+		TestExt::new().execute_with(|| {
+			advance_to(1);
+			let case_index = helpers::create_voting_case::<Test>();
+			let verdict = Judgement::Truth(Truth::True);
+			let case = OpenCases::<Test>::get(case_index).unwrap();
+			let callback_weight = case
+				.details
+				.callback
+				.curry((case_index, case.details.context, verdict))
+				.unwrap()
+				.get_dispatch_info()
+				.call_weight;
+
+			// Declare a bound generously above the callback's actual weight so a refund is due.
+			let max_callback_weight =
+				callback_weight.saturating_add(Weight::from_parts(1_000, 1_000));
+			let declared = Call::<Test>::intervene { case_index, verdict, max_callback_weight }
+				.get_dispatch_info()
+				.call_weight;
+
+			let post =
+				MobRule::intervene(RuntimeOrigin::root(), case_index, verdict, max_callback_weight)
+					.expect("open case can be intervened");
+
+			let expected =
+				<Test as Config>::WeightInfo::intervene().saturating_add(callback_weight);
+			assert_eq!(post.actual_weight, Some(expected));
+			assert_eq!(post.pays_fee, Pays::No);
+			assert!(post.actual_weight.unwrap().all_lt(declared));
 		});
 	}
 
@@ -583,7 +724,7 @@ mod case_lifecycle {
 
 			// Close the case and register the penalty when cleaning the bad vote.
 			advance_to(15);
-			assert!(MobRule::close_case(RuntimeOrigin::none(), case_index).is_ok());
+			assert!(MobRule::close_case(authorized_origin(), case_index, Weight::MAX).is_ok());
 			assert!(OpenCases::<Test>::get(case_index).is_none());
 			assert!(RipeCases::<Test>::get(case_index).is_none());
 			assert!(DoneCases::<Test>::get(case_index).is_some());
@@ -595,7 +736,7 @@ mod case_lifecycle {
 			mock::Now::set(Duration::from_millis(
 				constants::TWO_DAYS_MS + constants::ONE_HOUR_MS * 2,
 			));
-			assert_ok!(MobRule::clean_vote(RuntimeOrigin::none(), case_index, alias));
+			assert_ok!(MobRule::clean_vote(authorized_origin(), case_index, alias));
 			System::assert_has_event(Event::VoteCleaned { case_index, voter: alias }.into());
 
 			assert_eq!(VotingPenalties::<Test>::get(alias), Some(15));
@@ -1026,7 +1167,7 @@ mod rewards {
 			assert!(RipeCases::<Test>::get(case_index).is_some());
 
 			// The case becomes closed
-			assert!(MobRule::close_case(RuntimeOrigin::none(), case_index).is_ok());
+			assert!(MobRule::close_case(authorized_origin(), case_index, Weight::MAX).is_ok());
 			assert!(OpenCases::<Test>::get(case_index).is_none());
 			assert!(RipeCases::<Test>::get(case_index).is_none());
 			assert!(DoneCases::<Test>::get(case_index).is_some());
@@ -1201,7 +1342,7 @@ mod rewards {
 			assert!(RipeCases::<Test>::get(case_index).is_some());
 
 			// The case becomes closed
-			assert!(MobRule::close_case(RuntimeOrigin::none(), case_index).is_ok());
+			assert!(MobRule::close_case(authorized_origin(), case_index, Weight::MAX).is_ok());
 			assert!(OpenCases::<Test>::get(case_index).is_none());
 			assert!(RipeCases::<Test>::get(case_index).is_none());
 			assert!(DoneCases::<Test>::get(case_index).is_some());
@@ -1450,8 +1591,8 @@ mod rewards {
 			));
 
 			// Both cases become closed
-			assert!(MobRule::close_case(RuntimeOrigin::none(), case_a).is_ok());
-			assert!(MobRule::close_case(RuntimeOrigin::none(), case_b).is_ok());
+			assert!(MobRule::close_case(authorized_origin(), case_a, Weight::MAX).is_ok());
+			assert!(MobRule::close_case(authorized_origin(), case_b, Weight::MAX).is_ok());
 
 			// Both voters claim the credit for case A
 			assert_ok!(MobRule::claim_vote(RuntimeOrigin::signed(VOTER_VALID), case_a));
@@ -1583,11 +1724,14 @@ mod rewards {
 mod offchain_worker {
 	use super::*;
 	use codec::Decode;
-	use frame_support::{pallet_prelude::Get, traits::OffchainWorker};
+	use frame_support::{assert_noop, assert_ok, pallet_prelude::Get, traits::OffchainWorker};
 	use indiv_support::traits::Truth::True;
 	use sp_core::offchain::{
 		testing::{TestOffchainExt, TestTransactionPoolExt},
 		OffchainDbExt, OffchainWorkerExt, TransactionPoolExt,
+	};
+	use sp_runtime::transaction_validity::{
+		TransactionSource, TransactionValidityError, UnknownTransaction,
 	};
 	use std::time::Duration;
 
@@ -1624,13 +1768,106 @@ mod offchain_worker {
 			// and the transaction should be close_case call
 			let transaction = state.write().transactions.pop().unwrap();
 			let ex: Extrinsic = Decode::decode(&mut &*transaction).unwrap();
-			let closed_case_index = match ex.function {
+			let closed_case_index = match &ex.function {
 				crate::mock::RuntimeCall::MobRule(crate::Call::close_case {
 					case_index, ..
-				}) => case_index,
+				}) => *case_index,
 				e => panic!("Unexpected call: {e:?}"),
 			};
 			assert_eq!(closed_case_index, case_index);
+			assert_ok!(exec_tx(ex, TransactionSource::Local));
+			assert!(!RipeCases::<Test>::contains_key(case_index));
+			assert!(DoneCases::<Test>::contains_key(case_index));
+		});
+	}
+
+	#[test]
+	fn offchain_worker_closes_ripe_case_automatically() {
+		let mut ext = new_test_ext();
+		let (offchain, _state) = TestOffchainExt::new();
+		let (pool, state) = TestTransactionPoolExt::new();
+		ext.register_extension(OffchainDbExt::new(offchain.clone()));
+		ext.register_extension(OffchainWorkerExt::new(offchain));
+		ext.register_extension(TransactionPoolExt::new(pool));
+
+		ext.execute_with(|| {
+			System::set_block_number(1);
+			// A ripe case exists.
+			let case_index = helpers::create_ripe_case::<Test>();
+			assert!(RipeCases::<Test>::contains_key(case_index));
+
+			// Drive the chain: the offchain worker runs every block and its submitted
+			// transactions are applied automatically. It closes the case at the first interval
+			// tick without any manual extrinsic.
+			let interval: u64 = <Test as Config>::OffchainWorkInterval::get();
+			let mut take_submitted = || core::mem::take(&mut state.write().transactions);
+			run_offchain_to_block(interval + 1, &mut take_submitted);
+
+			assert!(!RipeCases::<Test>::contains_key(case_index));
+			assert!(DoneCases::<Test>::contains_key(case_index));
+			System::assert_has_event(
+				Event::CaseClosed { case_index, verdict: Judgement::Truth(True) }.into(),
+			);
+		});
+	}
+
+	#[test]
+	fn offchain_worker_ripens_times_out_and_reaps_case_automatically() {
+		let mut ext = new_test_ext();
+		let (offchain, _state) = TestOffchainExt::new();
+		let (pool, state) = TestTransactionPoolExt::new();
+		ext.register_extension(OffchainDbExt::new(offchain.clone()));
+		ext.register_extension(OffchainWorkerExt::new(offchain));
+		ext.register_extension(TransactionPoolExt::new(pool));
+
+		ext.execute_with(|| {
+			System::set_block_number(1);
+			EnsureAliasLowerThan5::set_voter_count(1);
+			ActiveSince::<Test>::put(<Test as Config>::Clock::now().as_secs());
+
+			// An open case that nobody resolves.
+			let case_index = helpers::create_voting_case::<Test>();
+			assert!(OpenCases::<Test>::contains_key(case_index));
+
+			let mut take_submitted = || core::mem::take(&mut state.write().transactions);
+
+			// Once the voting duration elapses, the offchain worker times the case out, moving
+			// it from open to ripe automatically.
+			mock::Now::set(Duration::from_millis(constants::TWO_WEEKS_MS));
+			let interval: u64 = <Test as Config>::OffchainWorkInterval::get();
+			run_offchain_to_block(interval + 1, &mut take_submitted);
+			assert!(!OpenCases::<Test>::contains_key(case_index));
+			assert!(RipeCases::<Test>::contains_key(case_index));
+
+			// The next interval the offchain worker closes the now-ripe case.
+			run_offchain_to_block(2 * interval + 1, &mut take_submitted);
+			assert!(!RipeCases::<Test>::contains_key(case_index));
+			assert!(DoneCases::<Test>::contains_key(case_index));
+
+			// After the claims period the offchain worker reaps the done case.
+			mock::Now::set(Duration::from_millis(constants::TWO_WEEKS_MS * 2));
+			run_offchain_to_block(3 * interval + 1, &mut take_submitted);
+			assert!(!DoneCases::<Test>::contains_key(case_index));
+			System::assert_has_event(Event::CaseRemoved { case_index }.into());
+		});
+	}
+
+	#[test]
+	fn rejects_bare_close_case_extrinsic_without_authorize_extension() {
+		TestExt::new().execute_with(|| {
+			let case_index = helpers::create_ripe_case::<Test>();
+
+			assert_noop!(
+				exec_tx(
+					Extrinsic::new_bare(
+						Call::close_case { case_index, max_callback_weight: Weight::MAX }.into()
+					),
+					TransactionSource::Local,
+				),
+				TransactionExecutionError::Validity(TransactionValidityError::Unknown(
+					UnknownTransaction::NoUnsignedValidator
+				)),
+			);
 		});
 	}
 
@@ -1667,13 +1904,16 @@ mod offchain_worker {
 			// and the transaction should be close_case call
 			let transaction = state.write().transactions.pop().unwrap();
 			let ex: Extrinsic = Decode::decode(&mut &*transaction).unwrap();
-			let closed_case_index = match ex.function {
+			let closed_case_index = match &ex.function {
 				crate::mock::RuntimeCall::MobRule(crate::Call::close_case {
 					case_index, ..
-				}) => case_index,
+				}) => *case_index,
 				e => panic!("Unexpected call: {e:?}"),
 			};
 			assert_eq!(closed_case_index, case_index);
+			assert_ok!(exec_tx(ex, TransactionSource::Local));
+			assert!(!RipeCases::<Test>::contains_key(case_index));
+			assert!(DoneCases::<Test>::contains_key(case_index));
 		});
 	}
 
@@ -1713,13 +1953,15 @@ mod offchain_worker {
 			// and the transaction should be reap_case call
 			let transaction = state.write().transactions.pop().unwrap();
 			let ex: Extrinsic = Decode::decode(&mut &*transaction).unwrap();
-			let reap_case_index = match ex.function {
+			let reap_case_index = match &ex.function {
 				crate::mock::RuntimeCall::MobRule(crate::Call::reap_case {
 					case_index, ..
-				}) => case_index,
+				}) => *case_index,
 				e => panic!("Unexpected call: {e:?}"),
 			};
 			assert_eq!(done_case_index, reap_case_index);
+			assert_ok!(exec_tx(ex, TransactionSource::Local));
+			assert!(!DoneCases::<Test>::contains_key(done_case_index));
 		});
 	}
 
@@ -1759,14 +2001,16 @@ mod offchain_worker {
 			// and the transaction should be case_timeout call
 			let transaction = state.write().transactions.pop().unwrap();
 			let ex: Extrinsic = Decode::decode(&mut &*transaction).unwrap();
-			let timeout_case_index = match ex.function {
+			let timeout_case_index = match &ex.function {
 				crate::mock::RuntimeCall::MobRule(crate::Call::force_ripen_case {
 					case_index,
 					..
-				}) => case_index,
+				}) => *case_index,
 				e => panic!("Unexpected call: {e:?}"),
 			};
 			assert_eq!(timeout_case_index, case_index);
+			assert_ok!(exec_tx(ex, TransactionSource::Local));
+			assert!(RipeCases::<Test>::contains_key(case_index));
 		});
 	}
 
@@ -1803,7 +2047,7 @@ mod offchain_worker {
 			mock::Now::set(Duration::from_millis(constants::TWO_DAYS_MS));
 			assert_ok!(MobRule::touch_case(RuntimeOrigin::signed(VOTER_VALID), case_index_1));
 			// Case 1 becomes closed
-			assert!(MobRule::close_case(RuntimeOrigin::none(), case_index_1).is_ok());
+			assert!(MobRule::close_case(authorized_origin(), case_index_1, Weight::MAX).is_ok());
 
 			// Current time after the votes claims duration
 			let claims_duration: u32 =
@@ -1824,18 +2068,20 @@ mod offchain_worker {
 			// and the transaction should be clean_vote call
 			let transaction = state.write().transactions.pop().unwrap();
 			let ex: Extrinsic = Decode::decode(&mut &*transaction).unwrap();
-			let (clean_vote_case_index, clean_vote_voter) = match ex.function {
+			let (clean_vote_case_index, clean_vote_voter) = match &ex.function {
 				crate::mock::RuntimeCall::MobRule(crate::Call::clean_vote {
 					case_index,
 					voter,
 					..
-				}) => (case_index, voter),
+				}) => (*case_index, *voter),
 				e => panic!("Unexpected call: {e:?}"),
 			};
 			assert_eq!(clean_vote_case_index, case_index_1);
 
 			let voter = EnsureAliasLowerThan5::get_alias(RuntimeOrigin::signed(VOTER_VALID));
 			assert_eq!(clean_vote_voter, voter);
+			assert_ok!(exec_tx(ex, TransactionSource::Local));
+			assert!(!Votes::<Test>::contains_key(case_index_1, voter));
 		});
 	}
 
@@ -2010,16 +2256,10 @@ mod offchain_worker {
 	}
 }
 
-// TODO: remove the `allow(deprecated)` once mob-rule migrates to `#[pallet::authorize]`
-// (deadline April 2027). See https://github.com/paritytech/polkadot-sdk/issues/2415.
-#[allow(deprecated)]
-mod validate_unsigned {
+mod authorize {
 	use super::*;
 	use indiv_support::traits::Truth::True;
-	use sp_runtime::{
-		traits::ValidateUnsigned,
-		transaction_validity::{InvalidTransaction, TransactionSource},
-	};
+	use sp_runtime::transaction_validity::TransactionSource;
 	use std::time::Duration;
 
 	#[test]
@@ -2029,8 +2269,52 @@ mod validate_unsigned {
 			let case_index = helpers::create_ripe_case::<Test>();
 
 			// close_case call should succeed
-			let valid_call = Call::<Test>::close_case { case_index };
-			assert_ok!(MobRule::validate_unsigned(TransactionSource::Local, &valid_call),);
+			let max_callback_weight = ripe_case_callback_weight(case_index);
+			let valid_call = Call::<Test>::close_case { case_index, max_callback_weight };
+			assert!(valid_call.authorize(TransactionSource::Local).is_some());
+			assert_ok!(valid_call.authorize(TransactionSource::Local).unwrap(),);
+		});
+	}
+
+	#[test]
+	fn close_case_authorize_discards_case_that_is_not_ripe() {
+		TestExt::new().execute_with(|| {
+			let case_index = helpers::create_voting_case::<Test>();
+			let call = Call::<Test>::close_case { case_index, max_callback_weight: Weight::MAX };
+
+			assert_eq!(
+				call.authorize(TransactionSource::Local),
+				Some(Err(CustomInvalidity::CaseNotRipe.into()))
+			);
+		});
+	}
+
+	#[test]
+	fn close_case_authorize_rejects_too_low_callback_weight() {
+		TestExt::new().execute_with(|| {
+			let case_index = helpers::create_ripe_case::<Test>();
+			let callback_weight = ripe_case_callback_weight(case_index);
+
+			// A bound that does not cover the actual callback weight is rejected by `authorize`,
+			// so the transaction never enters a block.
+			let too_low = Call::<Test>::close_case {
+				case_index,
+				max_callback_weight: callback_weight.saturating_sub(Weight::from_parts(1, 0)),
+			};
+			assert_eq!(
+				too_low.authorize(TransactionSource::Local),
+				Some(Err(CustomInvalidity::CallbackWeightTooLow.into()))
+			);
+
+			// The exact callback weight, and any larger upper bound, are accepted.
+			let exact =
+				Call::<Test>::close_case { case_index, max_callback_weight: callback_weight };
+			assert_ok!(exact.authorize(TransactionSource::Local).unwrap());
+			let over = Call::<Test>::close_case {
+				case_index,
+				max_callback_weight: callback_weight.saturating_add(Weight::from_parts(1, 1)),
+			};
+			assert_ok!(over.authorize(TransactionSource::Local).unwrap());
 		});
 	}
 
@@ -2047,7 +2331,7 @@ mod validate_unsigned {
 			// AND two days have passed since it's opening
 			mock::Now::set(Duration::from_millis(constants::TWO_DAYS_MS));
 			assert_ok!(MobRule::touch_case(RuntimeOrigin::signed(VOTER_VALID), case_index));
-			assert!(MobRule::close_case(RuntimeOrigin::none(), case_index).is_ok());
+			assert!(MobRule::close_case(authorized_origin(), case_index, Weight::MAX).is_ok());
 
 			// Vote is no longer open for claim - the claim period has passed
 			mock::Now::set(Duration::from_millis(
@@ -2057,7 +2341,8 @@ mod validate_unsigned {
 			// clean_vote call should succeed
 			let voter = EnsureAliasLowerThan5::get_alias(RuntimeOrigin::signed(VOTER_VALID));
 			let valid_call = Call::<Test>::clean_vote { case_index, voter };
-			assert_ok!(MobRule::validate_unsigned(TransactionSource::Local, &valid_call),);
+			assert!(valid_call.authorize(TransactionSource::Local).is_some());
+			assert_ok!(valid_call.authorize(TransactionSource::Local).unwrap(),);
 		});
 	}
 
@@ -2072,7 +2357,33 @@ mod validate_unsigned {
 
 			// reap_case call should succeed
 			let valid_call = Call::<Test>::reap_case { case_index };
-			assert_ok!(MobRule::validate_unsigned(TransactionSource::Local, &valid_call),);
+			assert!(valid_call.authorize(TransactionSource::Local).is_some());
+			assert_ok!(valid_call.authorize(TransactionSource::Local).unwrap(),);
+		});
+	}
+
+	#[test]
+	fn reap_case_authorize_discards_case_before_claim_window_ends() {
+		TestExt::new().execute_with(|| {
+			let case_index = helpers::create_done_case::<Test>(vec![], 0);
+			let call = Call::<Test>::reap_case { case_index };
+
+			assert_eq!(
+				call.authorize(TransactionSource::Local),
+				Some(Err(CustomInvalidity::CaseTooRecent.into()))
+			);
+		});
+	}
+
+	#[test]
+	fn reap_case_authorize_discards_case_that_is_not_done() {
+		TestExt::new().execute_with(|| {
+			let call = Call::<Test>::reap_case { case_index: 0 };
+
+			assert_eq!(
+				call.authorize(TransactionSource::Local),
+				Some(Err(CustomInvalidity::CaseNotDone.into()))
+			);
 		});
 	}
 
@@ -2088,7 +2399,47 @@ mod validate_unsigned {
 
 			// clean_vote call should succeed
 			let valid_call = Call::<Test>::force_ripen_case { case_index };
-			assert_ok!(MobRule::validate_unsigned(TransactionSource::Local, &valid_call),);
+			assert!(valid_call.authorize(TransactionSource::Local).is_some());
+			assert_ok!(valid_call.authorize(TransactionSource::Local).unwrap(),);
+		});
+	}
+
+	#[test]
+	fn force_ripen_case_authorize_discards_case_before_voting_timeout() {
+		TestExt::new().execute_with(|| {
+			ActiveSince::<Test>::put(0);
+			let case_index = helpers::create_voting_case::<Test>();
+			let call = Call::<Test>::force_ripen_case { case_index };
+
+			assert_eq!(
+				call.authorize(TransactionSource::Local),
+				Some(Err(CustomInvalidity::CaseTooRecent.into()))
+			);
+		});
+	}
+
+	#[test]
+	fn force_ripen_case_authorize_discards_case_that_is_not_open() {
+		TestExt::new().execute_with(|| {
+			let call = Call::<Test>::force_ripen_case { case_index: 0 };
+
+			assert_eq!(
+				call.authorize(TransactionSource::Local),
+				Some(Err(CustomInvalidity::CaseNotOpen.into()))
+			);
+		});
+	}
+
+	#[test]
+	fn force_ripen_case_authorize_discards_when_expiration_is_disabled() {
+		TestExt::new().execute_with(|| {
+			let case_index = helpers::create_voting_case::<Test>();
+			let call = Call::<Test>::force_ripen_case { case_index };
+
+			assert_eq!(
+				call.authorize(TransactionSource::Local),
+				Some(Err(CustomInvalidity::CaseExpirationDisabled.into()))
+			);
 		});
 	}
 
@@ -2096,23 +2447,17 @@ mod validate_unsigned {
 	fn fails_for_other_calls() {
 		TestExt::new().execute_with(|| {
 			let vote_call = Call::<Test>::vote { case_index: 0, opinion: Judgement::Contempt };
-			assert_eq!(
-				MobRule::validate_unsigned(TransactionSource::Local, &vote_call),
-				InvalidTransaction::Call.into()
-			);
+			assert_eq!(vote_call.authorize(TransactionSource::Local), None);
 
-			let intervene_call =
-				Call::<Test>::intervene { case_index: 0, verdict: Judgement::Contempt };
-			assert_eq!(
-				MobRule::validate_unsigned(TransactionSource::Local, &intervene_call),
-				InvalidTransaction::Call.into()
-			);
+			let intervene_call = Call::<Test>::intervene {
+				case_index: 0,
+				verdict: Judgement::Contempt,
+				max_callback_weight: Weight::MAX,
+			};
+			assert_eq!(intervene_call.authorize(TransactionSource::Local), None);
 
 			let claim_vote_call = Call::<Test>::claim_vote { case_index: 0 };
-			assert_eq!(
-				MobRule::validate_unsigned(TransactionSource::Local, &claim_vote_call),
-				InvalidTransaction::Call.into()
-			);
+			assert_eq!(claim_vote_call.authorize(TransactionSource::Local), None);
 		});
 	}
 }
@@ -2127,6 +2472,15 @@ mod hooks {
 	use std::time::Duration;
 
 	use crate::{ActiveSince, WeightInfo};
+
+	/// The default mock configuration must pass every integrity check, including the block-fit
+	/// assertions for the offchain-worker-submitted authorized calls.
+	#[test]
+	fn integrity_test_passes() {
+		TestExt::new().execute_with(|| {
+			<crate::Pallet<Test> as frame_support::traits::Hooks<u64>>::integrity_test();
+		});
+	}
 
 	#[test]
 	fn on_poll_works() {
@@ -2208,7 +2562,6 @@ mod hooks {
 }
 
 #[test]
-#[allow(deprecated)]
 fn invalid_if_not_local() {
 	TestExt::new().execute_with(|| {
 		use sp_runtime::transaction_validity::{InvalidTransaction, TransactionSource};
@@ -2216,8 +2569,8 @@ fn invalid_if_not_local() {
 		// clean_vote must be invalid if not local
 		let call = Call::<Test>::clean_vote { case_index: 0, voter: constants::PERSON_0_ALIAS };
 		assert_eq!(
-			MobRule::validate_unsigned(TransactionSource::External, &call),
-			InvalidTransaction::BadSigner.into()
+			call.authorize(TransactionSource::External),
+			Some(Err(InvalidTransaction::BadSigner.into()))
 		);
 	});
 }

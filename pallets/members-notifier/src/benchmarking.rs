@@ -39,6 +39,22 @@ fn setup_subscriber<T: Config>(para_id: ParaId, collections: Vec<Identifier>) {
 	setup_subscriber_with_init_seq::<T>(para_id, collections, 0);
 }
 
+/// Full collection set for subscriber `index`, disjoint from every other index so that
+/// `MaxSubscribers` subscribers cover `MaxSubscribers * MaxCollectionsPerSubscriber` distinct
+/// collections.
+fn subscriber_collections<T: Config>(index: u32) -> Vec<Identifier> {
+	let stride = T::MaxSubscribers::get().max(1);
+	(0..T::MaxCollectionsPerSubscriber::get())
+		.map(|slot| test_identifier(index.saturating_add(slot.saturating_mul(stride))))
+		.collect()
+}
+
+/// Every collection covered by a full set of subscribers, the worst case for a rebuild of
+/// `SubscribedCollections` and for the subscription filter in `enqueue_updates`.
+fn all_subscribed_collections<T: Config>() -> Vec<Identifier> {
+	(0..T::MaxSubscribers::get()).flat_map(subscriber_collections::<T>).collect()
+}
+
 #[cfg(feature = "runtime-benchmarks")]
 pub trait BenchmarkHelper<T: Config> {
 	/// Initializes runtime state needed for benchmarks (e.g. timestamp, HRMP channels).
@@ -65,8 +81,10 @@ fn setup_subscriber_with_init_seq<T: Config>(
 	Subscribers::<T>::insert(para_id, info);
 }
 
+/// Seeds `MaxUpdatesPerBatch` entries in `SealedBatchIndices`, the most one sealed page can
+/// produce and the limit `clear_batch` deletes against, plus a full set of served subscribers.
 fn setup_clear_batch_worst_case<T: Config>() {
-	for i in 0..T::MaxCollections::get() {
+	for i in 0..T::MaxUpdatesPerBatch::get() {
 		let indices: BoundedVec<u32, T::MaxUpdatesPerBatch> =
 			(0..T::MaxUpdatesPerBatch::get()).collect::<Vec<_>>().try_into().unwrap();
 		SealedBatchIndices::<T>::insert(test_identifier(i), indices);
@@ -93,15 +111,22 @@ mod benches {
 	#[benchmark]
 	fn subscribe() -> Result<(), BenchmarkError> {
 		T::BenchmarkHelper::init();
-		// Subscribers storage almost full
-		for i in 0..(T::MaxSubscribers::get() - 1) {
-			setup_subscriber::<T>(ParaId::from(i), alloc::vec![]);
+		// Subscribers storage almost full, each with a full disjoint collection set so the
+		// SubscribedCollections rebuild runs at its worst case.
+		let last = T::MaxSubscribers::get() - 1;
+		for i in 0..last {
+			let collections = subscriber_collections::<T>(i);
+			setup_subscriber::<T>(ParaId::from(i), collections.clone());
+			for identifier in &collections {
+				SubscribedCollections::<T>::insert(identifier, ());
+			}
 		}
 
-		let para_id = ParaId::from(T::MaxSubscribers::get() - 1);
+		let para_id = ParaId::from(last);
 		let collections: BoundedVec<(Identifier, RingExponent), T::MaxCollectionsPerSubscriber> =
-			(0..T::MaxCollectionsPerSubscriber::get())
-				.map(|i| (test_identifier(i), RingExponent::R2e9))
+			subscriber_collections::<T>(last)
+				.into_iter()
+				.map(|id| (id, RingExponent::R2e9))
 				.collect::<alloc::vec::Vec<_>>()
 				.try_into()
 				.expect("within bounds");
@@ -116,37 +141,75 @@ mod benches {
 	}
 
 	#[benchmark]
+	fn subscribe_whitelisted() -> Result<(), BenchmarkError> {
+		T::BenchmarkHelper::init();
+		// Subscribers storage almost full, each with a full disjoint collection set so the
+		// SubscribedCollections rebuild runs at its worst case.
+		let last = T::MaxSubscribers::get() - 1;
+		for i in 0..last {
+			let collections = subscriber_collections::<T>(i);
+			setup_subscriber::<T>(ParaId::from(i), collections.clone());
+			for identifier in &collections {
+				SubscribedCollections::<T>::insert(identifier, ());
+			}
+		}
+
+		let para_id = ParaId::from(last);
+		let collections: BoundedVec<(Identifier, RingExponent), T::MaxCollectionsPerSubscriber> =
+			subscriber_collections::<T>(last)
+				.into_iter()
+				.map(|id| (id, RingExponent::R2e9))
+				.collect::<alloc::vec::Vec<_>>()
+				.try_into()
+				.expect("within bounds");
+		SubscriptionWhitelist::<T>::insert(
+			para_id,
+			WhitelistedSubscription::<T> { collections, pallet_index: BENCHMARK_PALLET_INDEX },
+		);
+
+		#[extrinsic_call]
+		_(frame_system::RawOrigin::Authorized, para_id);
+
+		assert!(Subscribers::<T>::contains_key(para_id));
+		assert!(!SubscriptionWhitelist::<T>::contains_key(para_id));
+
+		Ok(())
+	}
+
+	#[benchmark]
 	fn unsubscribe() -> Result<(), BenchmarkError> {
 		T::BenchmarkHelper::init();
 		let target_para = ParaId::from(T::MaxSubscribers::get() - 1);
 
-		// SealedBatchIndices with MaxCollections entries.
-		for i in 0..T::MaxCollections::get() {
+		for i in 0..T::MaxUpdatesPerBatch::get() {
 			let indices = BoundedVec::<u32, T::MaxUpdatesPerBatch>::truncate_from(
 				(0..T::MaxUpdatesPerBatch::get()).collect(),
 			);
 			SealedBatchIndices::<T>::insert(test_identifier(i), indices);
 		}
 
-		// MaxSubscribers number of subscribers.
+		// MaxSubscribers number of subscribers, each with a full disjoint collection set so
+		// the SubscribedCollections rebuild over the survivors runs at its worst case.
 		// All except target marked as already received updates.
 		// Target subscriber has MaxCollectionsPerSubscriber collections (worst case for
 		// LastReplayTime cleanup).
 		let target_collections: Vec<Identifier> =
-			(0..T::MaxCollectionsPerSubscriber::get()).map(test_identifier).collect();
+			subscriber_collections::<T>(T::MaxSubscribers::get() - 1);
 		for i in 0..T::MaxSubscribers::get() {
 			let para = ParaId::from(i);
-			if para == target_para {
-				setup_subscriber::<T>(para, target_collections.clone());
-			} else {
-				setup_subscriber::<T>(para, alloc::vec![test_identifier(0)]);
+			let collections = subscriber_collections::<T>(i);
+			setup_subscriber::<T>(para, collections.clone());
+			for identifier in &collections {
+				SubscribedCollections::<T>::insert(identifier, ());
+			}
+			if para != target_para {
 				SubscribersWithCurrentBatch::<T>::insert(para, ());
 			}
 		}
 
 		// LastReplayTime entries for all target subscriber collections.
-		for i in 0..T::MaxCollectionsPerSubscriber::get() {
-			LastReplayTime::<T>::insert(target_para, test_identifier(i), 1u64);
+		for identifier in &target_collections {
+			LastReplayTime::<T>::insert(target_para, identifier, 1u64);
 		}
 
 		// PendingInit for target subscriber.
@@ -220,21 +283,16 @@ mod benches {
 		n: Linear<1, { T::MaxUpdatesPerBatch::get() }>,
 	) -> Result<(), BenchmarkError> {
 		T::BenchmarkHelper::init();
-		// Spreading updates across MaxCollections distinct identifiers.
-		let max_collections = T::MaxCollections::get();
-		for i in 0..n {
-			let identifier = test_identifier(i % max_collections);
-			insert_pending_update::<T>(identifier, i);
-		}
 
-		T::BenchmarkHelper::setup_ring_roots(n);
-
-		// MaxSubscribers number of subscribers. Half with PendingInit.
-		let collections: Vec<Identifier> =
-			(0..T::MaxCollectionsPerSubscriber::get()).map(test_identifier).collect();
+		// MaxSubscribers number of subscribers, with disjoint collections. Half with
+		// PendingInit.
 		for i in 0..T::MaxSubscribers::get() {
 			let para = ParaId::from(1000 + i);
+			let collections = subscriber_collections::<T>(i);
 			setup_subscriber::<T>(para, collections.clone());
+			for identifier in &collections {
+				SubscribedCollections::<T>::insert(identifier, ());
+			}
 			if i % 2 == 0 {
 				let bounded_collections: BoundedVec<_, T::MaxCollectionsPerSubscriber> =
 					collections
@@ -257,6 +315,16 @@ mod benches {
 				);
 			}
 		}
+
+		// Spreading updates over subscribed collections, so none is filtered out at seal
+		// time and every one costs a SealedBatchIndices write.
+		let subscribed = all_subscribed_collections::<T>();
+		for i in 0..n {
+			let identifier = subscribed[(i as usize) % subscribed.len()];
+			insert_pending_update::<T>(identifier, i);
+		}
+
+		T::BenchmarkHelper::setup_ring_roots(n);
 
 		let send_page = PageState::<T>::get().send_page;
 
@@ -526,6 +594,35 @@ mod benches {
 		#[block]
 		{
 			Pallet::<T>::authorize_abandon_stuck_batch(TransactionSource::Local)
+				.expect("must authorize");
+		}
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn authorize_subscribe_whitelisted() -> Result<(), BenchmarkError> {
+		T::BenchmarkHelper::init();
+		// Subscribers storage almost full, so the subscriber lookup and count hit the worst case.
+		for i in 0..(T::MaxSubscribers::get() - 1) {
+			setup_subscriber::<T>(ParaId::from(i), alloc::vec![]);
+		}
+
+		let para_id = ParaId::from(T::MaxSubscribers::get() - 1);
+		let collections: BoundedVec<(Identifier, RingExponent), T::MaxCollectionsPerSubscriber> =
+			(0..T::MaxCollectionsPerSubscriber::get())
+				.map(|i| (test_identifier(i), RingExponent::R2e9))
+				.collect::<alloc::vec::Vec<_>>()
+				.try_into()
+				.expect("within bounds");
+		SubscriptionWhitelist::<T>::insert(
+			para_id,
+			WhitelistedSubscription::<T> { collections, pallet_index: BENCHMARK_PALLET_INDEX },
+		);
+
+		#[block]
+		{
+			Pallet::<T>::authorize_subscribe_whitelisted(TransactionSource::External, &para_id)
 				.expect("must authorize");
 		}
 

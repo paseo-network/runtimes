@@ -21,6 +21,7 @@ use codec::{Decode, DecodeWithMemTracking, Encode};
 use core::fmt;
 use frame_support::{defensive, ensure, pallet_prelude::Weight};
 use frame_system::{CheckNonce, ValidNonceInfo};
+use indiv_support::tx_priority;
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{DispatchInfoOf, TransactionExtension, ValidateResult},
@@ -113,7 +114,12 @@ impl<T: Config> TransactionExtension<RuntimeCallOf<T>> for ScoreAsParticipant<T>
 				// Validate the nonce.
 				let ValidNonceInfo { requires, provides } =
 					CheckNonce::<T>::validate_nonce_for_account(who, nonce)?;
-				let validity = ValidTransaction { requires, provides, ..Default::default() };
+				let validity = ValidTransaction {
+					requires,
+					provides,
+					priority: tx_priority::USER_DEFAULT,
+					..Default::default()
+				};
 
 				Ok((
 					validity,
@@ -121,6 +127,8 @@ impl<T: Config> TransactionExtension<RuntimeCallOf<T>> for ScoreAsParticipant<T>
 					Origin::AccountParticipant(who.clone()).into(),
 				))
 			},
+			// Extension not in use by this transaction: pass through with default validity. The
+			// effective priority comes from whichever extension authorizes the call.
 			None => Ok((ValidTransaction::default(), ScoreAsParticipantVal::None, origin)),
 		}
 	}

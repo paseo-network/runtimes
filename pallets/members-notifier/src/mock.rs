@@ -18,7 +18,7 @@
 
 extern crate alloc;
 
-use crate::{self as pallet_members_notifier, pallet::Subscribers, Event};
+use crate::{self as pallet_members_notifier, pallet::Subscribers, Event, GenesisWhitelistEntry};
 use alloc::{sync::Arc, vec::Vec};
 use codec::{Decode, Encode};
 use core::cell::RefCell;
@@ -308,7 +308,9 @@ parameter_types! {
 	pub const MaxSubscribers: u32 = 10;
 	pub const MaxUpdatesPerBatch: u32 = 10;
 	pub const MaxCollectionsPerSubscriber: u32 = 5;
-	pub const MaxCollections: u32 = 10;
+	// Above MaxUpdatesPerBatch, as in the production runtimes, so that a `clear` bounded by the
+	// page size is distinguishable from one bounded by the collection count.
+	pub const MaxCollections: u32 = 100;
 	pub const RequestReplayRemoteWeight: frame_support::weights::Weight = frame_support::weights::Weight::zero();
 	pub const OffchainWorkerInterval: u64 = 1;
 	pub const StuckBatchTimeout: u64 = 100;
@@ -352,10 +354,23 @@ impl crate::benchmarking::BenchmarkHelper<Test> for () {
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
+	new_test_ext_with_whitelist(alloc::vec![])
+}
+
+/// Test externalities with `subscription_whitelist` seeded at genesis.
+pub fn new_test_ext_with_whitelist(
+	subscription_whitelist: Vec<GenesisWhitelistEntry>,
+) -> sp_io::TestExternalities {
 	MOCK_MAX_MESSAGE_SIZE.with(|s| *s.borrow_mut() = 100_000);
 	MOCK_CHANNELLESS_PARAS.with(|s| s.borrow_mut().clear());
 	MOCK_CLOCK_TIME.with(|t| t.set(1000));
-	let storage = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
+	let mut storage = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
+	pallet_members_notifier::GenesisConfig::<Test> {
+		subscription_whitelist,
+		_phantom: Default::default(),
+	}
+	.assimilate_storage(&mut storage)
+	.unwrap();
 	let mut ext: sp_io::TestExternalities = storage.into();
 	let (offchain, _state) = TestOffchainExt::new();
 	let (pool, state) = TestTransactionPoolExt::new();
