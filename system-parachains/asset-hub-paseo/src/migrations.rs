@@ -184,6 +184,11 @@ pub type Unreleased = (
 	// Idempotent and safe to leave in the tuple: once the key exists it is a single read, and
 	// it will never clobber a suffix that governance has since changed.
 	indiv_pallet_network_suffix::migration::SeedNetworkSuffix<Runtime>,
+	// `Scarcity` (index 58) is newly wired by this release, so `ItemDefs` is empty and this
+	// translates nothing. It is still required: the pallet declares `STORAGE_VERSION = 1`, so
+	// without it the on-chain storage version stays at 0 and `try-runtime`'s post-upgrade check
+	// reports the mismatch. `VersionedMigration`, so it is self-guarding and cannot run twice.
+	pallet_scarcity::migration::MigrateV0ToV1<Runtime>,
 	// individuality v0.3.1 gave `AccountNameRecord` a `chat` field on each of `lite`/`full`.
 	// Live `AccountNames` entries are in the old two-`Option<BaseLabel>` shape and would fail
 	// to decode. `VersionedMigration`, so it is self-guarding and cannot run twice.
