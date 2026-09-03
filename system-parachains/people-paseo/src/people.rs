@@ -1356,6 +1356,14 @@ parameter_types! {
 	pub CoinageCollectionOwner: Location = Location::new(0, [PalletInstance(68)]);
 }
 
+/// The asset amount of a coin of denomination zero, used only when benchmarks create the coinage
+/// instance. The external asset (Asset Hub asset `50_000_413`) has 6 decimals, so this is $0.01.
+///
+/// Ported verbatim from individuality v0.3.1's `next-people-paseo`, which wraps the very same
+/// Asset Hub asset id.
+#[cfg(feature = "runtime-benchmarks")]
+pub const COINAGE_ASSET_UNIT: Balance = 10u128.pow(4);
+
 // `LitePeopleProof` and `PeopleProof` were DELETED here.
 //
 // They were runtime-local wrappers implementing `indiv_pallet_coinage::ValidateProof`, bound to
@@ -1370,30 +1378,135 @@ pub struct CoinageBenchHelper;
 #[cfg(feature = "runtime-benchmarks")]
 impl indiv_pallet_coinage::BenchmarkHelper<Runtime> for CoinageBenchHelper {
 	fn setup_assets() {
+		use frame_support::traits::fungibles::{Inspect, Mutate};
 		benchmark_utils::ensure_external_asset_exists();
-		if !indiv_pallet_coinage::UnderlyingAssetId::<Runtime>::exists() {
-			indiv_pallet_coinage::UnderlyingAssetId::<Runtime>::put(ExternalAssetLocation::get());
+		// v0.3.1 replaced the single `UnderlyingAssetId` storage value with per-asset instances,
+		// so the benchmark set-up now has to create the instance rather than write a storage item.
+		if indiv_pallet_coinage::AssetToInstance::<Runtime>::iter_key_prefix(
+			ExternalAssetLocation::get(),
+		)
+		.next()
+		.is_none()
+		{
+			// What governance is expected to do before creating an instance: give the pallet
+			// account a balance buffer so fee flows that empty its free balance cannot kill it.
+			<AssetsWithHolder as Mutate<_>>::mint_into(
+				ExternalAssetLocation::get(),
+				&indiv_pallet_coinage::Pallet::<Runtime>::pallet_account(),
+				<AssetsWithHolder as Inspect<_>>::minimum_balance(ExternalAssetLocation::get()),
+			)
+			.expect("minting the pallet account buffer should succeed");
+			Coinage::create_sufficient_instance(
+				RuntimeOrigin::root(),
+				ExternalAssetLocation::get(),
+				COINAGE_ASSET_UNIT,
+			)
+			.expect("create_sufficient_instance should succeed");
 		}
 	}
+
+	fn setup_asset_without_instance() -> Location {
+		use frame_support::traits::fungibles::{Inspect, Mutate};
+		benchmark_utils::ensure_external_asset_exists();
+		// What governance does before `create_sufficient_instance`: the pallet account's balance
+		// buffer.
+		<AssetsWithHolder as Mutate<_>>::mint_into(
+			ExternalAssetLocation::get(),
+			&indiv_pallet_coinage::Pallet::<Runtime>::pallet_account(),
+			<AssetsWithHolder as Inspect<_>>::minimum_balance(ExternalAssetLocation::get()),
+		)
+		.expect("minting the pallet account buffer should succeed");
+		ExternalAssetLocation::get()
+	}
+
 	fn fund_account(who: &AccountId, amount: u128) {
 		use frame_support::traits::fungibles::Mutate;
 		<AssetsWithHolder as Mutate<_>>::mint_into(ExternalAssetLocation::get(), who, amount)
 			.expect("Failed to fund account");
 	}
+
+	fn create_extra_asset(seed: u32, who: &AccountId) -> Location {
+		use frame_support::traits::{
+			fungibles::{Create, Inspect, Mutate},
+			PalletInfoAccess,
+		};
+		let location = Self::extra_asset_id(seed);
+		if !<Assets as Inspect<_>>::asset_exists(location.clone()) {
+			<Assets as Create<_>>::create(
+				location.clone(),
+				ParaId::new(<Assets as PalletInfoAccess>::index() as u32).into_account_truncating(),
+				true,
+				1u32.into(),
+			)
+			.expect("Failed to create extra asset");
+		}
+		<AssetsWithHolder as Mutate<_>>::mint_into(location.clone(), who, 1_000_000 * UNITS)
+			.expect("Failed to fund extra asset");
+		location
+	}
+
+	fn extra_asset_id(seed: u32) -> Location {
+		Location::new(
+			1,
+			[
+				xcm::latest::Junction::Parachain(ASSET_HUB_ID),
+				xcm::latest::Junction::PalletInstance(50),
+				xcm::latest::Junction::GeneralIndex(1_000_000u128 + seed as u128),
+			],
+		)
+	}
+
 	fn set_time(now: core::time::Duration) {
 		pallet_timestamp::Now::<Runtime>::put(now.as_millis() as u64);
 	}
-	fn setup_conversion_rate() {
-		use sp_runtime::FixedU128;
-		// Native has 10 decimals, external asset has 6 decimals.
-		// 1 raw external asset ($10^-6) = 10^4 raw native ($10^-10), so rate = 10^4.
-		pallet_asset_rate::ConversionRateToNative::<Runtime>::insert(
-			ExternalAssetLocation::get(),
-			FixedU128::from_u32(10_000),
-		);
+
+	fn setup_fee_conversion() {
+		use frame_support::traits::fungible::Mutate as _;
+
+		let native = crate::xcm_config::RelayLocation::get();
+		let asset = ExternalAssetLocation::get();
+		if pallet_asset_conversion::Pools::<Runtime>::contains_key((native.clone(), asset.clone()))
+		{
+			return;
+		}
+
+		// Native has 10 decimals, the external asset has 6, and 1 raw asset ($10^-6) is worth
+		// 10^4 raw native ($10^-10), so the pool holds that ratio — the same 10^4 rate the
+		// deleted `setup_conversion_rate` wrote into `pallet_asset_rate`. The depth is far above
+		// any benchmarked fee so that the conversions do not move the price.
+		let native_liquidity: Balance = 1_000 * UNITS;
+		let asset_liquidity: Balance = native_liquidity / 10_000;
+
+		let provider: AccountId = [42u8; 32].into();
+		Balances::mint_into(&provider, native_liquidity.saturating_mul(2))
+			.expect("failed to fund the liquidity provider with native");
+		Self::fund_account(&provider, asset_liquidity.saturating_mul(2));
+
+		let origin = RuntimeOrigin::signed(provider.clone());
+		crate::AssetConversion::create_pool(
+			origin.clone(),
+			alloc::boxed::Box::new(native.clone()),
+			alloc::boxed::Box::new(asset.clone()),
+		)
+		.expect("failed to create the fee conversion pool");
+		crate::AssetConversion::add_liquidity(
+			origin,
+			alloc::boxed::Box::new(native),
+			alloc::boxed::Box::new(asset),
+			native_liquidity,
+			asset_liquidity,
+			1,
+			1,
+			provider,
+		)
+		.expect("failed to add liquidity to the fee conversion pool");
 	}
 
-	fn create_people_proof(context: &[u8], msg: &[u8], _alias: Alias) -> PeopleProof {
+	fn create_people_proof(
+		context: &[u8],
+		msg: &[u8],
+		_alias: Alias,
+	) -> indiv_pallet_people::MembershipProof<Runtime> {
 		use frame_support::dispatch::RawOrigin;
 		use indiv_support::traits::{AddOnlyPeopleTrait, AppendOnlyMembers};
 		use verifiable::ring::RingDomainSize;
@@ -1440,10 +1553,14 @@ impl indiv_pallet_coinage::BenchmarkHelper<Runtime> for CoinageBenchHelper {
 		let (proof, _alias) = BandersnatchVrfVerifiable::create(commitment, &secret, context, msg)
 			.expect("should create proof");
 
-		PeopleProof { proof, ring: ring_index }
+		indiv_pallet_people::MembershipProof { proof, ring: ring_index, revision: 0 }
 	}
 
-	fn create_lite_people_proof(context: &[u8], msg: &[u8], _alias: Alias) -> LitePeopleProof {
+	fn create_lite_people_proof(
+		context: &[u8],
+		msg: &[u8],
+		_alias: Alias,
+	) -> indiv_pallet_people::MembershipProof<Runtime> {
 		use indiv_support::traits::AppendOnlyMembers as _;
 		use sp_core::Pair;
 		use sp_runtime::traits::IdentifyAccount;
@@ -1504,7 +1621,7 @@ impl indiv_pallet_coinage::BenchmarkHelper<Runtime> for CoinageBenchHelper {
 		let (proof, _) = BandersnatchVrfVerifiable::create(commitment, &ring_secret, context, msg)
 			.expect("should create lite proof");
 
-		LitePeopleProof { proof, ring: ring_index }
+		indiv_pallet_people::MembershipProof { proof, ring: ring_index, revision: 0 }
 	}
 }
 
