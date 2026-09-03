@@ -334,12 +334,46 @@ impl OnRuntimeUpgrade for SeedCoinageInstanceZero {
 	}
 }
 
-/// How much of one entry's work a single step charges: read the old key, write the new one, kill
-/// the old one. Deliberately generous — PoV, not ref-time, is the binding constraint here, and the
-/// meter stops us long before the block does.
+/// Declared `proof_size` charged per migrated entry, in bytes.
+///
+/// 🔴 THIS IS THE NUMBER THAT PROTECTS BLOCK PRODUCTION, and it must be an OVER-estimate.
+///
+/// `RuntimeDbWeight::reads_writes()` declares `proof_size = 0`. On a parachain PoV is the binding
+/// constraint, not ref-time, so a step weight built from `DbWeight` alone tells the `WeightMeter`
+/// that entries are free in PoV. The meter would then let a step process thousands of them while
+/// the real proof grows past `MAX_POV_SIZE`, the relay rejects the block, and **block production
+/// stalls**. Under-declaring here is the single most dangerous thing this file could do.
+///
+/// A trie proof node set for one key is roughly 0.5–2 KB. 4 KB is deliberately about double the
+/// top of that range. Against the ~4 MB the MBM budget allows per block
+/// (`MbmServiceWeight` = 80% of `max_block`), that admits ~1,000 entries per block:
+///
+/// | unit | entries | blocks at 4 KB |
+/// | --- | --- | --- |
+/// | B | ~6,900 | ~7 |
+/// | C | ~12,000 | ~12 |
+///
+/// Being wrong in the generous direction costs extra blocks. Being wrong in the other direction
+/// costs the chain. Do not lower this without measuring a real proof on a real snapshot.
+const DECLARED_PROOF_SIZE_PER_ENTRY: u64 = 4 * 1024;
+
+/// The weight one migrated entry is charged: a read, two writes, and a deliberately generous
+/// `proof_size` allowance the `DbWeight` figures do not include.
 fn per_entry_weight() -> Weight {
-	<Runtime as frame_system::Config>::DbWeight::get().reads_writes(1, 2)
+	<Runtime as frame_system::Config>::DbWeight::get()
+		.reads_writes(1, 2)
+		.saturating_add(Weight::from_parts(0, DECLARED_PROOF_SIZE_PER_ENTRY))
 }
+
+/// Upper bound on `step()` invocations before `pallet_migrations` gives up.
+///
+/// Expected is ~20 for B and C together. 10,000 is ~500x that: it can only be reached by a genuine
+/// bug such as a cursor that fails to advance, and it bounds a runaway rather than letting one spin
+/// forever.
+///
+/// ⚠️ On this chain exceeding it is not a soft failure: People binds
+/// `FreezeChainOnFailedMigration`. The bound is set far above any legitimate run for that reason.
+const MAX_MIGRATION_STEPS: u32 = 10_000;
 
 /// The longest raw storage key any phase resumes from. The widest is the `RecyclersUnloaded`
 /// n-map: 32-byte item prefix + three `Twox64Concat` segments, the largest being an `Alias`.
@@ -387,6 +421,10 @@ impl SteppedMigration for MigrateCoinageToInstances {
 		}
 	}
 
+	fn max_steps() -> Option<u32> {
+		Some(MAX_MIGRATION_STEPS)
+	}
+
 	fn step(
 		cursor: Option<Self::Cursor>,
 		meter: &mut WeightMeter,
@@ -403,36 +441,64 @@ impl SteppedMigration for MigrateCoinageToInstances {
 				return Ok(Some(phase));
 			}
 
+			// `Done` and `Halt` both leave the current prefix, but only `Halt` means something
+			// went wrong; the leftover keys make it detectable in `post_upgrade`.
 			phase = match phase {
 				Phase::CoinsByOwner(last) => match step_coins_by_owner(last) {
-					Some(next) => Phase::CoinsByOwner(Some(next)),
-					None => Phase::LockedCoins(None),
+					StepOutcome::Next(k) => Phase::CoinsByOwner(Some(k)),
+					StepOutcome::Done | StepOutcome::Halt => Phase::LockedCoins(None),
 				},
 				Phase::LockedCoins(last) => match step_locked_coins(last) {
-					Some(next) => Phase::LockedCoins(Some(next)),
-					None => Phase::RecyclersCoinToRecycler(None),
+					StepOutcome::Next(k) => Phase::LockedCoins(Some(k)),
+					StepOutcome::Done | StepOutcome::Halt => Phase::RecyclersCoinToRecycler(None),
 				},
 				Phase::RecyclersCoinToRecycler(last) => match step_coin_to_recycler(last) {
-					Some(next) => Phase::RecyclersCoinToRecycler(Some(next)),
-					None => Phase::RecyclersUnloaded(None),
+					StepOutcome::Next(k) => Phase::RecyclersCoinToRecycler(Some(k)),
+					StepOutcome::Done | StepOutcome::Halt => Phase::RecyclersUnloaded(None),
 				},
 				Phase::RecyclersUnloaded(last) => match step_recyclers_unloaded(last) {
-					Some(next) => Phase::RecyclersUnloaded(Some(next)),
-					None => Phase::OldCollectionMarkers(None),
+					StepOutcome::Next(k) => Phase::RecyclersUnloaded(Some(k)),
+					StepOutcome::Done | StepOutcome::Halt => Phase::OldCollectionMarkers(None),
 				},
 				Phase::OldCollectionMarkers(last) => match step_old_markers(last) {
-					Some(next) => Phase::OldCollectionMarkers(Some(next)),
-					None => return Ok(None),
+					StepOutcome::Next(k) => Phase::OldCollectionMarkers(Some(k)),
+					StepOutcome::Done | StepOutcome::Halt => return Ok(None),
 				},
 			};
 		}
 	}
 }
 
-/// Bound a raw key for the cursor. A key that does not fit is impossible for these maps; returning
-/// `None` stops the phase rather than truncating, which would silently restart it.
-fn bound_key(raw: alloc::vec::Vec<u8>) -> Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>> {
-	BoundedVec::try_from(raw).ok()
+/// What one entry-level step produced.
+///
+/// The point of this enum is that [`Self::Done`] and [`Self::Halt`] are different. Both stop the
+/// current prefix, but `Halt` means *we could not continue*, which leaves old keys behind — and
+/// `post_upgrade`'s emptiness assertions are guaranteed to catch that. Collapsing the two into a
+/// bare `None`, as an earlier revision did, is what would turn a cursor failure into silent data
+/// loss.
+enum StepOutcome {
+	/// Migrated one entry; resume after this raw key.
+	Next(BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>),
+	/// No entries left under this prefix.
+	Done,
+	/// Could not continue. Logged, and detectable afterwards by the leftover keys.
+	Halt,
+}
+
+/// Bound a raw key for the cursor.
+///
+/// 🔴 Every key these phases produce has a fixed shape, so this cannot fail in practice — but if
+/// it did, returning a value the caller reads as "prefix finished" would **silently skip every
+/// remaining entry under it**. That is data loss, and invisible until a balance is missing. So a
+/// failure is logged loudly and surfaced as an error the caller must handle by stopping.
+fn bound_key(raw: alloc::vec::Vec<u8>) -> Result<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>, ()> {
+	BoundedVec::try_from(raw).map_err(|k: alloc::vec::Vec<u8>| {
+		log::error!(
+			target: "runtime::coinage-migration",
+			"cursor key of {} bytes exceeds MAX_CURSOR_KEY ({MAX_CURSOR_KEY}); stopping this phase",
+			k.len(),
+		);
+	})
 }
 
 fn resume<'a>(last: &'a Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>>) -> Option<&'a [u8]> {
@@ -440,14 +506,12 @@ fn resume<'a>(last: &'a Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>>) -> Opt
 }
 
 /// One `CoinsByOwner` entry: rehash the key and widen `Coin` with `instance_id = 0`.
-fn step_coins_by_owner(
-	last: Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>>,
-) -> Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>> {
+fn step_coins_by_owner(last: Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>>) -> StepOutcome {
 	let mut iter = match resume(&last) {
 		Some(k) => old::CoinsByOwner::<Runtime>::iter_from(k.to_vec()),
 		None => old::CoinsByOwner::<Runtime>::iter(),
 	};
-	let (account, old_coin) = iter.next()?;
+	let Some((account, old_coin)) = iter.next() else { return StepOutcome::Done };
 	let raw = old::CoinsByOwner::<Runtime>::hashed_key_for(&account);
 
 	// `instance_id` is prepended, so the widened value is a strict extension of the old one.
@@ -456,40 +520,45 @@ fn step_coins_by_owner(
 		Coin { instance_id: LEGACY_INSTANCE_ID, value: old_coin.value, age: old_coin.age },
 	);
 	old::CoinsByOwner::<Runtime>::remove(&account);
-	bound_key(raw)
+	match bound_key(raw) {
+		Ok(k) => StepOutcome::Next(k),
+		Err(()) => StepOutcome::Halt,
+	}
 }
 
 /// One `LockedCoins` entry: the value bytes are already correct, only the hasher moves.
-fn step_locked_coins(
-	last: Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>>,
-) -> Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>> {
+fn step_locked_coins(last: Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>>) -> StepOutcome {
 	let mut iter = match resume(&last) {
 		Some(k) => old::LockedCoins::<Runtime>::iter_from(k.to_vec()),
 		None => old::LockedCoins::<Runtime>::iter(),
 	};
-	let (account, lock) = iter.next()?;
+	let Some((account, lock)) = iter.next() else { return StepOutcome::Done };
 	let raw = old::LockedCoins::<Runtime>::hashed_key_for(&account);
 
 	indiv_pallet_coinage::LockedCoins::<Runtime>::insert(&account, lock);
 	old::LockedCoins::<Runtime>::remove(&account);
-	bound_key(raw)
+	match bound_key(raw) {
+		Ok(k) => StepOutcome::Next(k),
+		Err(()) => StepOutcome::Halt,
+	}
 }
 
 /// One `RecyclersCoinToRecycler` entry: rehash, and widen the bare denomination into
 /// `(instance_id, denomination)`.
-fn step_coin_to_recycler(
-	last: Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>>,
-) -> Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>> {
+fn step_coin_to_recycler(last: Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>>) -> StepOutcome {
 	let mut iter = match resume(&last) {
 		Some(k) => old::RecyclersCoinToRecycler::<Runtime>::iter_from(k.to_vec()),
 		None => old::RecyclersCoinToRecycler::<Runtime>::iter(),
 	};
-	let (member, denomination) = iter.next()?;
+	let Some((member, denomination)) = iter.next() else { return StepOutcome::Done };
 	let raw = old::RecyclersCoinToRecycler::<Runtime>::hashed_key_for(&member);
 
 	RecyclersCoinToRecycler::<Runtime>::insert(&member, (LEGACY_INSTANCE_ID, denomination));
 	old::RecyclersCoinToRecycler::<Runtime>::remove(&member);
-	bound_key(raw)
+	match bound_key(raw) {
+		Ok(k) => StepOutcome::Next(k),
+		Err(()) => StepOutcome::Halt,
+	}
 }
 
 /// 🔴 One anti-replay entry, rebuilt into `RecyclerAliasStates`.
@@ -504,14 +573,12 @@ fn step_coin_to_recycler(
 /// counter and documents the migrated case: "a ring that already had alias states when
 /// `RecyclersUnloadedCount` was introduced is never counted, so a caller that needs its number has
 /// to scan `RecyclerAliasStates`". Seeding it would risk a `defensive!` mismatch at ring removal.
-fn step_recyclers_unloaded(
-	last: Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>>,
-) -> Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>> {
+fn step_recyclers_unloaded(last: Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>>) -> StepOutcome {
 	let mut iter = match resume(&last) {
 		Some(k) => old::RecyclersUnloaded::<Runtime>::iter_keys_from(k.to_vec()),
 		None => old::RecyclersUnloaded::<Runtime>::iter_keys(),
 	};
-	let (denomination, ring, alias) = iter.next()?;
+	let Some((denomination, ring, alias)) = iter.next() else { return StepOutcome::Done };
 	let raw = old::RecyclersUnloaded::<Runtime>::hashed_key_for((denomination, ring, alias));
 
 	RecyclerAliasStates::<Runtime>::insert(
@@ -519,22 +586,26 @@ fn step_recyclers_unloaded(
 		AliasState::Unloaded,
 	);
 	old::RecyclersUnloaded::<Runtime>::remove((denomination, ring, alias));
-	bound_key(raw)
+	match bound_key(raw) {
+		Ok(k) => StepOutcome::Next(k),
+		Err(()) => StepOutcome::Halt,
+	}
 }
 
 /// One baseline `RecyclerCollectionCreated` key. Unit A already wrote the double-map replacement;
 /// this drops the old key, which would otherwise sit inside the new map's own prefix.
-fn step_old_markers(
-	last: Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>>,
-) -> Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>> {
+fn step_old_markers(last: Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>>) -> StepOutcome {
 	let mut iter = match resume(&last) {
 		Some(k) => old::RecyclerCollectionCreated::<Runtime>::iter_keys_from(k.to_vec()),
 		None => old::RecyclerCollectionCreated::<Runtime>::iter_keys(),
 	};
-	let denomination = iter.next()?;
+	let Some(denomination) = iter.next() else { return StepOutcome::Done };
 	let raw = old::RecyclerCollectionCreated::<Runtime>::hashed_key_for(denomination);
 	old::RecyclerCollectionCreated::<Runtime>::remove(denomination);
-	bound_key(raw)
+	match bound_key(raw) {
+		Ok(k) => StepOutcome::Next(k),
+		Err(()) => StepOutcome::Halt,
+	}
 }
 
 #[cfg(feature = "try-runtime")]
@@ -766,6 +837,10 @@ impl SteppedMigration for RelocateCoinageRecyclerCollections {
 		}
 	}
 
+	fn max_steps() -> Option<u32> {
+		Some(MAX_MIGRATION_STEPS)
+	}
+
 	fn step(
 		cursor: Option<Self::Cursor>,
 		meter: &mut WeightMeter,
@@ -847,8 +922,10 @@ fn step_relocate_keys(
 	}
 
 	match bound_key(key) {
-		Some(k) => Relocation::Keys { item, denomination, last: Some(k) },
-		None => advance(item, denomination),
+		Ok(k) => Relocation::Keys { item, denomination, last: Some(k) },
+		// Cannot advance the cursor, so leave this prefix rather than loop. The un-relocated
+		// keys are what `post_upgrade` detects.
+		Err(()) => advance(item, denomination),
 	}
 }
 
