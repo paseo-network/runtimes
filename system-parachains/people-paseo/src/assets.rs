@@ -19,7 +19,7 @@ use assets_common::local_and_foreign_assets::ForeignAssetReserveData;
 use frame_support::{
 	parameter_types,
 	traits::{
-		fungibles::Balanced, AsEnsureOriginWithArg, ConstU128, ConstU32, NeverEnsureOrigin,
+		fungibles::Balanced, AsEnsureOriginWithArg, ConstU128, ConstU32,
 	},
 	PalletId,
 };
@@ -226,7 +226,8 @@ impl pallet_assets::Config<PoolAssetsInstance> for Runtime {
 	type CreateOrigin =
 		AsEnsureOriginWithArg<frame_system::EnsureSignedBy<AssetConversionOrigin, AccountId>>;
 	#[cfg(not(feature = "runtime-benchmarks"))]
-	type CreateOrigin = AsEnsureOriginWithArg<NeverEnsureOrigin<AccountId>>;
+	type CreateOrigin =
+		AsEnsureOriginWithArg<frame_support::traits::NeverEnsureOrigin<AccountId>>;
 	type ForceOrigin = EnsureRoot<AccountId>;
 	type AssetDeposit = ConstU128<0>;
 	type AssetAccountDeposit = AssetAccountDeposit;
