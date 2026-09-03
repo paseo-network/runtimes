@@ -74,15 +74,15 @@ mod benches {
 		pallet_prelude::One,
 		traits::{
 			fungibles::{Create, Inspect, Mutate},
-			Consideration, EnsureOriginWithArg, UnixTime,
+			Consideration, ConstU32, EnsureOriginWithArg, UnixTime,
 		},
 		BoundedVec,
 	};
 	use indiv_pallet_score::{
 		AbsenceGraceSchedule, AbsenceGraceTier, AbsenceGraceTiers, PersonhoodThresholdSchedule,
-		PersonhoodThresholdTier, MAX_PERSONHOOD_THRESHOLD_TIERS, SCORE_CONTEXT,
+		PersonhoodThresholdTier, MAX_PERSONHOOD_THRESHOLD_TIERS,
 	};
-	use indiv_support::traits::CountedMembers;
+	use indiv_support::traits::{AddOnlyPeopleTrait, CountedMembers, PersonalId};
 	use sp_core::Get;
 	use sp_runtime::{
 		traits::{
@@ -93,7 +93,26 @@ mod benches {
 
 	type Fungibles<T> = <T as indiv_pallet_airdrop::Config>::Fungibles;
 
+	type PeopleOf<T> = <T as indiv_pallet_score::Config>::People;
+
 	const DEFAULT_IDENTIFIER_KEY: CommunicationIdentifier = [42u8; 65];
+
+	/// Make `who` a `Recognized` participant backed by a real person in
+	/// [`indiv_pallet_score::Config::People`], so offboarding them exercises the personhood
+	/// suspension. The participant entry must already exist. Returns the personal id.
+	fn make_recognized_participant<T: Config>(
+		who: &AccountOrPerson<T::AccountId>,
+	) -> Result<PersonalId, BenchmarkError> {
+		PeopleOf::<T>::initialize_people_collection();
+		let id = PeopleOf::<T>::reserve_new_id();
+		let (key, _) = PeopleOf::<T>::mock_key(id);
+		PeopleOf::<T>::recognize_personhood(id, Some(key))?;
+		indiv_pallet_score::Participants::<T>::mutate(who, |p| {
+			p.as_mut().expect("participant entry exists").recognition =
+				indiv_pallet_score::Recognition::Recognized(id);
+		});
+		Ok(id)
+	}
 
 	/// Valid prize for benchmark schedules.
 	fn bench_airdrop_prize<T: Config>(
@@ -104,6 +123,27 @@ mod benches {
 			max_winners: 1,
 			winner_cap: sp_runtime::Permill::one(),
 		}
+	}
+
+	/// `n` valid airdrops for benchmark schedules, drawn one day apart.
+	fn bench_airdrops<T: Config>(
+		n: u32,
+	) -> BoundedVec<
+		GameAirdrop<T::AirdropAssetId, T::AirdropAssetBalance>,
+		ConstU32<{ MAX_GAME_AIRDROPS as u32 }>,
+	> {
+		/// Seconds in a day (24 * 60 * 60), used to space benchmark airdrops one day apart.
+		const SECONDS_PER_DAY: u32 = 24 * 60 * 60;
+
+		(0..n)
+			.map(|i| GameAirdrop {
+				draw_offset: i.saturating_mul(SECONDS_PER_DAY),
+				claim_window: SECONDS_PER_DAY,
+				prize: bench_airdrop_prize::<T>(),
+			})
+			.collect::<Vec<_>>()
+			.try_into()
+			.expect("n is bounded by MAX_GAME_AIRDROPS")
 	}
 
 	/// Ensure the prize asset exists, is enabled in `indiv_pallet_airdrop::SupportedAssets`,
@@ -150,28 +190,33 @@ mod benches {
 		.expect("fund AirdropSource");
 	}
 
-	/// Move the airdrop event for `game_index` from `Status::Scheduled` (where `new_game`
-	/// leaves it) into `Status::Registering` so the participate paths accept the call.
-	fn bench_open_airdrop_registration<T>(game_index: u32)
+	/// Move the airdrop events for `game_index` from `Status::Scheduled` (where `new_game`
+	/// leaves them) into `Status::Registering` so the participate paths accept the call.
+	fn bench_open_airdrop_registration<T>(game_index: GameIdx, airdrop_count: u32)
 	where
 		T: indiv_pallet_airdrop::Config + Config,
 	{
-		let event_id = pallet::Pallet::<T>::airdrop_event_id(game_index);
-		let mut event = indiv_pallet_airdrop::Events::<T>::get(event_id)
-			.expect("airdrop event scheduled by new_game");
-		event.status = indiv_pallet_airdrop::types::Status::Registering { total_participants: 0 };
-		indiv_pallet_airdrop::Events::<T>::insert(event_id, event);
+		for airdrop_index in 0..airdrop_count {
+			let event_id = pallet::Pallet::<T>::airdrop_event_id(game_index, airdrop_index as u8);
+			let mut event = indiv_pallet_airdrop::Events::<T>::get(event_id)
+				.expect("airdrop event scheduled by new_game");
+			event.status =
+				indiv_pallet_airdrop::types::Status::Registering { total_participants: 0 };
+			indiv_pallet_airdrop::Events::<T>::insert(event_id, event);
+		}
 	}
 
-	/// Prepare the airdrop event for `game_index` to accept registrations and build a valid
-	/// `AirdropVrf::Alias` for the participant identified by `participant_origin`.
+	/// Prepare the `airdrop_count` airdrop events for `game_index` to accept registrations and
+	/// build the `AirdropVrfs::Alias` value (one valid proof per event) for the participant
+	/// identified by `participant_origin`.
 	///
-	/// Alias VRF is the airdrop worst case for a sign-up: ring-membership verification dominates
-	/// the cheaper sr25519 VRF check used by `AirdropVrf::Account`.
-	fn bench_alias_vrf<T>(
-		game_index: u32,
+	/// Alias proofs are the airdrop worst case for a sign-up: per-event ring-membership
+	/// verification dominates the cheaper sr25519 VRF check used by `AirdropVrfs::Account`.
+	fn bench_alias_vrfs<T>(
+		game_index: GameIdx,
+		airdrop_count: u32,
 		participant_origin: &indiv_pallet_airdrop::types::RegistrationEntry<T::AccountId>,
-	) -> AirdropVrf<AirdropProofOf<T>>
+	) -> AirdropVrfs<AirdropProofOf<T>>
 	where
 		T: indiv_pallet_airdrop::Config
 			+ Config<
@@ -180,23 +225,34 @@ mod benches {
 				Airdrop = indiv_pallet_airdrop::Pallet<T>,
 			>,
 	{
-		bench_open_airdrop_registration::<T>(game_index);
-		let event_id = pallet::Pallet::<T>::airdrop_event_id(game_index);
-		let context = indiv_pallet_airdrop::context_for_event(&event_id);
+		bench_open_airdrop_registration::<T>(game_index, airdrop_count);
 		let message = codec::Encode::encode(participant_origin);
-		let (proof, _alias) =
-			<<T as indiv_pallet_airdrop::Config>::BenchmarkHelper
-				as indiv_pallet_airdrop::benchmarking::BenchmarkHelper<T>>::build_membership_proof(
-					&context, &message, 0,
-				);
-		AirdropVrf::Alias { proof, ring_index: 0, revision: 0 }
+		let proofs = (0..airdrop_count)
+			.map(|airdrop_index| {
+				let event_id =
+					pallet::Pallet::<T>::airdrop_event_id(game_index, airdrop_index as u8);
+				let context = indiv_pallet_airdrop::context_for_event(&event_id);
+				let (proof, _alias) = <<T as indiv_pallet_airdrop::Config>::BenchmarkHelper
+					as indiv_pallet_airdrop::benchmarking::BenchmarkHelper<T>>::build_membership_proof(
+						&context, &message, 0,
+					);
+				proof
+			})
+			.collect::<Vec<_>>()
+			.try_into()
+			.expect("airdrop_count is bounded by MAX_GAME_AIRDROPS");
+		AirdropVrfs::Alias { proofs, ring_index: 0, revision: 0 }
 	}
 
-	/// Open registration on the airdrop event for `game_index` and build a valid
-	/// `AirdropVrf::Account` signature using an sr25519 keypair sourced from airdrop's
-	/// benchmark helper. Returns the matching `AccountId` (which the bench must use as
-	/// the call's caller — the VRF only verifies against this specific account's pubkey).
-	fn bench_account_vrf<T>(game_index: u32) -> (T::AccountId, AirdropVrf<AirdropProofOf<T>>)
+	/// Open registration on the `airdrop_count` airdrop events for `game_index` and build the
+	/// `AirdropVrfs::Account` value (one valid signature per event) using an sr25519 keypair
+	/// sourced from airdrop's benchmark helper. Returns the matching `AccountId` (which the
+	/// bench must use as the call's caller — the VRFs only verify against this specific
+	/// account's pubkey).
+	fn bench_account_vrfs<T>(
+		game_index: GameIdx,
+		airdrop_count: u32,
+	) -> (T::AccountId, AirdropVrfs<AirdropProofOf<T>>)
 	where
 		T: indiv_pallet_airdrop::Config
 			+ Config<
@@ -206,28 +262,36 @@ mod benches {
 			>,
 	{
 		use sp_runtime::traits::TryConvert;
-		bench_open_airdrop_registration::<T>(game_index);
-		let event_id = pallet::Pallet::<T>::airdrop_event_id(game_index);
+		bench_open_airdrop_registration::<T>(game_index, airdrop_count);
 		let (account_id, pair) =
 			<<T as indiv_pallet_airdrop::Config>::BenchmarkHelper
 				as indiv_pallet_airdrop::benchmarking::BenchmarkHelper<T>>::account_keypair_for(0);
 		let public =
 			<T as indiv_pallet_airdrop::Config>::AccountIdToPublic::try_convert(account_id.clone())
 				.expect("benchmark account must map to an sr25519 public key");
-		let transcript = indiv_pallet_airdrop::vrf::transcript_for_event(&event_id, &public);
-		let signature =
-			indiv_pallet_airdrop::benchmarking::vrf_sign_via_schnorrkel(&pair, transcript);
-		(account_id, AirdropVrf::Account(signature))
+		let vrfs = (0..airdrop_count)
+			.map(|airdrop_index| {
+				let event_id =
+					pallet::Pallet::<T>::airdrop_event_id(game_index, airdrop_index as u8);
+				let transcript =
+					indiv_pallet_airdrop::vrf::transcript_for_event(&event_id, &public);
+				indiv_pallet_airdrop::benchmarking::vrf_sign_via_schnorrkel(&pair, transcript)
+			})
+			.collect::<Vec<_>>()
+			.try_into()
+			.expect("airdrop_count is bounded by MAX_GAME_AIRDROPS");
+		(account_id, AirdropVrfs::Account(vrfs))
 	}
 
-	// Worst case for `new_game`: some airdrop is scheduled.
+	// `n` is the number of airdrop events the schedule carries, each of which is scheduled in
+	// the airdrop pallet.
 	#[benchmark]
-	fn new_game() -> Result<(), BenchmarkError> {
+	fn new_game(n: Linear<0, { MAX_GAME_AIRDROPS as u32 }>) -> Result<(), BenchmarkError> {
 		let schedule = GameScheduleOf::<T> {
 			game_play_time: 1000,
 			rounds: T::MaxRounds::get() as u8,
 			max_group_size: T::MaxGroupSize::get(),
-			airdrop_prize: Some(bench_airdrop_prize::<T>()),
+			airdrops: bench_airdrops::<T>(n),
 		};
 
 		<T as Config>::BenchmarkHelper::set_valid_time();
@@ -242,7 +306,7 @@ mod benches {
 		assert_eq!(game.state, GameState::Registration { next_player_index: 0 });
 		assert_eq!(game.max_group_size, schedule.max_group_size);
 		assert_eq!(game.rounds, schedule.rounds);
-		assert!(game.airdrop_scheduled, "airdrop should be scheduled");
+		assert_eq!(u32::from(game.airdrops_scheduled), n, "every airdrop should be scheduled");
 
 		Ok(())
 	}
@@ -257,7 +321,7 @@ mod benches {
 			game_play_time: 1000,
 			rounds: T::MaxRounds::get() as u8,
 			max_group_size: T::MaxGroupSize::get(),
-			airdrop_prize: Some(bench_airdrop_prize::<T>()),
+			airdrops: bench_airdrops::<T>(1),
 		};
 		assert_ok!(pallet::Pallet::<T>::new_game(&schedule));
 
@@ -294,7 +358,7 @@ mod benches {
 				game_play_time: prev_game_end + offset,
 				rounds: T::MaxRounds::get() as u8,
 				max_group_size: T::MaxGroupSize::get(),
-				airdrop_prize: Some(bench_airdrop_prize::<T>()),
+				airdrops: bench_airdrops::<T>(MAX_GAME_AIRDROPS.into()),
 			};
 			prev_game_end = GameTimes::<T>::player_process_end(&schedule);
 
@@ -343,7 +407,7 @@ mod benches {
 				max_group_size: T::MaxGroupSize::get(),
 				rounds: T::MaxRounds::get() as u8,
 				pending_attendance: 0,
-				airdrop_scheduled: false,
+				airdrops_scheduled: 0,
 			})
 		}
 		Ok(())
@@ -357,7 +421,7 @@ mod benches {
 				game_play_time: 1000,
 				rounds: T::MaxRounds::get() as u8,
 				max_group_size: T::MaxGroupSize::get(),
-				airdrop_prize: Some(bench_airdrop_prize::<T>()),
+				airdrops: bench_airdrops::<T>(MAX_GAME_AIRDROPS.into()),
 			});
 		}
 
@@ -383,7 +447,7 @@ mod benches {
 			max_group_size: T::MaxGroupSize::get(),
 			rounds: T::MaxRounds::get() as u8,
 			pending_attendance: 0,
-			airdrop_scheduled: false,
+			airdrops_scheduled: 0,
 		};
 
 		let mut meter = WeightMeter::new();
@@ -410,7 +474,7 @@ mod benches {
 			game_play_time: 1000,
 			rounds,
 			max_group_size: 2,
-			airdrop_prize: Some(bench_airdrop_prize::<T>()),
+			airdrops: bench_airdrops::<T>(1),
 		};
 		assert_ok!(pallet::Pallet::<T>::new_game(&schedule));
 
@@ -489,7 +553,7 @@ mod benches {
 			game_play_time: 1000,
 			rounds,
 			max_group_size: 2,
-			airdrop_prize: Some(bench_airdrop_prize::<T>()),
+			airdrops: bench_airdrops::<T>(1),
 		};
 		assert_ok!(pallet::Pallet::<T>::new_game(&schedule));
 
@@ -544,13 +608,15 @@ mod benches {
 			assert_eq!(ShuffleNotRecognized::<T>::iter_prefix(round).count(), 2);
 		}
 
-		let mut recognized_finished = true;
+		let mut phase = ShuffleRetrievePhase::NotRecognized { recognized_count: 0 };
 		let mut next_index = 0;
+		let mut cached_last_keys = vec![None; usize::from(rounds)];
 
 		// Do one shuffle step retrieve.
 		let _ = pallet::Pallet::<T>::shuffle_step_retrieve(
 			&mut next_index,
-			&mut recognized_finished,
+			&mut phase,
+			&mut cached_last_keys,
 			rounds,
 		);
 
@@ -559,7 +625,8 @@ mod benches {
 		{
 			let _ = pallet::Pallet::<T>::shuffle_step_retrieve(
 				&mut next_index,
-				&mut recognized_finished,
+				&mut phase,
+				&mut cached_last_keys,
 				rounds,
 			);
 		}
@@ -583,25 +650,34 @@ mod benches {
 
 	#[benchmark]
 	fn shuffle_step_compute_weights(
-		n: Linear<2, { T::MaxGroupSize::get() }>,
-		r: Linear<1, { T::MaxRounds::get() }>,
+		// `p` is the swept product `rounds * group_size`. The per-call cost scales with
+		// `rounds * (group_size - 1)` inner iterations, a product that a separable
+		// `f(group_size, rounds)` weight cannot model, so we sweep a single component over the
+		// whole product range and derive the two dimensions from it below. (The benchmark macro
+		// requires single-letter parameter names, hence `p` rather than a spelled-out name.)
+		p: Linear<2, { T::MaxRounds::get() * T::MaxGroupSize::get() }>,
 	) -> Result<(), BenchmarkError> {
 		<T as Config>::BenchmarkHelper::set_valid_time();
 		bench_setup_airdrop_funds::<T>();
 
-		let rounds = r as u8;
-		let player_count = 2u32 * n;
+		// Split the swept product `p` back into a group size and a round count. Group size grows
+		// first, up to `max_group_size`, then rounds take over for the rest of the range. This way
+		// small games (a low product) are measured too, instead of only sweeping rounds at the
+		// maximum group size. The runtime charges the worst case, `rounds * max_group_size`.
+		let group_size = p.clamp(2, T::MaxGroupSize::get());
+		let rounds = (p / group_size).max(1) as u8;
+		let player_count = 2u32 * group_size;
 
-		// One game exists with `max_group_size = n`.
+		// One game exists with `max_group_size = group_size`.
 		let schedule = crate::types::GameScheduleOf::<T> {
 			game_play_time: 1000,
 			rounds,
-			max_group_size: n,
-			airdrop_prize: Some(bench_airdrop_prize::<T>()),
+			max_group_size: group_size,
+			airdrops: bench_airdrops::<T>(1),
 		};
 		assert_ok!(pallet::Pallet::<T>::new_game(&schedule));
 
-		// Sign up `2 * n` players so the resulting two groups of size `n` are both full.
+		// Sign up `2 * group_size` players so the resulting two groups are both full.
 		for i in 0..player_count {
 			let player: T::AccountId = account("player", i, i);
 			<T as Config>::BenchmarkHelper::fund_account(player.clone());
@@ -635,11 +711,13 @@ mod benches {
 
 		// Run Step2 to assign player indices in every round.
 		let mut next_index = 0;
-		let mut recognized_finished = false;
+		let mut phase = ShuffleRetrievePhase::Recognized;
+		let mut cached_last_keys = vec![None; usize::from(rounds)];
 		loop {
 			let r = pallet::Pallet::<T>::shuffle_step_retrieve(
 				&mut next_index,
-				&mut recognized_finished,
+				&mut phase,
+				&mut cached_last_keys,
 				rounds,
 			);
 			if matches!(r, StepResult::Finished) {
@@ -649,13 +727,18 @@ mod benches {
 
 		assert_eq!(next_index, player_count);
 
+		let ShuffleRetrievePhase::NotRecognized { recognized_count } = phase else {
+			panic!("unexpected: shuffle step retrieve did not reach the not-recognized phase");
+		};
+
 		// Warm up Step3 once so the benchmarked call uses `iter_from_key`.
 		let mut last_iteration = None;
 		let _ = pallet::Pallet::<T>::shuffle_step_compute_weights(
 			&mut last_iteration,
 			rounds,
 			next_index,
-			n,
+			recognized_count,
+			group_size,
 		);
 		let warmup_player = last_iteration.clone().expect("warmup processed one player");
 
@@ -665,7 +748,8 @@ mod benches {
 				&mut last_iteration,
 				rounds,
 				next_index,
-				n,
+				recognized_count,
+				group_size,
 			);
 		}
 
@@ -673,10 +757,10 @@ mod benches {
 		assert!(processed_player != warmup_player, "benchmark must advance past the warmup player");
 		let player_info = Players::<T>::get(&processed_player).expect("player should still exist");
 		// All co-players are candidates (not externally recognised), so weight per voter
-		// is `CandidateVoteWeight`. The player's group has `n` members, hence `n - 1`
-		// voters per round.
+		// is `CandidateVoteWeight`. The player's group has `group_size` members, hence
+		// `group_size - 1` voters per round.
 		let expected = (T::CandidateVoteWeight::get() as u32)
-			.saturating_mul((n - 1).saturating_mul(rounds as u32));
+			.saturating_mul((group_size - 1).saturating_mul(rounds as u32));
 		let expected_u16: u16 = expected.try_into().unwrap_or(u16::MAX);
 		assert_eq!(player_info.expected_max_vote_weight, expected_u16);
 
@@ -759,7 +843,7 @@ mod benches {
 			max_group_size,
 			rounds,
 			pending_attendance: 0,
-			airdrop_scheduled: false,
+			airdrops_scheduled: 0,
 		};
 
 		let mut meter = WeightMeter::new();
@@ -784,17 +868,18 @@ mod benches {
 
 	// Per-player worst case: the target is freshly decided as Attended. The
 	// iteration runs `apply_attendance` (including score payout writes), rotates a
-	// full attendance history, mints all attendance NFTs, promotes all staged NFT
+	// full attendance history, awards all attendance NFT claim credits, promotes all staged
 	// candidates, and drops a deposit after the target reaches personhood.
 	#[benchmark]
-	fn player_process_step1_attended_player() -> Result<(), BenchmarkError> {
+	fn player_process_step1_inner_loop(
+		r: Linear<1, { T::MaxRounds::get() }>,
+	) -> Result<(), BenchmarkError> {
 		<T as Config>::BenchmarkHelper::set_valid_time();
 
 		let max_group_size = T::MaxGroupSize::get();
-		let rounds = T::MaxRounds::get() as u8;
+		let rounds = r as u8;
 		let game_index = 0u32;
 		let player_count = max_group_size;
-		let groups_setting = GroupsSetting { max_per_group: max_group_size, player_count };
 		let target_account: T::AccountId = account("target", 0, 0);
 		let target_player = AccountOrPerson::Account(target_account.clone());
 		<T as Config>::BenchmarkHelper::fund_account(target_account.clone());
@@ -812,7 +897,7 @@ mod benches {
 			max_group_size,
 			rounds,
 			pending_attendance: player_count,
-			airdrop_scheduled: false,
+			airdrops_scheduled: 0,
 		};
 
 		for i in 0..player_count {
@@ -862,18 +947,6 @@ mod benches {
 			}
 		}
 
-		let group_index = groups_setting.group_index_from_player_index(0);
-		for round in 0..rounds {
-			for co_member_index in groups_setting.group_members(group_index).filter(|&j| j != 0) {
-				let Some(co_member) = IndexToPlayer::<T>::get((round, co_member_index)) else {
-					continue;
-				};
-				let nft =
-					pallet::Pallet::<T>::compute_nft(game_index, round, &co_member, &target_player);
-				NftCandidates::<T>::insert(&target_player, nft, ());
-			}
-		}
-
 		let mut attendance = PlayerAttendanceHistory::<T>::get(&target_player);
 		for i in 0..T::MaxAttendanceHistoryDepth::get() {
 			let _ = attendance.try_push(i);
@@ -886,17 +959,18 @@ mod benches {
 			let participant =
 				maybe_participant.as_mut().expect("benchmark seeded score participant");
 			participant.score = personhood_threshold.saturating_sub(1);
-			participant.streak = indiv_pallet_score::Streak::Attended(1);
+			participant.streak = indiv_pallet_score::Streak::Attended(1u8);
 			participant.reached_personhood = false;
 			participant.has_ever_reached_personhood = false;
 		});
-		let mint_time = <T as Config>::UnixTime::now().as_secs() as u32;
+		let award_time = <T as Config>::UnixTime::now().as_secs() as u32;
 		let mut last_iteration = None;
 		let next_player = (
 			target_player.clone(),
 			Players::<T>::get(&target_player).expect("benchmark seeded target player"),
 		);
 		let mut iterator = Players::<T>::iter_from_key(target_player.clone());
+		let mut credits_awarded = 0;
 
 		#[block]
 		{
@@ -909,7 +983,8 @@ mod benches {
 				&mut last_iteration,
 				next_player,
 				&mut iterator,
-				mint_time,
+				award_time,
+				&mut credits_awarded,
 			);
 		}
 
@@ -919,144 +994,10 @@ mod benches {
 		assert!(!stored.registered);
 		assert!(<ArchivedPlayers<T>>::get(&target_player).is_none());
 		assert!(matches!(stored.credibility, PlayerCredibility::Recognized));
-		assert!(NftCandidates::<T>::iter_prefix(&target_player).next().is_none());
 		let attendance = PlayerAttendanceHistory::<T>::get(&target_player);
 		assert_eq!(attendance.len() as u32, T::MaxAttendanceHistoryDepth::get());
 		assert_eq!(attendance.last(), Some(&game_index));
 		assert!(indiv_pallet_score::Pallet::<T>::reached_personhood(&target_player));
-		assert_eq!(game.pending_attendance, player_count - 1);
-
-		Ok(())
-	}
-
-	// Distinct non-attending path for an alias player: no attendance NFTs are
-	// minted or promoted, but we still clear staged candidates, archive the
-	// player, and tear down statement-account state.
-	#[benchmark]
-	fn player_process_step1_not_attended_player() -> Result<(), BenchmarkError> {
-		<T as Config>::BenchmarkHelper::set_valid_time();
-
-		let max_group_size = T::MaxGroupSize::get();
-		let rounds = T::MaxRounds::get() as u8;
-		let game_index = 0u32;
-		let player_count = max_group_size;
-		let groups_setting = GroupsSetting { max_per_group: max_group_size, player_count };
-
-		let target_alias: Alias = [42u8; 32];
-		let target_stmt_account = <T as Config>::BenchmarkHelper::create_account(42);
-		let target_player = AccountOrPerson::Person(target_alias);
-
-		let mut game: GameInfo<T::AccountId> = GameInfo {
-			index: game_index,
-			registration_ends: 0,
-			shuffle_deadline: 0,
-			game_date: 0,
-			report_ends: 0,
-			state: GameState::PlayerProcess {
-				step: PlayerProcessStep::Step1ProcessPlayers { last_iteration: None, player_count },
-			},
-			max_group_size,
-			rounds,
-			pending_attendance: player_count,
-			airdrop_scheduled: false,
-		};
-
-		indiv_pallet_score::Pallet::<T>::onboard_externally_recognized(&target_alias)?;
-		AliasToStmtAccount::<T>::insert(target_alias, &target_stmt_account);
-		StmtAccountToAlias::<T>::insert(&target_stmt_account, target_alias);
-		sp_statement_store::increase_allowance_by(
-			target_stmt_account.clone().into(),
-			T::PlayerStatementLimit::get(),
-		);
-
-		for i in 0..player_count {
-			let mut player = Player {
-				first_game: 0,
-				registered: true,
-				sent_report: true,
-				early_attendance_enactment: None,
-				yes_person: max_group_size as u8 - 1,
-				no_not_person: 0,
-				expected_max_vote_weight: max_group_size as u16 - 1,
-				vote_weight: T::CandidateVoteWeight::get(),
-				credibility: PlayerCredibility::Recognized,
-			};
-			let account_or_person = if i == 0 {
-				player.sent_report = false;
-				target_player.clone()
-			} else {
-				let mut alias = [0u8; 32];
-				let i_bytes = i.to_le_bytes();
-				alias[..i_bytes.len()].copy_from_slice(&i_bytes);
-				let account_or_person = AccountOrPerson::Person(alias);
-				let stmt_acc: T::AccountId = account("stmt", i, i);
-				AliasToStmtAccount::<T>::insert(alias, &stmt_acc);
-				StmtAccountToAlias::<T>::insert(&stmt_acc, alias);
-				sp_statement_store::increase_allowance_by(
-					stmt_acc.clone().into(),
-					T::PlayerStatementLimit::get(),
-				);
-				assert!(
-					indiv_pallet_score::Pallet::<T>::onboard_externally_recognized(&alias).is_ok()
-				);
-				account_or_person
-			};
-
-			Players::<T>::insert(&account_or_person, player);
-
-			let indices =
-				BoundedVec::try_from(vec![i; rounds as usize]).expect("rounds within bound");
-			PlayerToIndex::<T>::insert(&account_or_person, indices);
-			for round in 0..rounds {
-				IndexToPlayer::<T>::insert((round, i), &account_or_person);
-			}
-		}
-
-		let group_index = groups_setting.group_index_from_player_index(0);
-		for round in 0..rounds {
-			for co_member_index in groups_setting.group_members(group_index).filter(|&j| j != 0) {
-				let Some(co_member) = IndexToPlayer::<T>::get((round, co_member_index)) else {
-					continue;
-				};
-				let nft =
-					pallet::Pallet::<T>::compute_nft(game_index, round, &co_member, &target_player);
-				NftCandidates::<T>::insert(&target_player, nft, ());
-			}
-		}
-
-		indiv_pallet_score::Pallet::<T>::start_attendance_report_session().unwrap();
-		let mut last_iteration = None;
-		let next_player = (
-			target_player.clone(),
-			Players::<T>::get(&target_player).expect("benchmark seeded target player"),
-		);
-		let mut iterator = Players::<T>::iter_from_key(target_player.clone());
-		let mint_time = <T as Config>::UnixTime::now().as_secs() as u32;
-
-		#[block]
-		{
-			pallet::Pallet::<T>::process_player_attendance_outcome(
-				game.index,
-				game.rounds,
-				game.max_group_size,
-				&mut game.pending_attendance,
-				player_count,
-				&mut last_iteration,
-				next_player,
-				&mut iterator,
-				mint_time,
-			);
-		}
-
-		assert_eq!(last_iteration, Some(target_player.clone()));
-		assert!(!Players::<T>::contains_key(&target_player));
-		assert!(matches!(
-			ArchivedPlayers::<T>::get(&target_player),
-			Some(ArchivedPlayer::Unkickable { first_game: 0 }),
-		));
-		assert!(!AliasToStmtAccount::<T>::contains_key(target_alias));
-		assert!(!StmtAccountToAlias::<T>::contains_key(&target_stmt_account));
-		assert!(NftCandidates::<T>::iter_prefix(&target_player).next().is_none());
 		assert_eq!(game.pending_attendance, player_count - 1);
 
 		Ok(())
@@ -1078,7 +1019,7 @@ mod benches {
 			max_group_size: T::MaxGroupSize::get(),
 			rounds,
 			pending_attendance: 0,
-			airdrop_scheduled: false,
+			airdrops_scheduled: 0,
 		});
 
 		let mut meter = WeightMeter::new();
@@ -1097,8 +1038,9 @@ mod benches {
 	fn player_process_step2_inner_loop() -> Result<(), BenchmarkError> {
 		<T as Config>::BenchmarkHelper::set_valid_time();
 
-		let total_entries = PLAYER_PROCESS_STEP2_CHUNK.saturating_mul(2).saturating_add(1);
+		let total_entries = PLAYER_PROCESS_STEP2_CHUNK.saturating_add(1);
 		let rounds = T::MaxRounds::get() as u8;
+		let game_index = 1u32;
 		for i in 0..total_entries {
 			let mut alias = [0u8; 32];
 			let i_bytes = i.to_le_bytes();
@@ -1109,46 +1051,62 @@ mod benches {
 				BoundedVec::try_from(vec![i; rounds as usize]).expect("rounds within bound");
 			PlayerToIndex::<T>::insert(&account_or_person, indices);
 			IndexToPlayer::<T>::insert((0u8, i), &account_or_person);
+			T::NftClaimCredits::benchmark_award_every_slot(game_index, &account_or_person);
 		}
 
 		let mut cursor1: Option<Vec<u8>> = None;
 		let mut cursor2: Option<Vec<u8>> = None;
+		let mut cursor3: Option<Vec<u8>> = None;
 		let mut done1 = false;
 		let mut done2 = false;
+		let mut done3 = false;
 
 		#[block]
 		{
 			pallet::Pallet::<T>::player_process_step2_inner_loop(
+				game_index,
 				&mut cursor1,
 				&mut cursor2,
+				&mut cursor3,
 				&mut done1,
 				&mut done2,
+				&mut done3,
 			);
 		}
 
 		assert!(IndexToPlayer::<T>::iter().count() < total_entries as usize);
 		assert!(PlayerToIndex::<T>::iter().count() < total_entries as usize);
+		// The third map is the credits pallet's, reached through `T::NftClaimCredits`, so what it
+		// costs is measured with whatever the runtime wires in and asserted in its own tests.
 
 		Ok(())
 	}
 
 	#[benchmark]
 	fn process_cancelling() -> Result<(), BenchmarkError> {
-		// A game in the cancelling state exists
+		// A game in the cancelling state exists, with the player-drain
+		// sub-step already reached (so the benchmark exercises the path
+		// that actually completes the cancellation).
 		let game = GameInfo {
 			index: 0,
 			registration_ends: 0,
 			shuffle_deadline: 0,
 			game_date: 0,
 			report_ends: 0,
-			state: GameState::Cancelling { last_iteration: None },
+			state: GameState::Cancelling {
+				step: CancellingStep::Step2DrainPlayers { last_iteration: None },
+			},
 			max_group_size: T::MaxGroupSize::get(),
 			rounds: T::MaxRounds::get() as u8,
 			pending_attendance: 0,
-			airdrop_scheduled: false,
+			// `process_cancelling` never touches the airdrop — the refund happens once at the
+			// transition in `on_game_cancelled` (benchmarked separately). `airdrops_scheduled` is
+			// inert here; if refund logic ever moves into this path, set up a funded event.
+			airdrops_scheduled: 0,
 		};
 
-		// No players exists for the game so `process_cancelling_step` should do minimal computation
+		// No players exists for the game so `process_cancelling_step_player` should do minimal
+		// computation
 
 		let mut meter = WeightMeter::new();
 		Game::<T>::put(game);
@@ -1164,7 +1122,41 @@ mod benches {
 	}
 
 	#[benchmark]
-	fn process_cancelling_step(
+	fn process_cancelling_step_shuffle() -> Result<(), BenchmarkError> {
+		// Pre-populate more than one chunk worth of entries in each shuffle map so that a
+		// single step does the worst-case work (a full `CANCELLING_SHUFFLE_CHUNK`-sized clear).
+		let total_entries = CANCELLING_SHUFFLE_CHUNK.saturating_add(1);
+		let aop: AccountOrPerson<T::AccountId> =
+			AccountOrPerson::Account(<T as Config>::BenchmarkHelper::create_account(0));
+		for i in 0..total_entries {
+			let hash = sp_io::hashing::blake2_256(&i.to_le_bytes());
+			ShuffleRecognized::<T>::insert(0u8, hash, &aop);
+			ShuffleNotRecognized::<T>::insert(0u8, hash, &aop);
+		}
+
+		let mut cursor1: Option<Vec<u8>> = None;
+		let mut cursor2: Option<Vec<u8>> = None;
+		let mut done1 = false;
+		let mut done2 = false;
+
+		#[block]
+		{
+			pallet::Pallet::<T>::process_cancelling_step_shuffle(
+				&mut cursor1,
+				&mut cursor2,
+				&mut done1,
+				&mut done2,
+			);
+		}
+
+		assert!(ShuffleRecognized::<T>::iter().count() < total_entries as usize);
+		assert!(ShuffleNotRecognized::<T>::iter().count() < total_entries as usize);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn process_cancelling_step_player(
 		n: Linear<1, { T::MaxRounds::get() }>,
 	) -> Result<(), BenchmarkError> {
 		<T as Config>::BenchmarkHelper::set_valid_time();
@@ -1177,7 +1169,7 @@ mod benches {
 			game_play_time: 1000,
 			rounds,
 			max_group_size: T::MaxGroupSize::get(),
-			airdrop_prize: Some(bench_airdrop_prize::<T>()),
+			airdrops: bench_airdrops::<T>(1),
 		};
 		assert_ok!(pallet::Pallet::<T>::new_game(&schedule));
 
@@ -1193,7 +1185,8 @@ mod benches {
 			.using_encoded(sp_io::hashing::blake2_256);
 		let signature = <T as Config>::BenchmarkHelper::sign_account(seed, &msg[..]);
 
-		let origin = T::EnsurePerson::try_successful_origin(&SCORE_CONTEXT)
+		let score_context = indiv_pallet_score::Pallet::<T>::score_context();
+		let origin = T::EnsurePerson::try_successful_origin(&score_context)
 			.map_err(|_| BenchmarkError::Weightless)?;
 
 		let result = pallet::Pallet::<T>::sign_up_with_alias(
@@ -1214,9 +1207,15 @@ mod benches {
 		}
 		assert!(PlayerToIndex::<T>::contains_key(&account_or_person));
 
+		// The cancelled game's credit mask is dropped with the player's indices.
+		let game_index = Game::<T>::get().expect("game was scheduled").index;
+		T::NftClaimCredits::benchmark_award_every_slot(game_index, &account_or_person);
+
 		#[block]
 		{
-			assert!(!pallet::Pallet::<T>::process_cancelling_step(&mut None, rounds));
+			assert!(!pallet::Pallet::<T>::process_cancelling_step_player(
+				game_index, &mut None, rounds
+			));
 		}
 
 		// All the player's info is reset
@@ -1243,8 +1242,12 @@ mod benches {
 
 	// Invites are for brand-new players, so they're never recognized — only the
 	// `AirdropVrf::Account` variant is possible here.
+	// `n` is the number of scheduled airdrop events the sign-up registers into; zero skips
+	// airdrop registration entirely.
 	#[benchmark]
-	fn sign_up_with_invite() -> Result<(), BenchmarkError> {
+	fn sign_up_with_invite(
+		n: Linear<0, { MAX_GAME_AIRDROPS as u32 }>,
+	) -> Result<(), BenchmarkError> {
 		<T as Config>::BenchmarkHelper::set_valid_time();
 		bench_setup_airdrop_funds::<T>();
 
@@ -1253,15 +1256,15 @@ mod benches {
 			game_play_time: 1000,
 			rounds: T::MaxRounds::get() as u8,
 			max_group_size: T::MaxGroupSize::get(),
-			airdrop_prize: Some(bench_airdrop_prize::<T>()),
+			airdrops: bench_airdrops::<T>(n),
 		};
 		assert_ok!(pallet::Pallet::<T>::new_game(&schedule));
 		let game_index = Game::<T>::get().expect("game exists").index;
 
-		let (caller, vrf) = bench_account_vrf::<T>(game_index);
+		let (caller, vrfs) = bench_account_vrfs::<T>(game_index, n);
 
 		#[extrinsic_call]
-		_(Origin::Invited(caller.clone()), DEFAULT_IDENTIFIER_KEY, Some(vrf));
+		_(Origin::Invited(caller.clone()), DEFAULT_IDENTIFIER_KEY, Some(vrfs));
 
 		// The caller becomes a registered player
 		let account_or_person: AccountOrPerson<T::AccountId> = AccountOrPerson::Account(caller);
@@ -1274,9 +1277,12 @@ mod benches {
 
 	// New (not playing, not archived) account signing up: `sign_up_inner` calls
 	// `onboard_for_recognition` and takes a `PlayDeposit`. The account is `NotRecognized`
-	// after onboarding, so the only possible airdrop variant is `AirdropVrf::Account`.
+	// after onboarding, so the only possible airdrop variant is `AirdropVrf::Account`. At zero
+	// airdrops VRF verification and airdrop registration are skipped entirely.
 	#[benchmark]
-	fn sign_up_with_account_new() -> Result<(), BenchmarkError> {
+	fn sign_up_with_account_new(
+		n: Linear<0, { MAX_GAME_AIRDROPS as u32 }>,
+	) -> Result<(), BenchmarkError> {
 		<T as Config>::BenchmarkHelper::set_valid_time();
 		bench_setup_airdrop_funds::<T>();
 
@@ -1285,18 +1291,18 @@ mod benches {
 			game_play_time: 1000,
 			rounds: T::MaxRounds::get() as u8,
 			max_group_size: T::MaxGroupSize::get(),
-			airdrop_prize: Some(bench_airdrop_prize::<T>()),
+			airdrops: bench_airdrops::<T>(n),
 		};
 		assert_ok!(pallet::Pallet::<T>::new_game(&schedule));
 		let game_index = Game::<T>::get().expect("game exists").index;
 
-		let (caller, vrf) = bench_account_vrf::<T>(game_index);
+		let (caller, vrfs) = bench_account_vrfs::<T>(game_index, n);
 
 		// To make sure the deposit ticket creation for the game will succeed
 		T::PlayDeposit::ensure_successful(&caller, pallet::PlayDepositAmount::<T>::get());
 
 		#[extrinsic_call]
-		sign_up_with_account(RawOrigin::Signed(caller.clone()), DEFAULT_IDENTIFIER_KEY, Some(vrf));
+		sign_up_with_account(RawOrigin::Signed(caller.clone()), DEFAULT_IDENTIFIER_KEY, Some(vrfs));
 
 		// New player + onboarding ran (caller wasn't in `Participants` beforehand).
 		let aop: AccountOrPerson<T::AccountId> = AccountOrPerson::Account(caller);
@@ -1309,7 +1315,9 @@ mod benches {
 	// Recognized, currently-playing account signing up: onboarding is skipped, the airdrop path
 	// now takes the worst case: `AirdropVrf::Alias` variant.
 	#[benchmark]
-	fn sign_up_with_account_recognized() -> Result<(), BenchmarkError> {
+	fn sign_up_with_account_recognized(
+		n: Linear<0, { MAX_GAME_AIRDROPS as u32 }>,
+	) -> Result<(), BenchmarkError> {
 		<T as Config>::BenchmarkHelper::set_valid_time();
 		bench_setup_airdrop_funds::<T>();
 
@@ -1318,13 +1326,13 @@ mod benches {
 			game_play_time: 1000,
 			rounds: T::MaxRounds::get() as u8,
 			max_group_size: T::MaxGroupSize::get(),
-			airdrop_prize: Some(bench_airdrop_prize::<T>()),
+			airdrops: bench_airdrops::<T>(n),
 		};
 		assert_ok!(pallet::Pallet::<T>::new_game(&schedule));
 		let game_index = Game::<T>::get().expect("game exists").index;
 
 		let caller: T::AccountId = whitelisted_caller();
-		let aop = AccountOrPerson::Account(caller.clone());
+		let account_or_person = AccountOrPerson::Account(caller.clone());
 
 		// Fund the caller before seeding their `PlayerCredibility::Deposit`.
 		<T as Config>::BenchmarkHelper::fund_account(caller.clone());
@@ -1333,7 +1341,7 @@ mod benches {
 		// existing record) and is recognized in pallet-score (so the alias airdrop variant is
 		// the valid one).
 		indiv_pallet_score::Participants::<T>::insert(
-			&aop,
+			&account_or_person,
 			indiv_pallet_score::Participant {
 				score: 0,
 				streak: Default::default(),
@@ -1348,7 +1356,7 @@ mod benches {
 		);
 		let deposit = T::PlayDeposit::new(&caller, pallet::PlayDepositAmount::<T>::get())?;
 		Players::<T>::insert(
-			&aop,
+			&account_or_person,
 			Player {
 				first_game: 0,
 				registered: false,
@@ -1364,18 +1372,20 @@ mod benches {
 
 		let participant_origin =
 			indiv_pallet_airdrop::types::RegistrationEntry::Account { account_id: caller.clone() };
-		let vrf = bench_alias_vrf::<T>(game_index, &participant_origin);
+		let vrfs = bench_alias_vrfs::<T>(game_index, n, &participant_origin);
 
 		#[extrinsic_call]
-		sign_up_with_account(RawOrigin::Signed(caller.clone()), DEFAULT_IDENTIFIER_KEY, Some(vrf));
+		sign_up_with_account(RawOrigin::Signed(caller.clone()), DEFAULT_IDENTIFIER_KEY, Some(vrfs));
 
-		let player = <Players<T>>::get(&aop).expect("existing player record");
+		let player = <Players<T>>::get(&account_or_person).expect("existing player record");
 		assert!(player.registered, "existing player marked registered for this game");
 		Ok(())
 	}
 
 	#[benchmark]
-	fn sign_up_with_alias() -> Result<(), BenchmarkError> {
+	fn sign_up_with_alias(
+		n: Linear<0, { MAX_GAME_AIRDROPS as u32 }>,
+	) -> Result<(), BenchmarkError> {
 		<T as Config>::BenchmarkHelper::set_valid_time();
 		bench_setup_airdrop_funds::<T>();
 
@@ -1384,7 +1394,7 @@ mod benches {
 			game_play_time: 1000,
 			rounds: T::MaxRounds::get() as u8,
 			max_group_size: T::MaxGroupSize::get(),
-			airdrop_prize: Some(bench_airdrop_prize::<T>()),
+			airdrops: bench_airdrops::<T>(n),
 		};
 		Pallet::<T>::new_game(&game_schedule)?;
 		let game_index = Game::<T>::get().expect("game exists").index;
@@ -1406,12 +1416,13 @@ mod benches {
 		let signature = <T as Config>::BenchmarkHelper::sign_account(seed, &msg[..]);
 
 		// Origin for the personal alias
-		let origin = T::EnsurePerson::try_successful_origin(&SCORE_CONTEXT)
+		let score_context = indiv_pallet_score::Pallet::<T>::score_context();
+		let origin = T::EnsurePerson::try_successful_origin(&score_context)
 			.map_err(|_| BenchmarkError::Weightless)?;
 
 		let participant_origin =
 			indiv_pallet_airdrop::types::RegistrationEntry::Alias { alias: person };
-		let vrf = bench_alias_vrf::<T>(game_index, &participant_origin);
+		let vrfs = bench_alias_vrfs::<T>(game_index, n, &participant_origin);
 
 		#[extrinsic_call]
 		_(
@@ -1419,7 +1430,7 @@ mod benches {
 			DEFAULT_IDENTIFIER_KEY,
 			statement_account.clone(),
 			signature,
-			Some(vrf),
+			Some(vrfs),
 		);
 
 		// The caller becomes a registered player
@@ -1439,17 +1450,96 @@ mod benches {
 		Ok(())
 	}
 
+	// `n` is the number of scheduled airdrop events the sign-up registers into
 	#[benchmark]
-	fn report(p: Linear<0, { Pallet::<T>::max_enactments() }>) -> Result<(), BenchmarkError> {
+	fn sign_up_with_account_lite_invite(
+		n: Linear<0, { MAX_GAME_AIRDROPS as u32 }>,
+	) -> Result<(), BenchmarkError> {
 		<T as Config>::BenchmarkHelper::set_valid_time();
 		bench_setup_airdrop_funds::<T>();
+
+		// A game exists and it's in registration state
+		let schedule = GameScheduleOf::<T> {
+			game_play_time: 1000,
+			rounds: T::MaxRounds::get() as u8,
+			max_group_size: T::MaxGroupSize::get(),
+			airdrops: bench_airdrops::<T>(n),
+		};
+		Pallet::<T>::new_game(&schedule)?;
+		let game_index = Game::<T>::get().expect("game exists").index;
+
+		let score_context = indiv_pallet_score::Pallet::<T>::score_context();
+		let origin = T::EnsureLiteAlias::try_successful_origin(&score_context)
+			.map_err(|_| BenchmarkError::Weightless)?;
+		let alias = T::EnsureLiteAlias::try_origin(origin.clone(), &score_context)
+			.map_err(|_| BenchmarkError::Weightless)?;
+
+		let (account, vrfs) = bench_account_vrfs::<T>(game_index, n);
+		LiteInvites::<T>::insert(alias, &account);
+
+		#[extrinsic_call]
+		_(origin as T::RuntimeOrigin, account.clone(), DEFAULT_IDENTIFIER_KEY, Some(vrfs));
+
+		let who = AccountOrPerson::Account(account.clone());
+		let player = Players::<T>::get(&who).expect("the invited account is a player");
+		assert!(player.registered);
+		assert!(matches!(player.credibility, PlayerCredibility::Invited));
+		assert_eq!(LiteInvites::<T>::get(alias), Some(account));
+		assert!(indiv_pallet_score::Participants::<T>::contains_key(&who));
+
+		Ok(())
+	}
+
+	/// `report` has two independent cost drivers, swept as separate `Linear` components:
+	///
+	/// - `e`: the co-player entries the reporter submits across all rounds. Each drives one pass of
+	///   the per-entry loop (one `IndexToPlayer` read, one `Players` tally mutation, one
+	///   `AwardedNftClaimCredits` write). Bounded by `MaxRounds * (MaxGroupSize - 1)`.
+	/// - `n`: the early-attendance enactments the call triggers. The enactment loop fires
+	///   `try_early_attendance_enactment` per reported player plus the reporter, but only when a
+	///   player crosses the attendance threshold, which depends on chain state, not on `e`. A fixed
+	///   `e` can enact anywhere from 0 to `e + 1` players, so this work needs its own component
+	///   rather than folding into the `e` slope.
+	#[benchmark]
+	fn report(
+		e: Linear<
+			{ T::MaxGroupSize::get() - 1 },
+			{ T::MaxRounds::get() * (T::MaxGroupSize::get() - 1) },
+		>,
+		n: Linear<0, { T::MaxGroupSize::get() - 1 }>,
+	) -> Result<(), BenchmarkError> {
+		<T as Config>::BenchmarkHelper::set_valid_time();
+		bench_setup_airdrop_funds::<T>();
+
+		// --- Scenario derived from the swept components (e, n) -------------------
+		// `e`'s per-entry cost is constant, so its slope over `[max_group_size - 1,
+		// MaxRounds * (max_group_size - 1)]` extrapolates exactly to production. We realise
+		// `e` with full groups (`rounds = e / (max_group_size - 1)`); `div_ceil` keeps the
+		// entry count `>= e` (conservative) on non-multiples.
+		//
+		// The weight has no rounds component. Full-group packing uses the fewest rounds for
+		// a given `e`; production may use more (up to `MaxRounds`) as eliminations shrink
+		// late groups. Safe, because the only round-dependent work is the outer loop
+		// (`full_report`/`reporter_indices` indexing, `group_members` arithmetic, the
+		// empty-report check): it reads no storage per round (`PlayerToIndex` is hoisted
+		// before the loop) so adds nothing to the PoV, and its ref_time is `MaxRounds`
+		// iterations of cheap arithmetic, negligible against the per-entry slope.
+		//
+		// `n` is swept up to `MaxGroupSize - 1` (the most feasible at the low end of `e`, a
+		// single full round). Its per-enactment cost is constant (proof size exactly linear
+		// in `n`), so the slope extrapolates to the production bound `e + 1`. The cap
+		// keeps `n` orthogonal to `e` and every sample on the co-players-only path, so
+		// frame-omni-bencher's rectangular sweep needs no custom `--low`/`--high` values.
+		let max_group_size = T::MaxGroupSize::get();
+		let rounds = e.div_ceil(max_group_size.saturating_sub(1)).clamp(1, T::MaxRounds::get());
+		let coplayers_enacted = n;
 
 		// A game exists
 		let game_schedule = GameScheduleOf::<T> {
 			game_play_time: 1000,
-			rounds: T::MaxRounds::get() as u8,
-			max_group_size: T::MaxGroupSize::get(),
-			airdrop_prize: Some(bench_airdrop_prize::<T>()),
+			rounds: rounds as u8,
+			max_group_size,
+			airdrops: bench_airdrops::<T>(1),
 		};
 		assert_ok!(Pallet::<T>::new_game(&game_schedule));
 
@@ -1493,22 +1583,19 @@ mod benches {
 
 		// The actual shuffle gives pseudo-random groupings; the caller's co-player
 		// count across rounds isn't guaranteed to reach the worst-case bound of
-		// `MaxRounds * (MaxGroupSize - 1)` unique players. Rewrite the caller's
-		// indices and the other slots of the caller's group so each round exposes a
-		// disjoint set of co-players, pushing `reported_players.len()` to the max.
-		let max_group_size = T::MaxGroupSize::get();
-		let max_rounds = T::MaxRounds::get();
+		// `rounds * (MaxGroupSize - 1)` unique players. Rewrite the caller's indices
+		// and the other slots of the caller's group so each round exposes a disjoint
+		// set of co-players, pushing `reported_players.len()` to the max.
 		let num_groups = max_group_size; // player_count / max_per_group == MaxGroupSize
-		let max_enactments = Pallet::<T>::max_enactments();
 
 		let caller_aop = AccountOrPerson::Account(caller.clone());
 		let caller_indices: BoundedVec<PlayerIndex, T::MaxRounds> =
-			vec![0u32; max_rounds as usize].try_into().expect("fits MaxRounds");
+			vec![0u32; rounds as usize].try_into().expect("fits MaxRounds");
 		PlayerToIndex::<T>::insert(&caller_aop, caller_indices);
 
 		// Group 0 slots other than the caller's slot 0.
 		let group0_other_slots: Vec<u32> = (1..max_group_size).map(|k| k * num_groups).collect();
-		for round in 0..max_rounds as u8 {
+		for round in 0..rounds as u8 {
 			for (k, &slot) in group0_other_slots.iter().enumerate() {
 				let player_idx = 1 + (round as usize) * (max_group_size as usize - 1) + k;
 				let coplayer = AccountOrPerson::Account(players[player_idx].clone());
@@ -1516,17 +1603,14 @@ mod benches {
 			}
 		}
 
-		// Pick `p` enactments. Saturating yes_person blocks NotAttended;
-		// sent_report flips the rest between Attended (full path) and Pending
-		// (cheap bail). Caller is handled separately below — only enacts at the
-		// max-p step.
-		let p_reported = core::cmp::min(p, max_enactments.saturating_sub(1));
-
-		for round in 0..max_rounds as u8 {
+		// Realise the scenario: saturating `yes_person` blocks `NotAttended`;
+		// `sent_report = true` flips the chosen co-players to the Attended (full)
+		// path, the others bail cheaply as Pending.
+		for round in 0..rounds as u8 {
 			for (k, _) in group0_other_slots.iter().enumerate() {
 				let player_idx = 1 + (round as usize) * (max_group_size as usize - 1) + k;
 				let account_or_person = AccountOrPerson::Account(players[player_idx].clone());
-				let goes_full = (player_idx as u32) <= p_reported;
+				let goes_full = (player_idx as u32) <= coplayers_enacted;
 				Players::<T>::mutate(&account_or_person, |player_info| {
 					if let Some(player_info) = player_info {
 						player_info.yes_person = u8::MAX;
@@ -1538,24 +1622,17 @@ mod benches {
 			}
 		}
 
-		if p == max_enactments {
-			Players::<T>::mutate(&caller_aop, |player_info| {
-				if let Some(player_info) = player_info {
-					player_info.yes_person = u8::MAX;
-				}
-			});
-		}
-
-		// NotPerson stages each attestee in NftCandidates first; the later
-		// enactment then promotes them to Nfts — heavier than direct Person.
+		// `Person` awards one credit per attestee on the spot, marking its slot;
+		// `NotPerson` awards nothing in `report` (it is backfilled later only if the
+		// attestee attends), so an all-`Person` report is the heavier path to benchmark.
 		let round_report: BoundedVec<Report, T::MaxGroupSize> = (0..(T::MaxGroupSize::get() - 1))
-			.map(|_| Report::NotPerson)
+			.map(|_| Report::Person)
 			.collect::<Vec<_>>()
 			.try_into()
 			.unwrap();
 
 		let mut full_report: FullReport<T> = BoundedVec::new();
-		for _ in 0..T::MaxRounds::get() {
+		for _ in 0..rounds {
 			assert!(full_report.try_push(round_report.clone()).is_ok());
 		}
 
@@ -1566,8 +1643,8 @@ mod benches {
 			.filter(|(_, p)| p.early_attendance_enactment.is_some())
 			.count() as u32;
 		assert_eq!(
-			actual_enacted, p,
-			"benchmark must produce exactly p full early-attendance enactments",
+			actual_enacted, n,
+			"benchmark must produce exactly `n` full early-attendance enactments",
 		);
 
 		Ok(())
@@ -1592,6 +1669,10 @@ mod benches {
 			caller.clone().into(),
 			T::PlayerStatementLimit::get(),
 		);
+
+		// Worst case: the caller is a recognized participant, so the offboard also suspends
+		// their personhood.
+		let id = make_recognized_participant::<T>(&caller_aop)?;
 
 		let deposit = T::PlayDeposit::new(&caller, pallet::PlayDepositAmount::<T>::get())?;
 		let player: Player<<T as Config>::PlayDeposit> = Player {
@@ -1622,6 +1703,10 @@ mod benches {
 
 		// And the caller is not stored in the list of archived players
 		assert!(!ArchivedPlayers::<T>::contains_key(&caller_aop), "Player should not be archived");
+
+		// Resuming succeeds only for a suspended person, which proves the offboard suspended
+		// them.
+		assert_ok!(PeopleOf::<T>::recognize_personhood(id, None));
 
 		Ok(())
 	}
@@ -1677,7 +1762,7 @@ mod benches {
 			max_group_size: T::MaxGroupSize::get(),
 			rounds: T::MaxRounds::get() as u8,
 			pending_attendance: 0,
-			airdrop_scheduled: false,
+			airdrops_scheduled: 0,
 		});
 
 		// Seed attendance history at max depth so the removal proof is worst case.
@@ -1687,7 +1772,8 @@ mod benches {
 		}
 		PlayerAttendanceHistory::<T>::insert(&person_aop, attendance);
 
-		let origin = T::EnsurePerson::try_successful_origin(&SCORE_CONTEXT)
+		let score_context = indiv_pallet_score::Pallet::<T>::score_context();
+		let origin = T::EnsurePerson::try_successful_origin(&score_context)
 			.map_err(|_| BenchmarkError::Weightless)?;
 
 		#[extrinsic_call]
@@ -1717,6 +1803,10 @@ mod benches {
 
 		indiv_pallet_score::Pallet::<T>::onboard_for_recognition(&player_to_kickout)?;
 
+		// Worst case: the player is a recognized participant, so the kickout also suspends
+		// their personhood.
+		let id = make_recognized_participant::<T>(&player_aop)?;
+
 		ArchivedPlayers::<T>::insert(
 			&player_aop,
 			ArchivedPlayer::Kickable { archived_since: 0u32.into(), first_game: 0 },
@@ -1743,6 +1833,10 @@ mod benches {
 			!indiv_pallet_score::Participants::<T>::contains_key(&player_aop),
 			"Player should be offboarded from indiv_pallet_score"
 		);
+
+		// Resuming succeeds only for a suspended person, which proves the kickout suspended
+		// them.
+		assert_ok!(PeopleOf::<T>::recognize_personhood(id, None));
 
 		Ok(())
 	}
@@ -1859,7 +1953,7 @@ mod benches {
 			game_play_time: 1000,
 			rounds: T::MaxRounds::get() as u8,
 			max_group_size: T::MaxGroupSize::get(),
-			airdrop_prize: Some(bench_airdrop_prize::<T>()),
+			airdrops: bench_airdrops::<T>(1),
 		};
 		assert_ok!(pallet::Pallet::<T>::new_game(&game_schedule));
 
@@ -1873,7 +1967,7 @@ mod benches {
 				game_play_time: prev_game_end + offset,
 				rounds: T::MaxRounds::get() as u8,
 				max_group_size: T::MaxGroupSize::get(),
-				airdrop_prize: Some(bench_airdrop_prize::<T>()),
+				airdrops: bench_airdrops::<T>(MAX_GAME_AIRDROPS.into()),
 			};
 			prev_game_end = GameTimes::<T>::player_process_end(&schedule);
 
@@ -1905,7 +1999,7 @@ mod benches {
 				game_play_time: prev_game_end + offset,
 				rounds: T::MaxRounds::get() as u8,
 				max_group_size: T::MaxGroupSize::get(),
-				airdrop_prize: Some(bench_airdrop_prize::<T>()),
+				airdrops: bench_airdrops::<T>(MAX_GAME_AIRDROPS.into()),
 			};
 			prev_game_end = GameTimes::<T>::player_process_end(&schedule);
 
@@ -1941,8 +2035,9 @@ mod benches {
 		Ok(())
 	}
 
+	// `n` is the number of scheduled airdrop events the validated registration covers.
 	#[benchmark]
-	fn as_invited_tx_ext() -> Result<(), BenchmarkError> {
+	fn as_invited_tx_ext(n: Linear<0, { MAX_GAME_AIRDROPS as u32 }>) -> Result<(), BenchmarkError> {
 		<T as Config>::BenchmarkHelper::set_valid_time();
 		bench_setup_airdrop_funds::<T>();
 
@@ -1951,7 +2046,7 @@ mod benches {
 			game_play_time: 1000,
 			rounds: T::MaxRounds::get() as u8,
 			max_group_size: T::MaxGroupSize::get(),
-			airdrop_prize: Some(bench_airdrop_prize::<T>()),
+			airdrops: bench_airdrops::<T>(n),
 		};
 		assert_ok!(pallet::Pallet::<T>::new_game(&schedule));
 		let game_index = Game::<T>::get().expect("game exists").index;
@@ -1962,13 +2057,13 @@ mod benches {
 		PendingInvites::<T>::insert(&inviter, &ticket, ());
 
 		// The caller is new, it has an sr25519 keypair.
-		let (caller, vrf) = bench_account_vrf::<T>(game_index);
+		let (caller, vrfs) = bench_account_vrfs::<T>(game_index, n);
 		let origin = RawOrigin::Signed(caller.clone());
 
 		// The call is `sign_up_with_invite` with a valid airdrop VRF.
 		let call: <T as frame_system::Config>::RuntimeCall = Call::sign_up_with_invite {
 			identifier_key: DEFAULT_IDENTIFIER_KEY,
-			airdrop: Some(vrf),
+			airdrops: Some(vrfs),
 		}
 		.into();
 		let len = call.encode().len();
@@ -2020,7 +2115,7 @@ mod benches {
 			max_group_size: T::MaxGroupSize::get(),
 			rounds: T::MaxRounds::get() as u8,
 			pending_attendance: 0,
-			airdrop_scheduled: false,
+			airdrops_scheduled: 0,
 		});
 
 		let mut meter = WeightMeter::new();
@@ -2069,25 +2164,38 @@ mod benches {
 	}
 
 	#[benchmark]
-	fn kill_current_game() -> Result<(), BenchmarkError> {
-		// A game exists.
+	fn cancel_game() -> Result<(), BenchmarkError> {
+		// A game exists in Registration phase — the only state this call accepts.
 		<T as Config>::BenchmarkHelper::set_valid_time();
 		bench_setup_airdrop_funds::<T>();
 		let schedule = GameScheduleOf::<T> {
 			game_play_time: 1000,
 			rounds: T::MaxRounds::get() as u8,
 			max_group_size: T::MaxGroupSize::get(),
-			airdrop_prize: Some(bench_airdrop_prize::<T>()),
+			airdrops: bench_airdrops::<T>(MAX_GAME_AIRDROPS.into()),
 		};
 		assert_ok!(pallet::Pallet::<T>::new_game(&schedule));
-		assert!(Game::<T>::get().is_some());
+		assert!(matches!(
+			Game::<T>::get().expect("game exists").state,
+			GameState::Registration { .. }
+		));
+		assert_eq!(Game::<T>::get().expect("game exists").airdrops_scheduled, MAX_GAME_AIRDROPS);
+
+		// Worst case: the airdrop events have already opened for registration
+		let game_index = Game::<T>::get().expect("game exists").index;
+		bench_open_airdrop_registration::<T>(game_index, MAX_GAME_AIRDROPS.into());
 
 		// The caller is of ManagerOrigin, so Root should work in all cases.
 		#[extrinsic_call]
 		_(RawOrigin::Root);
 
-		// The current game is gone.
-		assert!(Game::<T>::get().is_none());
+		// The game has been transitioned to `Cancelling`; the per-player
+		// cleanup is driven by `process_cancelling` on later blocks and is
+		// not part of this bench.
+		assert!(matches!(
+			Game::<T>::get().expect("game still in storage").state,
+			GameState::Cancelling { step: CancellingStep::Step1DrainShuffle }
+		));
 
 		Ok(())
 	}
@@ -2103,7 +2211,7 @@ mod benches {
 			game_play_time: 1000,
 			rounds: T::MaxRounds::get() as u8,
 			max_group_size: T::MaxGroupSize::get(),
-			airdrop_prize: Some(bench_airdrop_prize::<T>()),
+			airdrops: bench_airdrops::<T>(1),
 		};
 		assert_ok!(pallet::Pallet::<T>::new_game(&schedule));
 		assert!(matches!(
@@ -2117,7 +2225,6 @@ mod benches {
 			post_shuffle_margin: 1,
 			reporting: 1,
 			player_process: 1,
-			airdrop_claim_window: 1,
 		};
 
 		#[extrinsic_call]
@@ -2127,8 +2234,9 @@ mod benches {
 		Ok(())
 	}
 
+	// `n` is the number of scheduled airdrop events to cancel.
 	#[benchmark]
-	fn on_game_cancelled() -> Result<(), BenchmarkError> {
+	fn on_game_cancelled(n: Linear<0, { MAX_GAME_AIRDROPS as u32 }>) -> Result<(), BenchmarkError> {
 		<T as Config>::BenchmarkHelper::set_valid_time();
 		bench_setup_airdrop_funds::<T>();
 
@@ -2136,31 +2244,32 @@ mod benches {
 			game_play_time: 1000,
 			rounds: T::MaxRounds::get() as u8,
 			max_group_size: T::MaxGroupSize::get(),
-			airdrop_prize: Some(bench_airdrop_prize::<T>()),
+			airdrops: bench_airdrops::<T>(n),
 		};
 		assert_ok!(pallet::Pallet::<T>::new_game(&schedule));
 		let game = Game::<T>::get().expect("game exists after new_game");
-
-		let event_id = pallet::Pallet::<T>::airdrop_event_id(game.index);
 
 		#[block]
 		{
 			pallet::Pallet::<T>::on_game_cancelled(&game);
 		}
 
-		// Cancellation routes the airdrop into the airdrop pallet's clean-up pipeline (or drops
+		// Cancellation routes each airdrop into the airdrop pallet's clean-up pipeline (or drops
 		// it outright if still `Scheduled`); the game pallet no longer keeps its own record.
 		use indiv_pallet_airdrop::types::Status;
-		let still_present = indiv_pallet_airdrop::Events::<T>::get(event_id);
-		assert!(
-			still_present.is_none() ||
-				matches!(
-					still_present.expect("checked").status,
-					Status::ClearingRegistrations { .. } |
-						Status::ClearingWinners { .. } |
-						Status::Finalizing { .. },
-				),
-		);
+		for airdrop_index in 0..n {
+			let event_id = pallet::Pallet::<T>::airdrop_event_id(game.index, airdrop_index as u8);
+			let still_present = indiv_pallet_airdrop::Events::<T>::get(event_id);
+			assert!(
+				still_present.is_none() ||
+					matches!(
+						still_present.expect("checked").status,
+						Status::ClearingRegistrations { .. } |
+							Status::ClearingWinners { .. } |
+							Status::Finalizing { .. },
+					),
+			);
+		}
 
 		Ok(())
 	}
@@ -2175,14 +2284,14 @@ mod benches {
 			game_play_time: 1000,
 			rounds: T::MaxRounds::get() as u8,
 			max_group_size: T::MaxGroupSize::get(),
-			airdrop_prize: Some(bench_airdrop_prize::<T>()),
+			airdrops: bench_airdrops::<T>(1),
 		};
 		assert_ok!(pallet::Pallet::<T>::new_game(&schedule));
 		let game = Game::<T>::get().expect("game exists after new_game");
 
 		// Transition the airdrop event to `Claiming` so `do_claim` accepts the call, and
 		// place time inside the claim window.
-		let event_id = pallet::Pallet::<T>::airdrop_event_id(game.index);
+		let event_id = pallet::Pallet::<T>::airdrop_event_id(game.index, 0);
 		let mut event = indiv_pallet_airdrop::Events::<T>::get(event_id)
 			.expect("airdrop event scheduled by new_game");
 		event.status = indiv_pallet_airdrop::types::Status::Claiming {
@@ -2227,7 +2336,7 @@ mod benches {
 		let beneficiary: T::AccountId = account("beneficiary", 0, 0);
 
 		#[extrinsic_call]
-		_(RawOrigin::Signed(claimant.clone()), game.index, beneficiary);
+		_(RawOrigin::Signed(claimant.clone()), game.index, 0, beneficiary);
 
 		assert!(!indiv_pallet_airdrop::Winners::<T>::contains_key(
 			event_id,

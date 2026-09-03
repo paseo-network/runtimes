@@ -69,6 +69,21 @@
 //! other players in the group. The report is a list of round reports, one for each round. Each
 //! round report is a list of reports for all other players in the group, ordered by player index.
 //!
+//! Players have different vote weights and are differently distributed depending on whether they
+//! are recognized as a unique individual in pallet-score. Throughout this pallet, we use
+//! "recognized players"/"people" for players that are recognized as unique individuals in
+//! pallet-score, and "not-recognized players"/"candidates" for players that are not currently
+//! recognized as unique individuals in pallet-score.
+//! During the shuffle phase, the recognized players are assigned the first player indices, and the
+//! not-recognized players are assigned the last player indices. Given the calculation of groups,
+//! this ensures that recognized players are evenly distributed across groups.
+//! Additionally, the vote weight of recognized players is [`Config::PeopleVoteWeight`] and the vote
+//! weight of not-recognized players is [`Config::CandidateVoteWeight`].
+//!
+//! Note that this status is different from the player's participant info field: `recognition` in
+//! pallet-score, which is the recognition status in the `People` registry. The player is considered
+//! recognized in pallet-score when the field `reached_personhood` is true.
+//!
 //! # Attendance
 //!
 //! A participant is considered attending if:
@@ -84,7 +99,7 @@
 //! New players can sign up for a game by proving an initial credibility.
 //! Either they are recognized by another DIM, and they use their alias to register to the games,
 //! they are considered credible. Or they use an account and need to prove their credibility by
-//! using an invite ticket or by paying a deposit.
+//! using an invite ticket, an invitation from their lite personhood, or by paying a deposit.
 //! We differentiate between players playing using an account, and players already recognized by
 //! another DIM and playing using their alias.
 //!
@@ -112,10 +127,38 @@
 //!    its score goes to zero then the invite status is revoked, and player should pay the deposit
 //!    or find a new invite to play the game.
 //!
+//! # Lite invite process
+//!
+//! A lite invite is an invitation from a lite person. Lite personhood is credible enough to play,
+//! so a lite person needs no invite ticket from an inviter, they invite an account of their own
+//! with the call `sign_up_with_account_lite_invite`:
+//!
+//! 1. The lite person binds the account they want to play with to their alias in
+//!    [`indiv_pallet_score::Pallet::score_context`], in indiv-pallet-people-lite.
+//! 2. That account signs up with `sign_up_with_account_lite_invite`, as a player with an invited
+//!    credibility and without paying any deposit.
+//! 3. The account signs up for later games with `sign_up_with_account`, for free. If its score
+//!    reaches zero it is archived, as any account-based player, and
+//!    `sign_up_with_account_lite_invite` signs it up again.
+//!
+//! A lite person invites one account, ever: the first account they invite is the only one they can
+//! play with.
+//!
 //! # Statement store usage
 //!
 //! All players in the game are given some statement store usage allowance. The player's allowance
 //! is cleared and their statements removed when archived or offboarded.
+//!
+//! # NFT claim credits
+//!
+//! A player earns one credit per successful report of one player on another, in one round of one
+//! game. A credit is not an NFT: it is the entitlement to mint one, and the minting happens on
+//! Asset Hub.
+//!
+//! This pallet only triggers the awards, through [`Config::NftClaimCredits`]. Everything a credit
+//! becomes afterwards belongs to `indiv-pallet-nft-credits`, which holds the awards, commits them
+//! to one Merkle root per block, delivers those roots to the minting chain and serves the
+//! inclusion proofs a claimant needs. Its module documentation covers the whole path.
 //!
 //! # Calls
 //!
@@ -126,6 +169,9 @@
 //! - `sign_up_with_account`: sign up for the game using an account, this is free if the player is
 //!   not new nor archived, otherwise they must pay a deposit.
 //! - `sign_up_with_alias`: sign up for the game using an alias.
+//! - `sign_up_with_account_lite_invite`: sign up for the game without deposit as a lite person,
+//!   using the account bound to the lite person's alias in the score context. The account-based
+//!   player must be new or archived, otherwise they must use `sign_up_with_account` for free.
 //! - `report`: Each participant’s self-contained reporting of whether their peers are persons.
 //! - `offboard`: Offboard from the game.
 //!
@@ -146,14 +192,33 @@
 //! Other calls:
 //!
 //! - `kickout`: Kick out a player that is not playing. Persons are not kickable.
+//!
+//! # Code debt
+//!
+//! An "alias" in this pallet often refers implicitly to the alias of a person, not the alias of a
+//! lite person (for unfortunate historical reasons).
+//!
+//! `sign_up_with_account` covers both a live player, for free, and a new or archived player, from
+//! whom it takes a deposit. The two cases should better be told apart instead:
+//! `sign_up_with_account_lite_invite`, `sign_up_with_account_invitation` and
+//! `sign_up_with_account_pay_deposit` for a new or archived player, and
+//! `sign_up_with_account_active_player` for an active player.
+//!
+//! Invitation and deposit could potentially be removed and it could be refactored to support only
+//! lite people.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![recursion_limit = "128"]
 
 extern crate alloc;
 
+// The mock runtime in `mock_runtime.rs` is shared with `indiv-pallet-nft-credits`, which includes
+// the same file, so it names this pallet's items by the path that crate sees them under.
+#[cfg(test)]
+extern crate self as indiv_pallet_game;
+
 #[cfg(feature = "runtime-benchmarks")]
-mod benchmarking;
+pub mod benchmarking;
 mod extension;
 #[cfg(test)]
 mod mock;
@@ -177,7 +242,10 @@ use frame_support::{
 	dispatch::PostDispatchInfo,
 	sp_runtime::Saturating,
 	storage::{with_transaction, TransactionOutcome},
-	traits::{fungible::Inspect, Consideration, Defensive, IsSubType, OriginTrait, UnixTime},
+	traits::{
+		fungible::Inspect, Consideration, Defensive, EnsureOriginWithArg, IsSubType, OriginTrait,
+		UnixTime,
+	},
 	weights::WeightMeter,
 };
 use frame_system::offchain::CreateAuthorizedTransaction;
@@ -186,11 +254,12 @@ use indiv_pallet_airdrop::types::{
 	RegistrationEntry as AirdropRegistrationEntry,
 };
 use indiv_pallet_score::AccountOrPerson;
-use indiv_support::traits::{Alias, CommunicationIdentifier};
-use sp_runtime::{
-	traits::{IdentifyAccount, Verify, Zero},
-	transaction_validity::{InvalidTransaction, TransactionValidityError},
+use indiv_support::{
+	credit_trees::AwardCredits,
+	traits::{Alias, CommunicationIdentifier, Context},
+	weight_budget::OcwWeightBudget,
 };
+use sp_runtime::traits::{IdentifyAccount, Verify, Zero};
 use sp_statement_store::{
 	decrease_allowance_by, increase_allowance_by, runtime_api::statement_store, StatementAllowance,
 };
@@ -199,7 +268,10 @@ use sp_statement_store::{
 const OP_UPPER_BOUND: u32 = 100_000;
 
 /// Chunk size for clearing the per-game index <-> player maps in `player_process_step2`.
-const PLAYER_PROCESS_STEP2_CHUNK: u32 = 100;
+pub const PLAYER_PROCESS_STEP2_CHUNK: u32 = 100;
+
+/// Chunk size for clearing the shuffle maps in `process_cancelling`.
+const CANCELLING_SHUFFLE_CHUNK: u32 = 100;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -228,7 +300,7 @@ pub mod pallet {
 
 	/// Every `GAME_PROCESS_SKIPPED_BLOCK` blocks, the game process in on_poll/on_idle is skipped.
 	/// This is a defense mechanism if the game process is wrongly weighted.
-	pub(crate) const GAME_PROCESS_SKIPPED_BLOCK: u32 = 8;
+	pub const GAME_PROCESS_SKIPPED_BLOCK: u32 = 8;
 
 	pub(crate) const LOG_TARGET: &str = "runtime::indiv-pallet-game";
 
@@ -257,12 +329,6 @@ pub mod pallet {
 		/// The maximum number of rounds in a game.
 		///
 		/// Note: the actual number of rounds is configured per game.
-		///
-		/// TODO: if this bound is raised meaningfully (e.g. above ~5) or when time allows,
-		/// revisit the `process_players` and `report` benchmarks to add a `Linear<1, MaxRounds>`
-		/// sweep. Currently they bench at fixed `MaxRounds` so games with fewer
-		/// rounds overpay for per-round work.
-		/// See <https://github.com/paritytech/individuality/issues/244>
 		#[pallet::constant]
 		type MaxRounds: Get<u32>;
 
@@ -289,6 +355,13 @@ pub mod pallet {
 		/// The origin that can issue game invites.
 		type InviteIssuer: EnsureOrigin<Self::RuntimeOrigin>;
 
+		/// Origin certifying a lite person by an alias in a context, and yielding that alias.
+		///
+		/// [`Pallet::sign_up_with_account_lite_invite`] uses it with the context
+		/// [`indiv_pallet_score::Pallet::score_context`]: lite personhood is credibility enough to play,
+		/// and the alias identifies the lite person without linking to their account.
+		type EnsureLiteAlias: EnsureOriginWithArg<Self::RuntimeOrigin, Context, Success = Alias>;
+
 		/// The time after which a player that is not playing can be kicked out.
 		///
 		/// This is only for account players, not persons.
@@ -308,8 +381,10 @@ pub mod pallet {
 		#[pallet::constant]
 		type DefaultPlayDeposit: Get<NativeBalanceOf<Self>>;
 
-		/// The default durations of each game phase, in seconds. Overridden at
-		/// runtime via [`Pallet::set_game_phases`].
+		/// The default durations of each game phase, in seconds. When
+		/// `StoredPhaseDurations` is `Some`, those values take precedence
+		/// over this default; the override is set at runtime via
+		/// [`Pallet::set_game_phases`].
 		#[pallet::constant]
 		type DefaultPhaseDurations: Get<PhaseDurationValues>;
 
@@ -321,6 +396,14 @@ pub mod pallet {
 		/// entries older than this will be imminently purged from storage.
 		#[pallet::constant]
 		type MaxAttendanceHistoryDepth: Get<u32>;
+
+		/// The pallet that owns the NFT claim credits a game awards.
+		///
+		/// Playing is what earns a credit, so the game triggers the awards, but nothing about a
+		/// credit afterwards is the game's: `indiv-pallet-nft-credits` holds them, commits them to
+		/// per-block Merkle roots and delivers those to the chain that mints against them. A
+		/// runtime that plays games without minting anything sets this to `()`.
+		type NftClaimCredits: AwardCredits<Self::AccountId>;
 
 		/// Signature used to verify tickets.
 		type TicketSignature: Verify<Signer: IdentifyAccount<AccountId: Parameter + MaxEncodedLen + Send + Sync>>
@@ -386,18 +469,22 @@ pub mod pallet {
 		/// Maximum number of full early-attendance enactments a single `report` call can
 		/// trigger: every unique co-player across all rounds, plus the reporter.
 		///
-		/// Used both as the pre-dispatch overcharge bound on `report` and as the
-		/// upper bound of its `Linear` benchmark component.
+		/// Used as the pre-dispatch overcharge bound on `report`.
 		pub fn max_enactments() -> u32 {
-			(T::MaxRounds::get() as u32)
-				.saturating_mul(T::MaxGroupSize::get().saturating_sub(1))
-				.saturating_add(1)
+			Self::max_attestations(T::MaxRounds::get(), T::MaxGroupSize::get()).saturating_add(1)
 		}
 
-		/// The base string for the airdrop event ID derivation. The actual event ID is this base
-		/// concatenated with the game index BE encoded.
-		pub fn airdrop_event_id_base() -> [u8; 28] {
-			*b"pop:game:airdrop:           "
+		/// [`Self::max_attestations`] over any game the runtime allows: the most votes a single
+		/// player can receive, and equally the most co-players they can report on.
+		pub(crate) fn max_received_votes() -> u32 {
+			Self::max_attestations(T::MaxRounds::get(), T::MaxGroupSize::get())
+		}
+
+		/// The base string for the airdrop event id derivation. The actual event id is this base
+		/// concatenated with the airdrop index and the game index BE encoded (see
+		/// [`Pallet::airdrop_event_id`]).
+		pub fn airdrop_event_id_base() -> [u8; 27] {
+			*b"pop:game:airdrop:          "
 		}
 	}
 
@@ -437,44 +524,6 @@ pub mod pallet {
 	pub type PlayDepositAmount<T: Config> =
 		StorageValue<_, NativeBalanceOf<T>, ValueQuery, T::DefaultPlayDeposit>;
 
-	/// All minted NFTs, keyed by owner and NFT hash. The value is a Unix-seconds
-	/// timestamp set whenever the entry is written: by the `report` extrinsic for a
-	/// fresh `Person` vote, by `mint_attendance_nfts` when an attendee's attendance
-	/// is finalised, or by `promote_nft_candidates` when a held `NotPerson` NFT is
-	/// resolved. Backfill writes overwrite an earlier timestamp on the same key —
-	/// the value is therefore the *most recent* mint time, not the first. Within a
-	/// single game these timestamps are bounded together (typically the same block),
-	/// so clients can use them as a per-game version marker (e.g. mapping old mints
-	/// to one image collection and newer mints to another).
-	#[pallet::storage]
-	pub(crate) type Nfts<T: Config> = StorageDoubleMap<
-		_,
-		Blake2_128Concat,
-		AccountOrPerson<T::AccountId>,
-		Blake2_128Concat,
-		Nft,
-		u32,
-	>;
-
-	/// Candidate NFTs staged from `NotPerson` reports, held until the attestee's
-	/// attendance is decided.
-	///
-	/// During the reporting phase a `NotPerson` vote stages the NFT here rather than
-	/// minting directly into [`Nfts`]: the attestee only earns the NFT if they end up
-	/// classed as having attended. The first key is the prospective owner (the
-	/// attestee), the second is the NFT hash (same derivation as in [`Nfts`]).
-	/// Resolved entries are either promoted into [`Nfts`] or discarded — see
-	/// `promote_nft_candidates` / `discard_nft_candidates`.
-	#[pallet::storage]
-	pub(crate) type NftCandidates<T: Config> = StorageDoubleMap<
-		_,
-		Blake2_128Concat,
-		AccountOrPerson<T::AccountId>,
-		Blake2_128Concat,
-		Nft,
-		(),
-	>;
-
 	/// All the player with zero score but still onboarded in indiv_pallet_score.
 	#[pallet::storage]
 	pub type ArchivedPlayers<T: Config> = StorageMap<
@@ -494,7 +543,7 @@ pub mod pallet {
 
 	/// The current game index.
 	#[pallet::storage]
-	pub type GameIndex<T: Config> = StorageValue<_, u32, ValueQuery>;
+	pub type GameIndex<T: Config> = StorageValue<_, GameIdx, ValueQuery>;
 
 	/// The information for the next game or ongoing game.
 	#[pallet::storage]
@@ -503,7 +552,7 @@ pub mod pallet {
 	/// The mapping from past games, identified by their game index, to the start timestamp, in
 	/// seconds since the UNIX epoch.
 	#[pallet::storage]
-	pub(crate) type GameHistory<T: Config> = StorageMap<_, Twox64Concat, u32, u32>;
+	pub(crate) type GameHistory<T: Config> = StorageMap<_, Twox64Concat, GameIdx, u32>;
 
 	/// Entries of previously attended games of each player. Retained on `offboard`
 	/// and `kickout`. Bounded by `MaxAttendanceHistoryDepth` per player.
@@ -512,7 +561,7 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		AccountOrPerson<T::AccountId>,
-		BoundedVec<u32, T::MaxAttendanceHistoryDepth>,
+		BoundedVec<GameIdx, T::MaxAttendanceHistoryDepth>,
 		ValueQuery,
 	>;
 
@@ -521,16 +570,17 @@ pub mod pallet {
 	/// whether the player is recorded as `AccountOrPerson::Person` or
 	/// `AccountOrPerson::Account`. Exposed for off-chain consumers.
 	#[pallet::storage]
-	pub type GameParticipantCount<T: Config> = StorageMap<_, Twox64Concat, u32, u32, ValueQuery>;
+	pub type GameParticipantCount<T: Config> =
+		StorageMap<_, Twox64Concat, GameIdx, u32, ValueQuery>;
 
 	/// The mapping from round index and player index to player.
 	#[pallet::storage]
-	pub(crate) type IndexToPlayer<T: Config> =
+	pub type IndexToPlayer<T: Config> =
 		StorageMap<_, Twox64Concat, (RoundIndex, PlayerIndex), AccountOrPerson<T::AccountId>>;
 
 	/// The mapping from player to their indices in each round.
 	#[pallet::storage]
-	pub(crate) type PlayerToIndex<T: Config> = StorageMap<
+	pub type PlayerToIndex<T: Config> = StorageMap<
 		_,
 		Blake2_128Concat,
 		AccountOrPerson<T::AccountId>,
@@ -544,7 +594,7 @@ pub mod pallet {
 		Twox64Concat,
 		RoundIndex,
 		Identity,
-		[u8; 32],
+		ShufflePositionKey,
 		AccountOrPerson<T::AccountId>,
 	>;
 
@@ -555,7 +605,7 @@ pub mod pallet {
 		Twox64Concat,
 		RoundIndex,
 		Identity,
-		[u8; 32],
+		ShufflePositionKey,
 		AccountOrPerson<T::AccountId>,
 	>;
 
@@ -575,6 +625,11 @@ pub mod pallet {
 	#[pallet::storage]
 	pub(crate) type PendingInvites<T: Config> =
 		StorageDoubleMap<_, Blake2_128Concat, T::AccountId, Blake2_128Concat, TicketOf<T>, ()>;
+
+	/// The account each lite person designated to play with, keyed by the lite person's alias in
+	/// [`indiv_pallet_score::Pallet::score_context`].
+	#[pallet::storage]
+	pub type LiteInvites<T: Config> = StorageMap<_, Blake2_128Concat, Alias, T::AccountId>;
 
 	/// Mapping from alias to the account id to use for interacting with the statement store.
 	///
@@ -613,15 +668,13 @@ pub mod pallet {
 		/// A new game is starting.
 		NewGame { registration_ends: u32, game_date: u32, report_ends: u32 },
 		/// The game and its post-process has ended.
-		GameEnded { index: u32 },
-		/// The current game was force-killed by [`Config::ManagerOrigin`].
-		GameKilled { index: u32 },
+		GameEnded { index: GameIdx },
 		/// The game phase durations were overridden by [`Config::ManagerOrigin`].
 		GamePhasesSet { phases: PhaseDurationValues },
 		/// A player signed up for the game.
 		SignedUp { who: AccountOrPerson<T::AccountId> },
 		/// A player submitted their report.
-		ReportSubmitted { who: AccountOrPerson<T::AccountId>, game_index: u32 },
+		ReportSubmitted { who: AccountOrPerson<T::AccountId>, game_index: GameIdx },
 		/// A player offboarded from the game.
 		Offboarded { who: AccountOrPerson<T::AccountId> },
 		/// An archived player was kicked out.
@@ -632,6 +685,9 @@ pub mod pallet {
 		InviteTicketSet { inviter: T::AccountId },
 		/// An invite ticket was cancelled.
 		InviteTicketCancelled { inviter: T::AccountId },
+		/// A lite person invited the account `player` to play on their behalf, which is now a
+		/// player with an invited credibility.
+		LiteInvited { player: T::AccountId },
 		/// Games were scheduled.
 		GamesScheduled { count: u32 },
 		/// A scheduled game was removed.
@@ -645,11 +701,11 @@ pub mod pallet {
 		/// The configured play deposit was updated.
 		PlayDepositSet { amount: NativeBalanceOf<T> },
 		/// An airdrop event was scheduled for the current game.
-		AirdropScheduled { game_index: u32, event_id: AirdropEventId },
-		/// The airdrop event for the current game failed to schedule.
-		AirdropScheduleFailed { game_index: u32, error: DispatchError },
+		AirdropScheduled { game_index: GameIdx, airdrop_index: u8, event_id: AirdropEventId },
+		/// An airdrop event for the current game failed to schedule.
+		AirdropScheduleFailed { game_index: GameIdx, airdrop_index: u8, error: DispatchError },
 		/// Game `game_index` was cancelled.
-		GameCancelled { game_index: u32 },
+		GameCancelled { game_index: GameIdx },
 	}
 
 	#[pallet::error]
@@ -690,6 +746,8 @@ pub mod pallet {
 		NotAccountPlayer,
 		/// The player can't use an invite if already playing.
 		UseInviteButAlreadyPlaying,
+		/// The lite person already invited another account, and invites only one account ever.
+		AnotherAccountInvited,
 		/// The number of existing schedules and new schedules exceeds the configured limit.
 		TooManyGameSchedules,
 		/// The game that was supposed to be removed was not found in scheduled games.
@@ -712,22 +770,12 @@ pub mod pallet {
 		InvalidPlayDeposit,
 		InvalidAirdropVrfVariantForAccount,
 		InvalidAirdropVrfVariantForRecognition,
+		/// The number of supplied airdrop VRF entries does not match the number of scheduled
+		/// airdrop events.
+		InvalidAirdropVrfCount,
 		/// `claim_airdrop`: the claimant is not recognized in pallet-score, or their most recent
 		/// attended game does not match the `game_index` of the airdrop.
 		NotEligibleForAirdrop,
-	}
-
-	/// Custom transaction-validity errors raised by the `authorize_*` hooks.
-	#[repr(u8)]
-	pub enum AuthorizeInvalidity {
-		/// Transaction source is not local or in block.
-		TransactionNotLocal = 200,
-	}
-
-	impl From<AuthorizeInvalidity> for TransactionValidityError {
-		fn from(e: AuthorizeInvalidity) -> Self {
-			InvalidTransaction::Custom(e as u8).into()
-		}
 	}
 
 	/// A reason for this pallet placing a hold on funds.
@@ -740,11 +788,7 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn integrity_test() {
-			let max_votes = T::MaxGroupSize::get()
-				.checked_mul(T::MaxRounds::get())
-				.expect("`max group size * max rounds` is too big, it must fit in u32")
-				.checked_sub(1)
-				.expect("Group size must be at least 1");
+			let max_votes = Self::max_received_votes();
 			assert!(
 				max_votes as u64 * T::PeopleVoteWeight::get() as u64 <= u8::MAX as u64,
 				"max_votes * people_vote_weight must fit in u8"
@@ -753,6 +797,37 @@ pub mod pallet {
 				max_votes as u64 * T::CandidateVoteWeight::get() as u64 <= u8::MAX as u64,
 				"max_votes * candidate_vote_weight must fit in u8"
 			);
+
+			// A `report` call's worst case must fit `Normal.max_extrinsic`. Its `Linear`
+			// weight is extrapolated to the production maximum here: `e_max` co-player
+			// entries across all rounds, with every one plus the reporter early-enacted
+			// (`max_enactments() == e_max + 1`). If a runtime bumps `MaxRounds` or
+			// `MaxGroupSize` past what the block can hold, this fails at `construct_runtime!`
+			// time rather than as silently-dropped `report` transactions in production.
+			//
+			// `e_max` is the worst-case *valid* report length. The pre-dispatch weight reads
+			// `full_report.len()` before validation, so a maximally-filled invalid report can
+			// reach `MaxRounds * MaxGroupSize` entries (one extra per round); that still fits
+			// with wide margin and only ever fails validation, so bounding the valid case
+			// here suffices.
+			let e_max = Self::max_enactments().saturating_sub(1);
+			let report_worst_case =
+				<T as Config>::WeightInfo::report(e_max, Self::max_enactments());
+			OcwWeightBudget::from_normal_max::<T>().assert_fits("report", report_worst_case);
+
+			// A sign-up worst case (registering into the maximum number of airdrop events) must
+			// fit `Normal.max_extrinsic`, otherwise sign-ups against a fully airdropped game are
+			// unsubmittable.
+			let max_airdrops: u32 = MAX_GAME_AIRDROPS.into();
+			let sign_up_worst_case = <T as Config>::WeightInfo::sign_up_with_alias(max_airdrops)
+				.max(<T as Config>::WeightInfo::sign_up_with_account_new(max_airdrops))
+				.max(<T as Config>::WeightInfo::sign_up_with_account_recognized(max_airdrops))
+				.max(<T as Config>::WeightInfo::sign_up_with_account_lite_invite(max_airdrops))
+				.max(
+					<T as Config>::WeightInfo::sign_up_with_invite(max_airdrops)
+						.saturating_add(<T as Config>::WeightInfo::as_invited_tx_ext(max_airdrops)),
+				);
+			OcwWeightBudget::from_normal_max::<T>().assert_fits("sign_up", sign_up_worst_case);
 		}
 
 		fn on_idle(n: BlockNumberFor<T>, remaining_weight: Weight) -> Weight {
@@ -790,19 +865,25 @@ pub mod pallet {
 		///
 		/// A game must be ongoing and in its registration phase.
 		///
-		/// `airdrop` optionally enters the player into this game's airdrop draw. Pass `None` to
-		/// skip it. When `Some`, it is the player's VRF, which both seeds their draw slot and
-		/// proves their identity path: the alias variant if the player is recognized (pallet-score
-		/// `recognition` is `Recognized` or `ExternallyRecognized`), otherwise the account variant.
-		/// See the documentation of [`AirdropVrf`] for more details.
+		/// `airdrops` optionally enters the player into the airdrop draws scheduled for this
+		/// game. Pass `None` to skip it; otherwise it holds exactly one VRF per scheduled
+		/// airdrop event (`airdrops_scheduled` in the [`Game`] storage), in airdrop-index order.
+		/// Each entry is bound to its own event id (see [`Pallet::airdrop_event_id`]), seeds the
+		/// player's draw slot for that event and proves their identity path: the alias variant if
+		/// the player is recognized (pallet-score `recognition` is `Recognized` or
+		/// `ExternallyRecognized`), otherwise the account variant. The sign-up fails entirely if
+		/// any event does not accept its registration or the number of supplied VRFs does not
+		/// match `airdrops_scheduled`. See the documentation of [`AirdropVrfs`] for more details.
 		///
 		/// The origin must be a signed by an account and use the `GameAsInvited` extension.
 		#[pallet::call_index(0)]
-		#[pallet::weight(<T as Config>::WeightInfo::sign_up_with_invite())]
+		#[pallet::weight(<T as Config>::WeightInfo::sign_up_with_invite(
+			airdrops.as_ref().map_or(0, AirdropVrfs::count) as u32
+		))]
 		pub fn sign_up_with_invite(
 			origin: OriginFor<T>,
 			identifier_key: CommunicationIdentifier,
-			airdrop: Option<AirdropVrf<AirdropProofOf<T>>>,
+			airdrops: Option<AirdropVrfs<AirdropProofOf<T>>>,
 		) -> DispatchResultWithPostInfo {
 			let who = match origin.clone().into_caller().try_into() {
 				Ok(Origin::Invited(account)) => account,
@@ -813,8 +894,10 @@ pub mod pallet {
 				who,
 				identifier_key,
 				new_invited: true,
-				airdrop,
-			})
+				airdrops,
+			})?;
+
+			Ok(Pays::No.into())
 		}
 
 		/// Sign up for the game using an account.
@@ -824,23 +907,31 @@ pub mod pallet {
 		///
 		/// A game must be ongoing and in its registration phase.
 		///
-		/// `airdrop` optionally enters the player into this game's airdrop draw. Pass `None` to
-		/// skip it. When `Some`, it is the player's VRF, which both seeds their draw slot and
-		/// proves their identity path: the alias variant if the player is recognized (pallet-score
-		/// `recognition` is `Recognized` or `ExternallyRecognized`), otherwise the account variant.
-		/// See the documentation of [`AirdropVrf`] for more details.
+		/// `airdrops` optionally enters the player into the airdrop draws scheduled for this
+		/// game. Pass `None` to skip it; otherwise it holds exactly one VRF per scheduled
+		/// airdrop event (`airdrops_scheduled` in the [`Game`] storage), in airdrop-index order.
+		/// Each entry is bound to its own event id (see [`Pallet::airdrop_event_id`]), seeds the
+		/// player's draw slot for that event and proves their identity path: the alias variant if
+		/// the player is recognized (pallet-score `recognition` is `Recognized` or
+		/// `ExternallyRecognized`), otherwise the account variant. The sign-up fails entirely if
+		/// any event does not accept its registration or the number of supplied VRFs does not
+		/// match `airdrops_scheduled`. See the documentation of [`AirdropVrfs`] for more details.
 		///
 		/// The origin must be signed by an account, or, be signed by an account and use
 		/// `ScoreAsParticipant` extension.
 		#[pallet::call_index(1)]
-		#[pallet::weight(
-			<T as Config>::WeightInfo::sign_up_with_account_new()
-				.max(<T as Config>::WeightInfo::sign_up_with_account_recognized())
-		)]
+		#[pallet::weight(match airdrops {
+			Some(AirdropVrfs::Account(vrfs)) =>
+				<T as Config>::WeightInfo::sign_up_with_account_new(vrfs.len() as u32),
+			Some(AirdropVrfs::Alias { proofs, .. }) =>
+				<T as Config>::WeightInfo::sign_up_with_account_recognized(proofs.len() as u32),
+			None => <T as Config>::WeightInfo::sign_up_with_account_new(0)
+				.max(<T as Config>::WeightInfo::sign_up_with_account_recognized(0)),
+		})]
 		pub fn sign_up_with_account(
 			origin: OriginFor<T>,
 			identifier_key: CommunicationIdentifier,
-			airdrop: Option<AirdropVrf<AirdropProofOf<T>>>,
+			airdrops: Option<AirdropVrfs<AirdropProofOf<T>>>,
 		) -> DispatchResultWithPostInfo {
 			let who = indiv_pallet_score::Pallet::<T>::ensure_signed_or_participant(origin)?;
 
@@ -848,8 +939,10 @@ pub mod pallet {
 				who,
 				identifier_key,
 				new_invited: false,
-				airdrop,
-			})
+				airdrops,
+			})?;
+
+			Ok(Pays::No.into())
 		}
 
 		/// Sign up for the game.
@@ -870,19 +963,25 @@ pub mod pallet {
 		///   the signature of the message `"pop:game:stmt_account_for_alias:"` concatenated to the
 		///   alias, and then hashed with `blake2_256` (blake2 256bit output). The base of the
 		///   message can be found in the constant: `proof_of_ownership_msg_base`.
-		/// - `airdrop`: optionally enters the player into this game's airdrop draw, Pass `None` to
-		///   skip it. When `Some`, it is the player's VRF, which both seeds their draw slot and
-		///   proves their identity path: the alias VRF must be used for alias-based players given
-		///   they are recognized in pallet-score participant information. See the documentation of
-		///   `AirdropVrf` for more details.
+		/// - `airdrops`: optionally enters the player into the airdrop draws scheduled for this
+		///   game. Pass `None` to skip it; otherwise it holds exactly one VRF per scheduled airdrop
+		///   event (`airdrops_scheduled` in the `Game` storage), in airdrop-index order. Each entry
+		///   is bound to its own event id (see `Pallet::airdrop_event_id`) and seeds the player's
+		///   draw slot for that event; the alias variant must be used for alias-based players given
+		///   they are recognized in pallet-score participant information. The sign-up fails
+		///   entirely if any event does not accept its registration or the number of supplied VRFs
+		///   does not match `airdrops_scheduled`. See the documentation of `AirdropVrfs` for more
+		///   details.
 		#[pallet::call_index(2)]
-		#[pallet::weight(<T as Config>::WeightInfo::sign_up_with_alias())]
+		#[pallet::weight(<T as Config>::WeightInfo::sign_up_with_alias(
+			airdrops.as_ref().map_or(0, AirdropVrfs::count) as u32
+		))]
 		pub fn sign_up_with_alias(
 			origin: OriginFor<T>,
 			identifier_key: CommunicationIdentifier,
 			statement_account: T::AccountId,
 			sig: T::AccountSignature,
-			airdrop: Option<AirdropVrf<AirdropProofOf<T>>>,
+			airdrops: Option<AirdropVrfs<AirdropProofOf<T>>>,
 		) -> DispatchResultWithPostInfo {
 			let who = indiv_pallet_score::Pallet::<T>::ensure_person(origin)?;
 
@@ -891,8 +990,72 @@ pub mod pallet {
 				identifier_key,
 				statement_account,
 				statement_account_signature: sig,
-				airdrop,
-			})
+				airdrops,
+			})?;
+
+			Ok(Pays::No.into())
+		}
+
+		/// Sign up for the game using an account and a lite invite, the invitation of a lite
+		/// person.
+		///
+		/// Lite personhood is credible enough to play, so a lite person can invite an account of
+		/// their own. It is registered as an account-based player with an invited credibility.
+		///
+		/// A game must be ongoing and in its registration phase.
+		///
+		/// `airdrops` optionally enters the player into the airdrop draws scheduled for this
+		/// game. Pass `None` to skip it; otherwise it holds exactly one VRF per scheduled
+		/// airdrop event (`airdrops_scheduled` in the [`Game`] storage), in airdrop-index order.
+		/// Each entry is bound to its own event id (see [`Pallet::airdrop_event_id`]), seeds the
+		/// player's draw slot for that event and proves their identity path: the alias variant if
+		/// the player is recognized (pallet-score `recognition` is `Recognized` or
+		/// `ExternallyRecognized`), otherwise the account variant. The sign-up fails entirely if
+		/// any event does not accept its registration or the number of supplied VRFs does not
+		/// match `airdrops_scheduled`. See the documentation of [`AirdropVrfs`] for more details.
+		///
+		/// The origin must be a lite alias in [`indiv_pallet_score::Pallet::score_context`], see
+		/// [`Config::EnsureLiteAlias`]. The lite person names the account playing on their behalf
+		/// with `account`, so the playing account is not the lite person's own account and stays
+		/// unlinkable from it.
+		///
+		/// A lite person invites one account, ever: the first account they sign up this way is the
+		/// only one they can play with, even after it stopped playing.
+		///
+		/// This must be used by lite-people on their first signup or after they have been
+		/// archived. Further signups while the player is active must use
+		/// [`Pallet::sign_up_with_account`] instead.
+		#[pallet::call_index(21)]
+		#[pallet::weight(<T as Config>::WeightInfo::sign_up_with_account_lite_invite(
+			airdrops.as_ref().map_or(0, AirdropVrfs::count) as u32
+		))]
+		pub fn sign_up_with_account_lite_invite(
+			origin: OriginFor<T>,
+			account: T::AccountId,
+			identifier_key: CommunicationIdentifier,
+			airdrops: Option<AirdropVrfs<AirdropProofOf<T>>>,
+		) -> DispatchResultWithPostInfo {
+			let alias = T::EnsureLiteAlias::ensure_origin(
+				origin,
+				&indiv_pallet_score::Pallet::<T>::score_context(),
+			)?;
+
+			if let Some(invited) = LiteInvites::<T>::get(alias) {
+				ensure!(invited == account, Error::<T>::AnotherAccountInvited);
+			}
+
+			Self::sign_up_inner(SignUpArgs::Account {
+				who: account.clone(),
+				identifier_key,
+				new_invited: true,
+				airdrops,
+			})?;
+
+			LiteInvites::<T>::insert(alias, &account);
+
+			Self::deposit_event(Event::<T>::LiteInvited { player: account });
+
+			Ok(Pays::No.into())
 		}
 
 		/// After the game, send the full report.
@@ -902,12 +1065,35 @@ pub mod pallet {
 		/// The origin must be an alias, or signed by an account, or signed by an account and use
 		/// `ScoreAsParticipant` extension.
 		///
+		/// `full_report` holds one entry per round (exactly `game.rounds` of them), and each
+		/// round lists one `Report` per co-player in the reporter's group for that round, in
+		/// group order and excluding the reporter. A round whose length does not match the
+		/// reporter's real group membership is rejected with `Error::InvalidReport`. Each
+		/// `Report::Person` vote awards an attendance NFT claim credit to the attestee immediately;
+		/// `Report::NotPerson` awards nothing.
+		///
 		/// After the votes from the report are counted, the reporter and each of the reported
 		/// players whose attendance can now be determined are processed early. This lets the
 		/// game skip the player-process phase entirely when every player has been processed by
 		/// the end of reporting.
+		///
+		/// On success the call pays no fee (`Pays::No`). Its weight scales with the number of
+		/// co-player entries across all rounds, not the round count, so partial groups are not
+		/// overcharged. The pre-dispatch charge assumes every co-player entry plus the reporter
+		/// is early-enacted and is refunded down to the actual enactment count post-dispatch.
 		#[pallet::call_index(3)]
-		#[pallet::weight(<T as Config>::WeightInfo::report(Pallet::<T>::max_enactments()))]
+		#[pallet::weight({
+			// `e` is the exact number of co-player entries in the submitted report (its
+			// flattened length). It equals the reporter's real group membership across all
+			// rounds, so it is not overcharged for partial groups (unlike scaling by round
+			// count, which assumes every group is full). All of `report`'s per-item PoV and
+			// compute lives in the per-co-player inner loop, so `e` captures 100% of the
+			// scaling cost. Every co-player entry, plus the reporter, may be early-enacted,
+			// so the pre-dispatch enactment bound is `e + 1`.
+			let e = full_report.iter().map(|round| round.len() as u32).sum::<u32>();
+			let n = e.saturating_add(1);
+			<T as Config>::WeightInfo::report(e, n)
+		})]
 		pub fn report(
 			origin: OriginFor<T>,
 			full_report: FullReport<T>,
@@ -919,7 +1105,7 @@ pub mod pallet {
 			let game_index = game.index;
 			let now = T::UnixTime::now();
 			ensure!(now < Duration::from_secs(game.report_ends as u64), Error::<T>::NoReporting);
-			let mint_time = now.as_secs() as u32;
+			let award_time = now.as_secs() as u32;
 			let group_size = game.max_group_size;
 			let GameState::Reporting { player_count } = game.state else {
 				return Err(Error::<T>::NoReporting.into());
@@ -940,11 +1126,19 @@ pub mod pallet {
 
 			ensure!(full_report.len() == game.rounds as usize, Error::<T>::InvalidReport);
 
+			// Number of co-player entries across all rounds. The loop below validates that each
+			// round's report length matches the reporter's real group membership, so this
+			// flattened length is the exact per-item cost driver charged as `e` in the weight.
+			let co_player_entries = full_report.iter().map(|round| round.len() as u32).sum::<u32>();
+
 			let reporter_indices =
 				PlayerToIndex::<T>::get(&who).ok_or(Error::<T>::NotRegistered)?;
 
 			// Collect all players that received a new vote during this report so we can
-			// check their attendance once, after the loop updates their tallies.
+			// check their attendance once, after the loop updates their tallies. A linear
+			// `contains` scan is deliberate: `v` is bounded by `MaxRounds * (MaxGroupSize - 1)`
+			// (15 in production), where a flat cache-local scan beats a `BTreeSet` (measured
+			// ~2x faster at that size), the quadratic term is negligible in-memory work.
 			let mut reported_players: Vec<AccountOrPerson<T::AccountId>> = Vec::new();
 
 			for round in 0..game.rounds {
@@ -961,6 +1155,15 @@ pub mod pallet {
 				let groups_setting = GroupsSetting { max_per_group: group_size, player_count };
 
 				let group_index = groups_setting.group_index_from_player_index(reporter_index);
+				// The reporter's place in their group. They are the attester of every credit
+				// this round awards, so this is the slot all of them take, and the one the
+				// attendance backfill reads off the group for this same player.
+				let attester_position = groups_setting
+					.group_members(group_index)
+					.position(|index| index == reporter_index)
+					.defensive_proof("indiv-pallet-game: reporter is a member of their own group")
+					.ok_or(Error::<T>::InternalErrorInvalidState)?
+					as AttesterPosition;
 				let other_people_in_group =
 					groups_setting.group_members(group_index).filter(|&i| i != reporter_index);
 
@@ -971,61 +1174,38 @@ pub mod pallet {
 					let reported_player = IndexToPlayer::<T>::get((round, reported_index))
 						.defensive_proof("indiv-pallet-game: index should map to a player")
 						.ok_or(Error::<T>::InternalErrorInvalidState)?;
-					let reported_early_enactment =
-						Players::<T>::mutate(&reported_player, |reported_player_info| {
-							let reported_player_info = reported_player_info
-								.as_mut()
-								.defensive_proof("indiv-pallet-game: player should exist")
-								.ok_or(Error::<T>::InternalErrorInvalidState)?;
-							match report {
-								Report::Person =>
-									reported_player_info.yes_person = reported_player_info
-										.yes_person
-										.saturating_add(reporter_vote_weight),
-								Report::NotPerson =>
-									reported_player_info.no_not_person = reported_player_info
-										.no_not_person
-										.saturating_add(reporter_vote_weight),
-							}
-							Result::<_, Error<T>>::Ok(
-								reported_player_info.early_attendance_enactment,
-							)
-						})?;
+					Players::<T>::mutate(&reported_player, |reported_player_info| {
+						let reported_player_info = reported_player_info
+							.as_mut()
+							.defensive_proof("indiv-pallet-game: player should exist")
+							.ok_or(Error::<T>::InternalErrorInvalidState)?;
+						match report {
+							Report::Person =>
+								reported_player_info.yes_person = reported_player_info
+									.yes_person
+									.saturating_add(reporter_vote_weight),
+							Report::NotPerson =>
+								reported_player_info.no_not_person = reported_player_info
+									.no_not_person
+									.saturating_add(reporter_vote_weight),
+						}
+						Result::<_, Error<T>>::Ok(())
+					})?;
 
-					// Decide where this NFT entry should land:
-					// - `Person` always mints into `Nfts` (the attestee earned it; their final
-					//   attendance status is irrelevant for this vote).
-					// - `NotPerson` is gated on the attestee's attendance: if the attestee is
-					//   already early-enacted we route the NFT to its final home directly (mint or
-					//   drop); otherwise we stage it in `NftCandidates` and let the
-					//   attendance-decision point promote or discard it.
-					enum NftAction {
-						MintNow,
-						StageAsCandidate,
-						Drop,
-					}
-					let action = match (*report, reported_early_enactment) {
-						(Report::Person, _) => NftAction::MintNow,
-						(
-							Report::NotPerson,
-							Some(EarlyAttendanceEnactment { attendance: true, .. }),
-						) => NftAction::MintNow,
-						(
-							Report::NotPerson,
-							Some(EarlyAttendanceEnactment { attendance: false, .. }),
-						) => NftAction::Drop,
-						(Report::NotPerson, None) => NftAction::StageAsCandidate,
-					};
-
-					let nft_hash = Self::compute_nft(game_index, round, &who, &reported_player);
-					match action {
-						NftAction::MintNow => {
-							Nfts::<T>::insert(&reported_player, nft_hash, mint_time);
-						},
-						NftAction::StageAsCandidate => {
-							NftCandidates::<T>::insert(&reported_player, nft_hash, ());
-						},
-						NftAction::Drop => {},
+					// A `Person` vote awards immediately: the attestee earns this credit
+					// regardless of their final attendance. A `NotPerson` vote awards
+					// nothing at this point. If the attestee ends up attending, the credit
+					// is backfilled by `award_attendance_credits` when their attendance is
+					// finalized.
+					if *report == Report::Person {
+						T::NftClaimCredits::award_report_credit(
+							game_index,
+							round,
+							&who,
+							&reported_player,
+							attester_position,
+							award_time,
+						);
 					}
 
 					if !reported_players.contains(&reported_player) {
@@ -1057,7 +1237,10 @@ pub mod pallet {
 			}
 
 			Ok(PostDispatchInfo {
-				actual_weight: Some(<T as Config>::WeightInfo::report(enacted_count)),
+				actual_weight: Some(<T as Config>::WeightInfo::report(
+					co_player_entries,
+					enacted_count,
+				)),
 				pays_fee: Pays::No,
 			})
 		}
@@ -1069,6 +1252,11 @@ pub mod pallet {
 		///
 		/// There must be no game or the existing game must be in registration phase and the player
 		/// must have not signed up for the game.
+		///
+		/// A player whose pallet-score recognition is `Recognized` has their personhood suspended,
+		/// the same as an absence-triggered suspension. Offboarding is permanent. Playing as a
+		/// person again after a suspension and then re-recognition requires onboarding under a new
+		/// personal id with a new key.
 		#[pallet::call_index(4)]
 		#[pallet::weight(
 			<T as Config>::WeightInfo::offboard_account()
@@ -1124,7 +1312,7 @@ pub mod pallet {
 				Self::deposit_event(Event::<T>::StmtUsageRemoved { who: stmt_account.into() });
 			}
 
-			indiv_pallet_score::Pallet::<T>::offboard(&who);
+			indiv_pallet_score::Pallet::<T>::offboard(&who)?;
 
 			let actual_weight = match &who {
 				AccountOrPerson::Account(_) => <T as Config>::WeightInfo::offboard_account(),
@@ -1139,6 +1327,11 @@ pub mod pallet {
 		/// Kickout a kickable player that is not playing after `NonPlayingKickoutTime`.
 		///
 		/// The origin must be signed by an account.
+		///
+		/// A player whose pallet-score recognition is `Recognized` has their personhood suspended,
+		/// the same as an absence-triggered suspension. The kickout is permanent. Playing as a
+		/// person again after a suspension and then re-recognition requires onboarding under a new
+		/// personal id with a new key.
 		///
 		/// - `player`: The player to kickout. It must be archived and kickable with
 		///   `archived_since` older than `NonPlayingKickoutTime`.
@@ -1164,7 +1357,7 @@ pub mod pallet {
 				Error::<T>::Early
 			);
 
-			indiv_pallet_score::Pallet::<T>::offboard(&player);
+			indiv_pallet_score::Pallet::<T>::offboard(&player)?;
 
 			Self::deposit_event(Event::<T>::KickedOut { player });
 
@@ -1225,12 +1418,16 @@ pub mod pallet {
 
 		/// Invite an account.
 		///
-		/// The origin must be signed by an account and have some invites left.
+		/// The origin must be signed by an account and have some invites left. The call is free on
+		/// success.
 		///
 		/// - `ticket`: The invite ticket to set.
 		#[pallet::call_index(8)]
 		#[pallet::weight(<T as Config>::WeightInfo::set_invite_ticket())]
-		pub fn set_invite_ticket(origin: OriginFor<T>, ticket: TicketOf<T>) -> DispatchResult {
+		pub fn set_invite_ticket(
+			origin: OriginFor<T>,
+			ticket: TicketOf<T>,
+		) -> DispatchResultWithPostInfo {
 			let inviter = ensure_signed(origin)?;
 
 			let mut available = AvailableInvites::<T>::get(&inviter);
@@ -1250,7 +1447,7 @@ pub mod pallet {
 
 			Self::deposit_event(Event::<T>::InviteTicketSet { inviter });
 
-			Ok(())
+			Ok(Pays::No.into())
 		}
 
 		/// Cancel an invite.
@@ -1387,7 +1584,12 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Claim a prize from the airdrop event scheduled for `game_index`.
+		/// Claim a prize from the airdrop event at index `airdrop_index` scheduled for
+		/// `game_index`.
+		///
+		/// A game schedules one airdrop event per entry in its schedule's `airdrops` (see
+		/// [`GameSchedule`]); `airdrop_index` selects which of them to claim from. A player who
+		/// won several of the game's airdrop events claims each of them separately.
 		///
 		/// Eligibility requires 2 conditions on the claimant to be recognized and have attended the
 		/// game. In more details:
@@ -1396,23 +1598,28 @@ pub mod pallet {
 		/// * AND for `game_index` to match the participant's `last_attended_game` — i.e. the most
 		///   recent game the claimant actually attended must be exactly the game the airdrop is
 		///   tied to. Subsequent game attendance overrides this information so the claim must be
-		///   made before attending another game.
+		///   made before attending another game. In particular an airdrop event drawn late relative
+		///   to the game play time must be claimed before the claimant attends the next game.
 		///
 		/// Claims against a cancelled game are rejected.
-		// This assumes the runtime configures `airdrop_claim_window` to be shorter than the gap
-		// between two successive games — otherwise a later absence could clear the flag before the
-		// claim window closes and vice versa.
+		// If an airdrop is scheduled with a closing window later than the next game, the actual
+		// airdrop claim window will be closed when the next game is played.
+		//
+		// We may want to relax the claimability to just: being recognized in pallet-score after
+		// the game the airdrop is tied to. Effectively changing the condition
+		// `last_attended_game == Some(game_index)` to `last_attended_game >= Some(game_index)`.
 		#[pallet::call_index(17)]
 		#[pallet::weight(<T as Config>::WeightInfo::claim_airdrop())]
 		pub fn claim_airdrop(
 			origin: OriginFor<T>,
-			game_index: u32,
+			game_index: GameIdx,
+			airdrop_index: u8,
 			beneficiary: T::AccountId,
 		) -> DispatchResultWithPostInfo {
 			let claimant =
 				indiv_pallet_score::Pallet::<T>::ensure_signed_or_participant_or_person(origin)?;
 
-			let event_id = Self::airdrop_event_id(game_index);
+			let event_id = Self::airdrop_event_id(game_index, airdrop_index);
 			let eligible = indiv_pallet_score::Participants::<T>::get(&claimant).is_some_and(|p| {
 				(p.recognition.is_recognized() || p.reached_personhood) &&
 					p.last_attended_game == Some(game_index)
@@ -1512,50 +1719,23 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Kill the current game, regardless of which phase it is in.
+		/// Cancel the current game while it is still in the Registration or Shuffle phase.
 		///
-		/// Restricted to [`Config::ManagerOrigin`] (or root). Intended as an emergency
-		/// recovery lever when a game is stuck or its state has been corrupted.
+		/// Restricted to [`Config::ManagerOrigin`] (or root).
 		#[pallet::call_index(15)]
-		#[pallet::weight(<T as Config>::WeightInfo::kill_current_game())]
-		pub fn kill_current_game(origin: OriginFor<T>) -> DispatchResult {
+		#[pallet::weight(<T as Config>::WeightInfo::cancel_game())]
+		pub fn cancel_game(origin: OriginFor<T>) -> DispatchResult {
 			<T as Config>::ManagerOrigin::ensure_origin_or_root(origin)?;
 
-			let game_index = GameIndex::<T>::get();
+			let mut game = Game::<T>::get().ok_or(Error::<T>::NoGame)?;
+			ensure!(
+				matches!(game.state, GameState::Registration { .. } | GameState::Shuffle { .. }),
+				Error::<T>::InvalidGameState
+			);
 
-			// If the game is past the shuffle phase, the attendance report session was
-			// started and needs to be ended here.
-			if let Some(game) = Game::<T>::get() {
-				if matches!(
-					game.state,
-					GameState::Reporting { .. } | GameState::PlayerProcess { .. }
-				) {
-					let _ = indiv_pallet_score::Pallet::<T>::end_attendance_report_session();
-				}
-				Self::on_game_cancelled(&game);
-			}
-
-			Players::<T>::translate(|_player_id, player_info: Player<T::PlayDeposit>| {
-				Some(Player {
-					first_game: player_info.first_game,
-					registered: false,
-					sent_report: false,
-					early_attendance_enactment: None,
-					yes_person: 0,
-					no_not_person: 0,
-					expected_max_vote_weight: 0,
-					vote_weight: 0,
-					credibility: player_info.credibility,
-				})
-			});
-			GameHistory::<T>::remove(game_index);
-			IndexToPlayer::<T>::drain().count(); // drain all
-			PlayerToIndex::<T>::drain().count(); // drain all
-			ShuffleRecognized::<T>::drain().count(); // drain all
-			ShuffleNotRecognized::<T>::drain().count(); // drain all
-			Game::<T>::kill();
-
-			Self::deposit_event(Event::<T>::GameKilled { index: game_index });
+			Self::on_game_cancelled(&game);
+			game.state = GameState::Cancelling { step: CancellingStep::Step1DrainShuffle };
+			Game::<T>::put(game);
 
 			Ok(())
 		}
@@ -1589,7 +1769,9 @@ pub mod pallet {
 					}
 					let mut schedules = <GameSchedules<T>>::get();
 					if !schedules.is_empty() {
-						let weight = <T as Config>::WeightInfo::new_game()
+						let schedule_airdrops =
+							schedules.first().map_or(0, |schedule| schedule.airdrops.len() as u32);
+						let weight = <T as Config>::WeightInfo::new_game(schedule_airdrops)
 							.saturating_add(<T as Config>::WeightInfo::put_game_schedules());
 
 						if weight_meter.try_consume(weight).is_err() {
@@ -1654,18 +1836,11 @@ pub mod pallet {
 				*index = index.saturating_add(1);
 				*index
 			});
-			let phases =
-				StoredPhaseDurations::<T>::get().unwrap_or_else(T::DefaultPhaseDurations::get);
-			let airdrop_end_time = (game_play_time as u64)
-				.saturating_add(phases.reporting as u64)
-				.saturating_add(phases.airdrop_claim_window as u64);
-			let airdrop_scheduled = Self::try_schedule_airdrop(
+			let airdrops_scheduled = Self::try_schedule_airdrops(
 				index,
-				// The airdrop registration opens immediately, regardless of when the game's own
-				// registration phase starts.
+				// The airdrop registrations open immediately, same as the game.
 				now.as_secs(),
 				game_play_time as u64,
-				airdrop_end_time,
 				schedule,
 			);
 			Game::<T>::put(GameInfo {
@@ -1678,7 +1853,7 @@ pub mod pallet {
 				max_group_size: schedule.max_group_size,
 				rounds: schedule.rounds,
 				pending_attendance: 0,
-				airdrop_scheduled,
+				airdrops_scheduled,
 			});
 			GameHistory::<T>::insert(index, game_play_time);
 
@@ -1696,58 +1871,92 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Deterministic `EventId` for the airdrop event associated with `game_index`.
-		pub fn airdrop_event_id(game_index: u32) -> AirdropEventId {
+		/// Deterministic `EventId` for the airdrop event at `airdrop_index` associated with
+		/// `game_index`.
+		///
+		/// The event id is the base concatenated with the airdrop index and the game index BE
+		/// encoded.
+		///
+		/// To discover the event ids of the current game: the game index and the number of
+		/// scheduled airdrops (`airdrops_scheduled`, the events carry indices
+		/// `0..airdrops_scheduled`) are available in the [`Game`] storage, and each successfully
+		/// scheduled event also emits [`Event::AirdropScheduled`] with its `airdrop_index` and
+		/// `event_id`.
+		pub fn airdrop_event_id(game_index: GameIdx, airdrop_index: u8) -> AirdropEventId {
 			let mut event_id = [0u8; 32];
-			event_id[0..28].copy_from_slice(Self::airdrop_event_id_base().as_ref());
+			event_id[0..27].copy_from_slice(Self::airdrop_event_id_base().as_ref());
+			event_id[27] = airdrop_index;
 			event_id[28..32].copy_from_slice(&game_index.to_be_bytes());
 			event_id
 		}
 
-		/// Best-effort schedule of the airdrop event for this game.
+		/// Best-effort schedule of the airdrop events for this game, one per entry in the
+		/// schedule's `airdrops`. Returns the number of scheduled events; the events carry the
+		/// airdrop indices `0..count`.
 		///
-		/// Returns `true` iff the schedule succeeded, `false` otherwise (no prize configured, or
-		/// the underlying scheduling call failed).
-		fn try_schedule_airdrop(
-			game_index: u32,
+		/// Every event opens registration at `registration_starts`, draws its winners at
+		/// `game_play_time + draw_offset` and closes claims its own `claim_window` after its
+		/// draw time. Claims only become possible once attendance is recorded (during the
+		/// reporting phase at the earliest), so schedules must pick `draw_offset` and
+		/// `claim_window` such that the window extends past the reporting phase.
+		///
+		/// Scheduling is best-effort and stops at the first failure: only the prefix of the
+		/// schedule's airdrops up to (excluding) the failing one is scheduled.
+		fn try_schedule_airdrops(
+			game_index: GameIdx,
 			registration_starts: u64,
 			game_play_time: u64,
-			airdrop_end_time: u64,
 			schedule: &GameScheduleOf<T>,
-		) -> bool {
-			let Some(prize) = schedule.airdrop_prize.clone() else { return false };
-			let event_id = Self::airdrop_event_id(game_index);
-			let info = AirdropEventInfo {
-				prize,
-				registration_starts,
-				draw_time: game_play_time,
-				end_time: airdrop_end_time,
-			};
-			let res = frame_support::storage::with_storage_layer(|| {
-				T::Airdrop::schedule(T::AirdropSource::get(), event_id, info)
-			});
-			match res {
-				Ok(()) => {
-					Self::deposit_event(Event::<T>::AirdropScheduled { game_index, event_id });
-					true
-				},
-				Err(error) => {
-					log::warn!(
-						target: LOG_TARGET,
-						"airdrop schedule failed for game {game_index}: {error:?}",
-					);
-					Self::deposit_event(Event::<T>::AirdropScheduleFailed { game_index, error });
-					false
-				},
+		) -> u8 {
+			let mut scheduled = 0u8;
+			for (airdrop_index, airdrop) in schedule.airdrops.iter().enumerate() {
+				// MAX_GAME_AIRDROPS is less than 256, so this cast is safe.
+				let airdrop_index = airdrop_index as u8;
+				let event_id = Self::airdrop_event_id(game_index, airdrop_index);
+				let draw_time = game_play_time.saturating_add(airdrop.draw_offset as u64);
+				let end_time = draw_time.saturating_add(airdrop.claim_window as u64);
+				let info = AirdropEventInfo {
+					prize: airdrop.prize.clone(),
+					registration_starts,
+					draw_time,
+					end_time,
+				};
+				let res = frame_support::storage::with_storage_layer(|| {
+					T::Airdrop::schedule(T::AirdropSource::get(), event_id, info)
+				});
+				match res {
+					Ok(()) => {
+						scheduled.saturating_inc();
+						Self::deposit_event(Event::<T>::AirdropScheduled {
+							game_index,
+							airdrop_index,
+							event_id,
+						});
+					},
+					Err(error) => {
+						log::warn!(
+							target: LOG_TARGET,
+							"airdrop {airdrop_index} schedule failed for game {game_index}: \
+							{error:?}",
+						);
+						Self::deposit_event(Event::<T>::AirdropScheduleFailed {
+							game_index,
+							airdrop_index,
+							error,
+						});
+						break;
+					},
+				}
 			}
+			scheduled
 		}
 
 		/// Called from every transition to `GameState::Cancelling`.
-		/// * cancel the game's airdrop event (if one was scheduled).
+		/// * cancel the game's airdrop events (those that were scheduled).
 		/// * deposit event.
 		pub(crate) fn on_game_cancelled(game: &GameInfo<T::AccountId>) {
-			if game.airdrop_scheduled {
-				let event_id = Self::airdrop_event_id(game.index);
+			for airdrop_index in 0..game.airdrops_scheduled {
+				let event_id = Self::airdrop_event_id(game.index, airdrop_index);
 				T::Airdrop::cancel(event_id);
 			}
 			Self::deposit_event(Event::<T>::GameCancelled { game_index: game.index });
@@ -1756,7 +1965,7 @@ pub mod pallet {
 		/// **Warning**: Storage must be rollbacked on error.
 		fn sign_up_inner(
 			args: SignUpArgs<T::AccountId, T::AccountSignature, AirdropProofOf<T>>,
-		) -> DispatchResultWithPostInfo {
+		) -> DispatchResult {
 			// Some pre-condition here are duplicated in validation checks in `GameAsInvited`
 			// transaction extension. This is to prevent consuming the invite when it would fail.
 			// If further checks are needed, they might also need to be duplicated in the
@@ -1764,9 +1973,8 @@ pub mod pallet {
 			// Signing up with an invite must never fail after the transaction extension validation,
 			// except, potentially, extreme conditions.
 			//
-			// TODO: https://github.com/paritytech/individuality/issues/230
-			// potentially refactor to avoid duplicated checks and enforce the success of
-			// `sign_up_with_invite`.
+			// TODO(paritytech/individuality#230): refactor to avoid duplicated checks and enforce
+			// the success of `sign_up_with_invite`.
 
 			// Check the game state.
 			let mut game = Game::<T>::get().ok_or(Error::<T>::NoGame)?;
@@ -1778,13 +1986,13 @@ pub mod pallet {
 				return Err(Error::<T>::NoRegistration.into());
 			};
 
-			let (who, new_invited, airdrop) = match args {
+			let (who, new_invited, airdrops) = match args {
 				SignUpArgs::Alias {
 					who,
 					identifier_key,
 					statement_account,
 					statement_account_signature,
-					airdrop,
+					airdrops,
 				} => {
 					// We require the proof of ownership to prevent person from blocking other
 					// player with account they don't own.
@@ -1828,9 +2036,9 @@ pub mod pallet {
 					}
 					CommunicationIdentifiers::<T>::insert(&statement_account, identifier_key);
 
-					(AccountOrPerson::Person(who), false, airdrop)
+					(AccountOrPerson::Person(who), false, airdrops)
 				},
-				SignUpArgs::Account { who, identifier_key, new_invited, airdrop } => {
+				SignUpArgs::Account { who, identifier_key, new_invited, airdrops } => {
 					// We prevent any overlap between statement accounts and player.
 					ensure!(
 						!StmtAccountToAlias::<T>::contains_key(&who),
@@ -1838,7 +2046,7 @@ pub mod pallet {
 					);
 					CommunicationIdentifiers::<T>::insert(&who, identifier_key);
 
-					(AccountOrPerson::Account(who.clone()), new_invited, airdrop)
+					(AccountOrPerson::Account(who.clone()), new_invited, airdrops)
 				},
 			};
 
@@ -1900,7 +2108,7 @@ pub mod pallet {
 				},
 			);
 
-			Self::register_for_airdrop(airdrop, &who, game.airdrop_scheduled, game.index)?;
+			Self::register_for_airdrop(airdrops, &who, game.airdrops_scheduled, game.index)?;
 
 			// An account-identified player gets allowance when signed up
 			if !already_playing {
@@ -1919,110 +2127,128 @@ pub mod pallet {
 				"Player {who:?} registered for game",
 			);
 
-			Ok(Pays::No.into())
+			Ok(())
 		}
 
 		// This function is mirrored `validate_register_for_airdrop`, changes must be kept in sync.
+		//
+		// Registers the player into every scheduled airdrop event, one entry per event in
+		// airdrop-index order, return error on the first failure.
 		fn register_for_airdrop(
-			airdrop: Option<AirdropVrf<AirdropProofOf<T>>>,
+			airdrops: Option<AirdropVrfs<AirdropProofOf<T>>>,
 			who: &AccountOrPerson<T::AccountId>,
-			game_airdrop_scheduled: bool,
-			game_index: u32,
+			airdrops_scheduled: u8,
+			game_index: GameIdx,
 		) -> DispatchResult {
-			if !game_airdrop_scheduled {
-				return Ok(());
-			}
-			let Some(airdrop_vrf) = airdrop else {
+			let Some(airdrops) = airdrops else {
 				return Ok(());
 			};
+			ensure!(
+				airdrops.count() == usize::from(airdrops_scheduled),
+				Error::<T>::InvalidAirdropVrfCount
+			);
 
 			let recognized = indiv_pallet_score::Participants::<T>::get(who)
 				.defensive_proof("pallet-game: registering account must be a participant")
 				.is_some_and(|p| p.recognition.is_recognized());
-			let variant_ok = match &airdrop_vrf {
-				AirdropVrf::Alias { .. } => recognized,
-				AirdropVrf::Account(_) => !recognized,
-			};
-			ensure!(variant_ok, Error::<T>::InvalidAirdropVrfVariantForRecognition);
-			let event_id = Self::airdrop_event_id(game_index);
-			match airdrop_vrf {
-				AirdropVrf::Account(sig) => {
+			match airdrops {
+				AirdropVrfs::Account(vrfs) => {
+					ensure!(!recognized, Error::<T>::InvalidAirdropVrfVariantForRecognition);
 					let AccountOrPerson::Account(acct) = &who else {
 						return Err(Error::<T>::InvalidAirdropVrfVariantForAccount.into());
 					};
-					T::Airdrop::participate_with_account(acct.clone(), event_id, sig)
+					for (airdrop_index, sig) in vrfs.into_iter().enumerate() {
+						let event_id = Self::airdrop_event_id(game_index, airdrop_index as u8);
+						T::Airdrop::participate_with_account(acct.clone(), event_id, sig)?;
+					}
 				},
-				AirdropVrf::Alias { proof, ring_index, revision } => {
+				AirdropVrfs::Alias { proofs, ring_index, revision } => {
+					ensure!(recognized, Error::<T>::InvalidAirdropVrfVariantForRecognition);
 					let participant_origin = into_registration_entry(who.clone());
-					T::Airdrop::participate_with_alias(
-						event_id,
-						participant_origin,
-						proof,
-						ring_index,
-						revision,
-					)
+					for (airdrop_index, proof) in proofs.into_iter().enumerate() {
+						let event_id = Self::airdrop_event_id(game_index, airdrop_index as u8);
+						T::Airdrop::participate_with_alias(
+							event_id,
+							participant_origin.clone(),
+							proof,
+							ring_index,
+							revision,
+						)?;
+					}
 				},
 			}
+			Ok(())
 		}
 
 		/// Validation-only counterpart of [`Self::register_for_airdrop`] used by the
 		/// `GameAsInvited` transaction extension.
-		// TODO: we may want to refactor. But ideally we should change the onboarding flow to first
-		// onboard and then register for the game so the check for onboarding only consist of
-		// checking the invitation. Or otherwise we may not want to check the validity of the VRF
-		// and maybe not even check the validity of the complete call, just let the invitation do 5
-		// calls until being consumed, the invited being responsible for doing valid calls.
+		// TODO(paritytech/individuality#230): ideally change the onboarding flow to first onboard
+		// and then register for the game so the check for onboarding only consists of checking
+		// the invitation. Or otherwise we may not want to check the validity of the VRF and maybe
+		// not even check the validity of the complete call, just let the invitation do 5 calls
+		// until being consumed, the invited being responsible for doing valid calls.
 		pub(crate) fn validate_register_for_airdrop(
-			airdrop_vrf: &Option<AirdropVrf<AirdropProofOf<T>>>,
+			airdrops: &Option<AirdropVrfs<AirdropProofOf<T>>>,
 			who: &AccountOrPerson<T::AccountId>,
-			game_index: u32,
-			game_airdrop_scheduled: bool,
+			game_index: GameIdx,
+			airdrops_scheduled: u8,
 		) -> Result<(), CustomError> {
 			use CustomError::*;
 			use TransactionOutcome::*;
 
-			if !game_airdrop_scheduled {
-				return Ok(());
-			}
-			let Some(airdrop_vrf) = airdrop_vrf.as_ref() else {
+			let Some(airdrops) = airdrops.as_ref() else {
 				return Ok(());
 			};
+			if airdrops.count() != usize::from(airdrops_scheduled) {
+				return Err(InvalidAirdropVrfCount);
+			}
 
 			let recognized = indiv_pallet_score::Participants::<T>::get(who)
 				// When None, it will be onboarded as NotRecognized.
 				.is_some_and(|p| p.recognition.is_recognized());
 
-			let variant_ok = match airdrop_vrf {
-				AirdropVrf::Alias { .. } => recognized,
-				AirdropVrf::Account(_) => !recognized,
+			let variant_ok = match airdrops {
+				AirdropVrfs::Alias { .. } => recognized,
+				AirdropVrfs::Account(_) => !recognized,
 			};
 			if !variant_ok {
 				return Err(InvalidAirdropVrfVariant);
 			}
-			let event_id = Self::airdrop_event_id(game_index);
 
-			let res = match airdrop_vrf {
-				AirdropVrf::Account(sig) => {
+			let res = match airdrops {
+				AirdropVrfs::Account(vrfs) => {
 					let AccountOrPerson::Account(acct) = who else {
 						return Err(InvalidAirdropVrfVariant);
 					};
 					with_transaction(|| {
-						Rollback(Ok(T::Airdrop::participate_with_account(
-							acct.clone(),
-							event_id,
-							sig.clone(),
+						Rollback(Ok(vrfs.iter().enumerate().try_for_each(
+							|(airdrop_index, sig)| {
+								let event_id =
+									Self::airdrop_event_id(game_index, airdrop_index as u8);
+								T::Airdrop::participate_with_account(
+									acct.clone(),
+									event_id,
+									sig.clone(),
+								)
+							},
 						)))
 					})
 				},
-				AirdropVrf::Alias { proof, ring_index, revision } => {
+				AirdropVrfs::Alias { proofs, ring_index, revision } => {
 					let participant_origin = into_registration_entry(who.clone());
 					with_transaction(|| {
-						Rollback(Ok(T::Airdrop::participate_with_alias(
-							event_id,
-							participant_origin,
-							proof.clone(),
-							*ring_index,
-							*revision,
+						Rollback(Ok(proofs.iter().enumerate().try_for_each(
+							|(airdrop_index, proof)| {
+								let event_id =
+									Self::airdrop_event_id(game_index, airdrop_index as u8);
+								T::Airdrop::participate_with_alias(
+									event_id,
+									participant_origin.clone(),
+									proof.clone(),
+									*ring_index,
+									*revision,
+								)
+							},
 						)))
 					})
 				},
@@ -2113,30 +2339,72 @@ pub mod pallet {
 			StepResult::Continue
 		}
 
-		/// Read and Write into `PlayerToIndex`, `IndexToPlayer`, `ShuffleRecognized`.
+		/// Reads from and writes to `PlayerToIndex`, `IndexToPlayer`, `ShuffleRecognized` and
+		/// `ShuffleNotRecognized`.
 		/// Update the `next_player_index` to the next index if one is processed.
+		/// Update the `phase` from [`ShuffleRetrievePhase::Recognized`] to
+		/// [`ShuffleRetrievePhase::NotRecognized`] when the recognized population is exhausted.
+		/// Update the `resume_cursors` to the last drained key for each round, to optimize the
+		/// retrieval of the next player.
+		///
+		/// `resume_cursors` **MUST** be passed with one entry per round (all initially `None`).
+		// `resume_cursors` is a pure optimization cache: it lets each step resume draining right
+		// after the previous key instead of iterating from the beginning of the trie prefix, which
+		// would require skipping over all the keys already removed (and still buffered in the
+		// overlay) this block.
 		pub(crate) fn shuffle_step_retrieve(
 			next_player_index: &mut PlayerIndex,
-			recognized_finished: &mut bool,
+			phase: &mut ShuffleRetrievePhase,
+			resume_cursors: &mut [Option<ShufflePositionKey>],
 			rounds: u8,
 		) -> StepResult {
 			for round in 0..rounds {
-				let next_recognized_player = if *recognized_finished {
-					ShuffleNotRecognized::<T>::drain_prefix(round).next()
-				} else {
-					ShuffleRecognized::<T>::drain_prefix(round).next()
+				let last_key = resume_cursors.get(usize::from(round)).copied().flatten();
+
+				// Resuming after the last key drained.
+				let player_iter = match (&*phase, last_key) {
+					(ShuffleRetrievePhase::NotRecognized { .. }, Some(key)) =>
+						ShuffleNotRecognized::<T>::iter_prefix_from(
+							round,
+							ShuffleNotRecognized::<T>::hashed_key_for(round, key),
+						),
+					(ShuffleRetrievePhase::NotRecognized { .. }, None) =>
+						ShuffleNotRecognized::<T>::iter_prefix(round),
+					(ShuffleRetrievePhase::Recognized, Some(key)) =>
+						ShuffleRecognized::<T>::iter_prefix_from(
+							round,
+							ShuffleRecognized::<T>::hashed_key_for(round, key),
+						),
+					(ShuffleRetrievePhase::Recognized, None) =>
+						ShuffleRecognized::<T>::iter_prefix(round),
 				};
 
-				let Some((_hash, player_id)) = next_recognized_player else {
-					if *recognized_finished {
-						// No more recognized players to shuffle.
-						return StepResult::Finished;
-					} else {
-						// No more not recognized players to shuffle.
-						*recognized_finished = true;
-						return StepResult::Continue;
+				// Drain the next entry.
+				let next_player = player_iter.drain().next();
+
+				let Some((hash, player_id)) = next_player else {
+					// One iteration is done, reset the cache.
+					resume_cursors.iter_mut().for_each(|key| *key = None);
+					match phase {
+						// Not-recognized phase drained. All is done.
+						ShuffleRetrievePhase::NotRecognized { .. } => return StepResult::Finished,
+						// Recognized phase drained. Transition to the not-recognized phase.
+						// `next_player_index` is exactly the number of recognized players.
+						ShuffleRetrievePhase::Recognized => {
+							*phase = ShuffleRetrievePhase::NotRecognized {
+								recognized_count: *next_player_index,
+							};
+							return StepResult::Continue;
+						},
 					}
 				};
+
+				// Cache the drained key to resume after it on the next step.
+				if let Some(cached) = resume_cursors.get_mut(usize::from(round)) {
+					*cached = Some(hash);
+				} else {
+					defensive!("indiv-pallet-game: resume_cursors should have one entry per round");
+				}
 
 				let mut indices = PlayerToIndex::<T>::get(&player_id).unwrap_or_else(|| {
 					let mut indices = BoundedVec::default();
@@ -2161,13 +2429,11 @@ pub mod pallet {
 
 		/// Compute the exact `expected_max_vote_weight` for one registered player by summing
 		/// the personhood-derived vote weights of all their co-players across every round.
-		///
-		/// Reads `PlayerToIndex`, `IndexToPlayer`, and the score pallet's `reached_personhood`,
-		/// then writes the result into `Players`.
 		pub(crate) fn shuffle_step_compute_weights(
 			last_iteration: &mut Option<AccountOrPerson<T::AccountId>>,
 			rounds: u8,
 			player_count: u32,
+			recognized_count: u32,
 			max_per_group: u32,
 		) -> StepResult {
 			let mut remaining_players = match last_iteration.clone() {
@@ -2180,6 +2446,8 @@ pub mod pallet {
 			};
 
 			let groups_setting = GroupsSetting { max_per_group, player_count };
+			let people_vote_weight = u32::from(T::PeopleVoteWeight::get());
+			let candidate_vote_weight = u32::from(T::CandidateVoteWeight::get());
 			let mut total_weight: u32 = 0;
 
 			for round in 0..rounds {
@@ -2196,20 +2464,14 @@ pub mod pallet {
 					if member_idx == player_idx {
 						continue;
 					}
-					let Some(member_id) = IndexToPlayer::<T>::get((round, member_idx))
-						.defensive_proof("indiv-pallet-game: index should map to a player")
-					else {
-						continue;
+					// Recognized players occupy indices `[0, recognized_count-1]` in every round,
+					// so we can determine the vote weight of a member by their index alone.
+					let member_weight = if member_idx < recognized_count {
+						people_vote_weight
+					} else {
+						candidate_vote_weight
 					};
-					// Read the member's snapshotted `vote_weight` (set in
-					// `shuffle_step_insert`). Using the snapshot here keeps the bound
-					// mathematically tight against the weights actually cast at report time.
-					let Some(member) = Players::<T>::get(&member_id)
-						.defensive_proof("indiv-pallet-game: player should exist")
-					else {
-						continue;
-					};
-					total_weight = total_weight.saturating_add(member.vote_weight as u32);
+					total_weight = total_weight.saturating_add(member_weight);
 				}
 			}
 
@@ -2238,8 +2500,9 @@ pub mod pallet {
 		/// - `weight_meter`: The available weight.
 		/// - `game`: The current game; caller must guarantee its state is `Shuffle`.
 		pub(crate) fn shuffles(weight_meter: &mut WeightMeter, mut game: GameInfo<T::AccountId>) {
-			let base_weight = <T as Config>::WeightInfo::shuffles_base()
-				.saturating_add(<T as Config>::WeightInfo::on_game_cancelled());
+			let base_weight = <T as Config>::WeightInfo::shuffles_base().saturating_add(
+				<T as Config>::WeightInfo::on_game_cancelled(game.airdrops_scheduled.into()),
+			);
 			if weight_meter.try_consume(base_weight).is_err() {
 				return;
 			}
@@ -2252,12 +2515,16 @@ pub mod pallet {
 			let now = T::UnixTime::now();
 			if now > Duration::from_secs(game.shuffle_deadline.into()) {
 				Self::on_game_cancelled(&game);
-				game.state = GameState::Cancelling { last_iteration: None };
+				game.state = GameState::Cancelling { step: CancellingStep::Step1DrainShuffle };
 				Game::<T>::put(game);
 				return;
 			}
 
 			let parent_hash = frame_system::Pallet::<T>::parent_hash();
+
+			// Per-round cache of the last drained key, used by `shuffle_step_retrieve` to resume
+			// iteration. Only meaningful within this single `shuffles` invocation.
+			let mut resume_cursors = vec![None; usize::from(game.rounds)];
 
 			for _ in 0..OP_UPPER_BOUND {
 				match step {
@@ -2282,16 +2549,13 @@ pub mod pallet {
 							StepResult::Finished => {
 								*step = ShuffleStep::Step2Retrieve {
 									next_player_index: 0,
-									recognized_finished: false,
+									phase: ShuffleRetrievePhase::Recognized,
 								};
 							},
 							StepResult::Continue => {},
 						}
 					},
-					ShuffleStep::Step2Retrieve {
-						ref mut next_player_index,
-						ref mut recognized_finished,
-					} => {
+					ShuffleStep::Step2Retrieve { ref mut next_player_index, ref mut phase } => {
 						if weight_meter
 							.try_consume(<T as Config>::WeightInfo::shuffle_step_retrieve(
 								game.rounds.into(),
@@ -2303,25 +2567,48 @@ pub mod pallet {
 
 						let step_result = Self::shuffle_step_retrieve(
 							next_player_index,
-							recognized_finished,
+							phase,
+							&mut resume_cursors,
 							game.rounds,
 						);
 
 						match step_result {
 							StepResult::Finished => {
+								// Retrieve reports `Finished` after the not-recognized phase,
+								// so `recognized_count` is available.
+								let recognized_count = match phase {
+									ShuffleRetrievePhase::NotRecognized { recognized_count } =>
+										*recognized_count,
+									ShuffleRetrievePhase::Recognized => {
+										defensive!(
+											"indiv-pallet-game: retrieve finished before the \
+											recognized phase completed"
+										);
+										*next_player_index
+									},
+								};
 								*step = ShuffleStep::Step3ComputeWeights {
 									last_iteration: None,
 									player_count: *next_player_index,
+									recognized_count,
 								};
 							},
 							StepResult::Continue => {},
 						}
 					},
-					ShuffleStep::Step3ComputeWeights { ref mut last_iteration, player_count } => {
+					ShuffleStep::Step3ComputeWeights {
+						ref mut last_iteration,
+						player_count,
+						recognized_count,
+					} => {
 						if weight_meter
 							.try_consume(<T as Config>::WeightInfo::shuffle_step_compute_weights(
-								game.max_group_size,
-								game.rounds.into(),
+								// Per-call cost scales with the inner iterations
+								// `rounds * (group_size - 1)`; charge `rounds * max_group_size` as
+								// a tight upper bound (a single component avoids the n*r
+								// interaction that a separable `f(n, r)` weight cannot
+								// model).
+								u32::from(game.rounds).saturating_mul(game.max_group_size),
 							))
 							.is_err()
 						{
@@ -2332,6 +2619,7 @@ pub mod pallet {
 							last_iteration,
 							game.rounds,
 							*player_count,
+							*recognized_count,
 							game.max_group_size,
 						);
 
@@ -2414,8 +2702,10 @@ pub mod pallet {
 		/// or if their attendance is still pending. Reads and writes `Game` storage
 		/// directly.
 		///
-		/// Returns `true` if the full enactment path ran (i.e. attendance was applied and
-		/// the NFT routing performed), `false` for every early-bail case.
+		/// Returns `true` if the full enactment path ran (attendance was applied and the
+		/// result cached on the player), `false` for every early-bail case. Claim credit
+		/// materialization is *not* done here: it is deferred to
+		/// `process_player_attendance_outcome` so `report`'s weight stays linear.
 		pub(crate) fn try_early_attendance_enactment(
 			player_id: &AccountOrPerson<T::AccountId>,
 		) -> bool {
@@ -2433,7 +2723,7 @@ pub mod pallet {
 				AttendanceStatus::Pending => return false,
 			};
 
-			let GameState::Reporting { player_count } = game.state else {
+			let GameState::Reporting { .. } = game.state else {
 				defensive!("indiv-pallet-game: early enactment outside reporting phase");
 				return false;
 			};
@@ -2444,17 +2734,6 @@ pub mod pallet {
 				player.registered,
 				game.index,
 				&mut game.pending_attendance,
-			);
-
-			let mint_time = T::UnixTime::now().as_secs() as u32;
-			Self::apply_attendance_to_nfts(
-				game.index,
-				game.rounds,
-				game.max_group_size,
-				player_count,
-				player_id,
-				attendance,
-				mint_time,
 			);
 
 			Game::<T>::put(game);
@@ -2485,7 +2764,7 @@ pub mod pallet {
 			player_id: &AccountOrPerson<T::AccountId>,
 			attendance: bool,
 			registered: bool,
-			game_index: u32,
+			game_index: GameIdx,
 			game_pending_attendance: &mut u32,
 		) -> EarlyAttendanceEnactment {
 			let res =
@@ -2559,10 +2838,13 @@ pub mod pallet {
 		///
 		/// Side effects:
 		/// - May call into `indiv_pallet_score::Pallet::set_attendance`.
-		/// - Routes attendance NFTs, archives or resets player state, and may drop a play deposit.
+		/// - Routes attendance NFT claim credits, archives or resets player state, and may drop a
+		///   play deposit.
 		/// - Updates `last_iteration` and returns the next item from `iterator`.
+		/// - Adds the number of NFT claim credits recorded for this player to `credits_awarded`, so
+		///   the caller can debit the block capacity it reserved.
 		pub(crate) fn process_player_attendance_outcome(
-			game_index: u32,
+			game_index: GameIdx,
 			rounds: u8,
 			max_group_size: u32,
 			pending_attendance: &mut u32,
@@ -2570,7 +2852,8 @@ pub mod pallet {
 			last_iteration: &mut Option<AccountOrPerson<T::AccountId>>,
 			next_player: (AccountOrPerson<T::AccountId>, Player<T::PlayDeposit>),
 			iterator: &mut impl Iterator<Item = (AccountOrPerson<T::AccountId>, Player<T::PlayDeposit>)>,
-			mint_time: u32,
+			award_time: u32,
+			credits_awarded: &mut u32,
 		) -> Option<(AccountOrPerson<T::AccountId>, Player<T::PlayDeposit>)> {
 			let (player_id, player) = next_player;
 
@@ -2581,24 +2864,30 @@ pub mod pallet {
 					let half_plus_one = player.yes_person.saturating_sub(1) >= player.no_not_person;
 					let attendance = player.registered && player.sent_report && half_plus_one;
 
-					let enactment = Self::apply_attendance(
+					Self::apply_attendance(
 						&player_id,
 						attendance,
 						player.registered,
 						game_index,
 						pending_attendance,
-					);
-					Self::apply_attendance_to_nfts(
+					)
+				};
+
+			// `report` defers NFT claim credit materialization to here so its weight stays linear
+			// in `(e, n)` rather than `O(e · n)`. An attendee earns one credit per group
+			// co-member in every round played; a non-attendee earns none, and unearned
+			// credits were never awarded, so there is nothing to undo.
+			if attendance {
+				*credits_awarded =
+					credits_awarded.saturating_add(T::NftClaimCredits::award_attendance_credits(
 						game_index,
 						rounds,
 						max_group_size,
 						player_count,
 						&player_id,
-						attendance,
-						mint_time,
-					);
-					enactment
-				};
+						award_time,
+					));
+			}
 
 			let archived_player = match disposition {
 				PlayerDisposition::ArchiveKickable => Some(ArchivedPlayer::Kickable {
@@ -2710,21 +2999,32 @@ pub mod pallet {
 				Some(last) => Players::<T>::iter_from_key(last),
 			};
 
-			// Step 1 can resolve either the attended or not-attended branch per player. Meter
-			// against the heavier measured per-player path before consuming another item.
 			let per_player_weight =
-				<T as Config>::WeightInfo::player_process_step1_attended_player()
-					.max(<T as Config>::WeightInfo::player_process_step1_not_attended_player());
-			let mint_time = T::UnixTime::now().as_secs() as u32;
+				<T as Config>::WeightInfo::player_process_step1_inner_loop(game.rounds as u32);
+			let award_time = T::UnixTime::now().as_secs() as u32;
+			// A player's backfill cannot be split across blocks, so a player is only processed
+			// while its worst case still fits what the block can award and no credit ever has to
+			// be dropped. The remaining players are processed in a later block, which starts with
+			// its own awards. Only the credits really awarded are debited, so players that award
+			// nothing (non-attendees) or less than their worst case (credits already awarded
+			// during reporting) do not shorten the block.
+			let max_credits_per_player =
+				Self::max_attestations(game.rounds as u32, game.max_group_size);
+			let mut credit_capacity = T::NftClaimCredits::remaining_capacity();
 			let mut next_player = iterator.next();
 
 			for _ in 0..OP_UPPER_BOUND {
 				let Some(next_player_to_process) = next_player.take() else { break };
+				if credit_capacity < max_credits_per_player {
+					Game::<T>::put(game);
+					return;
+				}
 				if weight_meter.try_consume(per_player_weight).is_err() {
 					Game::<T>::put(game);
 					return;
 				}
 
+				let mut credits_awarded = 0;
 				next_player = Self::process_player_attendance_outcome(
 					game.index,
 					game.rounds,
@@ -2734,8 +3034,10 @@ pub mod pallet {
 					last_iteration,
 					next_player_to_process,
 					&mut iterator,
-					mint_time,
+					award_time,
+					&mut credits_awarded,
 				);
+				credit_capacity = credit_capacity.saturating_sub(credits_awarded);
 			}
 
 			if next_player.is_none() {
@@ -2750,12 +3052,20 @@ pub mod pallet {
 			Game::<T>::put(game);
 		}
 
-		/// Clear one bounded chunk from each per-game index <-> player map.
+		/// Clear one bounded chunk from each per-game index <-> player map, and from the game's
+		/// [`AwardedNftClaimCredits`].
+		///
+		/// The awarded-credit slots go with the maps, being positions in groups only those maps
+		/// resolve. Step 1 has finished the attendance backfill by now, so no award can name
+		/// this game again and the slots have no reader left.
 		pub(crate) fn player_process_step2_inner_loop(
+			game_index: GameIdx,
 			cursor1: &mut Option<Vec<u8>>,
 			cursor2: &mut Option<Vec<u8>>,
+			cursor3: &mut Option<Vec<u8>>,
 			done1: &mut bool,
 			done2: &mut bool,
+			done3: &mut bool,
 		) {
 			if !*done1 {
 				let r = IndexToPlayer::<T>::clear(PLAYER_PROCESS_STEP2_CHUNK, cursor1.as_deref());
@@ -2766,6 +3076,14 @@ pub mod pallet {
 				let r = PlayerToIndex::<T>::clear(PLAYER_PROCESS_STEP2_CHUNK, cursor2.as_deref());
 				*cursor2 = r.maybe_cursor;
 				*done2 = cursor2.is_none();
+			}
+			if !*done3 {
+				*cursor3 = T::NftClaimCredits::clear_game_credits(
+					game_index,
+					PLAYER_PROCESS_STEP2_CHUNK,
+					cursor3.as_deref(),
+				);
+				*done3 = cursor3.is_none();
 			}
 		}
 
@@ -2791,8 +3109,10 @@ pub mod pallet {
 
 			let mut cursor1: Option<Vec<u8>> = None;
 			let mut cursor2: Option<Vec<u8>> = None;
+			let mut cursor3: Option<Vec<u8>> = None;
 			let mut done1 = false;
 			let mut done2 = false;
+			let mut done3 = false;
 			for _ in 0..OP_UPPER_BOUND {
 				if weight_meter
 					.try_consume(<T as Config>::WeightInfo::player_process_step2_inner_loop())
@@ -2802,19 +3122,22 @@ pub mod pallet {
 				}
 
 				Self::player_process_step2_inner_loop(
+					game.index,
 					&mut cursor1,
 					&mut cursor2,
+					&mut cursor3,
 					&mut done1,
 					&mut done2,
+					&mut done3,
 				);
 
-				if done1 && done2 {
+				if done1 && done2 && done3 {
 					break;
 				}
 			}
 
 			// If still not done continue later.
-			if !(done1 && done2) {
+			if !(done1 && done2 && done3) {
 				defensive!(
 					"indiv-pallet-game: player_process_step2 exhausted OP_UPPER_BOUND without draining; possible cursor bug or miscalibrated weight meter"
 				);
@@ -2826,7 +3149,8 @@ pub mod pallet {
 		}
 
 		/// Process the cancelling of the game, one single step, return true if finished.
-		pub(crate) fn process_cancelling_step(
+		pub(crate) fn process_cancelling_step_player(
+			game_index: GameIdx,
 			last_iteration: &mut Option<AccountOrPerson<T::AccountId>>,
 			rounds: u8,
 		) -> bool {
@@ -2851,6 +3175,10 @@ pub mod pallet {
 						credibility: player.credibility,
 					},
 				);
+
+				// The credit mask names group positions, so it is only readable through the
+				// index maps and goes with them.
+				T::NftClaimCredits::forget_player_credits(game_index, &player_id);
 
 				// Clean index <-> player mapping.
 				if let Some(indices) = PlayerToIndex::<T>::take(&player_id) {
@@ -2883,25 +3211,58 @@ pub mod pallet {
 				defensive!("game should exist in order to be cancelled");
 				return;
 			};
-			let GameState::Cancelling { ref mut last_iteration } = game.state else {
+			let GameState::Cancelling { ref mut step } = game.state else {
 				defensive!("game state is not cancelling");
 				return;
 			};
 
+			let rounds = game.rounds;
+			let game_index = game.index;
 			let mut finished = false;
+			let mut shuffle_cursor1: Option<Vec<u8>> = None;
+			let mut shuffle_cursor2: Option<Vec<u8>> = None;
+			let mut shuffle_done1 = false;
+			let mut shuffle_done2 = false;
 			for _ in 0..OP_UPPER_BOUND {
-				if weight_meter
-					.try_consume(<T as Config>::WeightInfo::process_cancelling_step(
-						game.rounds as u32,
-					))
-					.is_err()
-				{
-					break;
-				}
-
-				finished = Self::process_cancelling_step(last_iteration, game.rounds);
-				if finished {
-					break;
+				match step {
+					CancellingStep::Step1DrainShuffle => {
+						if weight_meter
+							.try_consume(
+								<T as Config>::WeightInfo::process_cancelling_step_shuffle(),
+							)
+							.is_err()
+						{
+							break;
+						}
+						Self::process_cancelling_step_shuffle(
+							&mut shuffle_cursor1,
+							&mut shuffle_cursor2,
+							&mut shuffle_done1,
+							&mut shuffle_done2,
+						);
+						// Once both shuffle maps are drained, move on to draining players.
+						if shuffle_done1 && shuffle_done2 {
+							*step = CancellingStep::Step2DrainPlayers { last_iteration: None };
+						}
+					},
+					CancellingStep::Step2DrainPlayers { last_iteration } => {
+						if weight_meter
+							.try_consume(<T as Config>::WeightInfo::process_cancelling_step_player(
+								rounds as u32,
+							))
+							.is_err()
+						{
+							break;
+						}
+						finished = Self::process_cancelling_step_player(
+							game_index,
+							last_iteration,
+							rounds,
+						);
+						if finished {
+							break;
+						}
+					},
 				}
 			}
 
@@ -2910,6 +3271,28 @@ pub mod pallet {
 				GameHistory::<T>::remove(game.index);
 			} else {
 				Game::<T>::put(game);
+			}
+		}
+
+		/// Clear one bounded chunk from each shuffle map ([`ShuffleRecognized`]
+		/// and [`ShuffleNotRecognized`]). The caller checks `done1 && done2`
+		/// after this call to detect overall completion.
+		pub(crate) fn process_cancelling_step_shuffle(
+			cursor1: &mut Option<Vec<u8>>,
+			cursor2: &mut Option<Vec<u8>>,
+			done1: &mut bool,
+			done2: &mut bool,
+		) {
+			if !*done1 {
+				let r = ShuffleRecognized::<T>::clear(CANCELLING_SHUFFLE_CHUNK, cursor1.as_deref());
+				*cursor1 = r.maybe_cursor;
+				*done1 = cursor1.is_none();
+			}
+			if !*done2 {
+				let r =
+					ShuffleNotRecognized::<T>::clear(CANCELLING_SHUFFLE_CHUNK, cursor2.as_deref());
+				*cursor2 = r.maybe_cursor;
+				*done2 = cursor2.is_none();
 			}
 		}
 
@@ -2936,8 +3319,11 @@ pub mod pallet {
 					}
 					let now = T::UnixTime::now();
 					if now >= Duration::from_secs(game.registration_ends.into()) {
-						let weight = <T as Config>::WeightInfo::put_game()
-							.saturating_add(<T as Config>::WeightInfo::on_game_cancelled());
+						let weight = <T as Config>::WeightInfo::put_game().saturating_add(
+							<T as Config>::WeightInfo::on_game_cancelled(
+								game.airdrops_scheduled.into(),
+							),
+						);
 						if weight_meter.try_consume(weight).is_err() {
 							return;
 						}
@@ -2957,7 +3343,8 @@ pub mod pallet {
 							);
 						} else {
 							Self::on_game_cancelled(&game);
-							game.state = GameState::Cancelling { last_iteration: None };
+							game.state =
+								GameState::Cancelling { step: CancellingStep::Step1DrainShuffle };
 							log::trace!(
 								target: LOG_TARGET,
 								"Game cancelled due to unacceptable player count. player count: \
@@ -2988,150 +3375,21 @@ pub mod pallet {
 			}
 		}
 
-		/// Compute the NFT for a successful report.
+		/// The number of attestations one player is involved in over a game with these
+		/// settings: one per co-member of their group (they never report on themselves), in
+		/// every round played.
 		///
-		/// Blake2 256 hash of
-		/// ```txt
-		/// "polkadot-pop-game" ++ game index ++ attester ++ attestee ++ round
-		/// ```
-		/// - `game_index`: unsigned 32bit.
-		/// - `attester` and `attestee`:
-		///   - if an account-based player: 0 ++ account id.
-		///   - if a person-based player: 1 ++ person id.
-		/// - `round`: unsigned 8bit.
-		pub(crate) fn compute_nft(
-			game_index: u32,
-			round: u8,
-			attester: &AccountOrPerson<T::AccountId>,
-			attestee: &AccountOrPerson<T::AccountId>,
-		) -> Nft {
-			(b"polkadot-pop-game", game_index, round, attester, attestee)
-				.using_encoded(sp_io::hashing::blake2_256)
-		}
-
-		/// Mint every NFT a freshly-attended `attendee` is entitled to for the current
-		/// game.
-		///
-		/// An attendee earns one NFT per other member of their group, in every round
-		/// they played — irrespective of whether each co-member submitted a report or
-		/// what they voted. During the reporting phase the `report` extrinsic mints
-		/// these on the fly, but the early-attendance optimisation lets losing players
-		/// skip reporting entirely, so attendees can end up missing NFTs from
-		/// non-reporting co-members. This helper closes that gap by walking, for each
-		/// round the attendee played in, every other member of their group and
-		/// inserting the corresponding NFT entry.
-		///
-		/// `Nfts::insert` is unconditional on `(owner, nft_hash)`, so re-minting over
-		/// an entry produced by a real `Person` report is a harmless overwrite — the
-		/// value (a Unix-seconds `mint_time`) is refreshed to the backfill timestamp.
-		pub(crate) fn mint_attendance_nfts(
-			game_index: u32,
-			rounds: u8,
-			max_group_size: u32,
-			player_count: u32,
-			attendee: &AccountOrPerson<T::AccountId>,
-			mint_time: u32,
-		) {
-			let Some(attendee_indices) = PlayerToIndex::<T>::get(attendee) else {
-				// Unregistered attendee (should not happen for `attendance == true`,
-				// since `determine_attendance` short-circuits non-registered players).
-				defensive!("indiv-pallet-game: attended player must have round indices");
-				return;
-			};
-
-			let groups_setting = GroupsSetting { max_per_group: max_group_size, player_count };
-
-			for round in 0..rounds {
-				let Some(&attendee_index) = attendee_indices.get(round as usize) else {
-					defensive!("indiv-pallet-game: attendee should have an index for each round");
-					continue;
-				};
-
-				let group_index = groups_setting.group_index_from_player_index(attendee_index);
-				let co_members =
-					groups_setting.group_members(group_index).filter(|&i| i != attendee_index);
-
-				for co_member_index in co_members {
-					let Some(co_member) = IndexToPlayer::<T>::get((round, co_member_index)) else {
-						defensive!(
-							"indiv-pallet-game: index should map to a player when minting NFTs"
-						);
-						continue;
-					};
-					Nfts::<T>::insert(
-						attendee,
-						Self::compute_nft(game_index, round, &co_member, attendee),
-						mint_time,
-					);
-				}
-			}
-		}
-
-		/// Promote every staged NFT candidate held in [`NftCandidates`] for `attendee`
-		/// into [`Nfts`] with the given `mint_time`. Called once an attendee is classed
-		/// as having attended (either via early enactment or the player-process phase).
-		///
-		/// `Nfts::insert` is unconditional, so on the rare key collision with an entry
-		/// already minted by the `report` path (same attester / round) the timestamp
-		/// is refreshed to `mint_time`. See the [`Nfts`] doc for the resulting
-		/// "most recent mint time" semantics.
-		pub(crate) fn promote_nft_candidates(
-			attendee: &AccountOrPerson<T::AccountId>,
-			mint_time: u32,
-		) {
-			for (nft, ()) in NftCandidates::<T>::drain_prefix(attendee) {
-				Nfts::<T>::insert(attendee, nft, mint_time);
-			}
-		}
-
-		/// Discard every staged NFT candidate held in [`NftCandidates`] for `attendee`.
-		/// Called when an attestee did not attend (so the staged NFTs are never owed)
-		/// or when the player is leaving the game state (offboard / archive /
-		/// cancelling).
-		pub(crate) fn discard_nft_candidates(attendee: &AccountOrPerson<T::AccountId>) {
-			let removed = NftCandidates::<T>::clear_prefix(attendee, u32::MAX, None);
-			defensive_assert!(
-				removed.maybe_cursor.is_none(),
-				"indiv-pallet-game: NftCandidates prefix should clear in one call",
-			);
-		}
-
-		/// Resolve the NFT side-effects of an attendance decision for `attendee`.
-		///
-		/// On `attendance == true`: backfill all NFTs the attendee is owed via
-		/// [`Self::mint_attendance_nfts`] and promote any staged candidates via
-		/// [`Self::promote_nft_candidates`]. On `attendance == false`: discard the
-		/// staged candidates the attendee never earned.
-		///
-		/// Called once per player at attendance-decision time, from
-		/// [`Self::try_early_attendance_enactment`] (during reporting) and
-		/// [`Self::player_process_step1`] (after reporting).
-		pub(crate) fn apply_attendance_to_nfts(
-			game_index: u32,
-			rounds: u8,
-			max_group_size: u32,
-			player_count: u32,
-			attendee: &AccountOrPerson<T::AccountId>,
-			attendance: bool,
-			mint_time: u32,
-		) {
-			if attendance {
-				Self::mint_attendance_nfts(
-					game_index,
-					rounds,
-					max_group_size,
-					player_count,
-					attendee,
-					mint_time,
-				);
-				Self::promote_nft_candidates(attendee, mint_time);
-			} else {
-				Self::discard_nft_candidates(attendee);
-			}
+		/// The same count in every direction, which is why it has one definition: the votes a
+		/// player can receive, the co-players a single `report` covers and the NFT claim
+		/// credits an attendee can earn. Pass a game's own `rounds`/`max_group_size` for that
+		/// game's bound, or the configured maxima for the worst case over any game
+		/// ([`Self::max_received_votes`]).
+		pub(crate) fn max_attestations(rounds: u32, max_group_size: u32) -> u32 {
+			rounds.saturating_mul(max_group_size.saturating_sub(1))
 		}
 
 		/// Add a game to a player's attendance historical record.
-		pub fn note_attendance(game_index: u32, player: &AccountOrPerson<T::AccountId>) {
+		pub fn note_attendance(game_index: GameIdx, player: &AccountOrPerson<T::AccountId>) {
 			let mut attended_games = PlayerAttendanceHistory::<T>::get(player);
 			if attended_games.try_push(game_index).is_err() {
 				attended_games.remove(0);

@@ -21,19 +21,19 @@ use crate::{
 use codec::Encode;
 use frame_support::{
 	assert_noop, assert_ok,
-	traits::{Get, OffchainWorker},
+	dispatch::Pays,
+	traits::{Get, Hooks, OffchainWorker},
 	BoundedVec,
 };
 use indiv_pallet_people::PEOPLE_MEMBER_IDENTIFIER;
-use indiv_support::traits::{AppendOnlyMembers, RingExponent, RingMode};
+use indiv_support::traits::{
+	AddOnlyPeopleTrait, AppendOnlyMembers, RingExponent, RingMode, RingPosition,
+};
 use sp_core::{crypto::VrfSecret, ed25519, sr25519, Pair};
 use sp_runtime::{testing::TestSignature, transaction_validity::InvalidTransaction, AccountId32};
 use sp_statement_store::Statement;
 use std::{slice, time::Duration};
 use verifiable::{mock::Mock, GenerateVerifiable};
-
-// TODO: test that offchain worker executes correctly.
-// TODO: test that each validate unsigned fails when invalid.
 
 const ALICE: AccountId32 = AccountId32::new(*b"10______________________________");
 const BOB: AccountId32 = AccountId32::new(*b"20______________________________");
@@ -118,78 +118,8 @@ fn basic_game() {
 		assert!(PlayerAttendanceHistory::<Test>::get(AccountOrPerson::Account(BOB)).is_empty());
 		assert!(PlayerAttendanceHistory::<Test>::get(AccountOrPerson::Account(CHARLIE)).is_empty());
 
-		// Alice ends up "Attended" so she now receives one NFT per group co-member across
-		// all rounds (including Charlie, who skipped reporting). With 5 players and
-		// max_group_size = 3 → number_of_group = 2, Alice (index 0 in round 0) is in a
-		// group of 3 in one round (2 co-members) and a group of 2 in the other round
-		// (1 co-member): 3 NFTs total.
-		assert!(Nfts::<Test>::iter().count() > 0);
-		assert_eq!(Nfts::<Test>::iter_prefix(&players[0]).count(), 3);
-	});
-}
-
-#[test]
-fn attended_player_gets_nfts_from_non_reporting_co_members() {
-	// Regression test for the "mint all unminted NFTs on attendance" feature.
-	//
-	// Setup: a single 3-player group, single round. Alice is the only one who
-	// reports (she calls everyone a `Person`). Bob and Charlie never report.
-	//
-	// Under the old contract, Alice — despite being attended — would receive no
-	// NFTs at all because nobody reported `Person` on her. Under the new contract,
-	// the moment Alice's attendance is enacted, the pallet must backfill an NFT for
-	// every group co-member (Bob and Charlie) ⇒ exactly 2 NFTs for Alice.
-	new_test_ext().execute_with(|| {
-		let alice = AccountOrPerson::Account(ALICE);
-		let bob = AccountOrPerson::Account(BOB);
-		let charlie = AccountOrPerson::Account(CHARLIE);
-		let players = [alice.clone(), bob.clone(), charlie.clone()];
-
-		let schedule = GameSchedule::<u32, u128> {
-			game_play_time: 10,
-			rounds: 1,
-			max_group_size: 3,
-			..Default::default()
-		};
-
-		run_game_scenario(schedule, &players, |player| {
-			// Only Alice reports; Bob and Charlie are silent (mimicking
-			// early-enacted losers that skip the reporting call).
-			if player.account() != Some(&ALICE) {
-				return None;
-			}
-
-			// Alice's group in round 0 is the entire player set; she reports
-			// every co-member as `Person`.
-			let alice_index = PlayerToIndex::<Test>::get(&alice).unwrap()[0];
-			let group_size: u32 = 3;
-			let number_of_group: u32 = 1;
-			let partial_report = (0..group_size)
-				.map(|x| (alice_index % number_of_group) + x * number_of_group)
-				.filter(|&x| x < players.len() as u32)
-				.filter(|&x| x != alice_index)
-				.map(|_| Report::Person)
-				.collect::<Vec<_>>();
-			Some(vec![partial_report.try_into().unwrap()].try_into().unwrap())
-		});
-
-		// Alice attended (she sent her report and her tally is 0 yes / 0 no, which
-		// passes the `yes.saturating_sub(1) >= no` rule).
-		let alice_score = indiv_pallet_score::Participants::<Test>::get(&alice).unwrap();
-		assert!(alice_score.streak.absence() == 0, "alice should have attended");
-
-		// Bob and Charlie did not attend (no report sent).
-		let bob_score = indiv_pallet_score::Participants::<Test>::get(&bob).unwrap();
-		let charlie_score = indiv_pallet_score::Participants::<Test>::get(&charlie).unwrap();
-		assert_eq!(bob_score.streak.absence(), 1);
-		assert_eq!(charlie_score.streak.absence(), 1);
-
-		// The new contract: Alice has 2 NFTs — one keyed by (game, round, Bob,
-		// Alice), one by (game, round, Charlie, Alice) — even though neither Bob
-		// nor Charlie ever submitted a report.
-		assert_eq!(Nfts::<Test>::iter_prefix(&alice).count(), 2);
-		assert!(Nfts::<Test>::contains_key(&alice, Game::compute_nft(1, 0, &bob, &alice)));
-		assert!(Nfts::<Test>::contains_key(&alice, Game::compute_nft(1, 0, &charlie, &alice)));
+		// What Alice's attendance earns her in NFT claim credits is asserted in
+		// `indiv-pallet-nft-credits`, which owns them.
 	});
 }
 
@@ -2011,7 +1941,7 @@ fn invited_player_deposit_scenarios() {
 					crate::GameAsInvitedData { nonce, inviter: INVITER, ticket, signature },
 					Call::sign_up_with_invite {
 						identifier_key: DEFAULT_IDENTIFIER_KEY,
-						airdrop: None
+						airdrops: None
 					},
 				));
 			} else {
@@ -2019,7 +1949,7 @@ fn invited_player_deposit_scenarios() {
 					INVITED,
 					Call::sign_up_with_account {
 						identifier_key: DEFAULT_IDENTIFIER_KEY,
-						airdrop: None
+						airdrops: None
 					},
 				));
 			}
@@ -2154,7 +2084,10 @@ fn invites_flow_scenario() {
 		// ------------------------------------------------------------------
 		// (2) Inviter calls `set_invite_ticket(ticket1)` => should succeed.
 		// ------------------------------------------------------------------
-		assert_ok!(Game::set_invite_ticket(RuntimeOrigin::signed(INVITER), ticket1));
+		let post_info = Game::set_invite_ticket(RuntimeOrigin::signed(INVITER), ticket1)
+			.expect("inviter has invites left");
+		// Distributing an invite is free.
+		assert_eq!(post_info.pays_fee, Pays::No);
 		// The InviteTicketSet event is emitted.
 		System::assert_has_event(Event::<Test>::InviteTicketSet { inviter: INVITER }.into());
 		assert_eq!(AvailableInvites::<Test>::get(INVITER), 1);
@@ -2218,11 +2151,22 @@ fn invites_flow_scenario() {
 #[test]
 fn set_invite_ticket_fail_when_no_inviter_record() {
 	new_test_ext().execute_with(|| {
-		// Caller tries to set an invite ticket but has no invites at all => `NoInvites`.
-		assert_noop!(
-			Game::set_invite_ticket(RuntimeOrigin::signed(ALICE), 123),
-			Error::<Test>::NoInvites
-		);
+		let error = Game::set_invite_ticket(RuntimeOrigin::signed(ALICE), 123)
+			.expect_err("caller has no invites");
+		assert_eq!(error.error, Error::<Test>::NoInvites.into());
+		assert_eq!(error.post_info.pays_fee, Pays::Yes);
+	});
+}
+
+#[test]
+fn set_invite_ticket_fail_when_already_invited() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Game::grant_invites(RuntimeOrigin::root(), ALICE, 2));
+		assert_ok!(Game::set_invite_ticket(RuntimeOrigin::signed(ALICE), 123));
+		let error = Game::set_invite_ticket(RuntimeOrigin::signed(ALICE), 123)
+			.expect_err("ticket is already pending");
+		assert_eq!(error.error, Error::<Test>::AlreadyInvited.into());
+		assert_eq!(error.post_info.pays_fee, Pays::Yes);
 	});
 }
 
@@ -2259,7 +2203,7 @@ fn test_invited_player_never_pay_fees() {
 					},
 					Call::sign_up_with_invite {
 						identifier_key: DEFAULT_IDENTIFIER_KEY,
-						airdrop: None
+						airdrops: None
 					}
 				));
 			},
@@ -2290,7 +2234,7 @@ fn test_invited_player_never_pay_fees() {
 					2, // participant nonce
 					Call::sign_up_with_account {
 						identifier_key: DEFAULT_IDENTIFIER_KEY,
-						airdrop: None
+						airdrops: None
 					}
 				));
 			},
@@ -2355,7 +2299,7 @@ fn test_non_invited_player_scenario_dont_pay_fees() {
 					1, // nonce
 					Call::sign_up_with_account {
 						identifier_key: DEFAULT_IDENTIFIER_KEY,
-						airdrop: None
+						airdrops: None
 					}
 				));
 			},
@@ -2412,7 +2356,7 @@ fn sufficient_scenario_1_offboarded() {
 					},
 					Call::sign_up_with_invite {
 						identifier_key: DEFAULT_IDENTIFIER_KEY,
-						airdrop: None
+						airdrops: None
 					}
 				));
 			},
@@ -2472,7 +2416,7 @@ fn sufficient_scenario_2_archived() {
 					},
 					Call::sign_up_with_invite {
 						identifier_key: DEFAULT_IDENTIFIER_KEY,
-						airdrop: None
+						airdrops: None
 					}
 				));
 
@@ -2533,7 +2477,10 @@ fn use_invite_but_already_playing() {
 			exec_invited_tx(
 				ALICE,
 				crate::GameAsInvitedData { nonce: 0, inviter: INVITER, ticket, signature },
-				Call::sign_up_with_invite { identifier_key: DEFAULT_IDENTIFIER_KEY, airdrop: None },
+				Call::sign_up_with_invite {
+					identifier_key: DEFAULT_IDENTIFIER_KEY,
+					airdrops: None
+				},
 			),
 			InvalidTransaction::Custom(142),
 		);
@@ -2639,7 +2586,7 @@ fn sign_up_fails_if_statement_account_already_used() {
 	});
 }
 
-// `GameIndex` must start at 0 and grow by 1.
+// `GameIdx` must start at 0 and grow by 1.
 #[test]
 fn game_index_is_incremented_for_each_game() {
 	new_test_ext().execute_with(|| {
@@ -2689,7 +2636,6 @@ fn game_index_is_incremented_for_each_game() {
 fn statements_cleared() {
 	// when an alias switches to a new statement account.
 	new_test_ext().execute_with(|| {
-		MOCK_STATEMENT_STORE.clear();
 		advance_process();
 
 		let alias: [u8; 32] = [7; 32];
@@ -2728,9 +2674,9 @@ fn statements_cleared() {
 			s.sign_ed25519_private(&old_stmt);
 			s
 		};
-		MOCK_STATEMENT_STORE.add_stmt(keep_stmt.clone());
-		MOCK_STATEMENT_STORE.add_stmt(rm_stmt_1.clone());
-		MOCK_STATEMENT_STORE.add_stmt(rm_stmt_2.clone());
+		mock_statement_store().add_stmt(keep_stmt.clone());
+		mock_statement_store().add_stmt(rm_stmt_1.clone());
+		mock_statement_store().add_stmt(rm_stmt_2.clone());
 
 		// Drive Game 1 to completion
 		let registration_ends = GameTimes::<Test>::registration_end(&schedule);
@@ -2769,19 +2715,11 @@ fn statements_cleared() {
 		// Offchain worker should call remove_by(old_stmt)
 		AllPalletsWithSystem::offchain_worker(System::block_number());
 
-		let left = MOCK_STATEMENT_STORE
-			.0
-			.lock()
-			.unwrap()
-			.iter()
-			.map(|(_, s)| s.clone())
-			.collect::<Vec<_>>();
-		assert_eq!(left, vec![keep_stmt]);
+		assert_eq!(remaining_statements(), vec![keep_stmt]);
 	});
 
 	// when an alias player gets archived.
 	new_test_ext().execute_with(|| {
-		MOCK_STATEMENT_STORE.clear();
 		MOCK_UNIX_TIME.with(|t| *t.borrow_mut() = Duration::from_secs(1));
 		// Ensure we start on a live block
 		advance_process();
@@ -2827,9 +2765,9 @@ fn statements_cleared() {
 			s.sign_ed25519_private(&stmt_pair);
 			s
 		};
-		MOCK_STATEMENT_STORE.add_stmt(keep_stmt.clone());
-		MOCK_STATEMENT_STORE.add_stmt(rm_stmt_1.clone());
-		MOCK_STATEMENT_STORE.add_stmt(rm_stmt_2.clone());
+		mock_statement_store().add_stmt(keep_stmt.clone());
+		mock_statement_store().add_stmt(rm_stmt_1.clone());
+		mock_statement_store().add_stmt(rm_stmt_2.clone());
 
 		// Fast-forward to after registration -> Reporting
 		let registration_ends = GameTimes::<Test>::registration_end(&schedule);
@@ -2850,20 +2788,12 @@ fn statements_cleared() {
 		AllPalletsWithSystem::offchain_worker(System::block_number());
 
 		// Only the outsider-signed statement must remain.
-		let left = MOCK_STATEMENT_STORE
-			.0
-			.lock()
-			.unwrap()
-			.iter()
-			.map(|(_, s)| s.clone())
-			.collect::<Vec<_>>();
-		assert_eq!(left, vec![keep_stmt]);
+		assert_eq!(remaining_statements(), vec![keep_stmt]);
 	});
 
 	// when an account-based player gets archived.
 	new_test_ext().execute_with(|| {
 		MOCK_UNIX_TIME.with(|t| *t.borrow_mut() = Duration::from_secs(1));
-		MOCK_STATEMENT_STORE.clear();
 		// Ensure we start on a live block
 		advance_process();
 
@@ -2906,9 +2836,9 @@ fn statements_cleared() {
 			s.sign_ed25519_private(&acc_pair);
 			s
 		};
-		MOCK_STATEMENT_STORE.add_stmt(keep_stmt.clone());
-		MOCK_STATEMENT_STORE.add_stmt(rm_stmt_1.clone());
-		MOCK_STATEMENT_STORE.add_stmt(rm_stmt_2.clone());
+		mock_statement_store().add_stmt(keep_stmt.clone());
+		mock_statement_store().add_stmt(rm_stmt_1.clone());
+		mock_statement_store().add_stmt(rm_stmt_2.clone());
 
 		// Fast-forward to Reporting
 		let registration_ends = GameTimes::<Test>::registration_end(&schedule);
@@ -2928,14 +2858,66 @@ fn statements_cleared() {
 		AllPalletsWithSystem::offchain_worker(System::block_number());
 
 		// Only the outsider-signed statement must remain.
-		let left = MOCK_STATEMENT_STORE
-			.0
-			.lock()
-			.unwrap()
-			.iter()
-			.map(|(_, s)| s.clone())
-			.collect::<Vec<_>>();
-		assert_eq!(left, vec![keep_stmt]);
+		assert_eq!(remaining_statements(), vec![keep_stmt]);
+	});
+}
+
+/// Read the statements currently held in the mock store.
+fn remaining_statements() -> Vec<Statement> {
+	mock_statement_store().statements()
+}
+
+/// Build a statement signed by `pair`, so `remove_by(pair.public())` matches it.
+fn statement_signed_by(pair: &ed25519::Pair) -> Statement {
+	let mut s = Statement::new();
+	s.sign_ed25519_private(pair);
+	s
+}
+
+// The offchain worker walks the block's events and, for every `StmtUsageRemoved { who }`, removes
+// exactly the statements signed by `who` from the statement store, leaving all others untouched.
+#[test]
+fn offchain_worker_removes_statements_for_each_emitted_who() {
+	new_test_ext().execute_with(|| {
+		System::set_block_number(1);
+
+		let victim_a = ed25519::Pair::generate_with_phrase(None).0;
+		let victim_b = ed25519::Pair::generate_with_phrase(None).0;
+		let keeper = ed25519::Pair::generate_with_phrase(None).0;
+
+		let keep_stmt = statement_signed_by(&keeper);
+		mock_statement_store().add_stmt(statement_signed_by(&victim_a));
+		mock_statement_store().add_stmt(statement_signed_by(&victim_b));
+		mock_statement_store().add_stmt(keep_stmt.clone());
+
+		// One event per removed account; the worker must honour every one of them.
+		Game::deposit_event(Event::StmtUsageRemoved { who: victim_a.public().0 });
+		Game::deposit_event(Event::StmtUsageRemoved { who: victim_b.public().0 });
+
+		AllPalletsWithSystem::offchain_worker(System::block_number());
+
+		// Both victims' statements are gone; the unrelated keeper statement survives.
+		assert_eq!(remaining_statements(), vec![keep_stmt]);
+	});
+}
+
+// The offchain worker must not remove anything when the block carries no `StmtUsageRemoved` event,
+// even if other game events are present.
+#[test]
+fn offchain_worker_keeps_statements_without_removal_event() {
+	new_test_ext().execute_with(|| {
+		System::set_block_number(1);
+
+		let signer = ed25519::Pair::generate_with_phrase(None).0;
+		let stmt = statement_signed_by(&signer);
+		mock_statement_store().add_stmt(stmt.clone());
+
+		// An unrelated event is present, but no `StmtUsageRemoved`, so nothing is removed.
+		Game::deposit_event(Event::GameCancelled { game_index: 0 });
+
+		AllPalletsWithSystem::offchain_worker(System::block_number());
+
+		assert_eq!(remaining_statements(), vec![stmt]);
 	});
 }
 
@@ -2994,7 +2976,7 @@ mod game_cancellation {
 				game_play_time: 10,
 				rounds: 2,
 				max_group_size: 4,
-				airdrop_prize: Some(test_airdrop_prize()),
+				airdrops: test_airdrops(1),
 			};
 			assert_ok!(Game::new_game(&schedule));
 			let game_index = GameIndex::<Test>::get();
@@ -3039,10 +3021,10 @@ mod game_cancellation {
 			// Game should be in cancelling state
 			advance_process_with_on_poll_only();
 			assert!(crate::Game::<Test>::get().is_some());
-			assert_eq!(
+			assert!(matches!(
 				crate::Game::<Test>::get().unwrap().state,
-				GameState::Cancelling { last_iteration: None }
-			);
+				GameState::Cancelling { .. }
+			));
 
 			// Game should be removed
 			advance_process();
@@ -3053,7 +3035,7 @@ mod game_cancellation {
 
 			// Cancellation routed the airdrop event into the airdrop pallet's clean-up pipeline
 			// (or dropped it outright if still `Scheduled`).
-			let event_id = Game::airdrop_event_id(game_index);
+			let event_id = Game::airdrop_event_id(game_index, 0);
 			let event = indiv_pallet_airdrop::Events::<Test>::get(event_id);
 			assert!(
 				event.is_none() ||
@@ -3438,45 +3420,6 @@ mod one_group_scenario {
 }
 
 #[test]
-fn nft_spec() {
-	let calculated = Game::compute_nft(
-		32,
-		5,
-		&AccountOrPerson::Account([1u8; 32].into()),
-		&AccountOrPerson::Person([2u8; 32]),
-	);
-	let expected = (b"polkadot-pop-game", 32u32, 5u8, 0u8, [1u8; 32], 1u8, [2u8; 32])
-		.using_encoded(sp_io::hashing::blake2_256);
-
-	assert_eq!(calculated, expected);
-	assert_eq!(
-		calculated,
-		[
-			135, 205, 206, 159, 168, 238, 124, 124, 43, 173, 199, 120, 3, 56, 148, 117, 67, 126,
-			78, 190, 126, 15, 187, 177, 224, 186, 115, 113, 73, 121, 224, 196
-		]
-	);
-
-	let calculated = Game::compute_nft(
-		35,
-		9,
-		&AccountOrPerson::Person([3u8; 32]),
-		&AccountOrPerson::Account([4u8; 32].into()),
-	);
-	let expected = (b"polkadot-pop-game", 35u32, 9u8, 1u8, [3u8; 32], 0u8, [4u8; 32])
-		.using_encoded(sp_io::hashing::blake2_256);
-
-	assert_eq!(calculated, expected);
-	assert_eq!(
-		calculated,
-		[
-			86, 240, 179, 9, 73, 32, 219, 236, 202, 127, 104, 185, 169, 196, 74, 74, 168, 221, 30,
-			78, 35, 75, 128, 151, 175, 250, 203, 174, 199, 71, 243, 194
-		]
-	);
-}
-
-#[test]
 fn reach_lose_and_regain_personhood() {
 	new_test_ext().execute_with(|| {
 		use frame_support::BoundedVec;
@@ -3550,6 +3493,162 @@ fn reach_lose_and_regain_personhood() {
 }
 
 #[test]
+fn offboard_suspends_recognized_player() {
+	new_test_ext().execute_with(|| {
+		// Create the people collection first
+		assert_ok!(Members::create_collection(
+			0,
+			PEOPLE_MEMBER_IDENTIFIER,
+			1,
+			RingMode::Flexible,
+			RingExponent::R2e9,
+			None,
+		));
+
+		let alice = AccountOrPerson::Account(ALICE);
+
+		let mut schedule = GameSchedule::<u32, u128> {
+			game_play_time: 10,
+			rounds: 1,
+			max_group_size: 1,
+			..Default::default()
+		};
+		let attend_report: FullReport<Test> = vec![BoundedVec::default()].try_into().unwrap();
+
+		// Reach personhood and register, so ALICE is `Recognized`.
+		let mut safety = 0;
+		while !Score::reached_personhood(&alice) {
+			run_game_scenario(schedule.clone(), slice::from_ref(&alice), |_p| {
+				Some(attend_report.clone()) // attend
+			});
+			schedule.game_play_time += 10; // ensure times don't overlap
+			safety += 1;
+			assert!(safety < 200, "took too many games to reach personhood");
+		}
+		let (key, sk) = mock_key(1234);
+		let proof = {
+			let mut m = b"pop register using".to_vec();
+			m.extend_from_slice(&ALICE.encode()[..]);
+			Mock::sign(&sk, &m[..]).unwrap()
+		};
+		assert_ok!(Score::register(RuntimeOrigin::signed(ALICE), Some((key, proof))));
+
+		// Offboard while no game is ongoing.
+		assert_ok!(Game::offboard(RuntimeOrigin::signed(ALICE)));
+
+		assert!(!indiv_pallet_score::Participants::<Test>::contains_key(&alice));
+		// The offboard suspended the personhood: the member key is suspended in the people
+		// ring.
+		assert_eq!(
+			indiv_pallet_members::Members::<Test>::get(PEOPLE_MEMBER_IDENTIFIER, key),
+			Some(RingPosition::Suspended)
+		);
+		// The mutation session opened by the offboard is closed again.
+		assert!(
+			indiv_pallet_members::RingsState::<Test>::get(PEOPLE_MEMBER_IDENTIFIER).append_only()
+		);
+	});
+}
+
+#[test]
+fn kickout_suspends_recognized_player() {
+	new_test_ext().execute_with(|| {
+		// Create the people collection first
+		assert_ok!(Members::create_collection(
+			0,
+			PEOPLE_MEMBER_IDENTIFIER,
+			1,
+			RingMode::Flexible,
+			RingExponent::R2e9,
+			None,
+		));
+
+		let player = AccountOrPerson::Account(ALICE);
+
+		// An archived kickable player whose recognition is `Recognized`, backed by a real
+		// person.
+		assert_ok!(indiv_pallet_score::Pallet::<Test>::onboard_for_recognition(&ALICE));
+		let id = People::reserve_new_id();
+		let (key, _sk) = mock_key(1234);
+		assert_ok!(People::recognize_personhood(id, Some(key)));
+		indiv_pallet_score::Participants::<Test>::mutate(&player, |p| {
+			p.as_mut().unwrap().recognition = indiv_pallet_score::Recognition::Recognized(id);
+		});
+		ArchivedPlayers::<Test>::insert(
+			&player,
+			ArchivedPlayer::Kickable { archived_since: 0, first_game: 0 },
+		);
+
+		let kickout_time: u64 = <Test as Config>::NonPlayingKickoutTime::get();
+		System::set_block_number(kickout_time + 1);
+
+		assert_ok!(Game::kickout(RuntimeOrigin::signed(EVE), ALICE));
+
+		assert!(!indiv_pallet_score::Participants::<Test>::contains_key(&player));
+		// The kickout suspended the personhood: the member key is suspended in the people
+		// ring.
+		assert_eq!(
+			indiv_pallet_members::Members::<Test>::get(PEOPLE_MEMBER_IDENTIFIER, key),
+			Some(RingPosition::Suspended)
+		);
+		// The mutation session opened by the kickout is closed again.
+		assert!(
+			indiv_pallet_members::RingsState::<Test>::get(PEOPLE_MEMBER_IDENTIFIER).append_only()
+		);
+	});
+}
+
+#[test]
+fn offboard_fails_when_suspension_fails() {
+	new_test_ext().execute_with(|| {
+		let alice = AccountOrPerson::Account(ALICE);
+
+		let schedule = GameSchedule::<u32, u128> {
+			game_play_time: 25,
+			rounds: 2,
+			max_group_size: 2,
+			..Default::default()
+		};
+		run_game_scenario(schedule, slice::from_ref(&alice), |_player| {
+			Some(vec![BoundedVec::default(), BoundedVec::default()].try_into().unwrap())
+		});
+
+		// Make ALICE `Recognized` with a personal id that does not belong to any person, so
+		// the suspension on offboard fails.
+		indiv_pallet_score::Participants::<Test>::mutate(&alice, |p| {
+			p.as_mut().unwrap().recognition = indiv_pallet_score::Recognition::Recognized(404);
+		});
+
+		let err = Game::offboard(RuntimeOrigin::signed(ALICE)).unwrap_err();
+		assert_eq!(err.error, indiv_pallet_people::Error::<Test>::NotPerson.into());
+	});
+}
+
+#[test]
+fn kickout_fails_when_suspension_fails() {
+	new_test_ext().execute_with(|| {
+		let player = AccountOrPerson::Account(ALICE);
+
+		// An archived kickable player who is `Recognized` with a personal id that does not
+		// belong to any person, so the suspension on kickout fails.
+		assert_ok!(indiv_pallet_score::Pallet::<Test>::onboard_for_recognition(&ALICE));
+		indiv_pallet_score::Participants::<Test>::mutate(&player, |p| {
+			p.as_mut().unwrap().recognition = indiv_pallet_score::Recognition::Recognized(404);
+		});
+		ArchivedPlayers::<Test>::insert(
+			&player,
+			ArchivedPlayer::Kickable { archived_since: 0, first_game: 0 },
+		);
+
+		let kickout_time: u64 = <Test as Config>::NonPlayingKickoutTime::get();
+		System::set_block_number(kickout_time + 1);
+
+		let err = Game::kickout(RuntimeOrigin::signed(EVE), ALICE).unwrap_err();
+		assert_eq!(err.error, indiv_pallet_people::Error::<Test>::NotPerson.into());
+	});
+}
+
+#[test]
 fn game_cancelled_due_to_shuffle_deadline_missed() {
 	new_test_ext().execute_with(|| {
 		// Set up a game that *would* be acceptable to shuffle (2 players; max_group_size = 3).
@@ -3603,10 +3702,7 @@ fn game_cancelled_due_to_shuffle_deadline_missed() {
 			.with(|t| *t.borrow_mut() = Duration::from_secs((shuffle_deadline + 1) as u64));
 		advance_process_with_on_poll_only();
 		assert!(crate::Game::<Test>::get().is_some());
-		assert_eq!(
-			crate::Game::<Test>::get().unwrap().state,
-			GameState::Cancelling { last_iteration: None }
-		);
+		assert!(matches!(crate::Game::<Test>::get().unwrap().state, GameState::Cancelling { .. }));
 
 		// Let the Cancelling phase do its cleanup in the next block.
 		advance_process();
@@ -3751,7 +3847,7 @@ fn credibility_flow_invited_to_recognized_in_score_to_archived() {
 					},
 					Call::sign_up_with_invite {
 						identifier_key: DEFAULT_IDENTIFIER_KEY,
-						airdrop: None
+						airdrops: None
 					}
 				));
 			},
@@ -4471,225 +4567,6 @@ fn early_enactment_not_attended_without_own_report() {
 }
 
 #[test]
-fn nft_value_records_mint_time() {
-	new_test_ext().execute_with(|| {
-		let schedule = GameSchedule::<u32, u128> {
-			game_play_time: 100,
-			rounds: 1,
-			max_group_size: 2,
-			..Default::default()
-		};
-		assert_ok!(Game::new_game(&schedule));
-		assert_ok!(Game::sign_up_with_account(
-			RuntimeOrigin::signed(ALICE),
-			DEFAULT_IDENTIFIER_KEY,
-			None,
-		));
-		assert_ok!(Game::sign_up_with_account(
-			RuntimeOrigin::signed(BOB),
-			DEFAULT_IDENTIFIER_KEY,
-			None
-		));
-		advance_to_reporting_phase(&schedule);
-
-		// Pin a deterministic timestamp inside the reporting window so we can assert
-		// the value recorded in `Nfts`.
-		let report_open = schedule.game_play_time;
-		MOCK_UNIX_TIME.with(|t| *t.borrow_mut() = Duration::from_secs(report_open as u64));
-
-		let report: FullReport<Test> =
-			vec![vec![Report::Person].try_into().unwrap()].try_into().unwrap();
-		assert_ok!(Game::report(RuntimeOrigin::signed(ALICE), report.clone()));
-		assert_ok!(Game::report(RuntimeOrigin::signed(BOB), report));
-
-		let alice = AccountOrPerson::Account(ALICE);
-		let bob = AccountOrPerson::Account(BOB);
-		let nft_for_alice = Game::compute_nft(1, 0, &bob, &alice);
-		assert_eq!(Nfts::<Test>::get(&alice, nft_for_alice), Some(report_open));
-	});
-}
-
-#[test]
-fn notperson_nft_promoted_when_attendance_decided() {
-	// Four-player group, single round. BOB votes NotPerson on ALICE; CHARLIE/DAVE
-	// vote Person on her. ALICE ends up Attended (2 yes, 1 no, no remaining) — the
-	// staged NotPerson NFT from BOB must be promoted from `NftCandidates` into
-	// `Nfts` the moment ALICE's attendance is decided.
-	new_test_ext().execute_with(|| {
-		let schedule = GameSchedule::<u32, u128> {
-			game_play_time: 50,
-			rounds: 1,
-			max_group_size: 4,
-			..Default::default()
-		};
-		assert_ok!(Game::new_game(&schedule));
-		for acc in [ALICE, BOB, CHARLIE, DAVE] {
-			assert_ok!(Game::sign_up_with_account(
-				RuntimeOrigin::signed(acc),
-				DEFAULT_IDENTIFIER_KEY,
-				None,
-			));
-		}
-		advance_to_reporting_phase(&schedule);
-
-		let alice = AccountOrPerson::Account(ALICE);
-		let bob = AccountOrPerson::Account(BOB);
-		let charlie = AccountOrPerson::Account(CHARLIE);
-		let dave = AccountOrPerson::Account(DAVE);
-
-		assert_ok!(Game::report(
-			RuntimeOrigin::signed(ALICE),
-			build_report_with_opinion(&alice, |_| Report::Person),
-		));
-		assert_ok!(Game::report(
-			RuntimeOrigin::signed(BOB),
-			build_report_with_opinion(&bob, |target| if target == &alice {
-				Report::NotPerson
-			} else {
-				Report::Person
-			},),
-		));
-		assert_ok!(Game::report(
-			RuntimeOrigin::signed(CHARLIE),
-			build_report_with_opinion(&charlie, |_| Report::Person),
-		));
-
-		// After ALICE/BOB/CHARLIE: ALICE has yes=1 (CHARLIE), no=1 (BOB), remaining=1.
-		// Still Pending — the staged NotPerson NFT lives in `NftCandidates`, not yet
-		// in `Nfts`.
-		let nft_no_from_bob = Game::compute_nft(1, 0, &bob, &alice);
-		assert_eq!(Players::<Test>::get(&alice).unwrap().early_attendance_enactment, None);
-		assert!(NftCandidates::<Test>::contains_key(&alice, nft_no_from_bob));
-		assert!(!Nfts::<Test>::contains_key(&alice, nft_no_from_bob));
-
-		// DAVE's Person vote tips ALICE to Attended (2 yes, 1 no, no remaining).
-		// Early-enactment runs and promotes ALICE's staged NotPerson NFT into
-		// `Nfts`.
-		assert_ok!(Game::report(
-			RuntimeOrigin::signed(DAVE),
-			build_report_with_opinion(&dave, |_| Report::Person),
-		));
-		assert!(matches!(
-			Players::<Test>::get(&alice).unwrap().early_attendance_enactment,
-			Some(EarlyAttendanceEnactment { attendance: true, .. })
-		));
-		assert!(Nfts::<Test>::contains_key(&alice, nft_no_from_bob));
-		assert!(!NftCandidates::<Test>::contains_key(&alice, nft_no_from_bob));
-	});
-}
-
-#[test]
-fn notperson_nft_discarded_when_attestee_does_not_attend() {
-	// BOB and CHARLIE both vote NotPerson on ALICE; ALICE never reports — she ends
-	// up early-enacted as not attended, so the staged NotPerson NFTs against her are
-	// dropped rather than minted.
-	new_test_ext().execute_with(|| {
-		let schedule = GameSchedule::<u32, u128> {
-			game_play_time: 50,
-			rounds: 1,
-			max_group_size: 3,
-			..Default::default()
-		};
-		assert_ok!(Game::new_game(&schedule));
-		for acc in [ALICE, BOB, CHARLIE] {
-			assert_ok!(Game::sign_up_with_account(
-				RuntimeOrigin::signed(acc),
-				DEFAULT_IDENTIFIER_KEY,
-				None,
-			));
-		}
-		advance_to_reporting_phase(&schedule);
-
-		let alice = AccountOrPerson::Account(ALICE);
-		let bob = AccountOrPerson::Account(BOB);
-		let charlie = AccountOrPerson::Account(CHARLIE);
-
-		let opinion = |target: &AccountOrPerson<AccountId32>| {
-			if target == &alice {
-				Report::NotPerson
-			} else {
-				Report::Person
-			}
-		};
-		assert_ok!(Game::report(
-			RuntimeOrigin::signed(BOB),
-			build_report_with_opinion(&bob, opinion),
-		));
-		assert_ok!(Game::report(
-			RuntimeOrigin::signed(CHARLIE),
-			build_report_with_opinion(&charlie, opinion),
-		));
-
-		assert!(matches!(
-			Players::<Test>::get(&alice).unwrap().early_attendance_enactment,
-			Some(EarlyAttendanceEnactment { attendance: false, .. })
-		));
-		// Both NotPerson NFTs are gone — neither staged nor minted.
-		assert_eq!(NftCandidates::<Test>::iter_prefix(&alice).count(), 0);
-		assert_eq!(Nfts::<Test>::iter_prefix(&alice).count(), 0);
-	});
-}
-
-#[test]
-fn notperson_nft_routed_directly_when_attestee_already_attended() {
-	// Four-player group, single round. ALICE/BOB/CHARLIE all report all-Person —
-	// at that point ALICE is yes=2, no=0, remaining=1 → Attended early. DAVE then
-	// reports NotPerson on ALICE: because ALICE is already enacted, the NotPerson
-	// NFT skips the candidate stage and lands directly in `Nfts`.
-	new_test_ext().execute_with(|| {
-		let schedule = GameSchedule::<u32, u128> {
-			game_play_time: 50,
-			rounds: 1,
-			max_group_size: 4,
-			..Default::default()
-		};
-		assert_ok!(Game::new_game(&schedule));
-		for acc in [ALICE, BOB, CHARLIE, DAVE] {
-			assert_ok!(Game::sign_up_with_account(
-				RuntimeOrigin::signed(acc),
-				DEFAULT_IDENTIFIER_KEY,
-				None,
-			));
-		}
-		advance_to_reporting_phase(&schedule);
-
-		let alice = AccountOrPerson::Account(ALICE);
-		let bob = AccountOrPerson::Account(BOB);
-		let charlie = AccountOrPerson::Account(CHARLIE);
-		let dave = AccountOrPerson::Account(DAVE);
-
-		assert_ok!(Game::report(
-			RuntimeOrigin::signed(ALICE),
-			build_report_with_opinion(&alice, |_| Report::Person),
-		));
-		assert_ok!(Game::report(
-			RuntimeOrigin::signed(BOB),
-			build_report_with_opinion(&bob, |_| Report::Person),
-		));
-		assert_ok!(Game::report(
-			RuntimeOrigin::signed(CHARLIE),
-			build_report_with_opinion(&charlie, |_| Report::Person),
-		));
-		assert!(matches!(
-			Players::<Test>::get(&alice).unwrap().early_attendance_enactment,
-			Some(EarlyAttendanceEnactment { attendance: true, .. })
-		));
-
-		assert_ok!(Game::report(
-			RuntimeOrigin::signed(DAVE),
-			build_report_with_opinion(&dave, |target| if target == &alice {
-				Report::NotPerson
-			} else {
-				Report::Person
-			},),
-		));
-		let nft_no_from_dave = Game::compute_nft(1, 0, &dave, &alice);
-		assert!(Nfts::<Test>::contains_key(&alice, nft_no_from_dave));
-		assert!(!NftCandidates::<Test>::contains_key(&alice, nft_no_from_dave));
-	});
-}
-
-#[test]
 fn early_enactment_pending_with_partial_votes() {
 	new_test_ext().execute_with(|| {
 		let schedule = GameSchedule::<u32, u128> {
@@ -4866,7 +4743,7 @@ fn player_process_step2_uses_marginal_weight_for_follow_up_chunks() {
 			max_group_size: <Test as Config>::MaxGroupSize::get(),
 			rounds,
 			pending_attendance: 0,
-			airdrop_scheduled: false,
+			airdrops_scheduled: 0,
 		});
 
 		let first_chunk_weight = <MockWeightInfo as WeightInfo>::player_process_step2();
@@ -4966,6 +4843,89 @@ fn expected_max_vote_weight_is_sum_over_coplayers() {
 		assert_eq!(alias_info.expected_max_vote_weight, (2 + 2) * 2);
 		assert_eq!(alice_info.expected_max_vote_weight, (3 + 2) * 2);
 		assert_eq!(bob_info.expected_max_vote_weight, (3 + 2) * 2);
+	});
+}
+
+/// End-to-end equivalence guard for the arithmetic `shuffle_step_compute_weights`, exercising
+/// *multiple* groups and rounds with a mix of recognized (person) and not-recognized (candidate)
+/// players. For every player we recompute the expected weight the "slow" way the optimization
+/// replaced - reading each actual co-player's snapshotted `vote_weight` via `IndexToPlayer` - and
+/// assert it matches the value the optimization derived from index arithmetic alone. A divergence
+/// would mean the recognized/not-recognized index band (or `recognized_count`) is wrong.
+#[test]
+fn expected_max_vote_weight_matches_per_member_oracle_multi_group() {
+	use crate::types::GroupsSetting;
+
+	new_test_ext().execute_with(|| {
+		PeopleVoteWeight::set(&3u8);
+		CandidateVoteWeight::set(&2u8);
+
+		const RECOGNIZED: u64 = 4;
+		const CANDIDATES: u64 = 4;
+		let max_group_size = 3u32;
+		let rounds = 2u8;
+		let player_count = (RECOGNIZED + CANDIDATES) as u32;
+
+		let schedule = GameSchedule::<u32, u128> {
+			game_play_time: 20,
+			rounds,
+			max_group_size,
+			..Default::default()
+		};
+		assert_ok!(Game::new_game(&schedule));
+
+		// Recognized players: externally recognized aliases (snapshot = PeopleVoteWeight).
+		for i in 0..RECOGNIZED {
+			let alias = id_to_alias(i);
+			let stmt_acc = id_to_account(1000 + i);
+			assert_ok!(Game::sign_up_with_alias(
+				runtime_origin_for_alias(&alias),
+				DEFAULT_IDENTIFIER_KEY,
+				stmt_acc.clone(),
+				AccountAuthority(stmt_acc),
+				None,
+			));
+		}
+		// Candidates: account players (snapshot = CandidateVoteWeight).
+		for i in 0..CANDIDATES {
+			assert_ok!(Game::sign_up_with_account(
+				RuntimeOrigin::signed(id_to_account(i)),
+				DEFAULT_IDENTIFIER_KEY,
+				None,
+			));
+		}
+
+		advance_to_reporting_phase(&schedule);
+
+		// The scenario must span more than one group, otherwise group membership is trivial.
+		let groups = GroupsSetting { max_per_group: max_group_size, player_count };
+		assert!(groups.number_of_group() >= 2, "test must span multiple groups");
+
+		// Oracle: recompute every player's expected weight from the actual co-players, exactly as
+		// the pre-optimization code did, and compare to the stored arithmetic result.
+		for (player_id, round_indices) in PlayerToIndex::<Test>::iter() {
+			let mut oracle: u32 = 0;
+			for round in 0..rounds {
+				let player_idx = round_indices[usize::from(round)];
+				let group_index = groups.group_index_from_player_index(player_idx);
+				for member_idx in groups.group_members(group_index) {
+					if member_idx == player_idx {
+						continue;
+					}
+					let member_id = IndexToPlayer::<Test>::get((round, member_idx))
+						.expect("index maps to a player");
+					let member = Players::<Test>::get(&member_id).expect("player exists");
+					oracle = oracle.saturating_add(member.vote_weight as u32);
+				}
+			}
+			let oracle_u16: u16 = oracle.try_into().unwrap_or(u16::MAX);
+			let stored = Players::<Test>::get(&player_id).unwrap().expected_max_vote_weight;
+			assert_eq!(
+				stored, oracle_u16,
+				"expected_max_vote_weight mismatch for {player_id:?}: \
+				 arithmetic={stored} vs per-member oracle={oracle_u16}",
+			);
+		}
 	});
 }
 
@@ -5079,38 +5039,33 @@ fn report_post_dispatch_refunds_unused_weight() {
 	use sp_runtime::Weight;
 
 	new_test_ext().execute_with(|| {
-		// Lone-reporter game. With `rounds = 1, max_group_size = 1` the reporter
-		// has no co-players, so `reported_players` is empty and the only enactment
-		// candidate is the reporter themselves. This forces a large gap between the
-		// pre-dispatch overcharge (worst case = `max_enactments()`) and the
-		// post-dispatch actual cost (1 enactment), and we can observe the refund.
-		let alias = id_to_alias(1001);
-		let stmt_account = id_to_account(2001);
-		let empty_report: FullReport<Test> =
-			vec![BoundedVec::<Report, <Test as Config>::MaxGroupSize>::default()]
-				.try_into()
-				.unwrap();
-
+		// A 4-player, single-round game. ALICE reports `Person` on her 3 co-players, so the
+		// submitted report carries `e = 3` co-player entries. Pre-dispatch, `report` is
+		// charged for the worst case of `e + 1 = 4` early enactments (every co-player plus
+		// the reporter). But after ALICE's lone report nobody's attendance is decidable: each
+		// co-player has a single `Person` vote with votes still outstanding, and ALICE has
+		// received no votes at all. Zero enactments fire, so the whole `n` (enactment) axis is
+		// refunded, while the `e` axis (known exactly up front) is charged in full.
 		let schedule = GameSchedule::<u32, u128> {
-			game_play_time: 10,
+			game_play_time: 50,
 			rounds: 1,
-			max_group_size: 1,
+			max_group_size: 4,
 			..Default::default()
 		};
 		assert_ok!(Game::new_game(&schedule));
-		assert_ok!(Game::sign_up_with_alias(
-			runtime_origin_for_alias(&alias),
-			DEFAULT_IDENTIFIER_KEY,
-			stmt_account.clone(),
-			AccountAuthority(stmt_account.clone()),
-			None,
-		));
+		for acc in [ALICE, BOB, CHARLIE, DAVE] {
+			assert_ok!(Game::sign_up_with_account(
+				RuntimeOrigin::signed(acc),
+				DEFAULT_IDENTIFIER_KEY,
+				None,
+			));
+		}
+		advance_to_reporting_phase(&schedule);
 
-		// Advance to reporting phase.
-		let reg_end = GameTimes::<Test>::registration_end(&schedule);
-		MOCK_UNIX_TIME.with(|t| *t.borrow_mut() = Duration::from_secs((reg_end + 1) as u64));
-		advance_process(); // registration -> shuffle
-		advance_process(); // shuffle -> reporting
+		let alice = AccountOrPerson::Account(ALICE);
+		let full_report = build_report_with_opinion(&alice, |_| Report::Person);
+		let e = full_report.iter().map(|round| round.len() as u32).sum::<u32>();
+		assert_eq!(e, 3, "ALICE has 3 co-players in a single full group of 4");
 
 		// Pre-condition: no player has been early-enacted yet.
 		assert_eq!(
@@ -5120,53 +5075,144 @@ fn report_post_dispatch_refunds_unused_weight() {
 			0,
 		);
 
-		let upfront_weight = crate::Call::<Test>::report { full_report: empty_report.clone() }
+		let upfront_weight = crate::Call::<Test>::report { full_report: full_report.clone() }
 			.get_dispatch_info()
 			.call_weight;
-		let max_p = Pallet::<Test>::max_enactments();
-		assert_eq!(upfront_weight, Weight::from_parts(max_p as u64, max_p as u64));
-		assert_eq!(upfront_weight, <MockWeightInfo as WeightInfo>::report(max_p));
+		// Mirror the `report` weight annotation's pre-dispatch bound: `report(e, e + 1)`.
+		assert_eq!(upfront_weight, <MockWeightInfo as WeightInfo>::report(e, e + 1));
+		assert_eq!(upfront_weight, Weight::from_parts((e + 1) as u64, e as u64));
 
-		let post_info = Game::report(runtime_origin_for_alias(&alias), empty_report)
-			.expect("report should succeed");
-
+		let post_info =
+			Game::report(RuntimeOrigin::signed(ALICE), full_report).expect("report should succeed");
 		assert_eq!(post_info.pays_fee, Pays::No);
 
-		// Count the actual full enactments by inspecting `Players` storage.
-		// 1-player game the reporter's `determine_attendance` saturates to
-		// `Attended` (remaining vote weight is 0), so exactly one enactment fires
+		// ALICE's lone report leaves every attendance undecided, so nothing is enacted.
 		let actual_enacted = Players::<Test>::iter()
 			.filter(|(_, p)| p.early_attendance_enactment.is_some())
 			.count() as u32;
-		assert_eq!(actual_enacted, 1, "1-player game must produce exactly 1 enactment");
+		assert_eq!(actual_enacted, 0, "no attendance is decidable after a single report");
 
-		// Post-dispatch actual weight: `MockWeightInfo::report(1) = (1, 1)`.
+		// Post-dispatch actual weight: the `n` axis drops to the real enactment count, the
+		// `e` axis is unchanged.
 		let actual_weight = post_info.actual_weight.expect("post-dispatch weight must be set");
-		assert_eq!(actual_weight, <MockWeightInfo as WeightInfo>::report(actual_enacted));
-		assert_eq!(actual_weight, Weight::from_parts(1, 1));
+		assert_eq!(actual_weight, <MockWeightInfo as WeightInfo>::report(e, actual_enacted));
+		assert_eq!(actual_weight, Weight::from_parts(0, e as u64));
 
-		assert!(
-			actual_weight.all_lt(upfront_weight),
-			"actual weight {actual_weight:?} must be strictly less than upfront {upfront_weight:?}",
-		);
+		// The enactment axis is fully refunded; the co-player-entry axis is not.
 		let refund = upfront_weight.saturating_sub(actual_weight);
-		assert_eq!(refund, Weight::from_parts((max_p - 1) as u64, (max_p - 1) as u64));
+		assert_eq!(refund, Weight::from_parts((e + 1) as u64, 0));
 	});
 }
 
-mod kill_current_game {
+#[test]
+fn max_received_votes_counts_one_vote_per_co_member_per_round() {
+	new_test_ext().execute_with(|| {
+		let group_size: u32 = <Test as Config>::MaxGroupSize::get();
+		let rounds: u32 = <Test as Config>::MaxRounds::get();
+
+		// Independently reconstruct the model the bound encodes: each round a player is
+		// voted on by every co-member of their group, all but themselves.
+		let expected: u32 = (0..rounds).map(|_| group_size - 1).sum();
+		assert_eq!(Game::max_received_votes(), expected);
+
+		// Guard against the earlier `MaxGroupSize * MaxRounds - 1` formula, which drops
+		// only one self-vote for the whole game instead of one per round and so over-counts
+		// by `MaxRounds - 1`.
+		assert!(rounds > 1, "mock must run multi-round games for this guard to bite");
+		assert_ne!(Game::max_received_votes(), group_size * rounds - 1);
+
+		// The bound is exactly what `integrity_test` multiplies against the vote weight to
+		// keep the worst-case `u8` `yes_person`/`no_not_person` tally from overflowing.
+		let max_vote_weight = PeopleVoteWeight::get().max(CandidateVoteWeight::get());
+		assert!(
+			Game::max_received_votes() as u64 * max_vote_weight as u64 <= u8::MAX as u64,
+			"worst-case vote tally must fit in u8",
+		);
+	});
+}
+
+// `offboard` charges `max(account, person)` up front and refunds the branch actually
+// taken. An archived account offboards via the cheaper `offboard_account` path.
+#[test]
+fn offboard_refunds_account_branch() {
+	use frame_support::dispatch::GetDispatchInfo;
+
+	new_test_ext().execute_with(|| {
+		let alice = AccountOrPerson::Account(ALICE);
+		let schedule = GameSchedule::<u32, u128> {
+			game_play_time: 25,
+			rounds: 2,
+			max_group_size: 2,
+			..Default::default()
+		};
+		run_game_scenario(schedule, std::slice::from_ref(&alice), |_player| None);
+		assert!(ArchivedPlayers::<Test>::contains_key(&alice), "player should be archived");
+
+		let charged = crate::Call::<Test>::offboard {}.get_dispatch_info().call_weight;
+		assert_eq!(
+			charged,
+			<MockWeightInfo as WeightInfo>::offboard_account()
+				.max(<MockWeightInfo as WeightInfo>::offboard_person())
+		);
+
+		let post = Game::offboard(RuntimeOrigin::signed(ALICE)).expect("offboard should succeed");
+		let actual = post.actual_weight.expect("post-dispatch weight must be set");
+		assert_eq!(actual, <MockWeightInfo as WeightInfo>::offboard_account());
+		assert!(
+			actual.all_lt(charged),
+			"account path {actual:?} must be refunded below the worst-case charge {charged:?}",
+		);
+	});
+}
+
+mod cancel_game {
 	use super::*;
 	use sp_runtime::DispatchError;
 
 	#[test]
-	fn manager_origin_kills_running_game() {
+	fn manager_origin_transitions_running_game_to_cancelling() {
 		new_test_ext().execute_with(|| {
 			System::set_block_number(1);
 			let schedule = GameSchedule::<u32, u128> {
 				game_play_time: 10,
 				rounds: 2,
 				max_group_size: 3,
-				airdrop_prize: Some(test_airdrop_prize()),
+				airdrops: Default::default(),
+			};
+			assert_ok!(Game::new_game(&schedule));
+			assert_ok!(Game::sign_up_with_account(
+				RuntimeOrigin::signed(ALICE),
+				DEFAULT_IDENTIFIER_KEY,
+				None,
+			));
+			let game = crate::Game::<Test>::get().expect("game exists");
+			assert!(matches!(game.state, GameState::Registration { .. }));
+
+			assert_ok!(Game::cancel_game(RuntimeOrigin::root()));
+
+			// Game stays in storage with state flipped to `Cancelling`; the
+			// per-player cleanup runs on subsequent blocks via on_poll.
+			let game = crate::Game::<Test>::get().expect("game still in storage");
+			assert!(matches!(game.state, GameState::Cancelling { .. }));
+			let player = AccountOrPerson::<AccountId32>::Account(ALICE);
+			let info = crate::Players::<Test>::get(&player).expect("player record retained");
+			assert!(info.registered, "cleanup happens later, not during the extrinsic");
+			// `GameCancelled` is emitted up-front, when the game is flipped to `Cancelling`.
+			System::assert_has_event(
+				crate::Event::<Test>::GameCancelled { game_index: game.index }.into(),
+			);
+		});
+	}
+
+	#[test]
+	fn process_cancelling_drains_residue_and_kills_game() {
+		new_test_ext().execute_with(|| {
+			System::set_block_number(1);
+			let schedule = GameSchedule::<u32, u128> {
+				game_play_time: 10,
+				rounds: 2,
+				max_group_size: 3,
+				airdrops: test_airdrops(1),
 			};
 			assert_ok!(Game::new_game(&schedule));
 			let game_index = crate::GameIndex::<Test>::get();
@@ -5175,19 +5221,90 @@ mod kill_current_game {
 				DEFAULT_IDENTIFIER_KEY,
 				None,
 			));
-			assert!(crate::Game::<Test>::get().is_some());
+			assert_ok!(Game::sign_up_with_account(
+				RuntimeOrigin::signed(BOB),
+				DEFAULT_IDENTIFIER_KEY,
+				None,
+			));
 
-			assert_ok!(Game::kill_current_game(RuntimeOrigin::root()));
+			assert_ok!(Game::cancel_game(RuntimeOrigin::root()));
 
-			assert!(crate::Game::<Test>::get().is_none());
-			// The signed-up player should no longer be marked as registered.
-			let player = AccountOrPerson::<AccountId32>::Account(ALICE);
-			let info = crate::Players::<Test>::get(&player).expect("player record retained");
-			assert!(!info.registered);
-			// `GameKilled` event is emitted with the index of the killed game.
-			System::assert_last_event(
-				crate::Event::<Test>::GameKilled { index: game_index }.into(),
+			// `advance_process` runs on_poll to completion (multiple iterations
+			// if needed), driving `process_cancelling` until Game is killed.
+			advance_process();
+
+			assert!(crate::Game::<Test>::get().is_none(), "cleanup must remove Game");
+			assert!(
+				crate::GameHistory::<Test>::get(game_index).is_none(),
+				"cleanup must remove the GameHistory entry"
 			);
+			let alice = AccountOrPerson::<AccountId32>::Account(ALICE);
+			let bob = AccountOrPerson::<AccountId32>::Account(BOB);
+			assert!(!crate::Players::<Test>::get(&alice).unwrap().registered);
+			assert!(!crate::Players::<Test>::get(&bob).unwrap().registered);
+			System::assert_has_event(crate::Event::<Test>::GameCancelled { game_index }.into());
+		});
+	}
+
+	#[test]
+	fn cancel_blocks_auto_start_of_next_scheduled_game_until_cleanup_done() {
+		new_test_ext().execute_with(|| {
+			System::set_block_number(1);
+			let current = GameSchedule::<u32, u128> {
+				game_play_time: 10,
+				rounds: 2,
+				max_group_size: 3,
+				airdrops: Default::default(),
+			};
+			assert_ok!(Game::new_game(&current));
+			assert_ok!(Game::sign_up_with_account(
+				RuntimeOrigin::signed(ALICE),
+				DEFAULT_IDENTIFIER_KEY,
+				None,
+			));
+			assert_ok!(Game::sign_up_with_account(
+				RuntimeOrigin::signed(BOB),
+				DEFAULT_IDENTIFIER_KEY,
+				None,
+			));
+
+			let durations = <Test as Config>::DefaultPhaseDurations::get();
+			let next = GameSchedule::<u32, u128> {
+				game_play_time: GameTimes::<Test>::player_process_end(&current) +
+					durations.registration +
+					durations.shuffle +
+					durations.post_shuffle_margin,
+				rounds: 2,
+				max_group_size: 3,
+				airdrops: Default::default(),
+			};
+			assert_ok!(Game::schedule_games(RuntimeOrigin::root(), vec![next.clone()]));
+			assert_eq!(GameSchedules::<Test>::get().len(), 1);
+
+			assert_ok!(Game::cancel_game(RuntimeOrigin::root()));
+
+			// Right after cancellation, the current game is still present in
+			// storage and the successor is still queued.
+			let game = crate::Game::<Test>::get().expect("cancelling game still in storage");
+			assert!(matches!(game.state, GameState::Cancelling { .. }));
+			assert_eq!(
+				game.game_date, current.game_play_time,
+				"queued successor must not start yet"
+			);
+			assert_eq!(GameSchedules::<Test>::get().len(), 1, "successor must remain queued");
+
+			// With full weight, on_poll can finish the cancellation cleanup and
+			// remove the current game.
+			advance_process();
+			assert!(crate::Game::<Test>::get().is_none(), "cleanup must remove current game");
+			assert_eq!(GameSchedules::<Test>::get().len(), 1, "successor should still be queued");
+
+			// Once the current game is fully gone, the next on_poll may start the
+			// queued successor.
+			advance_process();
+			let game = crate::Game::<Test>::get().expect("queued successor should start");
+			assert_eq!(game.game_date, next.game_play_time);
+			assert_eq!(GameSchedules::<Test>::get().len(), 0);
 		});
 	}
 
@@ -5198,17 +5315,15 @@ mod kill_current_game {
 				game_play_time: 10,
 				rounds: 2,
 				max_group_size: 3,
-				airdrop_prize: Some(test_airdrop_prize()),
+				airdrops: test_airdrops(1),
 			};
 			assert_ok!(Game::new_game(&schedule));
 
-			assert_noop!(
-				Game::kill_current_game(RuntimeOrigin::signed(ALICE)),
-				DispatchError::BadOrigin,
-			);
+			assert_noop!(Game::cancel_game(RuntimeOrigin::signed(ALICE)), DispatchError::BadOrigin,);
 
-			// The game must still be in storage.
-			assert!(crate::Game::<Test>::get().is_some());
+			// Game state untouched.
+			let game = crate::Game::<Test>::get().expect("game still in storage");
+			assert!(matches!(game.state, GameState::Registration { .. }));
 		});
 	}
 
@@ -5217,8 +5332,139 @@ mod kill_current_game {
 		new_test_ext().execute_with(|| {
 			assert!(crate::Game::<Test>::get().is_none());
 
-			// Nothing to kill — but the call still succeeds (no-op cleanup).
-			assert_ok!(Game::kill_current_game(RuntimeOrigin::root()));
+			assert_noop!(Game::cancel_game(RuntimeOrigin::root()), crate::Error::<Test>::NoGame,);
+		});
+	}
+
+	fn force_game_state(state: GameState<AccountId32>) {
+		crate::Game::<Test>::mutate(|maybe_game| {
+			let game = maybe_game.as_mut().expect("game in storage");
+			game.state = state;
+		});
+	}
+
+	fn setup_one_player_game() {
+		let schedule = GameSchedule::<u32, u128> {
+			game_play_time: 10,
+			rounds: 2,
+			max_group_size: 3,
+			airdrops: Default::default(),
+		};
+		assert_ok!(Game::new_game(&schedule));
+		assert_ok!(Game::sign_up_with_account(
+			RuntimeOrigin::signed(ALICE),
+			DEFAULT_IDENTIFIER_KEY,
+			None,
+		));
+	}
+
+	#[test]
+	fn cancel_when_game_is_in_shuffle() {
+		new_test_ext().execute_with(|| {
+			setup_one_player_game();
+			force_game_state(GameState::Shuffle {
+				step: ShuffleStep::Step1Insert { last_iteration: None },
+			});
+
+			assert_ok!(Game::cancel_game(RuntimeOrigin::root()));
+
+			let game = crate::Game::<Test>::get().expect("game still in storage");
+			assert!(matches!(game.state, GameState::Cancelling { .. }));
+		});
+	}
+
+	#[test]
+	fn process_cancelling_drains_residual_shuffle_entries() {
+		new_test_ext().execute_with(|| {
+			setup_one_player_game();
+			let game = crate::Game::<Test>::get().expect("game exists");
+			let rounds = game.rounds;
+
+			// Seed `ShuffleRecognized` / `ShuffleNotRecognized` to simulate
+			// cancellation landing mid-shuffle.
+			for round in 0..rounds {
+				let hash = sp_io::hashing::blake2_256(&[round, 1]);
+				let aop = AccountOrPerson::<AccountId32>::Account(ALICE);
+				crate::ShuffleRecognized::<Test>::insert(round, hash, &aop);
+				let hash = sp_io::hashing::blake2_256(&[round, 2]);
+				crate::ShuffleNotRecognized::<Test>::insert(round, hash, &aop);
+			}
+
+			force_game_state(GameState::Shuffle {
+				step: ShuffleStep::Step1Insert { last_iteration: None },
+			});
+			assert_ok!(Game::cancel_game(RuntimeOrigin::root()));
+
+			advance_process();
+
+			assert!(crate::Game::<Test>::get().is_none(), "game should be killed");
+			for round in 0..rounds {
+				assert_eq!(
+					crate::ShuffleRecognized::<Test>::iter_prefix(round).count(),
+					0,
+					"recognized entries for round {round} must be drained",
+				);
+				assert_eq!(
+					crate::ShuffleNotRecognized::<Test>::iter_prefix(round).count(),
+					0,
+					"not-recognized entries for round {round} must be drained",
+				);
+			}
+		});
+	}
+
+	#[test]
+	fn rejects_when_game_is_in_reporting() {
+		new_test_ext().execute_with(|| {
+			setup_one_player_game();
+			force_game_state(GameState::Reporting { player_count: 1 });
+
+			assert_noop!(
+				Game::cancel_game(RuntimeOrigin::root()),
+				crate::Error::<Test>::InvalidGameState,
+			);
+
+			assert!(crate::Game::<Test>::get().is_some());
+		});
+	}
+
+	#[test]
+	fn rejects_when_game_is_in_player_process() {
+		new_test_ext().execute_with(|| {
+			setup_one_player_game();
+			force_game_state(GameState::PlayerProcess {
+				step: PlayerProcessStep::Step1ProcessPlayers {
+					last_iteration: None,
+					player_count: 1,
+				},
+			});
+
+			assert_noop!(
+				Game::cancel_game(RuntimeOrigin::root()),
+				crate::Error::<Test>::InvalidGameState,
+			);
+
+			assert!(crate::Game::<Test>::get().is_some());
+		});
+	}
+
+	#[test]
+	fn rejects_when_game_is_already_cancelling() {
+		new_test_ext().execute_with(|| {
+			setup_one_player_game();
+			force_game_state(GameState::Cancelling {
+				step: CancellingStep::Step2DrainPlayers { last_iteration: None },
+			});
+
+			// Re-issuing cancel_game on an already-Cancelling game is a no-op
+			// at best and confusing at worst; reject it.
+			assert_noop!(
+				Game::cancel_game(RuntimeOrigin::root()),
+				crate::Error::<Test>::InvalidGameState,
+			);
+
+			let game = crate::Game::<Test>::get().expect("game still in storage");
+			assert!(matches!(game.state, GameState::Cancelling { .. }));
 		});
 	}
 }
@@ -5235,7 +5481,6 @@ mod set_game_phases {
 			post_shuffle_margin: 13,
 			reporting: 17,
 			player_process: 19,
-			airdrop_claim_window: 23,
 		}
 	}
 
@@ -5250,7 +5495,7 @@ mod set_game_phases {
 			max_group_size: 3,
 			rounds: 1,
 			pending_attendance: 0,
-			airdrop_scheduled: false,
+			airdrops_scheduled: 0,
 		});
 	}
 
@@ -5291,7 +5536,6 @@ mod set_game_phases {
 				post_shuffle_margin: 1,
 				reporting: 1,
 				player_process: 1,
-				airdrop_claim_window: 1,
 			};
 			assert_ok!(Game::set_game_phases(RuntimeOrigin::root(), phases));
 
@@ -5365,7 +5609,9 @@ mod set_game_phases {
 	#[test]
 	fn cancelling_phase_rejects_override() {
 		new_test_ext().execute_with(|| {
-			put_game_in_state(GameState::Cancelling { last_iteration: None });
+			put_game_in_state(GameState::Cancelling {
+				step: CancellingStep::Step2DrainPlayers { last_iteration: None },
+			});
 			assert_noop!(
 				Game::set_game_phases(RuntimeOrigin::root(), distinct_phases()),
 				Error::<Test>::InvalidGameState,
@@ -5376,9 +5622,12 @@ mod set_game_phases {
 
 mod airdrop {
 	use super::*;
-	use crate::{extension::CustomError, AirdropVrf, Game as GameStorage};
+	use crate::{extension::CustomError, Game as GameStorage};
 	use codec::{Decode, Encode, MaxEncodedLen};
-	use frame_support::traits::fungibles::{Inspect, Mutate, MutateHold};
+	use frame_support::{
+		pallet_prelude::Weight,
+		traits::fungibles::{Inspect, Mutate, MutateHold},
+	};
 	use indiv_pallet_airdrop::{
 		types::{ActiveEvent, EventInfo, RegistrationEntry, Status},
 		BigEndianU256, Events as AirdropEvents, Registrations as AirdropRegistrations,
@@ -5393,14 +5642,32 @@ mod airdrop {
 		VrfSignature::decode(&mut &bytes[..]).expect("zero bytes decode to a VrfSignature")
 	}
 
-	fn account_proof(
-	) -> AirdropVrf<<verifiable::mock::Mock as verifiable::GenerateVerifiable>::Proof> {
-		AirdropVrf::Account(dummy_vrf())
+	/// The account variant with `n` dummy entries; the VRF signatures do not verify.
+	fn account_proofs(
+		n: u32,
+	) -> crate::AirdropVrfs<<verifiable::mock::Mock as verifiable::GenerateVerifiable>::Proof> {
+		crate::AirdropVrfs::Account(
+			(0..n)
+				.map(|_| dummy_vrf())
+				.collect::<Vec<_>>()
+				.try_into()
+				.expect("n is bounded by MAX_GAME_AIRDROPS"),
+		)
 	}
 
-	fn alias_proof() -> AirdropVrf<<verifiable::mock::Mock as verifiable::GenerateVerifiable>::Proof>
-	{
-		AirdropVrf::Alias { proof: Default::default(), ring_index: 0, revision: 0 }
+	/// The alias variant with `n` default entries; the mock member service accepts any proof.
+	fn alias_proofs(
+		n: u32,
+	) -> crate::AirdropVrfs<<verifiable::mock::Mock as verifiable::GenerateVerifiable>::Proof> {
+		crate::AirdropVrfs::Alias {
+			proofs: (0..n)
+				.map(|_| Default::default())
+				.collect::<Vec<_>>()
+				.try_into()
+				.expect("n is bounded by MAX_GAME_AIRDROPS"),
+			ring_index: 0,
+			revision: 0,
+		}
 	}
 
 	fn force_recognition(player: AccountOrPerson<AccountId32>, recognition: Recognition) {
@@ -5445,10 +5712,77 @@ mod airdrop {
 		});
 	}
 
-	/// Move the airdrop event for `game_index` directly into `Status::Claiming` and
+	/// Flip the airdrop events at indices `0..n` of `game_index` into `Status::Registering` so
+	/// participation calls land.
+	fn open_airdrop_events(game_index: GameIdx, n: u8) {
+		for airdrop_index in 0..n {
+			set_event_status(
+				Game::airdrop_event_id(game_index, airdrop_index),
+				Status::Registering { total_participants: 0 },
+			);
+		}
+	}
+
+	/// Register ALICE's sr25519 keypair and build a VRF signature bound to the event id of
+	/// `game_index`'s airdrop at `airdrop_index`. Returns the public key and the signature.
+	fn alice_event_vrf(
+		game_index: GameIdx,
+		airdrop_index: u8,
+	) -> (sp_core::sr25519::Public, VrfSignature) {
+		use sp_core::{crypto::VrfSecret, sr25519, Pair as _};
+		let pair = sr25519::Pair::from_seed(b"alice_vrf_seed_____padding______");
+		register_account_pubkey(ALICE, pair.public());
+		let event_id = Game::airdrop_event_id(game_index, airdrop_index);
+		let signature = pair.vrf_sign(
+			&indiv_pallet_airdrop::vrf::transcript_for_event(&event_id, &pair.public())
+				.into_sign_data(),
+		);
+		(pair.public(), signature)
+	}
+
+	/// The account variant with one entry per airdrop index `0..n`, each bound to its own event
+	/// id.
+	fn alice_airdrop_vrfs(
+		game_index: GameIdx,
+		n: u8,
+	) -> crate::AirdropVrfs<<verifiable::mock::Mock as verifiable::GenerateVerifiable>::Proof> {
+		crate::AirdropVrfs::Account(
+			(0..n)
+				.map(|airdrop_index| {
+					let (_public, signature) = alice_event_vrf(game_index, airdrop_index);
+					signature
+				})
+				.collect::<Vec<_>>()
+				.try_into()
+				.expect("n is bounded by MAX_GAME_AIRDROPS"),
+		)
+	}
+
+	/// The slot ALICE's VRF resolves to for `game_index`'s airdrop at `airdrop_index`.
+	fn alice_event_slot(game_index: GameIdx, airdrop_index: u8) -> BigEndianU256 {
+		let (public, signature) = alice_event_vrf(game_index, airdrop_index);
+		let event_id = Game::airdrop_event_id(game_index, airdrop_index);
+		let entropy =
+			indiv_pallet_airdrop::vrf::verify_and_extract_entropy(&public, &event_id, &signature)
+				.expect("signature verifies");
+		BigEndianU256::from(entropy)
+	}
+
+	/// Move the airdrop event at index 0 for `game_index` directly into `Status::Claiming` and
 	/// stage a winning entry for `registrant` so a `claim_airdrop` call lands.
-	fn stage_claim_for(game_index: u32, registrant: RegistrationEntry<AccountId32>) {
-		let event_id = Game::airdrop_event_id(game_index);
+	fn stage_claim_for(game_index: GameIdx, registrant: RegistrationEntry<AccountId32>) {
+		stage_claim_for_index(game_index, 0, registrant);
+	}
+
+	/// Move the airdrop event at `airdrop_index` for `game_index` directly into
+	/// `Status::Claiming` and stage a winning entry for `registrant` so a `claim_airdrop` call
+	/// lands.
+	fn stage_claim_for_index(
+		game_index: GameIdx,
+		airdrop_index: u8,
+		registrant: RegistrationEntry<AccountId32>,
+	) {
+		let event_id = Game::airdrop_event_id(game_index, airdrop_index);
 		let info = EventInfo {
 			prize: test_airdrop_prize(),
 			registration_starts: 0,
@@ -5490,20 +5824,20 @@ mod airdrop {
 				game_play_time: 10,
 				rounds: 2,
 				max_group_size: 3,
-				airdrop_prize: Some(test_airdrop_prize()),
+				airdrops: test_airdrops(1),
 			};
 			let now = <Test as crate::Config>::UnixTime::now().as_secs();
 			assert_ok!(Game::new_game(&schedule));
 			let game_index = GameIndex::<Test>::get();
-			let event_id = Game::airdrop_event_id(game_index);
+			let event_id = Game::airdrop_event_id(game_index, 0);
 			let event = AirdropEvents::<Test>::get(event_id).expect("event scheduled");
 			assert_eq!(event.info.registration_starts, now);
 			assert_eq!(event.info.draw_time, GameTimes::<Test>::game_play_time(&schedule) as u64);
-			// end_time = game_play_time + reporting + the chain-configured `airdrop_claim_window`.
+			// end_time = draw_time + the schedule entry's `claim_window`.
 			let game = GameStorage::<Test>::get().expect("game exists");
-			assert!(game.airdrop_scheduled);
-			assert_eq!(event.info.end_time, 10 + 2 + TEST_AIRDROP_CLAIM_WINDOW);
-			// The schedule call carried the schedule's airdrop_prize.
+			assert_ne!(game.airdrops_scheduled, 0);
+			assert_eq!(event.info.end_time, 10 + TEST_AIRDROP_CLAIM_WINDOW);
+			// The schedule call carried the schedule's airdrop prize.
 			assert_eq!(event.info.prize, test_airdrop_prize());
 		});
 	}
@@ -5516,7 +5850,7 @@ mod airdrop {
 				game_play_time: 100,
 				rounds: 2,
 				max_group_size: 3,
-				airdrop_prize: Some(test_airdrop_prize()),
+				airdrops: test_airdrops(1),
 			};
 			// `now` is set strictly before the game's registration phase starts, so the two
 			// timestamps are distinct and the test can tell them apart.
@@ -5534,7 +5868,7 @@ mod airdrop {
 			assert!(GameSchedules::<Test>::get().is_empty(), "schedule consumed by automation");
 
 			let game_index = GameIndex::<Test>::get();
-			let event = AirdropEvents::<Test>::get(Game::airdrop_event_id(game_index))
+			let event = AirdropEvents::<Test>::get(Game::airdrop_event_id(game_index, 0))
 				.expect("event scheduled");
 			// Airdrop registration opens at `now`.
 			assert_eq!(event.info.registration_starts, now);
@@ -5551,41 +5885,65 @@ mod airdrop {
 				game_play_time: 10,
 				rounds: 2,
 				max_group_size: 3,
-				airdrop_prize: Some(test_airdrop_prize()),
+				airdrops: test_airdrops(1),
 			};
 			assert_ok!(Game::new_game(&schedule));
 			assert!(crate::Game::<Test>::exists());
 			let game = GameStorage::<Test>::get().expect("game exists");
 			// Scheduling was attempted but failed, so the event isn't in airdrop storage and
-			// `airdrop_scheduled` is `false`.
-			assert!(!game.airdrop_scheduled);
-			assert!(AirdropEvents::<Test>::get(Game::airdrop_event_id(game.index)).is_none());
+			// `airdrops_scheduled` is empty.
+			assert_eq!(game.airdrops_scheduled, 0);
+			assert!(AirdropEvents::<Test>::get(Game::airdrop_event_id(game.index, 0)).is_none());
 		});
 	}
 
 	#[test]
-	fn sign_up_with_proof_when_schedule_failed_succeeds_and_skips_participate() {
-		// If `new_game` fails to schedule the airdrop, sign-up with an airdrop proof must
-		// still succeed — the proof is silently ignored (no participate dispatch), and the
-		// player is recorded in `Players` as usual.
+	fn sign_up_with_empty_proof_when_schedule_failed_succeeds() {
+		// If `new_game` fails to schedule the airdrop, `airdrops_scheduled` is 0. The check is
+		// count-based, so a `Some` carrying zero VRFs matches and the sign-up succeeds (no
+		// participate dispatch); the player is recorded in `Players` as usual.
 		new_test_ext().execute_with(|| {
 			break_airdrop_schedule();
 			let schedule = GameSchedule::<u32, u128> {
 				game_play_time: 10,
 				rounds: 2,
 				max_group_size: 3,
-				airdrop_prize: Some(test_airdrop_prize()),
+				airdrops: test_airdrops(1),
 			};
 			assert_ok!(Game::new_game(&schedule));
-			let event_id = Game::airdrop_event_id(GameIndex::<Test>::get());
+			let event_id = Game::airdrop_event_id(GameIndex::<Test>::get(), 0);
 			assert_ok!(Game::sign_up_with_account(
 				RuntimeOrigin::signed(ALICE),
 				DEFAULT_IDENTIFIER_KEY,
-				Some(account_proof()),
+				Some(account_proofs(0)),
 			));
 			assert!(Players::<Test>::get(AccountOrPerson::Account(ALICE)).is_some());
 			// No participate happened: nothing in `Registrations` for this event.
 			assert!(AirdropRegistrations::<Test>::iter_prefix(event_id).next().is_none());
+		});
+	}
+
+	#[test]
+	fn sign_up_with_proof_when_schedule_failed_is_rejected() {
+		// When scheduling failed (`airdrops_scheduled` is 0) a sign-up carrying airdrop VRFs is
+		// rejected: the supplied VRF count does not match the scheduled count.
+		new_test_ext().execute_with(|| {
+			break_airdrop_schedule();
+			let schedule = GameSchedule::<u32, u128> {
+				game_play_time: 10,
+				rounds: 2,
+				max_group_size: 3,
+				airdrops: test_airdrops(1),
+			};
+			assert_ok!(Game::new_game(&schedule));
+			assert_noop!(
+				Game::sign_up_with_account(
+					RuntimeOrigin::signed(ALICE),
+					DEFAULT_IDENTIFIER_KEY,
+					Some(account_proofs(1)),
+				),
+				Error::<Test>::InvalidAirdropVrfCount
+			);
 		});
 	}
 
@@ -5598,17 +5956,18 @@ mod airdrop {
 				game_play_time: 10,
 				rounds: 2,
 				max_group_size: 3,
-				airdrop_prize: Some(test_airdrop_prize()),
+				airdrops: test_airdrops(1),
 			};
 			assert_ok!(Game::new_game(&schedule));
-			let event_id = Game::airdrop_event_id(GameIndex::<Test>::get());
+			let event_id = Game::airdrop_event_id(GameIndex::<Test>::get(), 0);
 
 			// `participate_with_account` only accepts events in `Status::Registering`. The
 			// game scheduled the event in `Scheduled`; flip it so the call lands.
 			set_event_status(event_id, Status::Registering { total_participants: 0 });
 
-			// Build a real sr25519 VRF signature for ALICE. Register the keypair's pubkey
-			// for ALICE so `AccountIdToPublic` resolves to the pair we sign with.
+			// Build a real sr25519 VRF signature for ALICE, bound to the event's own id.
+			// Register the keypair's pubkey for ALICE so `AccountIdToPublic` resolves to the
+			// pair we sign with.
 			let pair = sr25519::Pair::from_seed(b"alice_vrf_seed_____padding______");
 			register_account_pubkey(ALICE, pair.public());
 			let signature = pair.vrf_sign(
@@ -5619,7 +5978,7 @@ mod airdrop {
 			assert_ok!(Game::sign_up_with_account(
 				RuntimeOrigin::signed(ALICE),
 				DEFAULT_IDENTIFIER_KEY,
-				Some(AirdropVrf::Account(signature.clone())),
+				Some(crate::AirdropVrfs::Account(vec![signature.clone()].try_into().unwrap())),
 			));
 
 			// The participate dispatch landed: a `Registrations` slot was inserted for ALICE
@@ -5645,10 +6004,10 @@ mod airdrop {
 				game_play_time: 10,
 				rounds: 2,
 				max_group_size: 3,
-				airdrop_prize: Some(test_airdrop_prize()),
+				airdrops: test_airdrops(1),
 			};
 			assert_ok!(Game::new_game(&schedule));
-			let event_id = Game::airdrop_event_id(GameIndex::<Test>::get());
+			let event_id = Game::airdrop_event_id(GameIndex::<Test>::get(), 0);
 			set_event_status(event_id, Status::Registering { total_participants: 0 });
 
 			let alias: Alias = [0xAA; 32];
@@ -5658,10 +6017,10 @@ mod airdrop {
 				DEFAULT_IDENTIFIER_KEY,
 				stmt_account.clone(),
 				AccountAuthority(stmt_account),
-				Some(alias_proof()),
+				Some(alias_proofs(1)),
 			));
 
-			// `MockAirdropMemberService::verify_membership_at_rev` returns the blake2 of the
+			// `MockAirdropMemberService::verify_membership` returns the blake2 of the
 			// encoded participant_origin as the alias; look up that slot.
 			let entry = RegistrationEntry::<AccountId32>::Alias { alias };
 			let slot_alias: indiv_support::traits::Alias =
@@ -5678,14 +6037,14 @@ mod airdrop {
 				game_play_time: 10,
 				rounds: 2,
 				max_group_size: 3,
-				airdrop_prize: Some(test_airdrop_prize()),
+				airdrops: test_airdrops(1),
 			};
 			assert_ok!(Game::new_game(&schedule));
 			assert_noop!(
 				Game::sign_up_with_account(
 					RuntimeOrigin::signed(ALICE),
 					DEFAULT_IDENTIFIER_KEY,
-					Some(alias_proof()),
+					Some(alias_proofs(1)),
 				),
 				Error::<Test>::InvalidAirdropVrfVariantForRecognition,
 			);
@@ -5699,7 +6058,7 @@ mod airdrop {
 				game_play_time: 10,
 				rounds: 2,
 				max_group_size: 3,
-				airdrop_prize: Some(test_airdrop_prize()),
+				airdrops: test_airdrops(1),
 			};
 			assert_ok!(Game::new_game(&schedule));
 			// Pre-recognized account player: in `Participants` as `Recognized(_)` and in
@@ -5713,7 +6072,7 @@ mod airdrop {
 				Game::sign_up_with_account(
 					RuntimeOrigin::signed(ALICE),
 					DEFAULT_IDENTIFIER_KEY,
-					Some(account_proof()),
+					Some(account_proofs(1)),
 				),
 				Error::<Test>::InvalidAirdropVrfVariantForRecognition,
 			);
@@ -5731,16 +6090,16 @@ mod airdrop {
 				game_play_time: 10,
 				rounds: 2,
 				max_group_size: 3,
-				airdrop_prize: Some(test_airdrop_prize()),
+				airdrops: test_airdrops(1),
 			};
 			assert_ok!(Game::new_game(&schedule));
-			let event_id = Game::airdrop_event_id(GameIndex::<Test>::get());
+			let event_id = Game::airdrop_event_id(GameIndex::<Test>::get(), 0);
 			register_account_pubkey(ALICE, sp_core::sr25519::Public::from([1u8; 32]));
 			assert_noop!(
 				Game::sign_up_with_account(
 					RuntimeOrigin::signed(ALICE),
 					DEFAULT_IDENTIFIER_KEY,
-					Some(account_proof()),
+					Some(account_proofs(1)),
 				),
 				indiv_pallet_airdrop::Error::<Test>::InvalidVrfProof,
 			);
@@ -5762,7 +6121,7 @@ mod airdrop {
 				game_play_time: 10,
 				rounds: 2,
 				max_group_size: 3,
-				airdrop_prize: Some(test_airdrop_prize()),
+				airdrops: test_airdrops(1),
 			};
 			assert_ok!(Game::new_game(&schedule));
 
@@ -5785,7 +6144,7 @@ mod airdrop {
 					tx_ext,
 					Call::sign_up_with_invite {
 						identifier_key: DEFAULT_IDENTIFIER_KEY,
-						airdrop: Some(account_proof()),
+						airdrops: Some(account_proofs(1)),
 					},
 				),
 				TransactionExecutionError::Validity(
@@ -5808,7 +6167,7 @@ mod airdrop {
 				game_play_time: 10,
 				rounds: 2,
 				max_group_size: 3,
-				airdrop_prize: Some(test_airdrop_prize()),
+				airdrops: test_airdrops(1),
 			};
 			assert_ok!(Game::new_game(&schedule));
 
@@ -5827,7 +6186,7 @@ mod airdrop {
 					tx_ext,
 					Call::sign_up_with_invite {
 						identifier_key: DEFAULT_IDENTIFIER_KEY,
-						airdrop: Some(alias_proof()),
+						airdrops: Some(alias_proofs(1)),
 					},
 				),
 				TransactionExecutionError::Validity(
@@ -5845,7 +6204,6 @@ mod airdrop {
 	#[test]
 	fn extension_validate_success_rolls_back_airdrop_registration() {
 		use frame_support::dispatch::GetDispatchInfo;
-		use sp_core::{crypto::VrfSecret, sr25519, Pair as _};
 		use sp_runtime::{
 			traits::{Applyable, Checkable},
 			transaction_validity::TransactionSource,
@@ -5856,21 +6214,14 @@ mod airdrop {
 				game_play_time: 10,
 				rounds: 2,
 				max_group_size: 3,
-				airdrop_prize: Some(test_airdrop_prize()),
+				airdrops: test_airdrops(2),
 			};
 			assert_ok!(Game::new_game(&schedule));
-			let event_id = Game::airdrop_event_id(GameIndex::<Test>::get());
+			let game_index = GameIndex::<Test>::get();
+			let event_id = Game::airdrop_event_id(game_index, 0);
 			// `participate_with_account` only accepts events in `Status::Registering`; the game
-			// scheduled the event in `Scheduled`, flip it so the inner call lands successfully.
-			set_event_status(event_id, Status::Registering { total_participants: 0 });
-
-			// Real sr25519 keypair for ALICE so `participate_with_account` verifies the VRF.
-			let pair = sr25519::Pair::from_seed(b"alice_vrf_seed_____padding______");
-			register_account_pubkey(ALICE, pair.public());
-			let signature = pair.vrf_sign(
-				&indiv_pallet_airdrop::vrf::transcript_for_event(&event_id, &pair.public())
-					.into_sign_data(),
-			);
+			// scheduled the events in `Scheduled`, flip them so the inner calls land successfully.
+			open_airdrop_events(game_index, 2);
 
 			let ticket = 44u64;
 			let invite_sig = TestSignature(ticket, ALICE.encode());
@@ -5881,7 +6232,7 @@ mod airdrop {
 			let x = mock::Extrinsic::new_signed(
 				Call::sign_up_with_invite {
 					identifier_key: DEFAULT_IDENTIFIER_KEY,
-					airdrop: Some(AirdropVrf::Account(signature.clone())),
+					airdrops: Some(alice_airdrop_vrfs(game_index, 2)),
 				}
 				.into(),
 				ALICE,
@@ -5905,9 +6256,14 @@ mod airdrop {
 			// Run validate.
 			assert_ok!(checked.validate::<Test>(TransactionSource::External, &info, len));
 
-			// `participate_with_account` would insert a `Registrations` entry on success; the
-			// inner rollback must have reverted it.
+			// `participate_with_account` would insert a `Registrations` entry into each of the
+			// game's events on success; the inner rollback must have reverted all of them.
 			assert!(AirdropRegistrations::<Test>::iter_prefix(event_id).next().is_none());
+			assert!(AirdropRegistrations::<Test>::iter_prefix(Game::airdrop_event_id(
+				game_index, 1
+			))
+			.next()
+			.is_none());
 		});
 	}
 
@@ -5916,7 +6272,7 @@ mod airdrop {
 		new_test_ext().execute_with(|| {
 			force_participant(AccountOrPerson::Account(ALICE), Recognition::Recognized(0), None);
 			assert_noop!(
-				Game::claim_airdrop(RuntimeOrigin::signed(ALICE), 1, id_to_account(99)),
+				Game::claim_airdrop(RuntimeOrigin::signed(ALICE), 1, 0, id_to_account(99)),
 				Error::<Test>::NotEligibleForAirdrop,
 			);
 		});
@@ -5932,20 +6288,20 @@ mod airdrop {
 			// Previous game.
 			stage_claim_for(4, RegistrationEntry::Account { account_id: ALICE });
 			assert_noop!(
-				Game::claim_airdrop(RuntimeOrigin::signed(ALICE), 4, id_to_account(99)),
+				Game::claim_airdrop(RuntimeOrigin::signed(ALICE), 4, 0, id_to_account(99)),
 				Error::<Test>::NotEligibleForAirdrop,
 			);
 
 			// Next game.
 			stage_claim_for(6, RegistrationEntry::Account { account_id: ALICE });
 			assert_noop!(
-				Game::claim_airdrop(RuntimeOrigin::signed(ALICE), 6, id_to_account(99)),
+				Game::claim_airdrop(RuntimeOrigin::signed(ALICE), 6, 0, id_to_account(99)),
 				Error::<Test>::NotEligibleForAirdrop,
 			);
 
 			// Sanity: claiming game 5 — the actual `last_attended_game` — succeeds.
 			stage_claim_for(5, RegistrationEntry::Account { account_id: ALICE });
-			assert_ok!(Game::claim_airdrop(RuntimeOrigin::signed(ALICE), 5, id_to_account(99)));
+			assert_ok!(Game::claim_airdrop(RuntimeOrigin::signed(ALICE), 5, 0, id_to_account(99)));
 		});
 	}
 
@@ -5955,7 +6311,7 @@ mod airdrop {
 			// Player attended game 1 but never reached recognition or personhood
 			force_participant(AccountOrPerson::Account(ALICE), Recognition::NotRecognized, Some(1));
 			assert_noop!(
-				Game::claim_airdrop(RuntimeOrigin::signed(ALICE), 1, id_to_account(99)),
+				Game::claim_airdrop(RuntimeOrigin::signed(ALICE), 1, 0, id_to_account(99)),
 				Error::<Test>::NotEligibleForAirdrop,
 			);
 		});
@@ -5974,14 +6330,15 @@ mod airdrop {
 				game_play_time: 10,
 				rounds: 2,
 				max_group_size: 3,
-				airdrop_prize: Some(test_airdrop_prize()),
+				airdrops: test_airdrops(1),
 			};
 			assert_ok!(Game::new_game(&schedule));
 			let game_index = GameIndex::<Test>::get();
-			let event_id = Game::airdrop_event_id(game_index);
+			let event_id = Game::airdrop_event_id(game_index, 0);
 			set_event_status(event_id, Status::Registering { total_participants: 0 });
 
-			// Sign up with the Account VRF (player is `NotRecognized` at signup).
+			// Sign up with the Account VRF (player is `NotRecognized` at signup), bound to the
+			// event's own id.
 			let pair = sr25519::Pair::from_seed(b"alice_vrf_seed_____padding______");
 			register_account_pubkey(ALICE, pair.public());
 			let signature = pair.vrf_sign(
@@ -5991,7 +6348,7 @@ mod airdrop {
 			assert_ok!(Game::sign_up_with_account(
 				RuntimeOrigin::signed(ALICE),
 				DEFAULT_IDENTIFIER_KEY,
-				Some(AirdropVrf::Account(signature)),
+				Some(crate::AirdropVrfs::Account(vec![signature].try_into().unwrap())),
 			));
 
 			// Player attended the game, then later acquired recognition via
@@ -6007,6 +6364,7 @@ mod airdrop {
 			assert_ok!(Game::claim_airdrop(
 				RuntimeOrigin::signed(ALICE),
 				game_index,
+				0,
 				id_to_account(99),
 			));
 			assert!(!AirdropWinners::<Test>::contains_key(
@@ -6026,11 +6384,11 @@ mod airdrop {
 				game_play_time: 10,
 				rounds: 2,
 				max_group_size: 3,
-				airdrop_prize: Some(test_airdrop_prize()),
+				airdrops: test_airdrops(1),
 			};
 			assert_ok!(Game::new_game(&schedule));
 			let game_index = GameIndex::<Test>::get();
-			let event_id = Game::airdrop_event_id(game_index);
+			let event_id = Game::airdrop_event_id(game_index, 0);
 			set_event_status(event_id, Status::Registering { total_participants: 0 });
 
 			// Pre-recognized account player: in `Participants` as `Recognized(_)` and in
@@ -6045,7 +6403,7 @@ mod airdrop {
 			assert_ok!(Game::sign_up_with_account(
 				RuntimeOrigin::signed(ALICE),
 				DEFAULT_IDENTIFIER_KEY,
-				Some(alias_proof()),
+				Some(alias_proofs(1)),
 			));
 
 			// Player attended the game; recognition remains `Recognized`.
@@ -6059,6 +6417,7 @@ mod airdrop {
 			assert_ok!(Game::claim_airdrop(
 				RuntimeOrigin::signed(ALICE),
 				game_index,
+				0,
 				id_to_account(99),
 			));
 			assert!(!AirdropWinners::<Test>::contains_key(
@@ -6077,9 +6436,9 @@ mod airdrop {
 				Some(1),
 			);
 			stage_claim_for(1, RegistrationEntry::Account { account_id: ALICE });
-			assert_ok!(Game::claim_airdrop(RuntimeOrigin::signed(ALICE), 1, id_to_account(99),));
+			assert_ok!(Game::claim_airdrop(RuntimeOrigin::signed(ALICE), 1, 0, id_to_account(99),));
 			assert!(!AirdropWinners::<Test>::contains_key(
-				Game::airdrop_event_id(1),
+				Game::airdrop_event_id(1, 0),
 				RegistrationEntry::<AccountId32>::Account { account_id: ALICE },
 			));
 		});
@@ -6092,10 +6451,15 @@ mod airdrop {
 			stage_claim_for(7, RegistrationEntry::Account { account_id: ALICE });
 			let beneficiary = id_to_account(123);
 			let prize_amount = test_airdrop_prize().asset_amount;
-			assert_ok!(Game::claim_airdrop(RuntimeOrigin::signed(ALICE), 7, beneficiary.clone(),));
+			assert_ok!(Game::claim_airdrop(
+				RuntimeOrigin::signed(ALICE),
+				7,
+				0,
+				beneficiary.clone(),
+			));
 			// Account-registrant entry consumed.
 			assert!(!AirdropWinners::<Test>::contains_key(
-				Game::airdrop_event_id(7),
+				Game::airdrop_event_id(7, 0),
 				RegistrationEntry::<AccountId32>::Account { account_id: ALICE },
 			));
 			// Prize was paid to the beneficiary.
@@ -6121,11 +6485,12 @@ mod airdrop {
 			assert_ok!(Game::claim_airdrop(
 				runtime_origin_for_alias(&alias),
 				9,
+				0,
 				beneficiary.clone(),
 			));
 			// Alias-registrant entry consumed.
 			assert!(!AirdropWinners::<Test>::contains_key(
-				Game::airdrop_event_id(9),
+				Game::airdrop_event_id(9, 0),
 				RegistrationEntry::<AccountId32>::Alias { alias },
 			));
 			assert_eq!(
@@ -6173,11 +6538,12 @@ mod airdrop {
 			// Stage an airdrop event in `Claiming` with ALICE as the pre-registered
 			// winner, then claim — without ever having called `score::register`. The claim
 			// must target the same game index ALICE last attended.
-			let event_id = Game::airdrop_event_id(last_game_index);
+			let event_id = Game::airdrop_event_id(last_game_index, 0);
 			stage_claim_for(last_game_index, RegistrationEntry::Account { account_id: ALICE });
 			assert_ok!(Game::claim_airdrop(
 				RuntimeOrigin::signed(ALICE),
 				last_game_index,
+				0,
 				id_to_account(99),
 			));
 			assert!(!AirdropWinners::<Test>::contains_key(
@@ -6194,12 +6560,14 @@ mod airdrop {
 				game_play_time: 10,
 				rounds: 2,
 				max_group_size: 2,
-				airdrop_prize: Some(test_airdrop_prize()),
+				airdrops: test_airdrops(1),
 			};
 			assert_ok!(Game::new_game(&schedule));
 			let game_index = GameIndex::<Test>::get();
-			let event_id = Game::airdrop_event_id(game_index);
+			let event_id = Game::airdrop_event_id(game_index, 0);
 
+			// Open airdrop registration and register ALICE as a participant while the
+			// game is still in its Registration phase.
 			MOCK_UNIX_TIME.with(|t| {
 				*t.borrow_mut() =
 					Duration::from_secs(GameTimes::<Test>::registration_start(&schedule) as u64)
@@ -6219,21 +6587,21 @@ mod airdrop {
 			assert_ok!(Game::sign_up_with_account(
 				RuntimeOrigin::signed(ALICE),
 				DEFAULT_IDENTIFIER_KEY,
-				Some(AirdropVrf::Account(signature)),
+				Some(crate::AirdropVrfs::Account(vec![signature].try_into().unwrap())),
 			));
 
-			MOCK_UNIX_TIME.with(|t| {
-				*t.borrow_mut() =
-					Duration::from_secs(GameTimes::<Test>::registration_end(&schedule) as u64)
-			});
-			advance_process(); // registration -> shuffle
-			advance_process(); // shuffle -> reporting
+			// The game is still in Registration and the airdrop has one participant.
 			assert!(matches!(
 				GameStorage::<Test>::get().expect("game remains running").state,
-				GameState::Reporting { .. },
+				GameState::Registration { .. },
+			));
+			assert!(matches!(
+				AirdropEvents::<Test>::get(event_id).expect("event registering").status,
+				Status::Registering { total_participants: 1 },
 			));
 
-			// Make ALICE eligible to claim without finishing the current game.
+			// Make ALICE eligible to claim, so the rejection below is specifically due to
+			// the cancelled (no-longer-claiming) airdrop rather than claim ineligibility.
 			let alice = AccountOrPerson::Account(ALICE);
 			indiv_pallet_score::PersonhoodThreshold::<Test>::put(1);
 			assert_ok!(indiv_pallet_score::Pallet::<Test>::set_attendance(
@@ -6249,9 +6617,8 @@ mod airdrop {
 				event_id,
 				0,
 			));
-			// v0.3.1's airdrop inserts an `AwaitingEntropy` step between closing registration
-			// and drawing: the draw only proceeds on randomness whose moment is strictly past
-			// the moment registration closed at. Advance the mock source, then capture.
+			// The draw waits for randomness produced after the close; advance the mock
+			// source before capturing the entropy.
 			advance_airdrop_randomness();
 			assert_ok!(indiv_pallet_airdrop::Pallet::<Test>::capture_entropy_authorized(
 				frame_system::RawOrigin::Authorized.into(),
@@ -6280,11 +6647,16 @@ mod airdrop {
 				frame_support::storage::TransactionOutcome::Rollback(Game::claim_airdrop(
 					RuntimeOrigin::signed(ALICE),
 					game_index,
+					0,
 					id_to_account(98),
 				))
 			}));
 
-			assert_ok!(Game::kill_current_game(RuntimeOrigin::root()));
+			// Cancelling the game cancels its airdrop.
+			assert_ok!(Game::cancel_game(RuntimeOrigin::root()));
+
+			// The event was already `Claiming` with one winner drawn, so cancellation moves it to
+			// `ClearingRegistrations` preserving the drawn winner count.
 			assert!(matches!(
 				AirdropEvents::<Test>::get(event_id)
 					.expect("event is clearing after cancel")
@@ -6297,34 +6669,1486 @@ mod airdrop {
 				},
 			));
 			assert_noop!(
-				Game::claim_airdrop(RuntimeOrigin::signed(ALICE), game_index, id_to_account(99)),
+				Game::claim_airdrop(RuntimeOrigin::signed(ALICE), game_index, 0, id_to_account(99)),
 				indiv_pallet_airdrop::Error::<Test>::NotClaiming,
 			);
 		});
 	}
 
 	#[test]
-	fn kill_current_game_cancels_airdrop() {
+	fn cancel_game_cancels_all_scheduled_airdrops() {
 		new_test_ext().execute_with(|| {
 			let schedule = GameSchedule::<u32, u128> {
 				game_play_time: 10,
 				rounds: 2,
 				max_group_size: 3,
-				airdrop_prize: Some(test_airdrop_prize()),
+				airdrops: test_airdrops(3),
 			};
 			assert_ok!(Game::new_game(&schedule));
 			let game_index = GameIndex::<Test>::get();
-			let event_id = Game::airdrop_event_id(game_index);
-			// The airdrop event is scheduled but not yet started.
-			assert!(matches!(
-				indiv_pallet_airdrop::Events::<Test>::get(event_id)
-					.expect("event scheduled")
-					.status,
-				indiv_pallet_airdrop::types::Status::Scheduled,
+			// The airdrop events are scheduled but not yet started.
+			for airdrop_index in 0..3 {
+				let event_id = Game::airdrop_event_id(game_index, airdrop_index);
+				assert!(matches!(
+					AirdropEvents::<Test>::get(event_id).expect("event scheduled").status,
+					Status::Scheduled,
+				));
+			}
+			assert_ok!(Game::cancel_game(RuntimeOrigin::root()));
+			// Cancelling not-yet-started events drops every one of them and releases their prize
+			// allocations.
+			for airdrop_index in 0..3 {
+				let event_id = Game::airdrop_event_id(game_index, airdrop_index);
+				assert!(AirdropEvents::<Test>::get(event_id).is_none());
+			}
+		});
+	}
+
+	#[test]
+	fn new_game_schedules_multiple_airdrops_with_per_index_timing() {
+		new_test_ext().execute_with(|| {
+			System::set_block_number(1);
+			let schedule = GameSchedule::<u32, u128> {
+				game_play_time: 10,
+				rounds: 2,
+				max_group_size: 3,
+				airdrops: test_airdrops(3),
+			};
+			let now = <Test as crate::Config>::UnixTime::now().as_secs();
+			assert_ok!(Game::new_game(&schedule));
+			let game_index = GameIndex::<Test>::get();
+			let game = GameStorage::<Test>::get().expect("game exists");
+			assert_eq!(game.airdrops_scheduled, 3);
+
+			for airdrop_index in 0..3u8 {
+				let event_id = Game::airdrop_event_id(game_index, airdrop_index);
+				let event = AirdropEvents::<Test>::get(event_id).expect("event scheduled");
+				// Registration opens immediately, the draw happens at its per-index offset and
+				// the claim window runs from the draw.
+				let draw_time = 10 + airdrop_index as u64 * 86_400;
+				assert_eq!(event.info.registration_starts, now);
+				assert_eq!(event.info.draw_time, draw_time);
+				assert_eq!(event.info.end_time, draw_time + TEST_AIRDROP_CLAIM_WINDOW);
+				assert_eq!(event.info.prize, test_airdrop_prize());
+				System::assert_has_event(
+					crate::Event::<Test>::AirdropScheduled { game_index, airdrop_index, event_id }
+						.into(),
+				);
+			}
+		});
+	}
+
+	#[test]
+	fn new_game_with_empty_airdrops_schedules_no_event() {
+		new_test_ext().execute_with(|| {
+			let schedule = GameSchedule::<u32, u128> {
+				game_play_time: 10,
+				rounds: 2,
+				max_group_size: 3,
+				airdrops: Default::default(),
+			};
+			assert_ok!(Game::new_game(&schedule));
+			let game = GameStorage::<Test>::get().expect("game exists");
+			assert_eq!(game.airdrops_scheduled, 0);
+			assert_eq!(indiv_pallet_airdrop::Events::<Test>::iter().count(), 0);
+			// Neither success nor failure events: no scheduling was attempted.
+			for record in System::events() {
+				assert!(!matches!(
+					record.event,
+					RuntimeEvent::Game(
+						crate::Event::<Test>::AirdropScheduled { .. } |
+							crate::Event::<Test>::AirdropScheduleFailed { .. }
+					),
+				));
+			}
+		});
+	}
+
+	/// Occupy the event id of airdrop index 1 of the upcoming game so its scheduling fails
+	/// with `DuplicateEventId`, and return that foreign event's id.
+	fn occupy_next_game_airdrop_index_1() -> indiv_pallet_airdrop::types::EventId {
+		let next_game_index = GameIndex::<Test>::get() + 1;
+		let occupied = Game::airdrop_event_id(next_game_index, 1);
+		AirdropEvents::<Test>::insert(
+			occupied,
+			ActiveEvent {
+				id: occupied,
+				info: EventInfo {
+					prize: test_airdrop_prize(),
+					registration_starts: 0,
+					draw_time: 1,
+					end_time: 2,
+				},
+				status: Status::Scheduled,
+				source: None,
+			},
+		);
+		occupied
+	}
+
+	#[test]
+	fn schedule_failure_stops_at_first_failing_airdrop() {
+		new_test_ext().execute_with(|| {
+			System::set_block_number(1);
+			let occupied = occupy_next_game_airdrop_index_1();
+
+			let schedule = GameSchedule::<u32, u128> {
+				game_play_time: 10,
+				rounds: 2,
+				max_group_size: 3,
+				airdrops: test_airdrops(3),
+			};
+			assert_ok!(Game::new_game(&schedule));
+			let game_index = GameIndex::<Test>::get();
+
+			// Scheduling stops at the failing index: only the prefix (index 0) is scheduled,
+			// index 2 is not attempted.
+			let game = GameStorage::<Test>::get().expect("game exists");
+			assert_eq!(game.airdrops_scheduled, 1);
+			assert!(AirdropEvents::<Test>::get(Game::airdrop_event_id(game_index, 2)).is_none());
+			System::assert_has_event(
+				crate::Event::<Test>::AirdropScheduleFailed {
+					game_index,
+					airdrop_index: 1,
+					error: indiv_pallet_airdrop::Error::<Test>::DuplicateEventId.into(),
+				}
+				.into(),
+			);
+
+			// A sign-up registers into exactly the scheduled prefix; the foreign event occupying
+			// index 1's id is never touched.
+			open_airdrop_events(game_index, 1);
+			assert_ok!(Game::sign_up_with_account(
+				RuntimeOrigin::signed(ALICE),
+				DEFAULT_IDENTIFIER_KEY,
+				Some(alice_airdrop_vrfs(game_index, 1)),
 			));
-			assert_ok!(Game::kill_current_game(RuntimeOrigin::root()));
-			// Cancelling a not-yet-started event drops it and releases the full prize allocation.
-			assert!(indiv_pallet_airdrop::Events::<Test>::get(event_id).is_none());
+			let slot = alice_event_slot(game_index, 0);
+			assert!(AirdropRegistrations::<Test>::contains_key(
+				Game::airdrop_event_id(game_index, 0),
+				slot,
+			));
+			assert!(AirdropRegistrations::<Test>::iter_prefix(occupied).next().is_none());
+		});
+	}
+
+	#[test]
+	fn cancellation_only_touches_scheduled_airdrops() {
+		new_test_ext().execute_with(|| {
+			// Same partial-failure setup: index 1's id is occupied by a foreign event, so only
+			// index 0 is scheduled.
+			let occupied = occupy_next_game_airdrop_index_1();
+			let schedule = GameSchedule::<u32, u128> {
+				game_play_time: 10,
+				rounds: 2,
+				max_group_size: 3,
+				airdrops: test_airdrops(3),
+			};
+			assert_ok!(Game::new_game(&schedule));
+			let game_index = GameIndex::<Test>::get();
+
+			assert_ok!(Game::cancel_game(RuntimeOrigin::root()));
+
+			// The scheduled event (index 0) is cancelled and dropped; the foreign event
+			// occupying index 1's id must not be cancelled with it.
+			assert!(AirdropEvents::<Test>::get(Game::airdrop_event_id(game_index, 0)).is_none());
+			assert!(matches!(
+				AirdropEvents::<Test>::get(occupied).expect("foreign event untouched").status,
+				Status::Scheduled,
+			));
+		});
+	}
+
+	#[test]
+	fn shuffle_deadline_cancellation_cancels_all_airdrops() {
+		new_test_ext().execute_with(|| {
+			let schedule = GameSchedule::<u32, u128> {
+				game_play_time: 10,
+				rounds: 2,
+				max_group_size: 3,
+				airdrops: test_airdrops(2),
+			};
+			assert_ok!(Game::new_game(&schedule));
+			let game_index = GameIndex::<Test>::get();
+
+			// Force the game into the shuffle phase and move time past the shuffle deadline.
+			let deadline = GameStorage::<Test>::get().expect("game exists").shuffle_deadline;
+			GameStorage::<Test>::mutate(|maybe_game| {
+				maybe_game.as_mut().expect("game exists").state =
+					GameState::Shuffle { step: ShuffleStep::Step1Insert { last_iteration: None } };
+			});
+			MOCK_UNIX_TIME.with(|t| *t.borrow_mut() = Duration::from_secs(deadline as u64 + 1));
+			advance_process_with_on_poll_only();
+
+			assert!(matches!(
+				GameStorage::<Test>::get().expect("game cancelling").state,
+				GameState::Cancelling { .. },
+			));
+			for airdrop_index in 0..2 {
+				let event_id = Game::airdrop_event_id(game_index, airdrop_index);
+				assert!(AirdropEvents::<Test>::get(event_id).is_none());
+			}
+		});
+	}
+
+	#[test]
+	fn sign_up_registers_into_every_scheduled_event() {
+		new_test_ext().execute_with(|| {
+			let schedule = GameSchedule::<u32, u128> {
+				game_play_time: 10,
+				rounds: 2,
+				max_group_size: 3,
+				airdrops: test_airdrops(3),
+			};
+			assert_ok!(Game::new_game(&schedule));
+			let game_index = GameIndex::<Test>::get();
+			open_airdrop_events(game_index, 3);
+
+			// Account path: one VRF per event, each landing at its own per-event slot.
+			assert_ok!(Game::sign_up_with_account(
+				RuntimeOrigin::signed(ALICE),
+				DEFAULT_IDENTIFIER_KEY,
+				Some(alice_airdrop_vrfs(game_index, 3)),
+			));
+
+			// Alias path: one proof per event; the mock member service derives the slot from
+			// the encoded registration entry, so it is the same in every event.
+			let alias: Alias = [0xAA; 32];
+			let stmt_account = id_to_account(0xA11A5);
+			assert_ok!(Game::sign_up_with_alias(
+				runtime_origin_for_alias(&alias),
+				DEFAULT_IDENTIFIER_KEY,
+				stmt_account.clone(),
+				AccountAuthority(stmt_account),
+				Some(alias_proofs(3)),
+			));
+			let alias_entry = RegistrationEntry::<AccountId32>::Alias { alias };
+			let alias_slot = BigEndianU256::from(sp_io::hashing::blake2_256(&alias_entry.encode()));
+
+			for airdrop_index in 0..3 {
+				let event_id = Game::airdrop_event_id(game_index, airdrop_index);
+				assert_eq!(
+					AirdropRegistrations::<Test>::get(
+						event_id,
+						alice_event_slot(game_index, airdrop_index),
+					),
+					Some(RegistrationEntry::Account { account_id: ALICE }),
+				);
+				assert_eq!(
+					AirdropRegistrations::<Test>::get(event_id, alias_slot),
+					Some(alias_entry.clone()),
+				);
+			}
+		});
+	}
+
+	#[test]
+	fn sign_up_fails_when_one_scheduled_event_not_accepting() {
+		new_test_ext().execute_with(|| {
+			let schedule = GameSchedule::<u32, u128> {
+				game_play_time: 10,
+				rounds: 2,
+				max_group_size: 3,
+				airdrops: test_airdrops(3),
+			};
+			assert_ok!(Game::new_game(&schedule));
+			let game_index = GameIndex::<Test>::get();
+			// Open only indices 0 and 2; index 1 stays `Scheduled` and rejects registrations.
+			set_event_status(
+				Game::airdrop_event_id(game_index, 0),
+				Status::Registering { total_participants: 0 },
+			);
+			set_event_status(
+				Game::airdrop_event_id(game_index, 2),
+				Status::Registering { total_participants: 0 },
+			);
+
+			// The whole sign-up fails and leaves no trace, including the registration the
+			// airdrop pallet already wrote into event 0 before failing on event 1.
+			assert_noop!(
+				Game::sign_up_with_account(
+					RuntimeOrigin::signed(ALICE),
+					DEFAULT_IDENTIFIER_KEY,
+					Some(alice_airdrop_vrfs(game_index, 3)),
+				),
+				indiv_pallet_airdrop::Error::<Test>::NotAcceptingRegistrations,
+			);
+			assert!(Players::<Test>::get(AccountOrPerson::Account(ALICE)).is_none());
+		});
+	}
+
+	#[test]
+	fn sign_up_rejects_vrf_bound_to_another_event() {
+		new_test_ext().execute_with(|| {
+			let schedule = GameSchedule::<u32, u128> {
+				game_play_time: 10,
+				rounds: 2,
+				max_group_size: 3,
+				airdrops: test_airdrops(2),
+			};
+			assert_ok!(Game::new_game(&schedule));
+			let game_index = GameIndex::<Test>::get();
+			open_airdrop_events(game_index, 2);
+
+			// Entries are bound positionally: swapping the two per-event VRFs must be rejected
+			// when the first entry (bound to event 1) is verified against event 0.
+			let (_public, signature_0) = alice_event_vrf(game_index, 0);
+			let (_public, signature_1) = alice_event_vrf(game_index, 1);
+			let swapped =
+				crate::AirdropVrfs::Account(vec![signature_1, signature_0].try_into().unwrap());
+			assert_noop!(
+				Game::sign_up_with_account(
+					RuntimeOrigin::signed(ALICE),
+					DEFAULT_IDENTIFIER_KEY,
+					Some(swapped),
+				),
+				indiv_pallet_airdrop::Error::<Test>::InvalidVrfProof,
+			);
+		});
+	}
+
+	#[test]
+	fn sign_up_rejects_vrf_count_mismatch() {
+		new_test_ext().execute_with(|| {
+			let schedule = GameSchedule::<u32, u128> {
+				game_play_time: 10,
+				rounds: 2,
+				max_group_size: 3,
+				airdrops: test_airdrops(2),
+			};
+			assert_ok!(Game::new_game(&schedule));
+			let game_index = GameIndex::<Test>::get();
+			open_airdrop_events(game_index, 2);
+
+			// One entry for two scheduled events: rejected before any verification.
+			assert_noop!(
+				Game::sign_up_with_account(
+					RuntimeOrigin::signed(ALICE),
+					DEFAULT_IDENTIFIER_KEY,
+					Some(alice_airdrop_vrfs(game_index, 1)),
+				),
+				Error::<Test>::InvalidAirdropVrfCount,
+			);
+		});
+	}
+
+	#[test]
+	fn sign_up_rejects_vrf_from_previous_game() {
+		new_test_ext().execute_with(|| {
+			let schedule = GameSchedule::<u32, u128> {
+				game_play_time: 10,
+				rounds: 2,
+				max_group_size: 3,
+				airdrops: test_airdrops(1),
+			};
+			// Game 1: ALICE prepares a VRF for its airdrop event but never signs up; the game
+			// is cancelled and cleaned up.
+			assert_ok!(Game::new_game(&schedule));
+			let first_game_index = GameIndex::<Test>::get();
+			let (_public, stale_signature) = alice_event_vrf(first_game_index, 0);
+			assert_ok!(Game::cancel_game(RuntimeOrigin::root()));
+			advance_process();
+			assert!(GameStorage::<Test>::get().is_none());
+
+			// Game 2: the event id embeds the game index, so game 1's VRF is a replay and must
+			// be rejected.
+			assert_ok!(Game::new_game(&schedule));
+			let game_index = GameIndex::<Test>::get();
+			assert_ne!(game_index, first_game_index);
+			open_airdrop_events(game_index, 1);
+			assert_noop!(
+				Game::sign_up_with_account(
+					RuntimeOrigin::signed(ALICE),
+					DEFAULT_IDENTIFIER_KEY,
+					Some(crate::AirdropVrfs::Account(vec![stale_signature].try_into().unwrap())),
+				),
+				indiv_pallet_airdrop::Error::<Test>::InvalidVrfProof,
+			);
+
+			// A VRF bound to the current game's event goes through.
+			assert_ok!(Game::sign_up_with_account(
+				RuntimeOrigin::signed(ALICE),
+				DEFAULT_IDENTIFIER_KEY,
+				Some(alice_airdrop_vrfs(game_index, 1)),
+			));
+		});
+	}
+
+	#[test]
+	fn claim_airdrop_selects_event_by_index() {
+		new_test_ext().execute_with(|| {
+			let alice_entry = RegistrationEntry::<AccountId32>::Account { account_id: ALICE };
+			force_participant(AccountOrPerson::Account(ALICE), Recognition::Recognized(0), Some(5));
+
+			// Index 0: claimable with a winning entry for ALICE.
+			stage_claim_for_index(5, 0, alice_entry.clone());
+			// Index 1: claimable, but ALICE is not among the winners.
+			stage_claim_for_index(5, 1, alice_entry.clone());
+			AirdropWinners::<Test>::remove(Game::airdrop_event_id(5, 1), &alice_entry);
+			// Index 2: drawn later, still registering — claims are not open yet.
+			stage_claim_for_index(5, 2, alice_entry.clone());
+			set_event_status(
+				Game::airdrop_event_id(5, 2),
+				Status::Registering { total_participants: 1 },
+			);
+
+			// Index 3 was never scheduled.
+			assert_noop!(
+				Game::claim_airdrop(RuntimeOrigin::signed(ALICE), 5, 3, id_to_account(99)),
+				indiv_pallet_airdrop::Error::<Test>::UnknownEvent,
+			);
+			// Winning the day-0 draw grants nothing for day 1.
+			assert_noop!(
+				Game::claim_airdrop(RuntimeOrigin::signed(ALICE), 5, 1, id_to_account(99)),
+				indiv_pallet_airdrop::Error::<Test>::NoSuchWinner,
+			);
+			// Day 2 has not drawn yet.
+			assert_noop!(
+				Game::claim_airdrop(RuntimeOrigin::signed(ALICE), 5, 2, id_to_account(99)),
+				indiv_pallet_airdrop::Error::<Test>::NotClaiming,
+			);
+			// The index ALICE actually won pays out.
+			assert_ok!(Game::claim_airdrop(RuntimeOrigin::signed(ALICE), 5, 0, id_to_account(99)));
+		});
+	}
+
+	#[test]
+	fn claim_each_won_airdrop_separately() {
+		new_test_ext().execute_with(|| {
+			let alice_entry = RegistrationEntry::<AccountId32>::Account { account_id: ALICE };
+			force_participant(AccountOrPerson::Account(ALICE), Recognition::Recognized(0), Some(5));
+			stage_claim_for_index(5, 0, alice_entry.clone());
+			stage_claim_for_index(5, 1, alice_entry.clone());
+
+			let beneficiary = id_to_account(123);
+			let prize_amount = test_airdrop_prize().asset_amount;
+			assert_ok!(Game::claim_airdrop(
+				RuntimeOrigin::signed(ALICE),
+				5,
+				0,
+				beneficiary.clone()
+			));
+			assert_ok!(Game::claim_airdrop(
+				RuntimeOrigin::signed(ALICE),
+				5,
+				1,
+				beneficiary.clone()
+			));
+			assert_eq!(
+				<Assets as Inspect<AccountId32>>::balance(TEST_AIRDROP_ASSET_ID, &beneficiary),
+				2 * prize_amount,
+			);
+			// Both winning entries are consumed; a second claim on either index fails.
+			assert_noop!(
+				Game::claim_airdrop(RuntimeOrigin::signed(ALICE), 5, 0, beneficiary),
+				indiv_pallet_airdrop::Error::<Test>::NoSuchWinner,
+			);
+		});
+	}
+
+	#[test]
+	fn extension_validate_accepts_empty_airdrop_when_none_scheduled() {
+		new_test_ext().execute_with(|| {
+			break_airdrop_schedule();
+			let schedule = GameSchedule::<u32, u128> {
+				game_play_time: 10,
+				rounds: 2,
+				max_group_size: 3,
+				airdrops: test_airdrops(1),
+			};
+			assert_ok!(Game::new_game(&schedule));
+			assert_eq!(GameStorage::<Test>::get().expect("game exists").airdrops_scheduled, 0);
+
+			let ticket = 45u64;
+			let signature = TestSignature(ticket, ALICE.encode());
+			assert_ok!(Game::grant_invites(RuntimeOrigin::root(), BOB, 1));
+			assert_ok!(Game::set_invite_ticket(RuntimeOrigin::signed(BOB), ticket));
+			let nonce = frame_system::Account::<Test>::get(&ALICE).nonce;
+			let tx_ext = GameAsInvitedData { nonce, inviter: BOB, ticket, signature };
+
+			// With no scheduled event the VRF count must be zero; a `Some` carrying zero VRFs is
+			// accepted and the sign-up lands without any registration.
+			assert_ok!(exec_invited_tx(
+				ALICE,
+				tx_ext,
+				Call::sign_up_with_invite {
+					identifier_key: DEFAULT_IDENTIFIER_KEY,
+					airdrops: Some(account_proofs(0)),
+				},
+			));
+			assert!(Players::<Test>::get(AccountOrPerson::Account(ALICE)).is_some());
+			assert_eq!(indiv_pallet_airdrop::Registrations::<Test>::iter().count(), 0);
+		});
+	}
+
+	#[test]
+	fn extension_validate_rejects_airdrop_when_none_scheduled() {
+		new_test_ext().execute_with(|| {
+			break_airdrop_schedule();
+			let schedule = GameSchedule::<u32, u128> {
+				game_play_time: 10,
+				rounds: 2,
+				max_group_size: 3,
+				airdrops: test_airdrops(1),
+			};
+			assert_ok!(Game::new_game(&schedule));
+			assert_eq!(GameStorage::<Test>::get().expect("game exists").airdrops_scheduled, 0);
+
+			let ticket = 45u64;
+			let signature = TestSignature(ticket, ALICE.encode());
+			assert_ok!(Game::grant_invites(RuntimeOrigin::root(), BOB, 1));
+			assert_ok!(Game::set_invite_ticket(RuntimeOrigin::signed(BOB), ticket));
+			let nonce = frame_system::Account::<Test>::get(&ALICE).nonce;
+			let tx_ext = GameAsInvitedData { nonce, inviter: BOB, ticket, signature };
+
+			// Supplying a VRF for a game that scheduled no event is rejected at validation: the
+			// VRF count (1) does not match the scheduled count (0).
+			assert_noop!(
+				exec_invited_tx(
+					ALICE,
+					tx_ext,
+					Call::sign_up_with_invite {
+						identifier_key: DEFAULT_IDENTIFIER_KEY,
+						airdrops: Some(account_proofs(1)),
+					},
+				),
+				TransactionExecutionError::Validity(
+					InvalidTransaction::Custom(CustomError::InvalidAirdropVrfCount as u8).into(),
+				),
+			);
+		});
+	}
+
+	#[test]
+	fn extension_validate_accepts_no_airdrop_with_scheduled_events() {
+		new_test_ext().execute_with(|| {
+			let schedule = GameSchedule::<u32, u128> {
+				game_play_time: 10,
+				rounds: 2,
+				max_group_size: 3,
+				airdrops: test_airdrops(2),
+			};
+			assert_ok!(Game::new_game(&schedule));
+
+			let ticket = 46u64;
+			let signature = TestSignature(ticket, ALICE.encode());
+			assert_ok!(Game::grant_invites(RuntimeOrigin::root(), BOB, 1));
+			assert_ok!(Game::set_invite_ticket(RuntimeOrigin::signed(BOB), ticket));
+			let nonce = frame_system::Account::<Test>::get(&ALICE).nonce;
+			let tx_ext = GameAsInvitedData { nonce, inviter: BOB, ticket, signature };
+
+			assert_ok!(exec_invited_tx(
+				ALICE,
+				tx_ext,
+				Call::sign_up_with_invite {
+					identifier_key: DEFAULT_IDENTIFIER_KEY,
+					airdrops: None
+				},
+			));
+			assert!(Players::<Test>::get(AccountOrPerson::Account(ALICE)).is_some());
+			assert_eq!(indiv_pallet_airdrop::Registrations::<Test>::iter().count(), 0);
+		});
+	}
+
+	#[test]
+	fn extension_validate_rejects_when_one_event_not_accepting() {
+		new_test_ext().execute_with(|| {
+			let schedule = GameSchedule::<u32, u128> {
+				game_play_time: 10,
+				rounds: 2,
+				max_group_size: 3,
+				airdrops: test_airdrops(2),
+			};
+			assert_ok!(Game::new_game(&schedule));
+			let game_index = GameIndex::<Test>::get();
+			// Only the first event accepts registrations; the second stays `Scheduled`.
+			open_airdrop_events(game_index, 1);
+
+			let vrfs = alice_airdrop_vrfs(game_index, 2);
+			let ticket = 47u64;
+			let invite_sig = TestSignature(ticket, ALICE.encode());
+			assert_ok!(Game::grant_invites(RuntimeOrigin::root(), BOB, 1));
+			assert_ok!(Game::set_invite_ticket(RuntimeOrigin::signed(BOB), ticket));
+			let nonce = frame_system::Account::<Test>::get(&ALICE).nonce;
+			let tx_ext = GameAsInvitedData { nonce, inviter: BOB, ticket, signature: invite_sig };
+
+			// A valid VRF is not enough: the registration must be acceptable by every scheduled
+			// event for the transaction to validate.
+			assert_noop!(
+				exec_invited_tx(
+					ALICE,
+					tx_ext,
+					Call::sign_up_with_invite {
+						identifier_key: DEFAULT_IDENTIFIER_KEY,
+						airdrops: Some(vrfs),
+					},
+				),
+				TransactionExecutionError::Validity(
+					InvalidTransaction::Custom(CustomError::InvalidAirdropRegistration as u8)
+						.into(),
+				),
+			);
+		});
+	}
+
+	#[test]
+	fn extension_validate_rejects_vrf_count_mismatch() {
+		new_test_ext().execute_with(|| {
+			let schedule = GameSchedule::<u32, u128> {
+				game_play_time: 10,
+				rounds: 2,
+				max_group_size: 3,
+				airdrops: test_airdrops(2),
+			};
+			assert_ok!(Game::new_game(&schedule));
+			let game_index = GameIndex::<Test>::get();
+			open_airdrop_events(game_index, 2);
+
+			let ticket = 48u64;
+			let invite_sig = TestSignature(ticket, ALICE.encode());
+			assert_ok!(Game::grant_invites(RuntimeOrigin::root(), BOB, 1));
+			assert_ok!(Game::set_invite_ticket(RuntimeOrigin::signed(BOB), ticket));
+			let nonce = frame_system::Account::<Test>::get(&ALICE).nonce;
+			let tx_ext = GameAsInvitedData { nonce, inviter: BOB, ticket, signature: invite_sig };
+
+			// One valid VRF for two scheduled events: rejected with the dedicated custom error
+			// before any verification runs.
+			assert_noop!(
+				exec_invited_tx(
+					ALICE,
+					tx_ext,
+					Call::sign_up_with_invite {
+						identifier_key: DEFAULT_IDENTIFIER_KEY,
+						airdrops: Some(alice_airdrop_vrfs(game_index, 1)),
+					},
+				),
+				TransactionExecutionError::Validity(
+					InvalidTransaction::Custom(CustomError::InvalidAirdropVrfCount as u8).into(),
+				),
+			);
+		});
+	}
+
+	#[test]
+	fn invited_sign_up_registers_into_every_scheduled_event() {
+		new_test_ext().execute_with(|| {
+			let schedule = GameSchedule::<u32, u128> {
+				game_play_time: 10,
+				rounds: 2,
+				max_group_size: 3,
+				airdrops: test_airdrops(2),
+			};
+			assert_ok!(Game::new_game(&schedule));
+			let game_index = GameIndex::<Test>::get();
+			open_airdrop_events(game_index, 2);
+
+			let ticket = 49u64;
+			let invite_sig = TestSignature(ticket, ALICE.encode());
+			assert_ok!(Game::grant_invites(RuntimeOrigin::root(), BOB, 1));
+			assert_ok!(Game::set_invite_ticket(RuntimeOrigin::signed(BOB), ticket));
+			let nonce = frame_system::Account::<Test>::get(&ALICE).nonce;
+			let tx_ext = GameAsInvitedData { nonce, inviter: BOB, ticket, signature: invite_sig };
+
+			// The full invited transaction (validate then dispatch) lands and registers the
+			// player into every scheduled event.
+			assert_ok!(exec_invited_tx(
+				ALICE,
+				tx_ext,
+				Call::sign_up_with_invite {
+					identifier_key: DEFAULT_IDENTIFIER_KEY,
+					airdrops: Some(alice_airdrop_vrfs(game_index, 2)),
+				},
+			));
+			assert!(Players::<Test>::get(AccountOrPerson::Account(ALICE)).is_some());
+			for airdrop_index in 0..2 {
+				assert_eq!(
+					AirdropRegistrations::<Test>::get(
+						Game::airdrop_event_id(game_index, airdrop_index),
+						alice_event_slot(game_index, airdrop_index),
+					),
+					Some(RegistrationEntry::Account { account_id: ALICE }),
+				);
+			}
+		});
+	}
+
+	// The sign-up calls charge their exact weight up front from the call arguments: the
+	// supplied variant picks the branch (account entries only verify for new players, alias
+	// entries only for recognized ones) and the entry count scales it. No airdrops means the
+	// branch is unknown, so the worst case of both at zero entries is charged.
+	#[test]
+	fn sign_up_calls_charge_by_airdrop_variant_and_count() {
+		use frame_support::dispatch::GetDispatchInfo;
+
+		let charged = |call: crate::Call<Test>| call.get_dispatch_info().call_weight;
+
+		assert_eq!(
+			charged(Call::sign_up_with_account {
+				identifier_key: DEFAULT_IDENTIFIER_KEY,
+				airdrops: Some(account_proofs(2)),
+			}),
+			<MockWeightInfo as WeightInfo>::sign_up_with_account_new(2),
+		);
+		assert_eq!(
+			charged(Call::sign_up_with_account {
+				identifier_key: DEFAULT_IDENTIFIER_KEY,
+				airdrops: Some(alias_proofs(3)),
+			}),
+			<MockWeightInfo as WeightInfo>::sign_up_with_account_recognized(3),
+		);
+		assert_eq!(
+			charged(Call::sign_up_with_account {
+				identifier_key: DEFAULT_IDENTIFIER_KEY,
+				airdrops: None,
+			}),
+			<MockWeightInfo as WeightInfo>::sign_up_with_account_new(0)
+				.max(<MockWeightInfo as WeightInfo>::sign_up_with_account_recognized(0)),
+		);
+
+		assert_eq!(
+			charged(Call::sign_up_with_invite {
+				identifier_key: DEFAULT_IDENTIFIER_KEY,
+				airdrops: Some(account_proofs(2)),
+			}),
+			<MockWeightInfo as WeightInfo>::sign_up_with_invite(2),
+		);
+		assert_eq!(
+			charged(Call::sign_up_with_invite {
+				identifier_key: DEFAULT_IDENTIFIER_KEY,
+				airdrops: None,
+			}),
+			<MockWeightInfo as WeightInfo>::sign_up_with_invite(0),
+		);
+
+		let stmt_account = id_to_account(0xA11A5);
+		assert_eq!(
+			charged(Call::sign_up_with_alias {
+				identifier_key: DEFAULT_IDENTIFIER_KEY,
+				statement_account: stmt_account.clone(),
+				sig: AccountAuthority(stmt_account),
+				airdrops: Some(alias_proofs(2)),
+			}),
+			<MockWeightInfo as WeightInfo>::sign_up_with_alias(2),
+		);
+	}
+
+	// `GameAsInvited` charges its validation weight from the call's airdrop entry count; a call
+	// that is not `sign_up_with_invite` fails validation before any airdrop work and an unused
+	// extension is free.
+	#[test]
+	fn extension_weight_charges_by_call_airdrop_count() {
+		use sp_runtime::traits::TransactionExtension as _;
+
+		let ticket = 1u64;
+		let ext = crate::GameAsInvited::<Test>::new(Some(GameAsInvitedData {
+			nonce: 0,
+			inviter: BOB,
+			ticket,
+			signature: TestSignature(ticket, ALICE.encode()),
+		}));
+
+		let signup: RuntimeCall = Call::sign_up_with_invite {
+			identifier_key: DEFAULT_IDENTIFIER_KEY,
+			airdrops: Some(account_proofs(2)),
+		}
+		.into();
+		assert_eq!(ext.weight(&signup), <MockWeightInfo as WeightInfo>::as_invited_tx_ext(2));
+
+		let no_airdrops: RuntimeCall =
+			Call::sign_up_with_invite { identifier_key: DEFAULT_IDENTIFIER_KEY, airdrops: None }
+				.into();
+		assert_eq!(ext.weight(&no_airdrops), <MockWeightInfo as WeightInfo>::as_invited_tx_ext(0));
+
+		let other: RuntimeCall = Call::cancel_game {}.into();
+		assert_eq!(ext.weight(&other), <MockWeightInfo as WeightInfo>::as_invited_tx_ext(0));
+
+		let unused = crate::GameAsInvited::<Test>::new(None);
+		assert_eq!(unused.weight(&signup), Weight::zero());
+	}
+
+	#[test]
+	fn airdrop_id_derivation_matches_layout() {
+		// The event id layout: 27-byte base, the airdrop index and the game index BE encoded.
+		let event_id = Game::airdrop_event_id(7, 3);
+		let mut expected = [0u8; 32];
+		expected[0..27].copy_from_slice(b"pop:game:airdrop:          ");
+		expected[27] = 3;
+		expected[28..32].copy_from_slice(&7u32.to_be_bytes());
+		assert_eq!(event_id, expected);
+
+		// Sibling events differ only in the airdrop index byte; other games differ in the game
+		// index bytes.
+		assert_eq!(Game::airdrop_event_id(7, 4)[27], 4);
+		assert_eq!(Game::airdrop_event_id(7, 4)[28..32], event_id[28..32]);
+		assert_ne!(Game::airdrop_event_id(8, 3)[28..32], event_id[28..32]);
+	}
+}
+
+/// Directly drives `shuffle_step_retrieve` in a tight loop within one block. Covers three
+/// invariants the cache-resume optimization must preserve:
+///   1. every seeded player from both `ShuffleRecognized` and `ShuffleNotRecognized` is consumed
+///      exactly once across all rounds;
+///   2. the recognized → not-recognized phase transition does not skip any not-recognized entries
+///      (regression guard for the per-phase cache reset);
+///   3. `PlayerToIndex` / `IndexToPlayer` end up consistent: each player's per-round index points
+///      back at that player, and indices are assigned densely from 0.
+#[test]
+fn shuffle_step_retrieve_resumes_and_drains_both_phases() {
+	new_test_ext().execute_with(|| {
+		const ROUNDS: u8 = 3;
+		const RECOGNIZED: u32 = 7;
+		const NOT_RECOGNIZED: u32 = 5;
+		let total = RECOGNIZED + NOT_RECOGNIZED;
+
+		// Seed both maps for every round. Hashes are arbitrary but unique per
+		// (round, player) so iteration order is well-defined under `Identity`.
+		let mut expected: Vec<AccountOrPerson<AccountId32>> = Vec::new();
+		for i in 0..RECOGNIZED {
+			let player = AccountOrPerson::Account(id_to_account(i as u64));
+			expected.push(player.clone());
+			for round in 0..ROUNDS {
+				let mut hash = [0u8; 32];
+				hash[0] = round;
+				hash[1..5].copy_from_slice(&i.to_be_bytes());
+				crate::ShuffleRecognized::<Test>::insert(round, hash, &player);
+			}
+		}
+		for i in 0..NOT_RECOGNIZED {
+			let player = AccountOrPerson::Person(id_to_alias((RECOGNIZED + i) as u64));
+			expected.push(player.clone());
+			for round in 0..ROUNDS {
+				let mut hash = [0xFFu8; 32];
+				hash[0] = round;
+				hash[1..5].copy_from_slice(&i.to_be_bytes());
+				crate::ShuffleNotRecognized::<Test>::insert(round, hash, &player);
+			}
+		}
+
+		// Drive the function to completion in this single block.
+		let mut next_player_index: u32 = 0;
+		let mut phase = ShuffleRetrievePhase::Recognized;
+		let mut resume_cursors: Vec<Option<[u8; 32]>> = vec![None; usize::from(ROUNDS)];
+		let mut transition_seen = false;
+		loop {
+			let was_recognized = matches!(phase, ShuffleRetrievePhase::Recognized);
+			let res = crate::Pallet::<Test>::shuffle_step_retrieve(
+				&mut next_player_index,
+				&mut phase,
+				&mut resume_cursors,
+				ROUNDS,
+			);
+			if was_recognized && matches!(phase, ShuffleRetrievePhase::NotRecognized { .. }) {
+				transition_seen = true;
+				// On transition the cache must be reset so the not-recognized phase starts
+				// from the prefix root rather than after a stale recognized key.
+				assert!(
+					resume_cursors.iter().all(|k| k.is_none()),
+					"cache must be reset on recognized → not-recognized transition",
+				);
+			}
+			if res == crate::StepResult::Finished {
+				break;
+			}
+		}
+
+		assert!(transition_seen, "test must exercise the phase transition");
+
+		// `recognized_count` must capture exactly the number of recognized players. This is the
+		// boundary `shuffle_step_compute_weights` relies on to derive vote weights arithmetically.
+		let ShuffleRetrievePhase::NotRecognized { recognized_count } = phase else {
+			panic!("retrieve must finish in the not-recognized phase");
+		};
+		assert_eq!(
+			recognized_count, RECOGNIZED,
+			"recognized_count must equal the number of recognized players",
+		);
+
+		// Index band invariant: in every round, indices `[0, recognized_count)` map to recognized
+		// players and `[recognized_count, total)` to not-recognized ones. The first `RECOGNIZED`
+		// entries of `expected` are the recognized players (seeded into `ShuffleRecognized`).
+		let recognized_players = &expected[..RECOGNIZED as usize];
+		for round in 0..ROUNDS {
+			for idx in 0..total {
+				let player = IndexToPlayer::<Test>::get((round, idx)).unwrap();
+				assert_eq!(
+					recognized_players.contains(&player),
+					idx < recognized_count,
+					"round {round} idx {idx}: recognized/not-recognized band mismatch",
+				);
+			}
+		}
+
+		// Both source maps must be fully drained.
+		for round in 0..ROUNDS {
+			assert_eq!(
+				crate::ShuffleRecognized::<Test>::iter_prefix(round).count(),
+				0,
+				"ShuffleRecognized round {round} not fully drained",
+			);
+			assert_eq!(
+				crate::ShuffleNotRecognized::<Test>::iter_prefix(round).count(),
+				0,
+				"ShuffleNotRecognized round {round} not fully drained",
+			);
+		}
+
+		// Every seeded player must have an entry in `PlayerToIndex` with the right shape.
+		for player in &expected {
+			let indices =
+				PlayerToIndex::<Test>::get(player).expect("seeded player must have indices");
+			assert_eq!(indices.len(), usize::from(ROUNDS));
+		}
+
+		// `IndexToPlayer` must contain exactly `total` entries per round and round-trip
+		// through `PlayerToIndex`.
+		for round in 0..ROUNDS {
+			for idx in 0..total {
+				let player = IndexToPlayer::<Test>::get((round, idx)).unwrap_or_else(|| {
+					panic!("missing IndexToPlayer entry for round {round} idx {idx}")
+				});
+				let player_indices =
+					PlayerToIndex::<Test>::get(&player).expect("player must have indices");
+				assert_eq!(
+					player_indices[usize::from(round)],
+					idx,
+					"IndexToPlayer/PlayerToIndex disagree for round {round}",
+				);
+			}
+			assert_eq!(
+				IndexToPlayer::<Test>::iter().filter(|((r, _), _)| *r == round).count(),
+				total as usize,
+				"unexpected entry count in IndexToPlayer for round {round}",
+			);
+		}
+	});
+}
+
+/// Verify that the default mock configuration passes all integrity checks,
+/// including the block-fit assertion for the `report` extrinsic.
+#[test]
+fn integrity_test_passes() {
+	new_test_ext().execute_with(|| {
+		<crate::Pallet<Test> as Hooks<u64>>::integrity_test();
+	});
+}
+
+/// Negative coverage for every reachable failure branch of `GameAsInvited::validate`.
+///
+/// Each test builds an otherwise-valid invited sign-up and perturbs a single precondition so the
+/// extension rejects the transaction with the matching `CustomError`. The airdrop branches
+/// (`InvalidAirdropVrfVariant`, `InvalidAirdropRegistration`) are covered in `mod airdrop`, and
+/// `UnexpectedInvalidity` is a defensive path in the transactional layer that the mock cannot
+/// trigger.
+mod invited_validation {
+	use super::*;
+	use crate::extension::CustomError;
+	use frame_support::dispatch::GetDispatchInfo;
+	use sp_runtime::{
+		traits::{TransactionExtension, TxBaseImplication},
+		transaction_validity::{TransactionSource, TransactionValidityError},
+	};
+
+	const TICKET: u64 = 44;
+
+	/// A schedule whose game sits in its registration phase at genesis time (`now == 0`), with
+	/// `registration_ends == 8`. No airdrop, so the airdrop validation path is skipped.
+	fn registration_schedule() -> GameSchedule<u32, u128> {
+		GameSchedule::<u32, u128> {
+			game_play_time: 10,
+			rounds: 1,
+			max_group_size: 2,
+			..Default::default()
+		}
+	}
+
+	/// Create a game in its registration phase.
+	fn start_registration_game() {
+		assert_ok!(Game::new_game(&registration_schedule()));
+	}
+
+	/// Grant BOB an invite and register a ticket, so `PendingInvites(BOB, TICKET)` exists.
+	fn create_pending_invite() {
+		assert_ok!(Game::grant_invites(RuntimeOrigin::root(), BOB, 1));
+		assert_ok!(Game::set_invite_ticket(RuntimeOrigin::signed(BOB), TICKET));
+	}
+
+	/// The invited-sign-up call ALICE submits.
+	fn sign_up_call() -> Call<Test> {
+		Call::sign_up_with_invite { identifier_key: DEFAULT_IDENTIFIER_KEY, airdrops: None }
+	}
+
+	/// Extension data with a nonce and ticket signature that are valid for ALICE.
+	fn valid_data() -> GameAsInvitedData<Test> {
+		GameAsInvitedData {
+			nonce: frame_system::Account::<Test>::get(&ALICE).nonce,
+			inviter: BOB,
+			ticket: TICKET,
+			signature: TestSignature(TICKET, ALICE.encode()),
+		}
+	}
+
+	fn assert_rejected(result: Result<(), TransactionExecutionError>, error: CustomError) {
+		assert_noop!(
+			result,
+			TransactionExecutionError::Validity(InvalidTransaction::Custom(error as u8).into())
+		);
+	}
+
+	// Baseline: the fully valid setup that every negative test perturbs must itself succeed, so
+	// each rejection below is attributable to the single precondition it removes.
+	#[test]
+	fn valid_invited_sign_up_succeeds() {
+		new_test_ext().execute_with(|| {
+			start_registration_game();
+			create_pending_invite();
+			assert_ok!(exec_invited_tx(ALICE, valid_data(), sign_up_call()));
+			assert!(Players::<Test>::contains_key(AccountOrPerson::Account(ALICE)));
+		});
+	}
+
+	#[test]
+	fn origin_not_signed_rejected() {
+		new_test_ext().execute_with(|| {
+			start_registration_game();
+			create_pending_invite();
+
+			// `exec_invited_tx` always signs, so drive `validate` directly with a `None` origin.
+			let call: RuntimeCall = sign_up_call().into();
+			let info = call.get_dispatch_info();
+			let ext = crate::GameAsInvited::<Test>::new(Some(valid_data()));
+			let result = ext.validate(
+				frame_system::RawOrigin::None.into(),
+				&call,
+				&info,
+				0,
+				(),
+				&TxBaseImplication(()),
+				TransactionSource::External,
+			);
+			let expected: TransactionValidityError =
+				InvalidTransaction::Custom(CustomError::OriginNotSigned as u8).into();
+			assert_eq!(result.err(), Some(expected));
+		});
+	}
+
+	#[test]
+	fn call_not_sign_up_with_invite_rejected() {
+		new_test_ext().execute_with(|| {
+			start_registration_game();
+			create_pending_invite();
+
+			// A signed origin with the extension, but a call that is not `sign_up_with_invite`.
+			assert_rejected(
+				exec_invited_tx(ALICE, valid_data(), Call::set_invite_ticket { ticket: 1 }),
+				CustomError::CallNotSignUpWithInvite,
+			);
+		});
+	}
+
+	#[test]
+	fn not_new_player_rejected() {
+		new_test_ext().execute_with(|| {
+			start_registration_game();
+			create_pending_invite();
+
+			// ALICE joins as an account player first, so she is no longer a new player.
+			assert_ok!(Game::sign_up_with_account(
+				RuntimeOrigin::signed(ALICE),
+				DEFAULT_IDENTIFIER_KEY,
+				None
+			));
+			assert!(Players::<Test>::contains_key(AccountOrPerson::Account(ALICE)));
+
+			assert_rejected(
+				exec_invited_tx(ALICE, valid_data(), sign_up_call()),
+				CustomError::NotNewPlayer,
+			);
+		});
+	}
+
+	#[test]
+	fn no_game_rejected() {
+		new_test_ext().execute_with(|| {
+			// No `new_game`, so `Game::get()` is `None`.
+			assert_rejected(
+				exec_invited_tx(ALICE, valid_data(), sign_up_call()),
+				CustomError::NoGame,
+			);
+		});
+	}
+
+	#[test]
+	fn game_registration_ended_rejected() {
+		new_test_ext().execute_with(|| {
+			start_registration_game();
+			create_pending_invite();
+
+			// Advance time to the registration deadline.
+			let registration_ends = GameTimes::<Test>::registration_end(&registration_schedule());
+			MOCK_UNIX_TIME
+				.with(|t| *t.borrow_mut() = Duration::from_secs(registration_ends as u64));
+
+			assert_rejected(
+				exec_invited_tx(ALICE, valid_data(), sign_up_call()),
+				CustomError::GameRegistrationEnded,
+			);
+		});
+	}
+
+	#[test]
+	fn game_not_in_registration_rejected() {
+		new_test_ext().execute_with(|| {
+			start_registration_game();
+			create_pending_invite();
+
+			// Force the game out of its registration state while keeping `now < registration_ends`
+			// (the only way to reach this branch, since the state machine would otherwise change
+			// state only once the deadline has already passed).
+			crate::Game::<Test>::mutate(|game| {
+				game.as_mut().expect("game exists").state =
+					GameState::Reporting { player_count: 0 };
+			});
+
+			assert_rejected(
+				exec_invited_tx(ALICE, valid_data(), sign_up_call()),
+				CustomError::GameNotInRegistration,
+			);
+		});
+	}
+
+	#[test]
+	fn account_already_used_for_stmt_account_rejected() {
+		new_test_ext().execute_with(|| {
+			start_registration_game();
+			create_pending_invite();
+
+			// Mark ALICE as an existing statement account.
+			crate::StmtAccountToAlias::<Test>::insert(ALICE, [1u8; 32]);
+
+			assert_rejected(
+				exec_invited_tx(ALICE, valid_data(), sign_up_call()),
+				CustomError::AccountAlreadyUsedForStmtAccount,
+			);
+		});
+	}
+
+	#[test]
+	fn cannot_onboard_already_onboarded_rejected() {
+		new_test_ext().execute_with(|| {
+			start_registration_game();
+			create_pending_invite();
+
+			// ALICE is already a score participant, so onboarding for recognition would fail.
+			assert_ok!(indiv_pallet_score::Pallet::<Test>::onboard_for_recognition(&ALICE));
+
+			assert_rejected(
+				exec_invited_tx(ALICE, valid_data(), sign_up_call()),
+				CustomError::CannotOnboardAlreadyOnboarded,
+			);
+		});
+	}
+
+	#[test]
+	fn no_pending_invite_rejected() {
+		new_test_ext().execute_with(|| {
+			start_registration_game();
+			// No `create_pending_invite`, so `PendingInvites(BOB, TICKET)` is absent.
+			assert_rejected(
+				exec_invited_tx(ALICE, valid_data(), sign_up_call()),
+				CustomError::NoPendingInvite,
+			);
+		});
+	}
+
+	#[test]
+	fn invalid_signature_rejected() {
+		new_test_ext().execute_with(|| {
+			start_registration_game();
+			create_pending_invite();
+
+			// A ticket signature over the wrong message (BOB instead of the signer ALICE).
+			let data = GameAsInvitedData {
+				signature: TestSignature(TICKET, BOB.encode()),
+				..valid_data()
+			};
+
+			assert_rejected(
+				exec_invited_tx(ALICE, data, sign_up_call()),
+				CustomError::InvalidSignature,
+			);
+		});
+	}
+
+	#[test]
+	fn stale_nonce_rejected() {
+		new_test_ext().execute_with(|| {
+			start_registration_game();
+			create_pending_invite();
+
+			// `valid_data` captures ALICE's current nonce (0); bumping the account nonce past it
+			// makes the provided nonce stale. This is a raw `InvalidTransaction::Stale`, not a
+			// `CustomError`, since the nonce check delegates to `CheckNonce`.
+			let data = valid_data();
+			frame_system::Account::<Test>::mutate(&ALICE, |account| account.nonce = 1);
+
+			assert_noop!(
+				exec_invited_tx(ALICE, data, sign_up_call()),
+				TransactionExecutionError::Validity(InvalidTransaction::Stale.into())
+			);
+		});
+	}
+}
+
+/// A lite person invites themselves, i.e. the account they bound to their alias in the score
+/// context, to play the game without any deposit.
+mod sign_up_with_account_lite_invite {
+	use super::*;
+	use deposit::DepositStorage;
+	use frame_support::dispatch::{DispatchResultWithPostInfo, Pays};
+	use sp_runtime::DispatchError;
+	use sp_statement_store::{get_allowance, StatementAllowance};
+
+	/// The lite person's alias in the score context.
+	const LITE_ALIAS: Alias = [7u8; 32];
+	/// The account the lite person plays with, e.g. a product key.
+	const PRODUCT_KEY: AccountId32 = AccountId32::new(*b"product_key_____________________");
+
+	fn game_schedule(game_play_time: u32) -> GameSchedule<u32, u128> {
+		GameSchedule::<u32, u128> {
+			game_play_time,
+			rounds: 1,
+			max_group_size: 2,
+			..Default::default()
+		}
+	}
+
+	/// Start a game and return its index. Its registration phase is open, as
+	/// `sign_up_with_account_lite_invite` requires.
+	fn start_game(game_play_time: u32) -> u32 {
+		assert_ok!(Game::new_game(&game_schedule(game_play_time)));
+		crate::Game::<Test>::get().expect("a game is ongoing").index
+	}
+
+	/// A lite invite of `account` by the lite person of `LITE_ALIAS`.
+	fn lite_invite(account: AccountId32) -> DispatchResultWithPostInfo {
+		Game::sign_up_with_account_lite_invite(
+			runtime_origin_for_lite_alias(&LITE_ALIAS),
+			account,
+			DEFAULT_IDENTIFIER_KEY,
+			None,
+		)
+	}
+
+	/// A lite person signs their designated account up for free: it is registered for the ongoing
+	/// game with an invited credibility, no deposit is taken, the statement allowance is granted
+	/// once, and the account goes on to attend the game.
+	#[test]
+	fn lite_person_signs_up_without_deposit_and_plays() {
+		new_test_ext().execute_with(|| {
+			System::set_block_number(1);
+			let player = AccountOrPerson::Account(PRODUCT_KEY);
+
+			assert_eq!(get_allowance(PRODUCT_KEY), StatementAllowance::default());
+
+			run_game_scenario_with_phase(
+				game_schedule(10),
+				|| {
+					let game_index = crate::Game::<Test>::get().expect("a game is ongoing").index;
+					let post_info =
+						lite_invite(PRODUCT_KEY).expect("the lite alias can lite invite");
+
+					assert_eq!(post_info.pays_fee, Pays::No);
+					assert_eq!(LiteInvites::<Test>::get(LITE_ALIAS), Some(PRODUCT_KEY));
+					System::assert_has_event(
+						Event::<Test>::LiteInvited { player: PRODUCT_KEY }.into(),
+					);
+					let player_info =
+						Players::<Test>::get(&player).expect("the account is a player");
+					assert!(player_info.registered);
+					assert!(matches!(player_info.credibility, PlayerCredibility::Invited));
+					assert_eq!(player_info.first_game, game_index);
+					assert!(indiv_pallet_score::Participants::<Test>::contains_key(&player));
+					assert_eq!(get_allowance(PRODUCT_KEY), PlayerStatementLimit::get());
+					assert!(DepositStorage::<Test>::get().active.is_empty());
+				},
+				|| {
+					assert_ok!(Game::report(
+						RuntimeOrigin::signed(PRODUCT_KEY),
+						vec![BoundedVec::new()].try_into().unwrap(),
+					));
+				},
+			);
+
+			assert!(DepositStorage::<Test>::get().active.is_empty());
+			assert_eq!(get_allowance(PRODUCT_KEY), PlayerStatementLimit::get());
+			assert!(!ArchivedPlayers::<Test>::contains_key(&player));
+			let score = indiv_pallet_score::Participants::<Test>::get(&player)
+				.expect("the account is a participant")
+				.score;
+			assert!(score > 0, "the account attended the game it played for free");
+		});
+	}
+
+	/// The call needs a game whose registration is still open, as any sign-up does: with no game,
+	/// past the registration deadline, or past the registration phase, nothing is created.
+	#[test]
+	fn lite_invite_needs_an_open_registration_phase() {
+		new_test_ext().execute_with(|| {
+			// No game at all.
+			let error = lite_invite(PRODUCT_KEY).expect_err("no game is ongoing");
+			assert_eq!(error.error, Error::<Test>::NoGame.into());
+			assert_eq!(error.post_info.pays_fee, Pays::Yes);
+
+			// A game whose registration deadline has passed. BOB plays it so it is not cancelled
+			// for lack of players.
+			let schedule = game_schedule(10);
+			assert_ok!(Game::new_game(&schedule));
+			assert_ok!(Game::sign_up_with_account(
+				RuntimeOrigin::signed(BOB),
+				DEFAULT_IDENTIFIER_KEY,
+				None,
+			));
+			let registration_ends = GameTimes::<Test>::registration_end(&schedule);
+			MOCK_UNIX_TIME
+				.with(|t| *t.borrow_mut() = Duration::from_secs((registration_ends + 1) as u64));
+			assert_noop!(lite_invite(PRODUCT_KEY), Error::<Test>::NoRegistration);
+
+			// A game past its registration phase.
+			advance_process(); // registration to shuffle
+			advance_process(); // shuffle to report
+			assert_noop!(lite_invite(PRODUCT_KEY), Error::<Test>::NoRegistration);
+			assert!(!Players::<Test>::contains_key(AccountOrPerson::Account(PRODUCT_KEY)));
+			assert!(LiteInvites::<Test>::iter().next().is_none());
+		});
+	}
+
+	/// An archived account is signed up again for free, as a fresh invited player of the new game,
+	/// and its statement allowance is granted again.
+	#[test]
+	fn archived_account_is_signed_up_again() {
+		new_test_ext().execute_with(|| {
+			let player = AccountOrPerson::Account(PRODUCT_KEY);
+			let mut first_game = 0;
+
+			// The account plays its first game but doesn't report, so it is absent, its score
+			// stays zero and it gets archived.
+			run_game_scenario_with_phase(
+				game_schedule(10),
+				|| {
+					assert_ok!(lite_invite(PRODUCT_KEY));
+					first_game = Players::<Test>::get(&player).expect("player").first_game;
+				},
+				|| {},
+			);
+			assert!(ArchivedPlayers::<Test>::contains_key(&player));
+			assert!(!Players::<Test>::contains_key(&player));
+			assert_eq!(get_allowance(PRODUCT_KEY), StatementAllowance::default());
+
+			// The lite person signs the same account up for the next game, which becomes the game
+			// it is eligible from, as for any account signing up with an invite.
+			let next_game = start_game(30);
+			assert_ne!(next_game, first_game);
+			assert_ok!(lite_invite(PRODUCT_KEY));
+			assert!(!ArchivedPlayers::<Test>::contains_key(&player));
+			let player_info = Players::<Test>::get(&player).expect("the account is a player again");
+			assert!(player_info.registered);
+			assert!(matches!(player_info.credibility, PlayerCredibility::Invited));
+			assert_eq!(player_info.first_game, next_game);
+			assert_eq!(get_allowance(PRODUCT_KEY), PlayerStatementLimit::get());
+			assert!(DepositStorage::<Test>::get().active.is_empty());
+		});
+	}
+
+	/// A live player must use `sign_up_with_account`: a lite invite while already playing is
+	/// rejected, and pays a fee.
+	#[test]
+	fn lite_invite_of_a_playing_account_fails() {
+		new_test_ext().execute_with(|| {
+			start_game(10);
+			assert_ok!(lite_invite(PRODUCT_KEY));
+
+			let error = lite_invite(PRODUCT_KEY).expect_err("the account is already a player");
+			assert_eq!(error.error, Error::<Test>::UseInviteButAlreadyPlaying.into());
+			assert_eq!(error.post_info.pays_fee, Pays::Yes);
+		});
+	}
+
+	/// A lite person invites one account ever: another account bound to the same alias is rejected,
+	/// even once the first one stopped playing.
+	#[test]
+	fn another_account_is_never_invitable() {
+		new_test_ext().execute_with(|| {
+			let first_player = AccountOrPerson::Account(PRODUCT_KEY);
+			start_game(10);
+			assert_ok!(lite_invite(PRODUCT_KEY));
+
+			// The lite person names another account, but their alias is already recorded with the
+			// first one.
+			let error = lite_invite(BOB).expect_err("another account was invited");
+			assert_eq!(error.error, Error::<Test>::AnotherAccountInvited.into());
+			assert_eq!(error.post_info.pays_fee, Pays::Yes);
+
+			// The first account leaves the game, which is only possible once it is not registered
+			// for a game, so the game is cancelled first for lack of other players.
+			MOCK_UNIX_TIME.with(|t| *t.borrow_mut() = Duration::from_secs(100));
+			for _ in 0..6 {
+				advance_process();
+			}
+			assert_ok!(Game::offboard(RuntimeOrigin::signed(PRODUCT_KEY)));
+			assert!(!Players::<Test>::contains_key(&first_player));
+
+			// The new account is still not invitable, and the recorded one is unchanged.
+			start_game(200);
+			assert_noop!(lite_invite(BOB), Error::<Test>::AnotherAccountInvited);
+			assert_eq!(LiteInvites::<Test>::get(LITE_ALIAS), Some(PRODUCT_KEY));
+		});
+	}
+
+	/// An account already used as the statement account of a person cannot be signed up, as
+	/// statement accounts and players must not overlap.
+	#[test]
+	fn statement_account_cannot_be_invited() {
+		new_test_ext().execute_with(|| {
+			StmtAccountToAlias::<Test>::insert(PRODUCT_KEY, [1u8; 32]);
+			start_game(10);
+
+			assert_noop!(lite_invite(PRODUCT_KEY), Error::<Test>::StatementAccountAlreadyInUse);
+		});
+	}
+
+	/// Only a lite alias in the score context can lite invite: a signed origin, a person's alias
+	/// and a lite alias in another context are all rejected.
+	#[test]
+	fn only_a_lite_alias_in_the_score_context_can_lite_invite() {
+		new_test_ext().execute_with(|| {
+			start_game(10);
+			let invite = |origin| {
+				Game::sign_up_with_account_lite_invite(
+					origin,
+					PRODUCT_KEY,
+					DEFAULT_IDENTIFIER_KEY,
+					None,
+				)
+			};
+
+			// A signed origin is not a lite alias.
+			assert_noop!(invite(RuntimeOrigin::signed(PRODUCT_KEY)), DispatchError::BadOrigin);
+
+			// A personal alias, i.e. a full person, is not a lite alias either. They sign up with
+			// `sign_up_with_alias`.
+			assert_noop!(invite(runtime_origin_for_alias(&LITE_ALIAS)), DispatchError::BadOrigin);
+
+			// A lite alias in another context than the score context is not accepted.
+			assert_noop!(
+				invite(runtime_origin_for_lite_alias_in_context(
+					&LITE_ALIAS,
+					&lite_people_auth_context()
+				)),
+				DispatchError::BadOrigin
+			);
+
+			assert!(LiteInvites::<Test>::iter().next().is_none());
+			assert!(Players::<Test>::iter().next().is_none());
 		});
 	}
 }

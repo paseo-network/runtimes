@@ -25,6 +25,7 @@ use frame_support::{
 	CloneNoBound, DebugNoBound, EqNoBound, PartialEqNoBound,
 };
 use frame_system::{CheckNonce, ValidNonceInfo};
+use indiv_support::tx_priority;
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{DispatchInfoOf, PostDispatchInfoOf, TransactionExtension, ValidateResult},
@@ -117,6 +118,9 @@ pub enum CustomError {
 	InvalidAirdropRegistration = 151,
 	/// The transaction is invalid for an unexpected reason.
 	UnexpectedInvalidity = 152,
+	/// The number of supplied airdrop VRF entries does not match the number of scheduled
+	/// airdrop events.
+	InvalidAirdropVrfCount = 153,
 }
 use CustomError::*;
 
@@ -134,11 +138,18 @@ impl<T: Config + Send + Sync> TransactionExtension<RuntimeCallOf<T>> for GameAsI
 	type Val = GameAsInvitedValPre<T::AccountId>;
 	type Pre = GameAsInvitedValPre<T::AccountId>;
 
-	fn weight(&self, _call: &RuntimeCallOf<T>) -> Weight {
-		match self.0 {
-			Some(_) => <T as Config>::WeightInfo::as_invited_tx_ext(),
-			None => Weight::zero(),
+	fn weight(&self, call: &RuntimeCallOf<T>) -> Weight {
+		if self.0.is_none() {
+			return Weight::zero();
 		}
+		let airdrop_count = match call.is_sub_type() {
+			// The validation work scales with the number of airdrop VRF entries in the call.
+			Some(Call::sign_up_with_invite { airdrops, .. }) =>
+				airdrops.as_ref().map_or(0, AirdropVrfs::count),
+			// Any other call is invalid, so VRFs won't be validated.
+			_ => 0,
+		};
+		<T as Config>::WeightInfo::as_invited_tx_ext(airdrop_count as u32)
 	}
 
 	fn validate(
@@ -159,7 +170,7 @@ impl<T: Config + Send + Sync> TransactionExtension<RuntimeCallOf<T>> for GameAsI
 				};
 
 				// Call must be a `sign_up_with_invite` call.
-				let Some(Call::sign_up_with_invite { airdrop: call_airdrop, .. }) =
+				let Some(Call::sign_up_with_invite { airdrops: call_airdrops, .. }) =
 					call.is_sub_type()
 				else {
 					return Err(InvalidTransaction::Custom(CallNotSignUpWithInvite as u8).into());
@@ -212,17 +223,22 @@ impl<T: Config + Send + Sync> TransactionExtension<RuntimeCallOf<T>> for GameAsI
 				frame_system::Pallet::<T>::inc_sufficients(who);
 
 				Pallet::<T>::validate_register_for_airdrop(
-					call_airdrop,
+					call_airdrops,
 					&who_account_or_person,
 					game.index,
-					game.airdrop_scheduled,
+					game.airdrops_scheduled,
 				)
 				.map_err(|e| InvalidTransaction::Custom(e as u8))?;
 
 				// Validate the nonce.
 				let ValidNonceInfo { requires, provides } =
 					CheckNonce::<T>::validate_nonce_for_account(who, *nonce)?;
-				let validity = ValidTransaction { requires, provides, ..Default::default() };
+				let validity = ValidTransaction {
+					requires,
+					provides,
+					priority: tx_priority::USER_HIGH,
+					..Default::default()
+				};
 
 				Ok((
 					validity,
@@ -230,6 +246,8 @@ impl<T: Config + Send + Sync> TransactionExtension<RuntimeCallOf<T>> for GameAsI
 					Origin::Invited(who.clone()).into(),
 				))
 			},
+			// Extension not in use by this transaction: pass through with default validity. The
+			// effective priority comes from whichever extension authorizes the call.
 			None => Ok((ValidTransaction::default(), GameAsInvitedValPre::None, origin)),
 		}
 	}
@@ -255,8 +273,8 @@ impl<T: Config + Send + Sync> TransactionExtension<RuntimeCallOf<T>> for GameAsI
 
 				// Consume the invite.
 				// Note: if the transaction fails, the invite is still consumed here.
-				// TODO: https://github.com/paritytech/individuality/issues/230
-				// refactor to make signing up with invite 100% fail-free guaranteed.
+				// TODO(paritytech/individuality#230): refactor to make signing up with invite 100%
+				// fail-free guaranteed.
 				PendingInvites::<T>::remove(inviter, ticket);
 
 				Ok(GameAsInvitedValPre::UsingInvite(account))

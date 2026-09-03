@@ -15,6 +15,7 @@ workspace = true
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
+binary-merkle-tree = { workspace = true }
 codec = { workspace = true, features = ["derive"] }
 log = { workspace = true }
 scale-info = { workspace = true, features = ["derive"] }
@@ -30,6 +31,7 @@ sp-runtime = { workspace = true }
 sp-state-machine = { workspace = true }
 sp-statement-store = { workspace = true }
 sp-trie = { workspace = true }
+xcm = { workspace = true }
 
 indiv-pallet-airdrop = { workspace = true }
 indiv-pallet-people = { workspace = true }
@@ -39,17 +41,19 @@ verifiable = { workspace = true }
 
 [dev-dependencies]
 indiv-pallet-chunks-manager = { workspace = true }
+parking_lot = { workspace = true }
 indiv-pallet-members = { workspace = true }
+indiv-pallet-people-lite = { workspace = true }
 verifiable = { workspace = true, features = ["mock"] }
 pallet-assets = { workspace = true }
 pallet-assets-holder = { workspace = true }
 pallet-balances = { workspace = true }
-xcm = { workspace = true }
 
 [features]
 default = ["std"]
 testnet = []
 std = [
+	"binary-merkle-tree/std",
 	"codec/std",
 	"cumulus-pallet-parachain-system/std",
 	"cumulus-primitives-core/std",
@@ -59,6 +63,7 @@ std = [
 	"indiv-pallet-airdrop/std",
 	"indiv-pallet-chunks-manager/std",
 	"indiv-pallet-members/std",
+	"indiv-pallet-people-lite/std",
 	"indiv-pallet-people/std",
 	"indiv-pallet-score/std",
 	"indiv-support/std",
@@ -86,6 +91,7 @@ runtime-benchmarks = [
 	"indiv-pallet-airdrop/runtime-benchmarks",
 	"indiv-pallet-chunks-manager/runtime-benchmarks",
 	"indiv-pallet-members/runtime-benchmarks",
+	"indiv-pallet-people-lite/runtime-benchmarks",
 	"indiv-pallet-people/runtime-benchmarks",
 	"indiv-pallet-score/runtime-benchmarks",
 	"indiv-support/runtime-benchmarks",
@@ -102,6 +108,7 @@ try-runtime = [
 	"indiv-pallet-airdrop/try-runtime",
 	"indiv-pallet-chunks-manager/try-runtime",
 	"indiv-pallet-members/try-runtime",
+	"indiv-pallet-people-lite/try-runtime",
 	"indiv-pallet-people/try-runtime",
 	"indiv-pallet-score/try-runtime",
 	"pallet-assets-holder/try-runtime",
