@@ -23,6 +23,7 @@ extern crate alloc;
 pub mod assets;
 // Genesis preset configurations.
 pub mod genesis_config_presets;
+pub mod parameters;
 pub mod people;
 #[cfg(test)]
 mod tests;
@@ -792,6 +793,7 @@ construct_runtime!(
 		ProofOfInk: indiv_pallet_proof_of_ink = 53,
 		Game: indiv_pallet_game = 55,
 		Score: indiv_pallet_score = 56,
+		NftCredits: indiv_pallet_nft_credits = 57,
 		DummyDim: indiv_pallet_dummy_dim = 59,
 		StorageInitialization: indiv_pallet_storage_initialization = 60,
 		PeopleLite: indiv_pallet_people_lite = 62,
@@ -802,7 +804,9 @@ construct_runtime!(
 		MembersNotifier: indiv_pallet_members_notifier = 69,
 		Airdrop: indiv_pallet_airdrop = 70,
 		Honour: indiv_pallet_honour = 71,
+		PeopleAirdrops: indiv_pallet_people_airdrops = 72,
 		// Index 74 matches upstream's `next-people-paseo`; confirmed free in live metadata.
+		Parameters: pallet_parameters = 73,
 		NetworkSuffix: indiv_pallet_network_suffix = 74,
 
 		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>, Config<T>} = 255,
@@ -832,6 +836,7 @@ mod benches {
 		[pallet_identity, Identity]
 		[pallet_message_queue, MessageQueue]
 		[pallet_migrations, MultiBlockMigrations]
+		[pallet_parameters, Parameters]
 		[pallet_multisig, Multisig]
 		[pallet_proxy, Proxy]
 		[pallet_session, SessionBench::<Runtime>]
@@ -864,6 +869,8 @@ mod benches {
 		[indiv_pallet_coinage, Coinage]
 		[indiv_pallet_airdrop, Airdrop]
 		[indiv_pallet_honour, Honour]
+		[indiv_pallet_nft_credits, NftCredits]
+		[indiv_pallet_people_airdrops, PeopleAirdrops]
 	);
 
 	impl frame_system_benchmarking::Config for Runtime {
@@ -1357,6 +1364,29 @@ impl_runtime_apis! {
 	impl indiv_pallet_game::runtime_api::PalletGameApi<Block, Balance> for Runtime {
 		fn play_deposit() -> Balance {
 			indiv_pallet_game::PlayDepositAmount::<Runtime>::get()
+		}
+	}
+
+	impl indiv_pallet_nft_credits::runtime_api::NftCreditsApi<Block, AccountId, BlockNumber> for Runtime {
+		fn nft_claim_credit_roots(
+			claimant: indiv_support::identity::AccountOrPerson<AccountId>,
+		) -> Vec<(BlockNumber, indiv_support::credit_trees::NftClaimCreditTree)> {
+			NftCredits::nft_claim_credit_roots(&claimant)
+		}
+
+		fn nft_claim_credit_proofs(
+			award_block: BlockNumber,
+			claimant: indiv_support::identity::AccountOrPerson<AccountId>,
+		) -> Result<Vec<indiv_pallet_nft_credits::NftClaimCreditProof>, indiv_pallet_nft_credits::NftClaimCreditProofError> {
+			NftCredits::nft_claim_credit_proofs(award_block, &claimant)
+		}
+
+		fn nft_claim_credit_proof_from_awards(
+			award_block: BlockNumber,
+			awards: Vec<indiv_pallet_nft_credits::NftClaimCreditAward<AccountId>>,
+			leaf_index: u32,
+		) -> Result<indiv_pallet_nft_credits::NftClaimCreditProof, indiv_pallet_nft_credits::NftClaimCreditProofError> {
+			NftCredits::nft_claim_credit_proof_from_awards(award_block, awards, leaf_index)
 		}
 	}
 

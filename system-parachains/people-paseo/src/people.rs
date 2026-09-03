@@ -14,7 +14,19 @@
 // limitations under the License.
 
 use super::*;
-use crate::xcm_config::LocationToAccountId;
+use crate::{
+	parameters::{
+		AccountsApiAllowance, LiteNotificationSlotsPerPeriod, LitePersonRegistrationFee,
+		LitePersonStatementLimit, LiteStmtStoreSlotsPerPeriod,
+		LongTermStorageAllowanceForLitePeople, LongTermStorageAllowanceForPeople,
+		LongTermStorageClaimsPerPeriod, LongTermStorageCleanupLimit, LongTermStorageGraceWindow,
+		LongTermStoragePeriodDuration, NotificationAllowance, NotificationPeriodDuration,
+		NotificationSlotsPerPeriod, PeopleAirdropsPrizeSource, PersonStatementLimit,
+		StmtStoreCleanupLimit,
+		StmtStoreGraceWindow, StmtStoreReplacementCooldown, StmtStoreSlotsPerPeriod,
+	},
+	xcm_config::LocationToAccountId,
+};
 use codec::{Decode, Encode, MaxEncodedLen};
 use enumflags2::{bitflags, BitFlags};
 use frame_support::{parameter_types, CloneNoBound, DebugNoBound, EqNoBound, PartialEqNoBound};
@@ -260,7 +272,6 @@ use indiv_pallet_game::PhaseDurationValues;
 use indiv_pallet_origin_restriction::Allowance;
 #[cfg(feature = "runtime-benchmarks")]
 use indiv_support::traits::{PersonalId, RingIndex};
-#[cfg(feature = "runtime-benchmarks")]
 use paseo_runtime_constants::system_parachain::ASSET_HUB_ID;
 use indiv_support::{
 	fungibles::CombineAssetsWithHolder,
@@ -299,14 +310,20 @@ pub type FungibleExternalAsset = ItemOf<AssetsWithHolder, ExternalAssetLocation,
 pub struct AccountContexts;
 impl frame_support::traits::Contains<Context> for AccountContexts {
 	fn contains(l: &Context) -> bool {
-		// individuality v0.3.1 deleted the `RESOURCES_CONTEXT` constant. Its replacement,
-		// `Pallet::<Runtime>::resources_context()`, is a FUNCTION, not a const: the context is
-		// now derived from the runtime's network suffix rather than being a fixed byte string.
-		// It must therefore be CALLED here — binding it as a value would not compile, and
-		// hard-coding the old constant would silently split the context namespace.
+		// individuality v0.3.1 deleted the `RESOURCES_CONTEXT` and `SCORE_CONTEXT` constants.
+		// Their replacements, `Pallet::<Runtime>::resources_context()` and
+		// `Pallet::<Runtime>::score_context()`, are FUNCTIONS, not consts: the contexts are now
+		// derived from the runtime's network suffix rather than being fixed byte strings.
+		// They must therefore be CALLED here — binding one as a value would not compile, and
+		// hard-coding an old constant would silently split the context namespace.
+		//
+		// 🔴 Every context a pallet gates its calls on must appear in this list. A pallet whose
+		// context is missing here is completely unreachable on chain — its dispatchables fail
+		// with `InvalidTransaction::Call` — while its unit tests keep passing.
 		l == &indiv_pallet_mob_rule::MOB_CONTEXT ||
-			l == &indiv_pallet_score::SCORE_CONTEXT ||
-			l == &indiv_pallet_resources::Pallet::<Runtime>::resources_context()
+			l == &indiv_pallet_score::Pallet::<Runtime>::score_context() ||
+			l == &indiv_pallet_resources::Pallet::<Runtime>::resources_context() ||
+			l == &indiv_pallet_people_airdrops::Pallet::<Runtime>::people_airdrops_context()
 	}
 }
 
@@ -345,10 +362,6 @@ parameter_types! {
 	pub const LitePeopleOnboardingSize: u32 = 3;
 	/// Receives `register_with_fee` payments. Matches upstream's `plitefee`.
 	pub const LitePeoplePotId: frame_support::PalletId = frame_support::PalletId(*b"plitefee");
-	/// Fee to register as a lite person without device attestation. Upstream's value.
-	/// Kept at or above the existential deposit so the fee pot account can always exist.
-	pub LitePersonRegistrationFee: Balance =
-		(75 * UNITS).max(ExistentialDeposit::get());
 	/// The page size for chunks manager.
 	pub const ChunkPageSize: u32 = 255;
 	/// Self-inclusion delay: 60 minutes.
@@ -773,6 +786,9 @@ impl indiv_pallet_score::benchmarking::BenchmarkHelper<Runtime> for ScoreBenchma
 
 impl indiv_pallet_score::Config for Runtime {
 	type WeightInfo = indiv_pallet_score::weights::SubstrateWeight<Runtime>;
+	// Same source of truth as every other `Suffix` binding in this runtime: the on-chain
+	// `NetworkSuffix` pallet, whose default is the shared `system-parachains-constants` value.
+	type Suffix = NetworkSuffix;
 	type EnsurePerson = indiv_pallet_people::EnsurePersonalAliasInContext<Runtime>;
 	type ScorePotId = ScorePotId;
 	type Currency = FungibleExternalAsset;
@@ -806,6 +822,7 @@ impl indiv_pallet_game::Config for Runtime {
 	type MaxRounds = ConstU32<3>;
 	type ManagerOrigin = EnsureRoot<Self::AccountId>;
 	type InviteIssuer = EnsureRoot<Self::AccountId>;
+	type EnsureLiteAlias = indiv_pallet_people_lite::EnsureLiteAliasInContext<Runtime>;
 	type NonPlayingKickoutTime = ConstU32<{ 90 * DAYS }>;
 	type NativeFungible = Balances;
 	type PlayDeposit = HoldConsideration<
@@ -821,6 +838,7 @@ impl indiv_pallet_game::Config for Runtime {
 	// ~6 months ahead, so the top-up keeper runs at most twice a year.
 	type MaxGameSchedules = ConstU32<26>;
 	type MaxAttendanceHistoryDepth = ConstU32<12>;
+	type NftClaimCredits = NftCredits;
 	type DefaultPhaseDurations = GamePhaseDurations;
 	type AccountSignature = Signature;
 	type PlayerStatementLimit = PlayerStatementLimit;
@@ -1075,6 +1093,198 @@ impl indiv_pallet_airdrop::benchmarking::BenchmarkHelper<Runtime> for AirdropBen
 	}
 }
 
+parameter_types! {
+	/// The chain that mints against the credit trees this runtime produces: Paseo's Asset Hub.
+	///
+	/// PASEO-LOCAL: upstream binds `NextAssetHubParaId`, which names its own separate
+	/// `next-asset-hub-paseo`. Paseo's credit trees go to the real Asset Hub, para 1000.
+	pub NftClaimsParaId: ParaId = ASSET_HUB_ID.into();
+	/// Upper bound on what one credit tree of a `receive_credit_trees` batch costs to execute on
+	/// the NFT claims chain. Charged to the caller of `replay_credit_trees`, so a repair pays for
+	/// the remote work it causes. What bounds replay traffic is `ReplayCooldownSeconds`; this
+	/// prices the work the replays that pass it cause.
+	///
+	/// Upstream's value, carried unchanged. Re-derive it whenever Asset Hub's
+	/// `indiv_pallet_nft_claims` weights are regenerated; `integrity_test` holds the whole
+	/// `replay_credit_trees` charge, surcharge included, to the block's budget.
+	pub NftClaimsRemoteWeight: Weight = Weight::from_parts(150_000_000, 2_600);
+}
+
+/// What the credits benchmarks cannot set up themselves: only the runtime knows how its HRMP
+/// channels are made.
+#[cfg(feature = "runtime-benchmarks")]
+pub struct NftCreditsBenchmarkHelper;
+
+#[cfg(feature = "runtime-benchmarks")]
+impl indiv_pallet_nft_credits::benchmarking::BenchmarkHelper for NftCreditsBenchmarkHelper {
+	fn open_nft_claims_channel(max_message_size: u32) {
+		use cumulus_pallet_parachain_system::RelevantMessagingState;
+		use cumulus_primitives_core::relay_chain::AbridgedHrmpChannel;
+
+		let channel = AbridgedHrmpChannel {
+			max_capacity: 1000,
+			max_total_size: 1_000_000,
+			max_message_size,
+			msg_count: 0,
+			total_size: 0,
+			mqc_head: None,
+		};
+		let claims_chain = <Runtime as indiv_pallet_nft_credits::Config>::NftClaimsParaId::get();
+		let mut messaging_state = RelevantMessagingState::<Runtime>::get().unwrap_or(
+			cumulus_pallet_parachain_system::relay_state_snapshot::MessagingStateSnapshot {
+				dmq_mqc_head: Default::default(),
+				relay_dispatch_queue_remaining_capacity: Default::default(),
+				ingress_channels: Vec::new(),
+				egress_channels: Vec::new(),
+			},
+		);
+		messaging_state.egress_channels.retain(|(id, _)| *id != claims_chain);
+		messaging_state.egress_channels.push((claims_chain, channel));
+		messaging_state.egress_channels.sort_by_key(|(id, _)| *id);
+		RelevantMessagingState::<Runtime>::put(messaging_state);
+	}
+}
+
+impl indiv_pallet_nft_credits::Config for Runtime {
+	// ⚠️ In-crate reference weights, not benchmarked on this runtime. See the weights pass.
+	type WeightInfo = indiv_pallet_nft_credits::weights::SubstrateWeight<Runtime>;
+	// Sized above what one block can award, so no `report` awards a credit the block has no room
+	// for, which would be committed to no root and lost. The game pallet's `integrity_test`
+	// recomputes that floor from the block limits and the generated `report` weight, so a value
+	// below it fails the aggregate integrity test. Upstream's value, carried unchanged.
+	type MaxCreditsPerBlock = ConstU32<1200>;
+	type XcmRouter = crate::xcm_config::XcmRouter;
+	type NftClaimsParaId = NftClaimsParaId;
+	// Matches the `NftClaims` index in asset-hub-paseo's `construct_runtime!`.
+	type NftClaimsPalletIndex = ConstU8<96>;
+	type ChannelInfo = ParachainSystem;
+	// One tree per block at most, and the offchain worker ships them every block, so the queue
+	// only fills while delivery to Asset Hub is down.
+	type MaxQueuedCreditTrees = ConstU32<256>;
+	// Must not exceed Asset Hub's `indiv_pallet_nft_claims::Config::MaxTreesPerMessage`, or the
+	// batches sent from here fail to decode there and the trees never arrive.
+	type MaxCreditTreesPerMessage = ConstU32<32>;
+	type ReplayCooldownSeconds = ConstU64<60>;
+	type NftClaimsRemoteWeight = NftClaimsRemoteWeight;
+	type MaxCreditBlocksPerClaimant = ConstU32<32>;
+	type MaxRetainedAwardBlocks = ConstU32<256>;
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = NftCreditsBenchmarkHelper;
+}
+
+impl indiv_pallet_people_airdrops::Config for Runtime {
+	// ⚠️ In-crate reference weights, not benchmarked on this runtime. See the weights pass.
+	type WeightInfo = indiv_pallet_people_airdrops::weights::SubstrateWeight<Runtime>;
+	// Same source of truth as every other `Suffix` binding in this runtime.
+	type Suffix = NetworkSuffix;
+	type EnsurePerson = indiv_pallet_people::EnsurePersonalAliasInContext<Runtime>;
+	type AirdropAssetId = <Runtime as pallet_assets::Config>::AssetId;
+	type AirdropAssetBalance = Balance;
+	type Airdrop = Airdrop;
+	type ManagerOrigin = EnsureRoot<Self::AccountId>;
+	type PrizeSource = PeopleAirdropsPrizeSource;
+	type Randomness = indiv_pallet_relay_randomness::RelayBlockRandomness<Runtime>;
+	// PASEO-LOCAL: upstream binds its `RuntimeClock` alias, which resolves to `Timestamp` outside
+	// benchmark builds. Every other `UnixTime` site in this runtime binds `Timestamp` directly,
+	// and the benchmark helper below writes `pallet_timestamp::Now`, which `Timestamp` reads.
+	type UnixTime = Timestamp;
+	type MaxScheduleBatch = ConstU32<16>;
+	type MaxRegisterBatch = ConstU32<16>;
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = PeopleAirdropsBenchmarkHelper;
+}
+
+/// Benchmark hooks for the people-airdrops pallet: places draws into lifecycle phases by writing
+/// the airdrop pallet's storage directly, since the `Airdrop` trait deliberately cannot.
+#[cfg(feature = "runtime-benchmarks")]
+pub struct PeopleAirdropsBenchmarkHelper;
+
+#[cfg(feature = "runtime-benchmarks")]
+impl indiv_pallet_people_airdrops::benchmarking::BenchmarkHelper<Runtime>
+	for PeopleAirdropsBenchmarkHelper
+{
+	fn fund_prize_source(
+		source: &AccountId,
+		draws: u32,
+	) -> alloc::vec::Vec<indiv_pallet_people_airdrops::AirdropEventInfoOf<Runtime>> {
+		use frame_support::traits::fungibles::Mutate;
+		use indiv_pallet_airdrop::{benchmarking::BenchmarkHelper as _, pallet::SupportedAssets};
+		const BENCH_ASSET_BASE: u32 = 42;
+		const BENCH_PRIZE: Balance = 1_000;
+		// `UnixTime::now` is read on the claim path; make sure it is past genesis.
+		if pallet_timestamp::Now::<Runtime>::get() == 0 {
+			Self::set_unix_time(1);
+		}
+		let pot = indiv_pallet_airdrop::Pallet::<Runtime>::airdrop_pot_id();
+		// One distinct asset per draw so a batch schedule touches distinct asset storage per draw
+		// (see the `BenchmarkHelper` trait doc).
+		(0..draws)
+			.map(|i| {
+				let asset_id =
+					AirdropBenchmarkHelper::create_asset_id_parameter(BENCH_ASSET_BASE + i);
+				// Mirror `enable_asset`: mark the asset supported and keep the pot's asset account
+				// alive.
+				if !SupportedAssets::<Runtime>::contains_key(&asset_id) {
+					Assets::mint_into(asset_id.clone(), &pot, 1).expect("fund pot ed");
+					SupportedAssets::<Runtime>::insert(&asset_id, 1u128);
+				}
+				Assets::mint_into(asset_id.clone(), source, BENCH_PRIZE)
+					.expect("fund prize source");
+				indiv_pallet_people_airdrops::AirdropEventInfoOf::<Runtime> {
+					prize: indiv_pallet_airdrop::types::AirdropPrize {
+						asset_id,
+						asset_amount: BENCH_PRIZE,
+						max_winners: 1,
+						winner_cap: sp_runtime::Permill::one(),
+					},
+					registration_starts: 100,
+					draw_time: 200,
+					end_time: 300,
+				}
+			})
+			.collect()
+	}
+
+	fn open_registration(event_id: &indiv_pallet_airdrop::types::EventId) {
+		indiv_pallet_airdrop::pallet::Events::<Runtime>::mutate(event_id, |event| {
+			if let Some(event) = event {
+				event.status =
+					indiv_pallet_airdrop::types::Status::Registering { total_participants: 0 };
+			}
+		});
+	}
+
+	fn start_claiming(event_id: &indiv_pallet_airdrop::types::EventId) {
+		use indiv_pallet_airdrop::pallet::{Registrations, Winners};
+		let registrations =
+			Registrations::<Runtime>::iter_prefix(event_id).collect::<alloc::vec::Vec<_>>();
+		for (slot, entry) in &registrations {
+			Winners::<Runtime>::insert(event_id, entry.clone(), *slot);
+		}
+		indiv_pallet_airdrop::pallet::Events::<Runtime>::mutate(event_id, |event| {
+			if let Some(event) = event {
+				event.status = indiv_pallet_airdrop::types::Status::Claiming {
+					total_participants: registrations.len() as u32,
+					effective_winners: registrations.len() as u32,
+					claimed: 0,
+				};
+			}
+		});
+	}
+
+	fn count_registrations(event_id: &indiv_pallet_airdrop::types::EventId) -> u32 {
+		indiv_pallet_airdrop::pallet::Registrations::<Runtime>::iter_prefix(event_id).count() as u32
+	}
+
+	fn count_winners(event_id: &indiv_pallet_airdrop::types::EventId) -> u32 {
+		indiv_pallet_airdrop::pallet::Winners::<Runtime>::iter_prefix(event_id).count() as u32
+	}
+
+	fn set_unix_time(now_secs: u64) {
+		pallet_timestamp::Now::<Runtime>::put(now_secs * 1_000);
+	}
+}
+
 #[cfg(feature = "runtime-benchmarks")]
 pub struct GamePalletBenchmarkHelper {}
 
@@ -1153,7 +1363,6 @@ impl Get<PhaseDurationValues> for GamePhaseDurations {
 			post_shuffle_margin: 30,
 			reporting: 10 * 60,
 			player_process: 60,
-			airdrop_claim_window: 3 * 24 * 60 * 60,
 		}
 	}
 }
@@ -1276,49 +1485,14 @@ impl indiv_pallet_people_lite::Config for Runtime {
 	type BenchmarkHelper = ();
 }
 
+// The eighteen statement-store and long-term-storage limits that used to live here are now
+// `pallet_parameters` dynamic parameters, declared in `crate::parameters` with defaults
+// byte-identical to the values this block held. See that module.
 parameter_types! {
 	pub const MinUsernameLength: u32 = 6;
 	pub const PersonAuthDuration: u32 = 2 * 24 * 60 * 60; // 2 days
 	pub const MinPersonAuthUpdateInterval: u32 = 24 * 60 * 60; // 1 day
-	pub const NotificationSlotsPerPeriod: u8 = 16;
-	pub const LiteNotificationSlotsPerPeriod: u8 = 8;
-	pub const NotificationPeriodDuration: u32 = 24 * 60 * 60; // 1 day
-	pub const LongTermStorageGraceWindow: u32 = 60 * 60; // 1 hour
 	pub const MaxReservationQueueLength: u32 = 10;
-	pub const StmtStoreSlotsPerPeriod: u32 = 20;
-	pub const LiteStmtStoreSlotsPerPeriod: u32 = 10;
-	pub const StmtStoreCleanupLimit: u32 = 50;
-	pub const StmtStoreReplacementCooldown: u32 = 60; // 1 minute
-	pub const StmtStoreGraceWindow: u32 = 2 * 24 * 60 * 60; // 2 days
-	pub AccountsApiAllowance: StatementAllowance = StatementAllowance {
-		max_size: 500 * 1024, // 500 KiB
-		max_count: 2,
-	};
-	pub NotificationAllowance: StatementAllowance = StatementAllowance {
-		max_size: 10 * 1024, // 10 KiB
-		max_count: 1,
-	};
-	pub LitePersonStatementLimit: StatementAllowance = StatementAllowance {
-		max_size: 500 * 1024, // 500 KiB
-		max_count: 50,
-	};
-	pub PersonStatementLimit: StatementAllowance = StatementAllowance {
-		max_size: 1024 * 1024, // 1 MiB
-		max_count: 200,
-	};
-	pub const LongTermStoragePeriodDuration: u32 = 14 * 24 * 60 * 60; // 2 weeks
-	pub const LongTermStorageClaimsPerPeriod: u8 = 100;
-	pub const LongTermStorageCleanupLimit: u32 = 20;
-	pub LongTermStorageAllowanceForPeople: indiv_pallet_resources::types::LongTermStorageAllocation =
-		indiv_pallet_resources::types::LongTermStorageAllocation {
-			transactions: 100,
-			bytes: 8 * 1024 * 1024, // 8 MiB
-		};
-	pub LongTermStorageAllowanceForLitePeople: indiv_pallet_resources::types::LongTermStorageAllocation =
-		indiv_pallet_resources::types::LongTermStorageAllocation {
-			transactions: 10,
-			bytes: 4 * 1024 * 1024, // 4 MiB
-		};
 }
 
 impl indiv_pallet_resources::Config for Runtime {
@@ -2040,6 +2214,11 @@ impl indiv_pallet_origin_restriction::BenchmarkHelper<OriginCaller, RuntimeCall>
 
 impl indiv_pallet_origin_restriction::Config for Runtime {
 	type WeightInfo = indiv_pallet_origin_restriction::weights::SubstrateWeight<Runtime>;
+	// individuality v0.3.1 moved `Usages.at_block` from the local para clock to the relay
+	// clock. The type is unchanged (`u32`), so this compiles either way and the live values
+	// silently become far-future timestamps — see `migrations::RebaseOriginRestrictionUsages`,
+	// which rebases them. Do not enact one without the other.
+	type BlockNumberProvider = RelaychainDataProvider<Runtime>;
 	type RestrictedEntity = RestrictedEntity;
 	type OperationAllowedOneTimeExcess = OperationAllowedOneTimeExcess;
 	#[cfg(feature = "runtime-benchmarks")]
