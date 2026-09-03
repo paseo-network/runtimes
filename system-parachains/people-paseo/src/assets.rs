@@ -16,8 +16,16 @@
 use super::*;
 
 use assets_common::local_and_foreign_assets::ForeignAssetReserveData;
-use frame_support::{parameter_types, traits::fungibles::Balanced};
+use frame_support::{
+	parameter_types,
+	traits::{
+		fungibles::Balanced, AsEnsureOriginWithArg, ConstU128, ConstU32,
+	},
+	PalletId,
+};
 use frame_system::{EnsureNever, EnsureRoot};
+use frame_support::traits::tokens::imbalance::ResolveAssetTo;
+use sp_runtime::Permill;
 use xcm::latest::{Asset, AssetId, Junction::*, Location};
 
 parameter_types! {
@@ -188,4 +196,110 @@ pub mod hollar {
 			is_hydration && is_hollar
 		}
 	}
+}
+
+// ---------------------------------------------------------------------------------------------
+// Asset conversion (AMM).
+//
+// Adopted so `indiv_pallet_coinage::Config::FeeConversion` can be bound to a real AMM, which is
+// what both reference integrations do: individuality v0.3.1's own `next-people-paseo`
+// (`AssetConversion = 18`, `PoolAssets = 19`) and polkadot-fellows' `people-polkadot`
+// (`AssetConversion = 17`, `PoolAssets = 18`). This runtime uses 18/19; 17 is taken by
+// `OriginRestriction`.
+//
+// Modelled on the fellowship's setup. The values below are theirs unless noted.
+// ---------------------------------------------------------------------------------------------
+
+/// The pool-token instance of `pallet-assets`, owned by `pallet-asset-conversion`.
+pub type PoolAssetsInstance = pallet_assets::Instance1;
+
+impl pallet_assets::Config<PoolAssetsInstance> for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Balance = Balance;
+	type RemoveItemsLimit = ConstU32<1000>;
+	type AssetId = u32;
+	type AssetIdParameter = u32;
+	type ReserveData = ();
+	type Currency = Balances;
+	// Only the AMM creates pool tokens. Outside benchmarks nothing else may.
+	#[cfg(feature = "runtime-benchmarks")]
+	type CreateOrigin =
+		AsEnsureOriginWithArg<frame_system::EnsureSignedBy<AssetConversionOrigin, AccountId>>;
+	#[cfg(not(feature = "runtime-benchmarks"))]
+	type CreateOrigin =
+		AsEnsureOriginWithArg<frame_support::traits::NeverEnsureOrigin<AccountId>>;
+	type ForceOrigin = EnsureRoot<AccountId>;
+	type AssetDeposit = ConstU128<0>;
+	type AssetAccountDeposit = AssetAccountDeposit;
+	type MetadataDepositBase = ConstU128<0>;
+	type MetadataDepositPerByte = ConstU128<0>;
+	type ApprovalDeposit = ApprovalDeposit;
+	type StringLimit = AssetsStringLimit;
+	type Freezer = ();
+	type Holder = ();
+	type Extra = ();
+	type CallbackHandle = ();
+	// ⚠️ In-crate reference weights: this runtime has no benchmarked `pallet_assets_pool` module.
+	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = ();
+}
+
+parameter_types! {
+	pub const AssetConversionPalletId: PalletId = PalletId(*b"py/ascon");
+	pub const LiquidityWithdrawalFee: Permill = Permill::from_percent(0);
+	pub StakingPotAccount: AccountId =
+		<pallet_collator_selection::StakingPotAccountId<Runtime> as frame_support::traits::TypedGet>::get();
+	pub LpFee: Permill = Permill::from_rational(3u32, 1_000u32);
+	pub const PoolSetupFee: Balance = system_para_deposit(1, 4) + AssetDeposit::get();
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+parameter_types! {
+	pub AssetsPalletIndex: u32 = <Assets as frame_support::traits::PalletInfoAccess>::index() as u32;
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+frame_support::ord_parameter_types! {
+	pub const AssetConversionOrigin: AccountId =
+		sp_runtime::traits::AccountIdConversion::<AccountId>::into_account_truncating(
+			&AssetConversionPalletId::get(),
+		);
+}
+
+pub type PoolIdToAccountId =
+	pallet_asset_conversion::AccountIdConverter<AssetConversionPalletId, (Location, Location)>;
+
+impl pallet_asset_conversion::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Balance = Balance;
+	type HigherPrecisionBalance = sp_core::U256;
+	type AssetKind = Location;
+	type Assets = crate::people::NativeAndAssets;
+	type PoolId = (Self::AssetKind, Self::AssetKind);
+	type PoolLocator = pallet_asset_conversion::WithFirstAsset<
+		crate::xcm_config::RelayLocation,
+		AccountId,
+		Self::AssetKind,
+		PoolIdToAccountId,
+	>;
+	type PoolAssetId = u32;
+	type PoolAssets = PoolAssets;
+	type PoolSetupFee = PoolSetupFee;
+	type PoolSetupFeeAsset = crate::xcm_config::RelayLocation;
+	type PoolSetupFeeTarget = ResolveAssetTo<StakingPotAccount, Self::Assets>;
+	type LiquidityWithdrawalFee = LiquidityWithdrawalFee;
+	type LPFee = LpFee;
+	type PalletId = AssetConversionPalletId;
+	type MaxSwapPathLength = ConstU32<3>;
+	type MintMinLiquidity = ConstU128<100>;
+	// ⚠️ In-crate reference weights, not benchmarked on this runtime.
+	type WeightInfo = pallet_asset_conversion::weights::SubstrateWeight<Runtime>;
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = assets_common::benchmarks::AssetPairFactory<
+		crate::xcm_config::RelayLocation,
+		parachain_info::Pallet<Runtime>,
+		AssetsPalletIndex,
+		Self::AssetKind,
+	>;
 }

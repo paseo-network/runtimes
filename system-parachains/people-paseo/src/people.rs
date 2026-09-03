@@ -1356,6 +1356,14 @@ parameter_types! {
 	pub CoinageCollectionOwner: Location = Location::new(0, [PalletInstance(68)]);
 }
 
+/// The asset amount of a coin of denomination zero, used only when benchmarks create the coinage
+/// instance. The external asset (Asset Hub asset `50_000_413`) has 6 decimals, so this is $0.01.
+///
+/// Ported verbatim from individuality v0.3.1's `next-people-paseo`, which wraps the very same
+/// Asset Hub asset id.
+#[cfg(feature = "runtime-benchmarks")]
+pub const COINAGE_ASSET_UNIT: Balance = 10u128.pow(4);
+
 // `LitePeopleProof` and `PeopleProof` were DELETED here.
 //
 // They were runtime-local wrappers implementing `indiv_pallet_coinage::ValidateProof`, bound to
@@ -1370,30 +1378,135 @@ pub struct CoinageBenchHelper;
 #[cfg(feature = "runtime-benchmarks")]
 impl indiv_pallet_coinage::BenchmarkHelper<Runtime> for CoinageBenchHelper {
 	fn setup_assets() {
+		use frame_support::traits::fungibles::{Inspect, Mutate};
 		benchmark_utils::ensure_external_asset_exists();
-		if !indiv_pallet_coinage::UnderlyingAssetId::<Runtime>::exists() {
-			indiv_pallet_coinage::UnderlyingAssetId::<Runtime>::put(ExternalAssetLocation::get());
+		// v0.3.1 replaced the single `UnderlyingAssetId` storage value with per-asset instances,
+		// so the benchmark set-up now has to create the instance rather than write a storage item.
+		if indiv_pallet_coinage::AssetToInstance::<Runtime>::iter_key_prefix(
+			ExternalAssetLocation::get(),
+		)
+		.next()
+		.is_none()
+		{
+			// What governance is expected to do before creating an instance: give the pallet
+			// account a balance buffer so fee flows that empty its free balance cannot kill it.
+			<AssetsWithHolder as Mutate<_>>::mint_into(
+				ExternalAssetLocation::get(),
+				&indiv_pallet_coinage::Pallet::<Runtime>::pallet_account(),
+				<AssetsWithHolder as Inspect<_>>::minimum_balance(ExternalAssetLocation::get()),
+			)
+			.expect("minting the pallet account buffer should succeed");
+			Coinage::create_sufficient_instance(
+				RuntimeOrigin::root(),
+				ExternalAssetLocation::get(),
+				COINAGE_ASSET_UNIT,
+			)
+			.expect("create_sufficient_instance should succeed");
 		}
 	}
+
+	fn setup_asset_without_instance() -> Location {
+		use frame_support::traits::fungibles::{Inspect, Mutate};
+		benchmark_utils::ensure_external_asset_exists();
+		// What governance does before `create_sufficient_instance`: the pallet account's balance
+		// buffer.
+		<AssetsWithHolder as Mutate<_>>::mint_into(
+			ExternalAssetLocation::get(),
+			&indiv_pallet_coinage::Pallet::<Runtime>::pallet_account(),
+			<AssetsWithHolder as Inspect<_>>::minimum_balance(ExternalAssetLocation::get()),
+		)
+		.expect("minting the pallet account buffer should succeed");
+		ExternalAssetLocation::get()
+	}
+
 	fn fund_account(who: &AccountId, amount: u128) {
 		use frame_support::traits::fungibles::Mutate;
 		<AssetsWithHolder as Mutate<_>>::mint_into(ExternalAssetLocation::get(), who, amount)
 			.expect("Failed to fund account");
 	}
+
+	fn create_extra_asset(seed: u32, who: &AccountId) -> Location {
+		use frame_support::traits::{
+			fungibles::{Create, Inspect, Mutate},
+			PalletInfoAccess,
+		};
+		let location = Self::extra_asset_id(seed);
+		if !<Assets as Inspect<_>>::asset_exists(location.clone()) {
+			<Assets as Create<_>>::create(
+				location.clone(),
+				ParaId::new(<Assets as PalletInfoAccess>::index() as u32).into_account_truncating(),
+				true,
+				1u32.into(),
+			)
+			.expect("Failed to create extra asset");
+		}
+		<AssetsWithHolder as Mutate<_>>::mint_into(location.clone(), who, 1_000_000 * UNITS)
+			.expect("Failed to fund extra asset");
+		location
+	}
+
+	fn extra_asset_id(seed: u32) -> Location {
+		Location::new(
+			1,
+			[
+				xcm::latest::Junction::Parachain(ASSET_HUB_ID),
+				xcm::latest::Junction::PalletInstance(50),
+				xcm::latest::Junction::GeneralIndex(1_000_000u128 + seed as u128),
+			],
+		)
+	}
+
 	fn set_time(now: core::time::Duration) {
 		pallet_timestamp::Now::<Runtime>::put(now.as_millis() as u64);
 	}
-	fn setup_conversion_rate() {
-		use sp_runtime::FixedU128;
-		// Native has 10 decimals, external asset has 6 decimals.
-		// 1 raw external asset ($10^-6) = 10^4 raw native ($10^-10), so rate = 10^4.
-		pallet_asset_rate::ConversionRateToNative::<Runtime>::insert(
-			ExternalAssetLocation::get(),
-			FixedU128::from_u32(10_000),
-		);
+
+	fn setup_fee_conversion() {
+		use frame_support::traits::fungible::Mutate as _;
+
+		let native = crate::xcm_config::RelayLocation::get();
+		let asset = ExternalAssetLocation::get();
+		if pallet_asset_conversion::Pools::<Runtime>::contains_key((native.clone(), asset.clone()))
+		{
+			return;
+		}
+
+		// Native has 10 decimals, the external asset has 6, and 1 raw asset ($10^-6) is worth
+		// 10^4 raw native ($10^-10), so the pool holds that ratio — the same 10^4 rate the
+		// deleted `setup_conversion_rate` wrote into `pallet_asset_rate`. The depth is far above
+		// any benchmarked fee so that the conversions do not move the price.
+		let native_liquidity: Balance = 1_000 * UNITS;
+		let asset_liquidity: Balance = native_liquidity / 10_000;
+
+		let provider: AccountId = [42u8; 32].into();
+		Balances::mint_into(&provider, native_liquidity.saturating_mul(2))
+			.expect("failed to fund the liquidity provider with native");
+		Self::fund_account(&provider, asset_liquidity.saturating_mul(2));
+
+		let origin = RuntimeOrigin::signed(provider.clone());
+		crate::AssetConversion::create_pool(
+			origin.clone(),
+			alloc::boxed::Box::new(native.clone()),
+			alloc::boxed::Box::new(asset.clone()),
+		)
+		.expect("failed to create the fee conversion pool");
+		crate::AssetConversion::add_liquidity(
+			origin,
+			alloc::boxed::Box::new(native),
+			alloc::boxed::Box::new(asset),
+			native_liquidity,
+			asset_liquidity,
+			1,
+			1,
+			provider,
+		)
+		.expect("failed to add liquidity to the fee conversion pool");
 	}
 
-	fn create_people_proof(context: &[u8], msg: &[u8], _alias: Alias) -> PeopleProof {
+	fn create_people_proof(
+		context: &[u8],
+		msg: &[u8],
+		_alias: Alias,
+	) -> indiv_pallet_people::MembershipProof<Runtime> {
 		use frame_support::dispatch::RawOrigin;
 		use indiv_support::traits::{AddOnlyPeopleTrait, AppendOnlyMembers};
 		use verifiable::ring::RingDomainSize;
@@ -1440,10 +1553,14 @@ impl indiv_pallet_coinage::BenchmarkHelper<Runtime> for CoinageBenchHelper {
 		let (proof, _alias) = BandersnatchVrfVerifiable::create(commitment, &secret, context, msg)
 			.expect("should create proof");
 
-		PeopleProof { proof, ring: ring_index }
+		indiv_pallet_people::MembershipProof { proof, ring: ring_index, revision: 0 }
 	}
 
-	fn create_lite_people_proof(context: &[u8], msg: &[u8], _alias: Alias) -> LitePeopleProof {
+	fn create_lite_people_proof(
+		context: &[u8],
+		msg: &[u8],
+		_alias: Alias,
+	) -> indiv_pallet_people::MembershipProof<Runtime> {
 		use indiv_support::traits::AppendOnlyMembers as _;
 		use sp_core::Pair;
 		use sp_runtime::traits::IdentifyAccount;
@@ -1504,7 +1621,7 @@ impl indiv_pallet_coinage::BenchmarkHelper<Runtime> for CoinageBenchHelper {
 		let (proof, _) = BandersnatchVrfVerifiable::create(commitment, &ring_secret, context, msg)
 			.expect("should create lite proof");
 
-		LitePeopleProof { proof, ring: ring_index }
+		indiv_pallet_people::MembershipProof { proof, ring: ring_index, revision: 0 }
 	}
 }
 
@@ -1522,93 +1639,6 @@ pub type NativeAndAssets = frame_support::traits::fungible::UnionOf<
 	AccountId,
 >;
 
-/// PASEO-LOCAL. `indiv_pallet_coinage::Config::FeeConversion` at individuality v0.3.1 requires
-/// `pallet_asset_conversion::{Swap, QuotePrice}` — an AMM. Paseo's People chain has NO
-/// `pallet-asset-conversion` and no `PoolAssets` instance (confirmed against live People
-/// metadata: the runtime has `AssetRate` at index 13 and no AMM at all). Upstream's
-/// `next-people-paseo` carries one at indices 18/19; Paseo does not.
-///
-/// Coinage only ever reaches `FeeConversion` when a coin instance's asset is NOT the native
-/// asset: both `quote_asset_for_native_fee` and `charge_asset_and_transfer_native` short-circuit
-/// to a plain transfer when `asset_id == NativeAssetKind::get()`.
-///
-/// So this adapter FAILS CLOSED. `quote_price_*` returns `None`, which is the trait's documented
-/// "the pool does not exist" answer and which coinage already turns into
-/// `FeeConversionError::Unavailable` / `CannotConvertAssetToNative`. Swaps return an error and
-/// move no funds.
-///
-/// Consequences, stated plainly:
-///   * native-denominated instances — unaffected, the AMM is never consulted;
-///   * non-native instances — paid-unload fee paths fail LOUDLY with a clear error.
-///
-/// This is deliberately NOT an `AssetRate`-backed shim. `Swap` moves real funds; backing it with
-/// a governance-set rate and no liquidity would either mint or lose value silently. A loud
-/// failure is the only safe placeholder.
-///
-/// REQUIRED BEFORE ENACTMENT — one of:
-///   (a) confirm the coinage migration maps every existing coin to a NATIVE-denominated
-///       instance, in which case this adapter is never reached and can stay; or
-///   (b) adopt `pallet-asset-conversion` + a `PoolAssets` instance (upstream's People indices
-///       18 and 19, both confirmed free on Paseo) AND seed the native/CASH pool with liquidity.
-///       An AMM with no pool fails exactly like this adapter does.
-/// The coinage migration is owned by another agent; this choice is theirs to close.
-pub struct CoinageFeeConversion;
-
-impl pallet_asset_conversion::QuotePrice for CoinageFeeConversion {
-	type Balance = Balance;
-	type AssetKind = Location;
-
-	fn quote_price_tokens_for_exact_tokens(
-		_asset1: Self::AssetKind,
-		_asset2: Self::AssetKind,
-		_amount: Self::Balance,
-		_include_fee: bool,
-	) -> Option<Self::Balance> {
-		None
-	}
-
-	fn quote_price_exact_tokens_for_tokens(
-		_asset1: Self::AssetKind,
-		_asset2: Self::AssetKind,
-		_amount: Self::Balance,
-		_include_fee: bool,
-	) -> Option<Self::Balance> {
-		None
-	}
-}
-
-impl pallet_asset_conversion::Swap<AccountId> for CoinageFeeConversion {
-	type Balance = Balance;
-	type AssetKind = Location;
-
-	fn max_path_len() -> u32 {
-		2
-	}
-
-	fn swap_exact_tokens_for_tokens(
-		_sender: AccountId,
-		_path: alloc::vec::Vec<Self::AssetKind>,
-		_amount_in: Self::Balance,
-		_amount_out_min: Option<Self::Balance>,
-		_send_to: AccountId,
-		_keep_alive: bool,
-	) -> Result<Self::Balance, sp_runtime::DispatchError> {
-		Err(sp_runtime::DispatchError::Other("coinage: no asset-conversion market on Paseo People"))
-	}
-
-	fn swap_tokens_for_exact_tokens(
-		_sender: AccountId,
-		_path: alloc::vec::Vec<Self::AssetKind>,
-		_amount_out: Self::Balance,
-		_amount_in_max: Option<Self::Balance>,
-		_send_to: AccountId,
-		_keep_alive: bool,
-	) -> Result<Self::Balance, sp_runtime::DispatchError> {
-		Err(sp_runtime::DispatchError::Other("coinage: no asset-conversion market on Paseo People"))
-	}
-}
-
-/// Prices the permanent footprint of a sponsored coinage instance.
 pub struct CoinageInstanceCreationPrice;
 impl sp_runtime::traits::Convert<frame_support::traits::Footprint, Balance>
 	for CoinageInstanceCreationPrice
@@ -1690,8 +1720,13 @@ impl indiv_pallet_coinage::Config for Runtime {
 	type MaxFreeUnloadTokensPerTimePeriod = ConstU32<1000>;
 	// Replaces the separate `LitePeopleProof` / `PeopleProof` pair.
 	type MembershipProof = People;
-	// See `CoinageFeeConversion`: Paseo People has no AMM, so this fails closed.
-	type FeeConversion = CoinageFeeConversion;
+	// Bound to the on-chain AMM, as both reference integrations do: individuality v0.3.1's
+	// `next-people-paseo` and polkadot-fellows' `people-polkadot` each bind their own
+	// `AssetConversion`. Reached only when a coin instance's asset is NOT the native asset;
+	// native-denominated instances short-circuit to a plain transfer.
+	// 🔴 A pool with no liquidity behaves exactly like the fail-closed adapter this replaces:
+	// paid unloads in a non-native asset fail until a native/asset pool is seeded.
+	type FeeConversion = AssetConversion;
 	type NativeAssetKind = crate::xcm_config::RelayLocation;
 	type WeightToFee = TransactionPayment;
 	type PaidUnloadTokenTimePeriod = ConstU32<{ 3 * 24 * 60 * 60 }>; // 3 days
