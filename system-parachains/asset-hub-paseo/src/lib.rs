@@ -4173,7 +4173,7 @@ mod tests {
 			// The bound the pallet actually uses for `SubPools::with_era`.
 			let total_unbonding_pools = || {
 				<Staking as StakingInterface>::nominator_bonding_duration() +
-					<Runtime as pallet_nomination_pools::Config>::PostUnbondingPoolsWindow::get()
+					<<Runtime as pallet_nomination_pools::Config>::PostUnbondingPoolsWindow as Get<u32>>::get()
 			};
 
 			// Pre-flip: nominators slashable, so the nominator bonding duration is the full
@@ -4183,7 +4183,9 @@ mod tests {
 			pallet_staking_async::AreNominatorsSlashable::<Runtime>::put(true);
 			assert_eq!(<Staking as StakingInterface>::nominator_bonding_duration(), 28);
 			assert_eq!(
-				<Runtime as pallet_nomination_pools::Config>::PostUnbondingPoolsWindow::get(),
+				<<Runtime as pallet_nomination_pools::Config>::PostUnbondingPoolsWindow as Get<
+					u32,
+				>>::get(),
 				4
 			);
 			assert_eq!(total_unbonding_pools(), 32);
@@ -4193,7 +4195,9 @@ mod tests {
 			pallet_staking_async::AreNominatorsSlashable::<Runtime>::put(false);
 			assert_eq!(<Staking as StakingInterface>::nominator_bonding_duration(), 2);
 			assert_eq!(
-				<Runtime as pallet_nomination_pools::Config>::PostUnbondingPoolsWindow::get(),
+				<<Runtime as pallet_nomination_pools::Config>::PostUnbondingPoolsWindow as Get<
+					u32,
+				>>::get(),
 				30
 			);
 			assert_eq!(total_unbonding_pools(), 32);

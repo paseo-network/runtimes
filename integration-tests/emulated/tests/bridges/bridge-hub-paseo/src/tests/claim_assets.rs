@@ -17,13 +17,14 @@
 
 use crate::*;
 
+use asset_hub_paseo_runtime::xcm_config::XcmConfig;
 use bridge_hub_paseo_runtime::ExistentialDeposit;
 use integration_tests_helpers::test_chain_can_claim_assets;
 
 #[test]
 fn assets_can_be_claimed() {
 	let amount = ExistentialDeposit::get();
-	let assets: Assets = (Parent, amount).into();
+	let assets: Asset = (Parent, amount).into();
 
-	test_chain_can_claim_assets!(AssetHubPaseo, RuntimeCall, NetworkId::Polkadot, assets, amount);
+	test_chain_can_claim_assets!(AssetHubPaseo, XcmConfig, NetworkId::Polkadot, assets, amount);
 }

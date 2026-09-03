@@ -452,7 +452,7 @@ fn receive_reserve_asset_deposited_ksm_from_asset_hub_kusama_fees_paid_by_pool_s
 		},
 		(
 			[PalletInstance(
-				bp_bridge_hub_paseo::WITH_BRIDGE_POLKAPAS_TO_KUSAMA_MESSAGES_PALLET_INDEX,
+				bp_bridge_hub_paseo::WITH_BRIDGE_POLKADOT_TO_KUSAMA_MESSAGES_PALLET_INDEX,
 			)]
 			.into(),
 			GlobalConsensus(Kusama),
@@ -1107,6 +1107,7 @@ fn staking_operator_filter_allows_validator_ops_and_session_keys() {
 	// StakingOperator can manage session keys
 	assert!(operator.filter(&RuntimeCall::StakingRcClient(RcClientCall::set_keys {
 		keys: Default::default(),
+		proof: Default::default(),
 		max_delivery_and_remote_execution_fee: None,
 	})));
 	assert!(operator.filter(&RuntimeCall::StakingRcClient(RcClientCall::purge_keys {
@@ -1330,7 +1331,7 @@ fn slash_goes_to_dap_buffer_account() {
 
 #[test]
 fn migrate_bounty_account_assets_moves_dot_usdt_and_usdc() {
-	use asset_hub_polkadot_runtime::{
+	use asset_hub_paseo_runtime::{
 		migrations::MigrateBountyAccountAssets, treasury::TreasuryPalletId,
 	};
 	use frame_support::traits::{

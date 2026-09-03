@@ -403,7 +403,6 @@ pub(crate) fn set_up_eth_and_dot_pool_on_penpal() {
 	create_foreign_pool_with_native_on!(
 		PenpalB,
 		eth_location(),
-		true,
 		ethereum_sovereign.clone(),
 		PAS_POOL_AMOUNT,
 		ETH_POOL_AMOUNT
