@@ -111,21 +111,21 @@ pub mod v1 {
 	// nothing else in this file branches on the policy.
 	//
 	// Why `Keep` is the conservative choice AND an affordable one:
-    //
+	//
 	//   * It grants nothing. The migration's job is to repair a broken clock, not to hand out
-	//     allowance. `Zero` writes a balance-shaped value the chain never earned; if the policy
-	//     is ever wrong, `Keep` is wrong in the direction of "the user waits", and `Zero` is
-	//     wrong in the direction of "the restriction did not apply".
+	//     allowance. `Zero` writes a balance-shaped value the chain never earned; if the policy is
+	//     ever wrong, `Keep` is wrong in the direction of "the user waits", and `Zero` is wrong in
+	//     the direction of "the restriction did not apply".
 	//   * On the one live entry the wait is **two relay blocks**, not a year. Measured, not
 	//     assumed: `used = 155,781,116` planck and `recovery_per_block = CENTS = 100,000,000`
 	//     planck (`ACCOUNT_PARTICIPANT_RECOVERY`, `system-parachains/people-paseo/src/people.rs`),
 	//     so `ceil(155,781,116 / 100,000,000) = 2` relay blocks ~ 12 seconds after the upgrade
-	//     block. The "banned for ~337 days" outcome belongs to shipping NO migration; it is not
-	//     the cost of declining to zero `used`.
-	//   * `pre_upgrade` turns that from a happy accident into an enforced precondition: it FAILS
-	//     if any entry would need more than [`MAX_ACCEPTABLE_RECOVERY_BLOCKS`] to recover under
-	//     the shipped policy. If a bigger `used` ever shows up, a human is forced to look and
-	//     choose rather than inheriting this file's default.
+	//     block. The "banned for ~337 days" outcome belongs to shipping NO migration; it is not the
+	//     cost of declining to zero `used`.
+	//   * `pre_upgrade` turns that from a happy accident into an enforced precondition: it FAILS if
+	//     any entry would need more than [`MAX_ACCEPTABLE_RECOVERY_BLOCKS`] to recover under the
+	//     shipped policy. If a bigger `used` ever shows up, a human is forced to look and choose
+	//     rather than inheriting this file's default.
 	//
 	// THE ALTERNATIVES, for whoever has to sign this off:
 	//
@@ -251,8 +251,10 @@ pub mod v1 {
 				 local frame_system now = {local:?}, policy = {USED_POLICY:?}",
 			);
 
-			let entries: Vec<(T::RestrictedEntity, Usage<BalanceOf<T>, ProviderBlockNumberFor<T>>)> =
-				Usages::<T>::iter().collect();
+			let entries: Vec<(
+				T::RestrictedEntity,
+				Usage<BalanceOf<T>, ProviderBlockNumberFor<T>>,
+			)> = Usages::<T>::iter().collect();
 
 			for (entity, usage) in entries {
 				let allowance = entity.allowance();
@@ -326,12 +328,13 @@ pub mod v1 {
 					UsedPolicy::Keep => usage.used,
 					UsedPolicy::Zero => Zero::zero(),
 				};
-				let wait = blocks_to_recover_for::<T>(used_after, &allowance)
-						.ok_or(sp_runtime::TryRuntimeError::Other(
-							"origin-restriction: an entity has recovery_per_block == 0 and \
+				let wait = blocks_to_recover_for::<T>(used_after, &allowance).ok_or(
+					sp_runtime::TryRuntimeError::Other(
+						"origin-restriction: an entity has recovery_per_block == 0 and \
 							 used > max — after this migration it could NEVER recover. Do not \
 							 enact; this needs governance, not a storage migration.",
-						))?;
+					),
+				)?;
 				ensure!(
 					wait <= MAX_ACCEPTABLE_RECOVERY_BLOCKS,
 					"origin-restriction: under USED_POLICY an entity would stay blocked for more \
@@ -346,11 +349,7 @@ pub mod v1 {
 					already_plausible = already_plausible.saturating_add(1);
 				}
 
-				captured.push((
-					entity.encode(),
-					usage.used.saturated_into::<u128>(),
-					wait,
-				));
+				captured.push((entity.encode(), usage.used.saturated_into::<u128>(), wait));
 			}
 
 			ensure!(
@@ -373,12 +372,14 @@ pub mod v1 {
 		#[cfg(feature = "try-runtime")]
 		fn post_upgrade(state: Vec<u8>) -> Result<(), sp_runtime::TryRuntimeError> {
 			type CapturedFor<B> = (Vec<(Vec<u8>, u128, u128)>, B);
-			let (captured, captured_now) =
-				<CapturedFor<ProviderBlockNumberFor<T>>>::decode(&mut &state[..]).map_err(|_| {
-					sp_runtime::TryRuntimeError::Other(
-						"origin-restriction: pre_upgrade state failed to decode",
-					)
-				})?;
+			let (captured, captured_now) = <CapturedFor<ProviderBlockNumberFor<T>>>::decode(
+				&mut &state[..],
+			)
+			.map_err(|_| {
+				sp_runtime::TryRuntimeError::Other(
+					"origin-restriction: pre_upgrade state failed to decode",
+				)
+			})?;
 
 			// 1. Nothing was created or destroyed.
 			ensure!(
@@ -414,14 +415,15 @@ pub mod v1 {
 					 captured in pre_upgrade"
 				);
 
-				// 4. The lockout is actually gone: recovery from here is finite, and no worse
-				//    than pre_upgrade predicted. This is the assertion that fails if the clock
-				//    was left stale.
+				// 4. The lockout is actually gone: recovery from here is finite, and no worse than
+				//    pre_upgrade predicted. This is the assertion that fails if the clock was left
+				//    stale.
 				let allowance = entity.allowance();
-				let wait = blocks_to_recover_for::<T>(usage.used, &allowance)
-						.ok_or(sp_runtime::TryRuntimeError::Other(
-							"origin-restriction: an entity is left unable to ever recover",
-						))?;
+				let wait = blocks_to_recover_for::<T>(usage.used, &allowance).ok_or(
+					sp_runtime::TryRuntimeError::Other(
+						"origin-restriction: an entity is left unable to ever recover",
+					),
+				)?;
 				ensure!(
 					wait == *expected_wait && wait <= MAX_ACCEPTABLE_RECOVERY_BLOCKS,
 					"origin-restriction: an entity's recovery time is not what pre_upgrade \
@@ -451,10 +453,7 @@ mod tests {
 		pallet::{Usage, Usages},
 	};
 	use frame_support::{assert_err, pallet_prelude::*, traits::OnRuntimeUpgrade};
-	use sp_runtime::{
-		traits::BlockNumberProvider,
-		transaction_validity::InvalidTransaction,
-	};
+	use sp_runtime::{traits::BlockNumberProvider, transaction_validity::InvalidTransaction};
 
 	/// The live people-paseo numbers, read read-only at People block 6,443,886 / relay 891,974.
 	/// Kept here as documentation of the shape of the problem, not as an assertion input — the
@@ -694,8 +693,8 @@ mod tests {
 		new_test_ext().execute_with(|| {
 			StorageVersion::new(0).put::<crate::Pallet<crate::mock::Test>>();
 			// A debt that needs more than MAX_ACCEPTABLE_RECOVERY_BLOCKS at 5/block.
-			let debt = MAX_ALLOWANCE
-				+ (MAX_ACCEPTABLE_RECOVERY_BLOCKS as u64 + 1) * ALLOWANCE_RECOVERY_PER_BLOCK;
+			let debt = MAX_ALLOWANCE +
+				(MAX_ACCEPTABLE_RECOVERY_BLOCKS as u64 + 1) * ALLOWANCE_RECOVERY_PER_BLOCK;
 			Usages::<crate::mock::Test>::insert(
 				&RuntimeRestrictedEntity::A,
 				Usage { used: debt, at_block: 9_000_000 },

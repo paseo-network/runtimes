@@ -271,13 +271,13 @@ use indiv_pallet_game::PhaseDurationValues;
 use indiv_pallet_origin_restriction::Allowance;
 #[cfg(feature = "runtime-benchmarks")]
 use indiv_support::traits::{PersonalId, RingIndex};
-#[cfg(feature = "runtime-benchmarks")]
-use paseo_runtime_constants::system_parachain::ASSET_HUB_ID;
 use indiv_support::{
 	fungibles::CombineAssetsWithHolder,
 	traits::{Alias, AllocateStorage, Context},
 	utils::TypedGetToGet,
 };
+#[cfg(feature = "runtime-benchmarks")]
+use paseo_runtime_constants::system_parachain::ASSET_HUB_ID;
 #[cfg(feature = "runtime-benchmarks")]
 use sp_runtime::BoundedVec;
 use sp_runtime::{
@@ -1634,7 +1634,10 @@ impl indiv_pallet_coinage::BenchmarkHelper<Runtime> for CoinageBenchHelper {
 pub type NativeAndAssets = frame_support::traits::fungible::UnionOf<
 	Balances,
 	AssetsWithHolder,
-	assets_common::local_and_foreign_assets::TargetFromLeft<crate::xcm_config::RelayLocation, Location>,
+	assets_common::local_and_foreign_assets::TargetFromLeft<
+		crate::xcm_config::RelayLocation,
+		Location,
+	>,
 	Location,
 	AccountId,
 >;

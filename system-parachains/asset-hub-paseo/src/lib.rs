@@ -1757,9 +1757,7 @@ impl indiv_pallet_dotns_gateway::benchmarking::BenchmarkHelper<Runtime>
 		// `RingRoots` gained a leading `Generation` key in v0.3.1; write through the pallet
 		// helper so the bench seeds the CURRENT generation prefix rather than a stale one.
 		indiv_pallet_members_subscriber::Pallet::<Runtime>::set_current_ring_roots(
-			identifier,
-			ring_index,
-			roots,
+			identifier, ring_index, roots,
 		);
 		indiv_pallet_members_subscriber::RingCollectionExponents::<Runtime>::insert(
 			*identifier,
@@ -2330,7 +2328,9 @@ impl indiv_pallet_alias_accounts::benchmarking::BenchmarkHelper<Runtime> for Run
 				.expect("revisions bounded by max_ring_revisions");
 		}
 		indiv_pallet_members_subscriber::Pallet::<Runtime>::set_current_ring_roots(
-			&collection, ring, roots,
+			&collection,
+			ring,
+			roots,
 		);
 	}
 }
@@ -2461,9 +2461,7 @@ impl indiv_pallet_pgas::benchmarking::BenchmarkHelper<Runtime> for PgasBenchHelp
 		let mut roots: frame_support::BoundedVec<_, _> = Default::default();
 		roots.try_push(record).expect("MaxRecentRootsPerRing > 0");
 		indiv_pallet_members_subscriber::Pallet::<Runtime>::set_current_ring_roots(
-			identifier,
-			ring_index,
-			roots,
+			identifier, ring_index, roots,
 		);
 		indiv_pallet_members_subscriber::RingCollectionExponents::<Runtime>::insert(
 			*identifier,

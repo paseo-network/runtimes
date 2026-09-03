@@ -28,14 +28,13 @@
 //!
 //! 1. **`RingRoots` gains a leading `Generation` key.** It went from
 //!    `StorageDoubleMap<Blake2_128Concat Identifier, Blake2_128Concat RingIndex>` to
-//!    `StorageNMap<(Twox64Concat Generation, Blake2_128Concat Identifier,
-//!    Blake2_128Concat RingIndex)>`. Same *item* prefix, 12 more bytes of key. Every live root
-//!    becomes unreachable.
+//!    `StorageNMap<(Twox64Concat Generation, Blake2_128Concat Identifier, Blake2_128Concat
+//!    RingIndex)>`. Same *item* prefix, 12 more bytes of key. Every live root becomes unreachable.
 //!
-//! 2. **`RingCollectionState` gains `next_scan_index: u32` MID-STRUCT**, between
-//!    `next_ring_index` and `missing_indices`. Live values are 10 bytes; the new type needs at
-//!    least 14. `unhashed::get` swallows the `codec::Error` and returns `None`, and `ValueQuery`
-//!    then substitutes `Default`. The failure is completely silent.
+//! 2. **`RingCollectionState` gains `next_scan_index: u32` MID-STRUCT**, between `next_ring_index`
+//!    and `missing_indices`. Live values are 10 bytes; the new type needs at least 14.
+//!    `unhashed::get` swallows the `codec::Error` and returns `None`, and `ValueQuery` then
+//!    substitutes `Default`. The failure is completely silent.
 //!
 //! 3. **The `verifiable` bump reshapes the ring commitment itself.** This one is NOT in
 //!    `INDIVIDUALITY_MIGRATIONS_DESIGN.md` §3 and it invalidates that document's instruction to
@@ -76,7 +75,7 @@ pub type MigrateV0ToV1<T> = VersionedMigration<
 
 pub mod v1 {
 	use super::*;
-	use crate::types::{MembersOf, RingCommitmentRecord, RingCollectionState, SequenceNumber};
+	use crate::types::{MembersOf, RingCollectionState, RingCommitmentRecord, SequenceNumber};
 	use alloc::vec::Vec;
 	use indiv_support::traits::RevisionIndex;
 	use sp_io::hashing::blake2_256;
@@ -141,8 +140,15 @@ pub mod v1 {
 
 	/// `RingCollectionState` as stored before `next_scan_index` was inserted.
 	#[derive(
-		Encode, Decode, MaxEncodedLen, TypeInfo, CloneNoBound, PartialEqNoBound, EqNoBound,
-		DebugNoBound, DefaultNoBound,
+		Encode,
+		Decode,
+		MaxEncodedLen,
+		TypeInfo,
+		CloneNoBound,
+		PartialEqNoBound,
+		EqNoBound,
+		DebugNoBound,
+		DefaultNoBound,
 	)]
 	#[scale_info(skip_type_params(MaxMissing, MaxDeleted))]
 	pub struct OldRingCollectionState<MaxMissing: Get<u32>, MaxDeleted: Get<u32>> {
@@ -257,8 +263,8 @@ pub mod v1 {
 	/// - Every `RingRoots` entry is re-keyed under generation `0` AND its records' roots are
 	///   re-encoded from 768 to 288 bytes. The old key is removed.
 	/// - Every `RingCollectionStates` value is re-encoded with `next_scan_index` inserted.
-	/// - `QueuedRingPurge` is left unset: `OptionQuery` `None` means "no purge in flight", which
-	///   is correct — there are no stale generations to purge.
+	/// - `QueuedRingPurge` is left unset: `OptionQuery` `None` means "no purge in flight", which is
+	///   correct — there are no stale generations to purge.
 	/// - `Subscription`, `ProcessingState` and `RingCollectionExponents` are NOT touched.
 	///
 	/// # `next_scan_index` seed: `0`
@@ -297,10 +303,8 @@ pub mod v1 {
 
 			for (identifier, ring_index, old_records) in old::RingRoots::<T>::iter() {
 				reads = reads.saturating_add(1);
-				let mut new_records: BoundedVec<
-					RingCommitmentRecord<T>,
-					T::MaxRecentRootsPerRing,
-				> = BoundedVec::new();
+				let mut new_records: BoundedVec<RingCommitmentRecord<T>, T::MaxRecentRootsPerRing> =
+					BoundedVec::new();
 				for old_record in old_records.iter() {
 					let Some(root) = convert_root::<T>(&old_record.root) else {
 						log::error!(
@@ -501,8 +505,8 @@ pub mod v1 {
 				"members-subscriber: QueuedRingPurge was set by the migration"
 			);
 
-			// 2. Every captured root exists under generation 0, and each record's ring
-			//    commitment is BYTE-IDENTICAL to the 288-byte tail of the old 768-byte value.
+			// 2. Every captured root exists under generation 0, and each record's ring commitment
+			//    is BYTE-IDENTICAL to the 288-byte tail of the old 768-byte value.
 			for (identifier, ring_index, expected) in &roots {
 				let got = RingRoots::<T>::get((0u32, *identifier, *ring_index)).ok_or(
 					sp_runtime::TryRuntimeError::Other(
@@ -550,10 +554,7 @@ pub mod v1 {
 			);
 			for (identifier, ring_count, next_ring_index, missing, deleted) in &states {
 				let s = RingCollectionStates::<T>::get(identifier);
-				ensure!(
-					s.ring_count == *ring_count,
-					"members-subscriber: ring_count changed"
-				);
+				ensure!(s.ring_count == *ring_count, "members-subscriber: ring_count changed");
 				ensure!(
 					s.next_ring_index == *next_ring_index,
 					"members-subscriber: next_ring_index changed"
@@ -563,8 +564,7 @@ pub mod v1 {
 					"members-subscriber: next_scan_index was not seeded to 0"
 				);
 				ensure!(
-					s.missing_indices.iter().map(|(k, v)| (*k, *v)).collect::<Vec<_>>() ==
-						*missing,
+					s.missing_indices.iter().map(|(k, v)| (*k, *v)).collect::<Vec<_>>() == *missing,
 					"members-subscriber: missing_indices changed"
 				);
 				ensure!(
@@ -608,9 +608,7 @@ mod tests {
 		CurrentGeneration, RingCollectionStates, RingRoots,
 	};
 	use codec::{Decode, Encode};
-	use frame_support::{
-		pallet_prelude::*, traits::OnRuntimeUpgrade, BoundedVec,
-	};
+	use frame_support::{pallet_prelude::*, traits::OnRuntimeUpgrade, BoundedVec};
 
 	// ---------------------------------------------------------------------------------------
 	// Real bytes, read read-only from asset-hub-paseo at spec 2004002.
@@ -681,7 +679,10 @@ mod tests {
 	const LIVE_STATE_PEOPLE_HEX: &str = "01000000010000000000";
 
 	fn unhex(s: &str) -> Vec<u8> {
-		(0..s.len()).step_by(2).map(|i| u8::from_str_radix(&s[i..i + 2], 16).unwrap()).collect()
+		(0..s.len())
+			.step_by(2)
+			.map(|i| u8::from_str_radix(&s[i..i + 2], 16).unwrap())
+			.collect()
 	}
 
 	fn live_old_root(tail_hex: &str) -> [u8; OLD_MEMBERS_LEN] {
@@ -743,10 +744,7 @@ mod tests {
 	#[test]
 	fn canonical_prefix_hash_matches_live_bytes() {
 		use sp_io::hashing::blake2_256;
-		assert_eq!(
-			blake2_256(&unhex(LIVE_KZG_PREFIX_HEX)),
-			CANONICAL_KZG_VERIFIER_KEY_HASH,
-		);
+		assert_eq!(blake2_256(&unhex(LIVE_KZG_PREFIX_HEX)), CANONICAL_KZG_VERIFIER_KEY_HASH,);
 	}
 
 	// ---------------------------------------------------------------------------------------
@@ -911,15 +909,14 @@ mod tests {
 			let records: BoundedVec<
 				OldRingCommitmentRecord,
 				<Test as crate::Config>::MaxRecentRootsPerRing,
-			> =
-				vec![OldRingCommitmentRecord {
-					root: bad,
-					revision: 1,
-					source_time: 42,
-					source_sequence: 7,
-				}]
-				.try_into()
-				.unwrap();
+			> = vec![OldRingCommitmentRecord {
+				root: bad,
+				revision: 1,
+				source_time: 42,
+				source_sequence: 7,
+			}]
+			.try_into()
+			.unwrap();
 			old::RingRoots::<Test>::insert(id, 0u32, records);
 			old::RingCollectionStates::<Test>::insert(
 				id,

@@ -24,8 +24,8 @@
 //! Deliberately a SEPARATE test target from `tests.rs`: those binaries do not currently compile
 //! on this branch (nor on the base branch), and a separate target compiles independently.
 
-use frame_support::traits::IntegrityTest;
 use asset_hub_paseo_runtime::AllPalletsWithSystem;
+use frame_support::traits::IntegrityTest;
 
 #[test]
 fn runtime_integrity_test() {

@@ -165,9 +165,9 @@ pub type Unreleased = (
 	//   2. `RingCollectionState` gains `next_scan_index` MID-STRUCT, so both live 10-byte values
 	//      fail to decode and `ValueQuery` silently substitutes `Default`;
 	//   3. the forced `verifiable` bump (git rev 93464a6 -> crates.io 0.3.0) reshapes the ring
-	//      commitment itself from 768 to 288 bytes, dropping a leading 480-byte KZG verifier
-	//      key. Item 3 is NOT in INDIVIDUALITY_MIGRATIONS_DESIGN.md §3, and it is why that
-	//      document's "copy the value bytes verbatim" instruction must not be followed.
+	//      commitment itself from 768 to 288 bytes, dropping a leading 480-byte KZG verifier key.
+	//      Item 3 is NOT in INDIVIDUALITY_MIGRATIONS_DESIGN.md §3, and it is why that document's
+	//      "copy the value bytes verbatim" instruction must not be followed.
 	//
 	// `Subscription` is `Active` and `ProcessingState.last_processed_sequence` is in the low
 	// thousands: this pallet is live and mid-stream. Untreated, every ring-proof-gated call on

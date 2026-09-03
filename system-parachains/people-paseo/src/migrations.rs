@@ -44,16 +44,16 @@ pub type Unreleased = (
 	// SLOT: coinage migrations. OWNED BY ANOTHER AGENT -- do not write them here.
 	//
 	// Required ordering when they land:
-	//   1. AFTER `SeedNetworkSuffix` above. Coinage aliases are derived from product
-	//      contexts, which splice the network suffix; the suffix must be materialised in
-	//      state before anything reads it back out.
+	//   1. AFTER `SeedNetworkSuffix` above. Coinage aliases are derived from product contexts,
+	//      which splice the network suffix; the suffix must be materialised in state before
+	//      anything reads it back out.
 	//   2. AFTER both collection-creation migrations above. Coinage's recycler and
-	//      paid-unload-token rings hang off the people / lite-people collections, so those
-	//      must exist first.
-	//   3. BEFORE any migration that reads `Instances`. The coinage migration is what
-	//      decides each existing coin's instance and, critically, that instance's
-	//      DENOMINATION -- see `CoinageFeeConversion` in people.rs: if instances end up
-	//      non-native, every paid-unload fee path needs an AMM this chain does not have.
+	//      paid-unload-token rings hang off the people / lite-people collections, so those must
+	//      exist first.
+	//   3. BEFORE any migration that reads `Instances`. The coinage migration is what decides each
+	//      existing coin's instance and, critically, that instance's DENOMINATION -- see
+	//      `CoinageFeeConversion` in people.rs: if instances end up non-native, every paid-unload
+	//      fee path needs an AMM this chain does not have.
 	// ================================================================================
 );
 

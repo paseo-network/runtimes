@@ -77,11 +77,14 @@ impl<T: Config> OnRuntimeUpgrade for SeedNetworkSuffix<T> {
 	}
 
 	#[cfg(feature = "try-runtime")]
-	fn post_upgrade(state: alloc::vec::Vec<u8>) -> Result<(), frame_support::sp_runtime::TryRuntimeError> {
+	fn post_upgrade(
+		state: alloc::vec::Vec<u8>,
+	) -> Result<(), frame_support::sp_runtime::TryRuntimeError> {
 		use codec::Decode;
 
-		let existed = bool::decode(&mut &state[..])
-			.map_err(|_| frame_support::sp_runtime::TryRuntimeError::Other("failed to decode pre_upgrade state"))?;
+		let existed = bool::decode(&mut &state[..]).map_err(|_| {
+			frame_support::sp_runtime::TryRuntimeError::Other("failed to decode pre_upgrade state")
+		})?;
 
 		frame_support::ensure!(
 			NetworkSuffix::<T>::exists(),
