@@ -6702,6 +6702,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "indiv-precompile-nft-claims"
+version = "2.3.1"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "indiv-pallet-nft-claims",
+ "indiv-support",
+ "pallet-balances",
+ "pallet-revive",
+ "pallet-scarcity",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
 name = "indiv-precompile-personhood"
 version = "2.3.1"
 dependencies = [
@@ -6722,6 +6739,21 @@ dependencies = [
  "sp-runtime",
  "staging-xcm",
  "verifiable",
+]
+
+[[package]]
+name = "indiv-precompile-scarcity"
+version = "2.3.1"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "pallet-revive",
+ "pallet-scarcity",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-io",
+ "sp-runtime",
 ]
 
 [[package]]
