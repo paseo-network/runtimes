@@ -37,10 +37,40 @@ pub type Unreleased = (
 	// later migration that derives a product context sees a materialised suffix.
 	// Idempotent; never clobbers a suffix governance has changed.
 	indiv_pallet_network_suffix::migration::SeedNetworkSuffix<Runtime>,
+	//
+	// 🔴 MUST RUN BEFORE THE TWO COLLECTION-CREATION MIGRATIONS BELOW.
+	//
+	// PASEO-LOCAL. v0.3.1 adds `SubscribedCollections` and makes
+	// `OnRingRootChange::on_ring_root_change` early-return for any collection not in it.
+	// Upstream ships no migration for that map, correctly: `next-people-paseo` launches from a
+	// genesis preset with no subscribers, so an empty map is accurate there. This chain has one
+	// live subscriber — para 1000 (Asset Hub), two collections — and leaving the map empty stops
+	// ring-root updates flowing to Asset Hub permanently, with no error and no event.
+	//
+	// The ordering is what makes it non-obvious: `CreatePeopleCollection` and
+	// `CreateLitePeopleCollection` write ring roots, so they fire `on_ring_root_change`. Any root
+	// change fired before this seed is dropped on the floor and cannot be recovered — the update
+	// is not queued, it is discarded.
+	indiv_pallet_members_notifier::migration_paseo::MigrateV0ToV1<Runtime>,
 	// Creates the on-chain collections the v0.3.1 people pallets expect. Both are self-guarding
 	// (they no-op when the collection already exists).
 	indiv_pallet_people::migration::CreatePeopleCollection<Runtime>,
 	indiv_pallet_people_lite::migration::CreateLitePeopleCollection<Runtime>,
+	//
+	// PASEO-LOCAL. `Participant.score` narrows `u32` -> `u8` and `Streak(u32)` -> `Streak(u8)`.
+	// The live 31-byte value DECODES SUCCESSFULLY under the new layout into wrong values —
+	// `unhashed::get` uses `Decode::decode`, not `decode_all` — so without this nothing errors
+	// and the corruption is silent, including a fabricated hold-backed `credit`.
+	// Order-independent of the entries above: `score` shares no storage with them.
+	indiv_pallet_score::migration::MigrateV0ToV1<Runtime>,
+	//
+	// PASEO-LOCAL. `Usages.at_block` keeps type `u32` but changes meaning: local para block ->
+	// relay block (`Config::BlockNumberProvider` is now `RelaychainDataProvider`). Paseo's relay
+	// height is far below People's, so `saturating_sub` yields an elapsed time of 0 forever and
+	// the live entry never rewrites its own stamp. This rebases the clock.
+	// 🔴 This migration and the `BlockNumberProvider` binding in `people.rs` are one change.
+	// Enacting either without the other is a permanent user lockout.
+	indiv_pallet_origin_restriction::migration::MigrateV0ToV1<Runtime>,
 	//
 	// PASEO-LOCAL. Unit A of the coinage migration: adopt the pre-existing coin population into
 	// instance 0, seeded from the removed `UnderlyingAssetId`.

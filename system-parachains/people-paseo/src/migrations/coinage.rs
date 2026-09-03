@@ -207,12 +207,19 @@ impl OnRuntimeUpgrade for SeedCoinageInstanceZero {
 		AssetToInstance::<Runtime>::insert(&asset_id, LEGACY_INSTANCE_ID, ());
 		writes = writes.saturating_add(3);
 
-		// Re-key the per-denomination collection markers into the double map. The old keys are
-		// dropped by the multi-block unit, which owns every removal from this prefix.
-		let mut denominations = 0u32;
-		for denomination in old::RecyclerCollectionCreated::<Runtime>::iter_keys() {
+		// Re-key the per-denomination collection markers into the double map.
+		//
+		// 🔴 COLLECT BEFORE WRITING. The baseline single map and the v0.3.1 double map share this
+		// storage prefix, so inserting while iterating feeds the alias's `Twox64Concat` reverse
+		// decode its own 21-byte suffixes, which it happily reads back as more `i8`
+		// denominations. Doing it in one pass re-keyed 25 markers for 15 real denominations.
+		//
+		// The old keys are dropped by the multi-block unit, which owns every removal here.
+		let legacy: alloc::vec::Vec<i8> =
+			old::RecyclerCollectionCreated::<Runtime>::iter_keys().collect();
+		let denominations = legacy.len() as u32;
+		for denomination in legacy {
 			RecyclerCollectionCreated::<Runtime>::insert(LEGACY_INSTANCE_ID, denomination, ());
-			denominations = denominations.saturating_add(1);
 		}
 		reads = reads.saturating_add(denominations.into());
 		writes = writes.saturating_add(denominations.into());
@@ -299,6 +306,15 @@ impl OnRuntimeUpgrade for SeedCoinageInstanceZero {
 				"coinage: a recycler collection marker was not re-keyed",
 			);
 		}
+		// Exactly those, and no others. Presence alone missed a real bug: writing into a prefix
+		// while iterating it produced 25 markers for 15 denominations, and every expected one was
+		// still present, so a presence-only check passed.
+		let rekeyed =
+			RecyclerCollectionCreated::<Runtime>::iter_key_prefix(LEGACY_INSTANCE_ID).count();
+		ensure!(
+			rekeyed == expected_denominations.len(),
+			"coinage: the re-keyed marker count does not match the denominations captured",
+		);
 
 		ensure!(
 			old::UnderlyingAssetId::<Runtime>::get().is_none(),
