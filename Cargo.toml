@@ -193,6 +193,7 @@ enumflags2 = { version = "0.7.7" }
 frame-benchmarking = { version = "48.0.0", default-features = false }
 frame-election-provider-support = { version = "47.0.0", default-features = false }
 frame-executive = { version = "47.0.0", default-features = false }
+frame-remote-externalities = { version = "0.59.0" }
 frame-support = { version = "47.0.0", default-features = false }
 frame-system = { version = "47.0.0", default-features = false }
 frame-system-benchmarking = { version = "48.0.0", default-features = false }

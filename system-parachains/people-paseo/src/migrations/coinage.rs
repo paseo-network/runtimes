@@ -55,7 +55,7 @@
 //! | `RecyclersLastRemovedRingIndex`, `RecyclersDusting`, `PaidUnloadTokenMembers` | 0 |
 //! | `Instances` | 0 — nothing seeded yet |
 
-use crate::{Runtime, Weight};
+use crate::{AccountId, Runtime, Weight};
 use frame_support::{
 	migrations::{MigrationId, SteppedMigration, SteppedMigrationError},
 	pallet_prelude::*,
@@ -505,21 +505,108 @@ fn resume<'a>(last: &'a Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>>) -> Opt
 	last.as_ref().map(|k| k.as_slice())
 }
 
+// ---------------------------------------------------------------------------------------------
+// 🔴 Why every phase below walks RAW keys instead of the typed legacy alias
+//
+// For `CoinsByOwner`, `LockedCoins`, `RecyclersCoinToRecycler` and `RecyclerCollectionCreated`,
+// v0.3.1 changed only the HASHER (or the map arity) — pallet and item names are unchanged, so
+// **source and destination share one storage prefix**. A freshly written destination key lands
+// inside the range a legacy-typed iterator walks.
+//
+// And it is NOT skipped. Reversing `Twox64Concat` over a 48-byte `Blake2_128Concat` suffix yields
+// 8 hash bytes and 40 remaining; `AccountId32` decodes from the first 32 and SCALE ignores the 8
+// trailing, so it succeeds with a garbage account. The migration then reads its own output back as
+// input, writes another key from the garbage account, and never terminates. Measured: unit B ran
+// 500 simulated blocks against a real snapshot without finishing.
+//
+// Legacy and destination keys differ in LENGTH, and that is what separates them:
+//
+// | item | legacy suffix | destination suffix |
+// | --- | --- | --- |
+// | `CoinsByOwner`, `LockedCoins`, `RecyclersCoinToRecycler` | 8 + 32 = 40 | 16 + 32 = 48 |
+// | `RecyclerCollectionCreated` | 8 + 1 = 9 | (8+4) + (8+1) = 21 |
+//
+// `RecyclersUnloaded` -> `RecyclerAliasStates` is the one safe case: different item names, so
+// different prefixes, so no overlap.
+// ---------------------------------------------------------------------------------------------
+
+/// `twox128("Coinage") ++ twox128(item)`.
+fn coinage_item_prefix(item: &str) -> alloc::vec::Vec<u8> {
+	let mut key = alloc::vec::Vec::with_capacity(32);
+	key.extend_from_slice(&sp_io::hashing::twox_128(b"Coinage"));
+	key.extend_from_slice(&sp_io::hashing::twox_128(item.as_bytes()));
+	key
+}
+
+/// Legacy suffix length for a `Twox64Concat` map over a fixed-size key: 8 hash bytes + the key.
+const fn twox64_suffix(key_len: usize) -> usize {
+	8 + key_len
+}
+
+/// Next raw key under `item_prefix` after `from` whose suffix length is exactly
+/// `legacy_suffix_len`, skipping everything else — which is this migration's own output.
+///
+/// Bounded: stops at the end of the prefix or after `SCAN_LIMIT` non-matching keys, so it can
+/// never spin. Hitting the limit ends the phase, and `post_upgrade`'s emptiness assertion catches
+/// whatever was left.
+fn next_legacy_key(
+	item_prefix: &[u8],
+	from: &[u8],
+	legacy_suffix_len: usize,
+) -> Option<alloc::vec::Vec<u8>> {
+	const SCAN_LIMIT: u32 = 10_000;
+	let mut cursor = from.to_vec();
+	for _ in 0..SCAN_LIMIT {
+		let next = sp_io::storage::next_key(&cursor)?;
+		if !next.starts_with(item_prefix) {
+			return None;
+		}
+		if next.len() == item_prefix.len().saturating_add(legacy_suffix_len) {
+			return Some(next);
+		}
+		cursor = next;
+	}
+	log::error!(
+		target: "runtime::coinage-migration",
+		"scan limit reached looking for a legacy key; ending this phase",
+	);
+	None
+}
+
+/// Decode a map key out of a raw storage key whose suffix is `hash ++ encoded_key`.
+fn key_from_raw<K: Decode>(raw: &[u8], item_prefix_len: usize, hash_len: usize) -> Option<K> {
+	let start = item_prefix_len.saturating_add(hash_len);
+	let mut encoded = raw.get(start..)?;
+	K::decode(&mut encoded).ok()
+}
+
 /// One `CoinsByOwner` entry: rehash the key and widen `Coin` with `instance_id = 0`.
 fn step_coins_by_owner(last: Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>>) -> StepOutcome {
-	let mut iter = match resume(&last) {
-		Some(k) => old::CoinsByOwner::<Runtime>::iter_from(k.to_vec()),
-		None => old::CoinsByOwner::<Runtime>::iter(),
+	let prefix = coinage_item_prefix("CoinsByOwner");
+	let from = resume(&last).map(|k| k.to_vec()).unwrap_or_else(|| prefix.clone());
+	let Some(raw) = next_legacy_key(&prefix, &from, twox64_suffix(32)) else {
+		return StepOutcome::Done;
 	};
-	let Some((account, old_coin)) = iter.next() else { return StepOutcome::Done };
-	let raw = old::CoinsByOwner::<Runtime>::hashed_key_for(&account);
+	let Some(account) = key_from_raw::<AccountId>(&raw, prefix.len(), 8) else {
+		log::error!(target: "runtime::coinage-migration", "undecodable CoinsByOwner key; halting");
+		return StepOutcome::Halt;
+	};
+	let Some(old_coin) = old::CoinsByOwner::<Runtime>::get(&account) else {
+		// A key that is present but whose value will not decode. Do NOT clear it: leaving it makes
+		// `post_upgrade`'s emptiness assertion fail loudly instead of losing a balance quietly.
+		log::error!(
+			target: "runtime::coinage-migration",
+			"CoinsByOwner value did not decode; leaving the key for post_upgrade to catch",
+		);
+		return StepOutcome::Halt;
+	};
 
-	// `instance_id` is prepended, so the widened value is a strict extension of the old one.
+	// `instance_id` is prepended, so the widened value strictly extends the old one.
 	indiv_pallet_coinage::CoinsByOwner::<Runtime>::insert(
 		&account,
 		Coin { instance_id: LEGACY_INSTANCE_ID, value: old_coin.value, age: old_coin.age },
 	);
-	old::CoinsByOwner::<Runtime>::remove(&account);
+	sp_io::storage::clear(&raw);
 	match bound_key(raw) {
 		Ok(k) => StepOutcome::Next(k),
 		Err(()) => StepOutcome::Halt,
@@ -528,15 +615,23 @@ fn step_coins_by_owner(last: Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>>) -
 
 /// One `LockedCoins` entry: the value bytes are already correct, only the hasher moves.
 fn step_locked_coins(last: Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>>) -> StepOutcome {
-	let mut iter = match resume(&last) {
-		Some(k) => old::LockedCoins::<Runtime>::iter_from(k.to_vec()),
-		None => old::LockedCoins::<Runtime>::iter(),
+	let prefix = coinage_item_prefix("LockedCoins");
+	let from = resume(&last).map(|k| k.to_vec()).unwrap_or_else(|| prefix.clone());
+	let Some(raw) = next_legacy_key(&prefix, &from, twox64_suffix(32)) else {
+		return StepOutcome::Done;
 	};
-	let Some((account, lock)) = iter.next() else { return StepOutcome::Done };
-	let raw = old::LockedCoins::<Runtime>::hashed_key_for(&account);
+	let Some(account) = key_from_raw::<AccountId>(&raw, prefix.len(), 8) else {
+		log::error!(target: "runtime::coinage-migration", "undecodable LockedCoins key; halting");
+		return StepOutcome::Halt;
+	};
 
-	indiv_pallet_coinage::LockedCoins::<Runtime>::insert(&account, lock);
-	old::LockedCoins::<Runtime>::remove(&account);
+	// `LockedCoin` and `LockInfo` are field-identical, so the value bytes are copied verbatim
+	// rather than decoded and re-encoded.
+	if let Some(value) = sp_io::storage::get(&raw) {
+		let dest = indiv_pallet_coinage::LockedCoins::<Runtime>::hashed_key_for(&account);
+		sp_io::storage::set(&dest, &value);
+	}
+	sp_io::storage::clear(&raw);
 	match bound_key(raw) {
 		Ok(k) => StepOutcome::Next(k),
 		Err(()) => StepOutcome::Halt,
@@ -546,15 +641,28 @@ fn step_locked_coins(last: Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>>) -> 
 /// One `RecyclersCoinToRecycler` entry: rehash, and widen the bare denomination into
 /// `(instance_id, denomination)`.
 fn step_coin_to_recycler(last: Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>>) -> StepOutcome {
-	let mut iter = match resume(&last) {
-		Some(k) => old::RecyclersCoinToRecycler::<Runtime>::iter_from(k.to_vec()),
-		None => old::RecyclersCoinToRecycler::<Runtime>::iter(),
+	let prefix = coinage_item_prefix("RecyclersCoinToRecycler");
+	let from = resume(&last).map(|k| k.to_vec()).unwrap_or_else(|| prefix.clone());
+	let Some(raw) = next_legacy_key(&prefix, &from, twox64_suffix(32)) else {
+		return StepOutcome::Done;
 	};
-	let Some((member, denomination)) = iter.next() else { return StepOutcome::Done };
-	let raw = old::RecyclersCoinToRecycler::<Runtime>::hashed_key_for(&member);
+	let Some(member) = key_from_raw::<MemberOf<Runtime>>(&raw, prefix.len(), 8) else {
+		log::error!(
+			target: "runtime::coinage-migration",
+			"undecodable RecyclersCoinToRecycler key; halting",
+		);
+		return StepOutcome::Halt;
+	};
+	let Some(denomination) = old::RecyclersCoinToRecycler::<Runtime>::get(&member) else {
+		log::error!(
+			target: "runtime::coinage-migration",
+			"RecyclersCoinToRecycler value did not decode; leaving the key",
+		);
+		return StepOutcome::Halt;
+	};
 
 	RecyclersCoinToRecycler::<Runtime>::insert(&member, (LEGACY_INSTANCE_ID, denomination));
-	old::RecyclersCoinToRecycler::<Runtime>::remove(&member);
+	sp_io::storage::clear(&raw);
 	match bound_key(raw) {
 		Ok(k) => StepOutcome::Next(k),
 		Err(()) => StepOutcome::Halt,
@@ -595,17 +703,43 @@ fn step_recyclers_unloaded(last: Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>
 /// One baseline `RecyclerCollectionCreated` key. Unit A already wrote the double-map replacement;
 /// this drops the old key, which would otherwise sit inside the new map's own prefix.
 fn step_old_markers(last: Option<BoundedVec<u8, ConstU32<MAX_CURSOR_KEY>>>) -> StepOutcome {
-	let mut iter = match resume(&last) {
-		Some(k) => old::RecyclerCollectionCreated::<Runtime>::iter_keys_from(k.to_vec()),
-		None => old::RecyclerCollectionCreated::<Runtime>::iter_keys(),
+	// 🔴 Length discrimination is not optional here. The legacy single-map suffix is 9 bytes and
+	// unit A's double-map replacement is 21; a typed legacy iterator decodes the 21-byte key as an
+	// `i8` plus ignored trailing bytes, so it would DELETE the markers unit A just wrote.
+	let prefix = coinage_item_prefix("RecyclerCollectionCreated");
+	let from = resume(&last).map(|k| k.to_vec()).unwrap_or_else(|| prefix.clone());
+	let Some(raw) = next_legacy_key(&prefix, &from, twox64_suffix(1)) else {
+		return StepOutcome::Done;
 	};
-	let Some(denomination) = iter.next() else { return StepOutcome::Done };
-	let raw = old::RecyclerCollectionCreated::<Runtime>::hashed_key_for(denomination);
-	old::RecyclerCollectionCreated::<Runtime>::remove(denomination);
+	sp_io::storage::clear(&raw);
 	match bound_key(raw) {
 		Ok(k) => StepOutcome::Next(k),
 		Err(()) => StepOutcome::Halt,
 	}
+}
+
+/// Count raw keys under a Coinage item whose suffix length matches the LEGACY shape.
+///
+/// 🔴 `post_upgrade` must use this, not the typed legacy alias. The alias misreads the
+/// destination keys — which share the prefix — as legacy ones (a 48-byte `Blake2_128Concat`
+/// suffix reverse-decodes as a `Twox64Concat` key with a garbage account), so an
+/// `iter_keys().next().is_none()` check on it reports leftovers that do not exist. That produced a
+/// false failure on the first clean run of the migration.
+#[cfg(feature = "try-runtime")]
+fn legacy_keys_remaining(item: &str, legacy_suffix_len: usize) -> usize {
+	let prefix = coinage_item_prefix(item);
+	let mut cursor = prefix.clone();
+	let mut found = 0usize;
+	while let Some(next) = sp_io::storage::next_key(&cursor) {
+		if !next.starts_with(&prefix) {
+			break;
+		}
+		if next.len() == prefix.len().saturating_add(legacy_suffix_len) {
+			found = found.saturating_add(1);
+		}
+		cursor = next;
+	}
+	found
 }
 
 #[cfg(feature = "try-runtime")]
@@ -626,12 +760,17 @@ mod unit_b_checks {
 	impl MigrateCoinageToInstances {
 		pub fn capture() -> Captured {
 			Captured {
-				coins: old::CoinsByOwner::<Runtime>::iter_keys().count() as u32,
-				locked: old::LockedCoins::<Runtime>::iter_keys().count() as u32,
-				coin_to_recycler: old::RecyclersCoinToRecycler::<Runtime>::iter_keys().count()
-					as u32,
+				coins: legacy_keys_remaining("CoinsByOwner", twox64_suffix(32)) as u32,
+				locked: legacy_keys_remaining("LockedCoins", twox64_suffix(32)) as u32,
+				coin_to_recycler: legacy_keys_remaining(
+					"RecyclersCoinToRecycler",
+					twox64_suffix(32),
+				) as u32,
+				// `RecyclersUnloaded` has its own item name, so nothing shares its prefix and the
+				// typed alias is safe here.
 				unloaded: old::RecyclersUnloaded::<Runtime>::iter_keys().count() as u32,
-				markers: old::RecyclerCollectionCreated::<Runtime>::iter_keys().count() as u32,
+				markers: legacy_keys_remaining("RecyclerCollectionCreated", twox64_suffix(1))
+					as u32,
 			}
 		}
 	}
@@ -675,25 +814,29 @@ impl MigrateCoinageToInstances {
 		let before: Captured = Decode::decode(&mut &state[..])
 			.map_err(|_| "coinage: could not decode the pre_upgrade capture")?;
 
+		// Counted by KEY SHAPE, because the destination keys share these prefixes.
 		ensure!(
-			old::CoinsByOwner::<Runtime>::iter_keys().next().is_none(),
-			"coinage: a baseline CoinsByOwner key survived — an entry failed to decode and was skipped",
+			legacy_keys_remaining("CoinsByOwner", twox64_suffix(32)) == 0,
+			"coinage: a baseline CoinsByOwner key survived — an entry was skipped, so a balance \
+			 was not migrated",
 		);
 		ensure!(
-			old::LockedCoins::<Runtime>::iter_keys().next().is_none(),
+			legacy_keys_remaining("LockedCoins", twox64_suffix(32)) == 0,
 			"coinage: a baseline LockedCoins key survived",
 		);
 		ensure!(
-			old::RecyclersCoinToRecycler::<Runtime>::iter_keys().next().is_none(),
+			legacy_keys_remaining("RecyclersCoinToRecycler", twox64_suffix(32)) == 0,
 			"coinage: a baseline RecyclersCoinToRecycler key survived",
 		);
 		ensure!(
-			old::RecyclersUnloaded::<Runtime>::iter_keys().next().is_none(),
-			"coinage: a baseline RecyclersUnloaded key survived — the anti-replay set is not fully rebuilt",
-		);
-		ensure!(
-			old::RecyclerCollectionCreated::<Runtime>::iter_keys().next().is_none(),
+			legacy_keys_remaining("RecyclerCollectionCreated", twox64_suffix(1)) == 0,
 			"coinage: a baseline RecyclerCollectionCreated key survived inside the new double map",
+		);
+		// Safe through the typed alias: nothing shares this item's prefix.
+		ensure!(
+			old::RecyclersUnloaded::<Runtime>::iter_keys().next().is_none(),
+			"coinage: a baseline RecyclersUnloaded key survived — the anti-replay set is not \
+			 fully rebuilt",
 		);
 
 		let coins = indiv_pallet_coinage::CoinsByOwner::<Runtime>::iter_keys().count() as u32;
@@ -901,16 +1044,36 @@ fn step_relocate_keys(
 		return advance(item, denomination);
 	}
 
-	let src = members_item_prefix(name, &legacy_recycler_identifier(denomination));
-	let dst = members_item_prefix(name, &instanced_recycler_identifier(denomination));
-
-	let from = last.map(|k| k.to_vec()).unwrap_or_else(|| src.clone());
-	let Some(key) = sp_io::storage::next_key(&from) else {
-		return advance(item, denomination);
-	};
-	if !key.starts_with(&src) {
+	// 🔴 Denomination 0's identifiers are BYTE-IDENTICAL between the two schemes: the legacy
+	// layout writes `id[16] = 0` and the instanced one writes `id[16..20] = 0u32` then
+	// `id[20] = 0`, and both leave the tail zeroed. Relocating it would mean `set(dest)` followed
+	// by `clear(src)` on the same key — deleting the collection. Measured against a real snapshot:
+	// 4 `pallet-members` rows vanished, exactly denomination 0's row count.
+	//
+	// It is already at its destination, so there is nothing to move.
+	let legacy_id = legacy_recycler_identifier(denomination);
+	let instanced_id = instanced_recycler_identifier(denomination);
+	if legacy_id == instanced_id {
 		return advance(item, denomination);
 	}
+
+	let src = members_item_prefix(name, &legacy_id);
+	let dst = members_item_prefix(name, &instanced_id);
+
+	// 🔴 Seven of the sixteen items are `StorageMap<_, Identity, Identifier, V>`, where the
+	// identifier IS the entire key — so the stored key equals `src` exactly. `next_key(src)`
+	// returns the key strictly AFTER it, which would skip the entry itself and strand the
+	// collection at its legacy address. Handle that exact key before walking.
+	let key = match last {
+		None if sp_io::storage::get(&src).is_some() => src.clone(),
+		last => {
+			let from = last.map(|k| k.to_vec()).unwrap_or_else(|| src.clone());
+			match sp_io::storage::next_key(&from) {
+				Some(k) if k.starts_with(&src) => k,
+				_ => return advance(item, denomination),
+			}
+		},
+	};
 
 	// Pure splice: the identifier occupies a fixed 32-byte slot, so everything after the source
 	// prefix is the untouched remainder of the key.
@@ -939,6 +1102,8 @@ fn step_relocate_owner(denomination: i8) -> Relocation {
 		};
 	}
 
+	// The owner rewrite applies to every relocated collection INCLUDING denomination 0, whose
+	// keys never moved (its two identifiers are equal) but whose recorded owner still changes.
 	let id = instanced_recycler_identifier(denomination);
 	indiv_pallet_members::Collections::<Runtime>::mutate(id, |maybe| {
 		if let Some(info) = maybe {
@@ -985,6 +1150,10 @@ fn relocate_identifier_index() {
 			.map(legacy_recycler_identifier)
 			.collect();
 
+	// Denomination 0's identifier is the same in both schemes, so it appears in `legacy` AND in
+	// `relocated`. Removing it from the old owner and adding it to the new one is still correct —
+	// the collection moved owners even though its key did not — but it must not be dropped from
+	// `relocated` or the new owner would never list it.
 	IdentifiersOf::<Runtime>::mutate(&old_owner, |maybe| {
 		if let Some(list) = maybe {
 			list.retain(|id| !legacy.contains(id));
