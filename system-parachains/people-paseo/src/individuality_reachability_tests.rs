@@ -52,11 +52,6 @@ fn person_gated_contexts() -> alloc::vec::Vec<(&'static str, Context)> {
 		("score", indiv_pallet_score::Pallet::<Runtime>::score_context()),
 		// `impl indiv_pallet_resources::Config for Runtime { type EnsurePerson = … }`
 		("resources", indiv_pallet_resources::Pallet::<Runtime>::resources_context()),
-		// `impl indiv_pallet_people_airdrops::Config for Runtime { type EnsurePerson = … }`
-		(
-			"people-airdrops",
-			indiv_pallet_people_airdrops::Pallet::<Runtime>::people_airdrops_context()
-		),
 	]
 }
 
@@ -156,10 +151,6 @@ fn derived_contexts_resolve_against_the_shared_network_suffix() {
 			indiv_pallet_people_lite::Pallet::<Runtime>::auth_context(),
 			expect(personhood::PEOPLE_LITE_AUTH),
 		);
-		assert_eq!(
-			indiv_pallet_people_airdrops::Pallet::<Runtime>::people_airdrops_context(),
-			expect(personhood::PEOPLE_AIRDROPS),
-		);
 	});
 }
 
@@ -173,7 +164,6 @@ fn rotating_the_network_suffix_moves_every_derived_context() {
 			indiv_pallet_score::Pallet::<Runtime>::score_context(),
 			indiv_pallet_resources::Pallet::<Runtime>::resources_context(),
 			indiv_pallet_people_lite::Pallet::<Runtime>::auth_context(),
-			indiv_pallet_people_airdrops::Pallet::<Runtime>::people_airdrops_context(),
 		);
 
 		indiv_pallet_network_suffix::NetworkSuffix::<Runtime>::put(
@@ -185,13 +175,11 @@ fn rotating_the_network_suffix_moves_every_derived_context() {
 			indiv_pallet_score::Pallet::<Runtime>::score_context(),
 			indiv_pallet_resources::Pallet::<Runtime>::resources_context(),
 			indiv_pallet_people_lite::Pallet::<Runtime>::auth_context(),
-			indiv_pallet_people_airdrops::Pallet::<Runtime>::people_airdrops_context(),
 		);
 
 		assert_ne!(before.0, after.0, "score context did not follow the suffix");
 		assert_ne!(before.1, after.1, "resources context did not follow the suffix");
 		assert_ne!(before.2, after.2, "people-lite auth context did not follow the suffix");
-		assert_ne!(before.3, after.3, "people-airdrops context did not follow the suffix");
 	});
 }
 
