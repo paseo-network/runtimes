@@ -96,6 +96,8 @@ indiv-pallet-members-notifier = { path = "pallets/members-notifier", default-fea
 indiv-pallet-members-subscriber = { path = "pallets/members-subscriber", default-features = false }
 indiv-pallet-mob-rule = { path = "pallets/mob-rule", default-features = false }
 indiv-pallet-network-suffix = { path = "pallets/network-suffix", default-features = false }
+indiv-pallet-nft-claims = { path = "pallets/nft-claims", default-features = false }
+indiv-pallet-nft-credits = { path = "pallets/nft-credits", default-features = false }
 indiv-pallet-origin-restriction = { path = "pallets/origin-restriction", default-features = false }
 indiv-pallet-people-lite = { path = "pallets/people-lite", default-features = false }
 indiv-pallet-people = { path = "pallets/people-multi", default-features = false }
@@ -264,6 +266,10 @@ pallet-referenda = { version = "48.0.0", default-features = false }
 pallet-remote-proxy = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.3.1", package = "pallet-remote-proxy", default-features = false }
 pallet-revive = { version = "0.18.0", default-features = false }
 pallet-salary = { version = "33.0.0", default-features = false }
+# Not an Individuality pallet: `pallet-scarcity` carries Substrate file headers and its manifest
+# reads "Vendored from polkadot-sdk until released on crates.io". Kept in the crates.io `pallet-*`
+# block (as upstream does) so it becomes a plain version dependency the day it is published.
+pallet-scarcity = { path = "pallets/scarcity", default-features = false }
 pallet-scheduler = { version = "49.0.0", default-features = false }
 pallet-session = { version = "48.0.0", default-features = false }
 pallet-session-benchmarking = { version = "48.0.0", default-features = false }
@@ -412,6 +418,8 @@ members = [
 	"pallets/members-subscriber",
 	"pallets/mob-rule",
 	"pallets/network-suffix",
+	"pallets/nft-claims",
+	"pallets/nft-credits",
 	"pallets/origin-restriction",
 	"pallets/people-lite",
 	"pallets/people-multi",
@@ -419,6 +427,7 @@ members = [
 	"pallets/proof-of-ink",
 	"pallets/relay-randomness",
 	"pallets/resources",
+	"pallets/scarcity",
 	"pallets/score",
 	"pallets/storage-initialization",
 	"pallets/value-transfer-auth",

@@ -6407,6 +6407,60 @@ dependencies = [
 ]
 
 [[package]]
+name = "indiv-pallet-nft-claims"
+version = "2.3.1"
+dependencies = [
+ "binary-merkle-tree",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "indiv-support",
+ "log",
+ "pallet-scarcity",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-api",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
+name = "indiv-pallet-nft-credits"
+version = "2.3.1"
+dependencies = [
+ "binary-merkle-tree",
+ "cumulus-primitives-core",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "indiv-pallet-airdrop",
+ "indiv-pallet-chunks-manager",
+ "indiv-pallet-game",
+ "indiv-pallet-members",
+ "indiv-pallet-people",
+ "indiv-pallet-people-lite",
+ "indiv-pallet-score",
+ "indiv-support",
+ "log",
+ "pallet-assets",
+ "pallet-assets-holder",
+ "pallet-balances",
+ "parity-scale-codec",
+ "parking_lot 0.12.5",
+ "scale-info",
+ "sp-api",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-state-machine",
+ "sp-statement-store 26.0.0",
+ "sp-trie",
+ "staging-xcm",
+ "verifiable",
+]
+
+[[package]]
 name = "indiv-pallet-origin-restriction"
 version = "2.3.1"
 dependencies = [
@@ -9832,6 +9886,23 @@ dependencies = [
  "parity-scale-codec",
  "polkadot-sdk-frame",
  "scale-info",
+]
+
+[[package]]
+name = "pallet-scarcity"
+version = "2.3.1"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "indiv-support",
+ "log",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-api",
+ "sp-io",
+ "sp-runtime",
 ]
 
 [[package]]
