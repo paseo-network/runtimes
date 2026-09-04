@@ -96,6 +96,48 @@ pub const CANONICAL_KZG_VERIFIER_KEY_HASH: [u8; 32] = [
 	0x58, 0x7b, 0xa4, 0xa5, 0x28, 0x6a, 0xa5, 0x99, 0xab, 0x6b, 0xf9, 0xf9, 0xc8, 0x63, 0x9d, 0xef,
 ];
 
+/// `proof_size` charged per entry, which `DbWeight` does not model.
+///
+/// `RocksDbWeight` on this runtime declares **ref_time only** (`read: 25_000ns`,
+/// `write: 100_000ns`) and a `proof_size` of **zero**. On a parachain the PoV is the binding
+/// constraint, so a migration that touches storage and declares `reads_writes()` alone is
+/// understating its real cost to nothing.
+///
+/// 4 KiB per entry is deliberately generous: the values are 1620 bytes read and 1140 written
+/// (`Members::Root`) or 776/296 (`Members::OldRoots`), so this leaves >2x headroom for the trie
+/// nodes the proof carries. Measured for comparison with `try-runtime on-runtime-upgrade` over a
+/// live `people-paseo` 2004003 snapshot: the **whole** single-block migration set produced a
+/// 12.6 KB compressed PoV, against the 96 KiB this declares for its 24 entries.
+///
+/// Same figure, and same reasoning, as `coinage::DECLARED_PROOF_SIZE_PER_ENTRY` in this runtime:
+/// being wrong in the generous direction costs block space; being wrong in the other direction
+/// costs the chain.
+const DECLARED_PROOF_SIZE_PER_ENTRY: u64 = 4 * 1024;
+
+/// Sanity bound on the number of entries this **single-block** migration expects to touch.
+///
+/// Live count at design time is **24** (`Members::Root`) + **0** (`Members::OldRoots`).
+/// `OldRoots` is the open-ended one: `OldRootRetentionDuration` is 600s, so it is empty only
+/// because nothing archived recently, and a burst of ring-root revisions shortly before enactment
+/// would leave entries behind.
+///
+/// The bound is **not** a truncation point — stopping half-way would leave the map in exactly the
+/// mixed state this migration exists to remove. It is a tripwire: `pre_upgrade` fails loudly under
+/// try-runtime, and `on_runtime_upgrade` logs an error while still completing the work correctly.
+///
+/// 512 x [`DECLARED_PROOF_SIZE_PER_ENTRY`] is 2 MiB, still inside a parachain PoV budget, so even
+/// the worst case this admits stays safe.
+const EXPECTED_MAX_ENTRIES: u32 = 512;
+
+/// The weight one entry is charged: a read, a write, and the `proof_size` allowance `DbWeight`
+/// omits. `ref_time` deliberately keeps coming from `DbWeight`, whose constants are the
+/// **reference machine's**, not whatever host happens to build or run this.
+fn per_entry_weight() -> Weight {
+	<Runtime as frame_system::Config>::DbWeight::get()
+		.reads_writes(1, 1)
+		.saturating_add(Weight::from_parts(0, DECLARED_PROOF_SIZE_PER_ENTRY))
+}
+
 /// The `Members` storage items whose value begins with a `MembersOf<T>`.
 const ITEMS: [&str; 2] = ["Root", "OldRoots"];
 
@@ -164,11 +206,24 @@ impl OnRuntimeUpgrade for MigrateRingRootsToCommitmentOnly {
 			}
 		}
 
+		if reads > EXPECTED_MAX_ENTRIES as u64 {
+			// Not fatal, and deliberately not a truncation: a correct migration of a larger map is
+			// still correct, whereas stopping half-way would leave the mixed state this migration
+			// exists to remove. Loud so an operator sees that the single-block weight assumption
+			// was sized against a smaller chain than the one that enacted it.
+			log::error!(
+				target: "runtime::ring_roots",
+				"touched {reads} entries, above the {EXPECTED_MAX_ENTRIES} this single-block \
+				 migration was sized for; the block may be heavy.",
+			);
+		}
+
 		log::info!(
 			target: "runtime::ring_roots",
-			"Members ring commitments: {writes} reshaped, {untouched} left as-is",
+			"Members ring commitments: {writes} reshaped, {untouched} left as-is, \
+			 {reads} entries visited",
 		);
-		<Runtime as frame_system::Config>::DbWeight::get().reads_writes(reads, writes)
+		per_entry_weight().saturating_mul(reads)
 	}
 
 	#[cfg(feature = "try-runtime")]
@@ -183,7 +238,18 @@ impl OnRuntimeUpgrade for MigrateRingRootsToCommitmentOnly {
 				}
 			}
 		}
-		log::info!(target: "runtime::ring_roots", "pre_upgrade: {legacy} legacy ring commitments");
+		// Tripwire, not a limit: this is a single-block migration whose declared weight is sized
+		// for `EXPECTED_MAX_ENTRIES`. If the chain grew past that between design and enactment we
+		// want a loud try-runtime failure here, not an oversized block on a live network.
+		let visited = ITEMS.iter().map(|i| keys_under(i).len()).sum::<usize>() as u32;
+		ensure!(
+			visited <= EXPECTED_MAX_ENTRIES,
+			"ring_roots: more entries than this single-block migration is sized for",
+		);
+		log::info!(
+			target: "runtime::ring_roots",
+			"pre_upgrade: {legacy} legacy ring commitments, {visited}/{EXPECTED_MAX_ENTRIES} entries",
+		);
 		Ok(legacy.encode())
 	}
 
@@ -286,6 +352,22 @@ mod tests {
 			strip_kzg_verifier_key(wrong).is_none(),
 			"a prefix-truncated value must not be accepted as legacy",
 		);
+	}
+
+	/// The declared worst case must stay inside a parachain PoV budget. If someone raises
+	/// `EXPECTED_MAX_ENTRIES` or `DECLARED_PROOF_SIZE_PER_ENTRY`, this is what catches an
+	/// unshippable combination.
+	#[test]
+	fn declared_worst_case_fits_a_pov() {
+		let worst = per_entry_weight().saturating_mul(EXPECTED_MAX_ENTRIES as u64);
+		// 5 MiB is the relay's per-candidate PoV ceiling; stay an order of magnitude under it.
+		assert!(
+			worst.proof_size() <= 2 * 1024 * 1024,
+			"declared worst-case proof_size {} exceeds 2 MiB",
+			worst.proof_size(),
+		);
+		// And the live population must sit far below the bound it is sized against.
+		assert!(24 * 4 < EXPECTED_MAX_ENTRIES, "bound leaves too little headroom");
 	}
 
 	/// Running twice must be a no-op, not a second truncation.
