@@ -3576,7 +3576,7 @@ mod remote_tests {
 	use std::env::var;
 
 	async fn remote_ext_test_setup() -> RemoteExternalities<Block> {
-		let transport: String = var("WS").unwrap_or("wss://paseo-rpc.dwellir.com".to_string());
+		let transport: String = var("WS").unwrap_or("wss://paseo-rpc.n.dwellir.com".to_string());
 		let maybe_state_snapshot: Option<SnapshotConfig> = var("SNAP").map(|s| s.into()).ok();
 		Builder::<Block>::default()
 			.mode(if let Some(state_snapshot) = maybe_state_snapshot {
@@ -3949,6 +3949,19 @@ mod post_ahm_filter_tests {
 mod upgrade_tests {
 	use super::*;
 	use frame_support::traits::OnRuntimeUpgrade;
+
+	#[test]
+	fn block_length_preserves_class_limits_and_caps_header_size() {
+		let current = <Runtime as frame_system::Config>::BlockLength::get();
+		let previous = BlockLength::get();
+		for class in [DispatchClass::Normal, DispatchClass::Operational, DispatchClass::Mandatory] {
+			assert_eq!(current.max.get(class), previous.max.get(class));
+		}
+		assert_eq!(*current.max.get(DispatchClass::Normal), 3_932_160);
+		assert_eq!(*current.max.get(DispatchClass::Operational), 5 * 1024 * 1024);
+		assert_eq!(*current.max.get(DispatchClass::Mandatory), 5 * 1024 * 1024);
+		assert_eq!(current.max_header_size(), 100 * 1024);
+	}
 
 	#[test]
 	fn retired_trie_migration_storage_is_removed_without_touching_other_pallets() {
