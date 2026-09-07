@@ -9,11 +9,8 @@ license.workspace = true
 
 [dependencies]
 
-# Fellowship v2.5.0 dependency overrides are scoped to the relay; system chains retain
-# the workspace versions. Other SDK dependencies already resolve to the required versions.
-
 # Asset Hub Migration concerning deps
-pallet-rc-migrator = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.5.0", default-features = false }
+pallet-rc-migrator = { workspace = true }
 # End: Asset Hub Migration concerning deps
 
 codec = { features = ["derive", "max-encoded-len"], workspace = true }
@@ -59,7 +56,7 @@ pallet-staking-async-rc-client = { workspace = true, features = ["xcm-sender"] }
 pallet-transaction-payment = { workspace = true }
 pallet-transaction-payment-rpc-runtime-api = { workspace = true }
 pallet-conviction-voting = { workspace = true }
-pallet-election-provider-multi-phase = { version = "50.0.0", default-features = false }
+pallet-election-provider-multi-phase = { workspace = true }
 pallet-fast-unstake = { workspace = true }
 frame-executive = { workspace = true }
 frame-metadata-hash-extension = { workspace = true }
@@ -103,7 +100,7 @@ pallet-offences-benchmarking = { optional = true, workspace = true }
 pallet-session-benchmarking = { optional = true, workspace = true }
 hex-literal = { workspace = true }
 
-polkadot-runtime-common = { version = "30.0.0", default-features = false }
+polkadot-runtime-common = { workspace = true }
 runtime-parachains = { workspace = true }
 polkadot-primitives = { workspace = true }
 
@@ -122,7 +119,7 @@ approx = { workspace = true }
 sp-keyring = { workspace = true }
 sp-trie = { workspace = true }
 separator = { workspace = true }
-remote-externalities = { version = "0.61.0", package = "frame-remote-externalities" }
+remote-externalities = { workspace = true }
 tokio = { features = ["macros"], workspace = true }
 sp-tracing = { workspace = true }
 hex-literal = { workspace = true }
