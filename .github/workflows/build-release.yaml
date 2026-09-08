@@ -343,8 +343,33 @@ jobs:
           echo "/home/linuxbrew/.linuxbrew/bin" >> $GITHUB_PATH
 
       - name: Install Pop
+        env:
+          # Pin the tap to the commit that adds pop-cli v0.12.1. The tap ships a single
+          # unversioned `pop.rb`, so there is no `pop@X.Y.Z` formula to pin by name: the only
+          # way to hold a version is to check the tap out at a fixed commit and stop brew from
+          # auto-updating it back to HEAD.
+          POP_TAP_COMMIT: 6d69ca334a23aded8e43ae9989afda358de4d32d
+          HOMEBREW_NO_AUTO_UPDATE: 1
+          HOMEBREW_NO_INSTALL_FROM_API: 1
         run: |
-          brew install r0gue-io/pop-cli/pop
+          set -euo pipefail
+          brew tap r0gue-io/pop-cli
+          git -C "$(brew --repository r0gue-io/pop-cli)" checkout -q "$POP_TAP_COMMIT"
+
+          # `create-release` needs this job, so a transient install failure blocks the whole
+          # release even when every runtime built. Release v2.5.0 was lost exactly that way:
+          # `brew install r0gue-io/pop-cli/pop` exited 1 with "Broken pipe" while fetching.
+          # Pinning fixes which version we get, not the flaky fetch, so retry the install.
+          for attempt in 1 2 3; do
+            if brew install --formula r0gue-io/pop-cli/pop; then
+              pop --version
+              exit 0
+            fi
+            echo "::warning::pop install attempt ${attempt} failed; retrying in 15s"
+            sleep 15
+          done
+          echo "::error::pop install failed after 3 attempts"
+          exit 1
 
       - name: Generate chain specs
         run: |
