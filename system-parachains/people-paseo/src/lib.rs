@@ -185,7 +185,26 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: Cow::Borrowed("people-paseo"),
 	impl_name: Cow::Borrowed("people-paseo"),
 	authoring_version: 1,
-	spec_version: 2_005_000,
+	// 2_005_000 -> 2_005_001 is NOT hygiene: it retires a `codeSubstitutes` entry.
+	//
+	// The 2_005_000 build that enacted on people-paseo carried `RelayParentOffset = 1`, which
+	// halted the chain at #6546979 (`InvalidNumberOfDescendants { expected: 2, received: 0 }`).
+	// Recovery registered a corrected offset-0 blob on the relay via
+	// `paras.forceSetCurrentCode`, and node operators run a spec carrying
+	// `codeSubstitutes { "6546979": <that blob> }`. So TWO DIFFERENT WASM BLOBS BOTH CLAIM
+	// spec_version 2_005_000: the broken one still sitting in this chain's `:code`, and the
+	// substitute that nodes actually execute.
+	//
+	// `sc_service`'s substitute map is keyed by the substitute's own `spec_version` and applies
+	// only where the on-chain runtime reports that same version, so leaving this at 2_005_000
+	// would keep every node permanently dependent on holding that spec file. Bumping to
+	// 2_005_001 puts the corrected code in `:code` under a version no substitute claims, and
+	// nodes past this upgrade need no substitute at all.
+	//
+	// The `codeSubstitutes` entry must nevertheless stay in the distributed spec forever: blocks
+	// 6546979..<this upgrade> can only be replayed with it, so any archive or resyncing node
+	// still needs it to cross that range.
+	spec_version: 2_005_001,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	// BUMPED 1 -> 2 for the individuality v0.3.1 port. MANDATORY, not hygiene: coinage call
