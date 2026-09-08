@@ -108,7 +108,7 @@ indiv-pallet-resources = { path = "pallets/resources", default-features = false 
 indiv-pallet-score = { path = "pallets/score", default-features = false }
 indiv-pallet-storage-initialization = { path = "pallets/storage-initialization", default-features = false }
 indiv-pallet-value-transfer-auth = { path = "pallets/value-transfer-auth", default-features = false }
-pallet-rc-migrator = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.4.0", default-features = false }
+pallet-rc-migrator = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.5.0", default-features = false }
 pallet-ah-ops = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.4.0", default-features = false }
 pallet-election-provider-multi-block = { version = "0.11.0", default-features = false }
 pallet-staking-async = { version = "0.14.0", default-features = false }
@@ -159,8 +159,8 @@ paseo-emulated-chain = { path = "integration-tests/emulated/chains/relays/paseo"
 assert_matches = { version = "1.5.0" }
 approx = { version = "0.5.1" }
 array-bytes = { version = "9.3.0" }
-asset-test-utils = { version = "35.0.0" }
-assets-common = { version = "0.33.0", default-features = false }
+asset-test-utils = { version = "37.0.0" }
+assets-common = { version = "0.35.0", default-features = false }
 authority-discovery-primitives = { version = "43.0.0", default-features = false, package = "sp-authority-discovery" }
 babe-primitives = { version = "0.49.0", default-features = false, package = "sp-consensus-babe" }
 beefy-primitives = { version = "31.0.0", default-features = false, package = "sp-consensus-beefy" }
@@ -175,7 +175,7 @@ bp-runtime = { version = "0.28.0", default-features = false }
 bp-xcm-bridge-hub = { version = "0.14.0", default-features = false }
 bp-xcm-bridge-hub-router = { version = "0.25.0", default-features = false }
 bridge-hub-common = { version = "0.22.0", default-features = false }
-bridge-hub-test-utils = { version = "0.34.0" }
+bridge-hub-test-utils = { version = "0.36.0" }
 bridge-runtime-common = { version = "0.30.0", default-features = false }
 clap = { version = "4.5.0" }
 codec = { package = "parity-scale-codec", version = "3.7.5", default-features = false }
@@ -186,11 +186,11 @@ cumulus-pallet-parachain-system = { version = "0.29.0", default-features = false
 cumulus-pallet-weight-reclaim = { version = "0.11.0", default-features = false }
 cumulus-pallet-session-benchmarking = { version = "30.0.0", default-features = false }
 cumulus-pallet-xcm = { version = "0.27.0", default-features = false }
-cumulus-pallet-xcmp-queue = { version = "0.30.0", default-features = false }
+cumulus-pallet-xcmp-queue = { version = "0.31.0", default-features = false }
 cumulus-primitives-aura = { version = "0.24.0", default-features = false }
 cumulus-primitives-core = { version = "0.26.0", default-features = false }
-cumulus-primitives-utility = { version = "0.30.0", default-features = false }
-emulated-integration-tests-common = { version = "34.0.0" }
+cumulus-primitives-utility = { version = "0.31.0", default-features = false }
+emulated-integration-tests-common = { version = "36.0.0" }
 enumflags2 = { version = "0.7.7" }
 frame-benchmarking = { version = "49.0.0", default-features = false }
 frame-election-provider-support = { version = "48.0.0", default-features = false }
@@ -235,7 +235,7 @@ pallet-collective = { version = "49.0.0", default-features = false }
 pallet-conviction-voting = { version = "49.0.0", default-features = false }
 pallet-dap = { version = "0.6.0", default-features = false }
 pallet-core-fellowship = { version = "33.0.0", default-features = false }
-pallet-election-provider-multi-phase = { version = "49.0.0", default-features = false }
+pallet-election-provider-multi-phase = { version = "50.0.0", default-features = false }
 pallet-election-provider-support-benchmarking = { version = "48.0.0", default-features = false }
 pallet-fast-unstake = { version = "48.0.0", default-features = false }
 pallet-glutton = { version = "35.0.0", default-features = false }
@@ -296,10 +296,10 @@ pallet-xcm-precompiles = { version = "0.9.0", default-features = false }
 pallet-xcm-bridge-hub = { version = "0.25.0", default-features = false }
 pallet-xcm-bridge-hub-router = { version = "0.27.0", default-features = false }
 parachain-info = { version = "0.28.0", default-features = false, package = "staging-parachain-info" }
-parachains-common = { version = "32.0.0", default-features = false }
-parachains-runtimes-test-utils = { version = "33.0.0" }
+parachains-common = { version = "34.0.0", default-features = false }
+parachains-runtimes-test-utils = { version = "35.0.0" }
 paste = { version = "1.0.14" }
-penpal-runtime = { version = "0.41.0" }
+penpal-runtime = { version = "0.43.0" }
 people-kusama-emulated-chain = { path = "integration-tests/emulated/chains/parachains/people/people-kusama" }
 people-kusama-runtime = { path = "system-parachains/people/people-kusama" }
 paseo-core-primitives = { version = "21.0.0", default-features = false }
@@ -308,10 +308,10 @@ paseo-primitives = { version = "25.0.0", package = "polkadot-primitives", defaul
 polkadot-core-primitives = { version = "24.0.0", default-features = false }
 polkadot-parachain-primitives = { version = "23.0.0", default-features = false }
 polkadot-primitives = { version = "25.0.0", default-features = false }
-polkadot-runtime-common = { version = "29.0.0", default-features = false }
+polkadot-runtime-common = { version = "30.0.0", default-features = false }
 primitive-types = { version = "0.13.1", default-features = false }
 frame-metadata-hash-extension = { version = "0.16.0", default-features = false }
-remote-externalities = { version = "0.60.0", package = "frame-remote-externalities" }
+remote-externalities = { version = "0.61.0", package = "frame-remote-externalities" }
 runtime-parachains = { version = "28.0.0", default-features = false, package = "polkadot-runtime-parachains" }
 sc-chain-spec = { version = "51.0.0" }
 sc-network = { version = "0.58.0" }
@@ -351,7 +351,7 @@ snowbridge-pallet-system-v2 = { version = "0.12.0", default-features = false }
 snowbridge-pallet-system-frontend = { version = "0.11.0", default-features = false }
 snowbridge-inbound-queue-primitives = { version = "0.14.0", default-features = false }
 snowbridge-runtime-common = { version = "0.23.0", default-features = false }
-snowbridge-runtime-test-common = { version = "0.27.0" }
+snowbridge-runtime-test-common = { version = "0.29.0" }
 snowbridge-system-runtime-api = { version = "0.22.0", default-features = false }
 snowbridge-system-v2-runtime-api = { version = "0.11.0", default-features = false }
 sp-api = { version = "43.0.0", default-features = false }
@@ -387,7 +387,7 @@ system-parachains-common = { git = "https://github.com/polkadot-fellows/runtimes
 tokio = { version = "1.45.0" }
 xcm = { version = "24.0.0", default-features = false, package = "staging-xcm" }
 xcm-builder = { version = "29.0.0", default-features = false, package = "staging-xcm-builder" }
-xcm-emulator = { version = "0.31.0" }
+xcm-emulator = { version = "0.33.0" }
 xcm-executor = { version = "28.0.0", default-features = false, package = "staging-xcm-executor" }
 xcm-runtime-apis = { version = "0.16.0", default-features = false }
 anyhow = { version = "1.0.82" }
