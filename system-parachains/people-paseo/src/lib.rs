@@ -85,9 +85,7 @@ use system_parachains_constants::{
 	async_backing::{MAXIMUM_BLOCK_WEIGHT, NORMAL_DISPATCH_RATIO},
 	paseo::{
 		consensus::{
-			elastic_scaling::{
-				BLOCK_PROCESSING_VELOCITY, RELAY_PARENT_OFFSET, UNINCLUDED_SEGMENT_CAPACITY,
-			},
+			elastic_scaling::{BLOCK_PROCESSING_VELOCITY, UNINCLUDED_SEGMENT_CAPACITY},
 			RELAY_CHAIN_SLOT_DURATION_MILLIS,
 		},
 		currency::*,
@@ -321,6 +319,24 @@ parameter_types! {
 	pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
 	pub const RelayOrigin: AggregateMessageOrigin = AggregateMessageOrigin::Parent;
 }
+
+/// PASEO-LOCAL OVERRIDE, pinned to 0.
+///
+/// `system_parachains_constants::paseo::consensus::elastic_scaling::RELAY_PARENT_OFFSET` is 1.
+/// Building one relay block behind makes the collator request **claim queue offset 2**
+/// (`relay_parent_offset + 1`), and enacting spec 2_005_000 on people-paseo froze the chain: the
+/// collator could not get a candidate backed and fell back to building on the last finalized
+/// block, where `cumulus-pallet-parachain-system` panics with
+/// `assertion failed: Only 1 is supported as valid claim queue offset -- left: 2, right: 1`.
+///
+/// Every other Paseo system parachain -- bulletin, coretime, collectives, bridge-hub -- already
+/// declares `RelayParentOffset = ConstU32<0>`, and bulletin took the same v2.5.0 release cleanly
+/// with offset 0. people-paseo and asset-hub-paseo were the only two on offset 1.
+///
+/// This pins both to 0 so they match the configuration that is known to work against the live
+/// Paseo relay. Revisit only alongside a relay-side change, and re-test on a fork whose relay
+/// matches production.
+const RELAY_PARENT_OFFSET: u32 = 0;
 
 impl cumulus_pallet_parachain_system::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
