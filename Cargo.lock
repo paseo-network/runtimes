@@ -1383,7 +1383,6 @@ dependencies = [
  "indiv-pallet-network-suffix",
  "indiv-pallet-origin-restriction",
  "indiv-pallet-pgas",
- "indiv-pallet-value-transfer-auth",
  "indiv-precompile-personhood",
  "indiv-support",
  "kusama-runtime-constants",
@@ -6805,23 +6804,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "indiv-pallet-value-transfer-auth"
-version = "2.3.1"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "pallet-balances",
- "parity-scale-codec",
- "scale-info",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "staging-xcm",
- "staging-xcm-executor",
-]
-
-[[package]]
 name = "indiv-precompile-personhood"
 version = "2.3.1"
 dependencies = [
@@ -11399,7 +11381,6 @@ dependencies = [
  "indiv-pallet-resources",
  "indiv-pallet-score",
  "indiv-pallet-storage-initialization",
- "indiv-pallet-value-transfer-auth",
  "indiv-support",
  "log",
  "pallet-asset-conversion",

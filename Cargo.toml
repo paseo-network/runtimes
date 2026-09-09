@@ -107,7 +107,6 @@ indiv-pallet-relay-randomness = { path = "pallets/relay-randomness", default-fea
 indiv-pallet-resources = { path = "pallets/resources", default-features = false }
 indiv-pallet-score = { path = "pallets/score", default-features = false }
 indiv-pallet-storage-initialization = { path = "pallets/storage-initialization", default-features = false }
-indiv-pallet-value-transfer-auth = { path = "pallets/value-transfer-auth", default-features = false }
 pallet-rc-migrator = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.5.0", default-features = false }
 pallet-ah-ops = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.4.0", default-features = false }
 pallet-election-provider-multi-block = { version = "0.11.0", default-features = false }
@@ -424,7 +423,6 @@ members = [
 	"pallets/resources",
 	"pallets/score",
 	"pallets/storage-initialization",
-	"pallets/value-transfer-auth",
 	"precompiles/personhood",
 	"support",
 

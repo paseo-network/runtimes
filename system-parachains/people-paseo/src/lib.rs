@@ -29,7 +29,6 @@ pub mod parameters;
 pub mod people;
 #[cfg(test)]
 mod tests;
-pub mod value_transfer_filter;
 mod weights;
 pub mod xcm_config;
 
@@ -44,7 +43,7 @@ use frame_support::{
 	parameter_types,
 	traits::{
 		tokens::imbalance::ResolveTo, ConstBool, ConstU32, ConstU64, ConstU8, EitherOf,
-		EitherOfDiverse, InstanceFilter, TransformOrigin,
+		EitherOfDiverse, Everything, InstanceFilter, TransformOrigin,
 	},
 	weights::{ConstantMultiplier, Weight},
 	PalletId,
@@ -125,10 +124,10 @@ pub type TxExtension = cumulus_pallet_weight_reclaim::StorageWeightReclaim<
 	(
 		// Origin modifiers
 		(
-			indiv_pallet_value_transfer_auth::extension::AuthorizeValueTransfer<
-				Runtime,
-				paseo_runtime_constants::ValueTransferAuthorizationPubkey,
-			>,
+			// Slot 0 is the unit extension, as upstream individuality keeps it after removing the
+			// Paseo-only W3S `AuthorizeValueTransfer` gate: `UnitTransactionExtension` in
+			// metadata.
+			(),
 			pallet_verify_signature::VerifySignature<Runtime>,
 			indiv_pallet_people::extension::AsPerson<Runtime>,
 			indiv_pallet_proof_of_ink::extension::AsProofOfInkParticipant<Runtime>,
@@ -204,7 +203,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// The `codeSubstitutes` entry must nevertheless stay in the distributed spec forever: blocks
 	// 6546979..<this upgrade> can only be replayed with it, so any archive or resyncing node
 	// still needs it to cross that range.
-	spec_version: 2_005_001,
+	spec_version: 2_005_002,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	// BUMPED 1 -> 2 for the individuality v0.3.1 port. MANDATORY, not hygiene: coinage call
@@ -212,7 +211,13 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// (`unload_recycler_into_external_asset_and_vouchers` ->
 	// `unload_recycler_into_external_asset_and_loaded_coins`). A signer that did not notice
 	// would build a call that decodes as the wrong extrinsic rather than failing cleanly.
-	transaction_version: 2,
+	//
+	// BUMPED 2 -> 3: the W3S `AuthorizeValueTransfer` extension was replaced by the unit `()`
+	// extension in slot 0 of the `TxExtension` origin-modifier tuple (as upstream), which changes
+	// the transaction extension tuple that every signer must construct. Mandatory, not hygiene: an
+	// unbumped `transaction_version` would let wallets keep building the old, now-undecodable,
+	// extension payload.
+	transaction_version: 3,
 	system_version: 1,
 };
 
@@ -258,9 +263,7 @@ parameter_types! {
 
 #[derive_impl(frame_system::config_preludes::ParaChainDefaultConfig as frame_system::DefaultConfig)]
 impl frame_system::Config for Runtime {
-	type BaseCallFilter = indiv_pallet_value_transfer_auth::BlockValueTransfersWhenFlagSet<
-		crate::value_transfer_filter::PeopleValueTransferFilter,
-	>;
+	type BaseCallFilter = Everything;
 	type BlockWeights = RuntimeBlockWeights;
 	type BlockLength = RuntimeBlockLength;
 	type AccountId = AccountId;
@@ -752,10 +755,7 @@ where
 	fn create_extension() -> Self::Extension {
 		(
 			(
-				indiv_pallet_value_transfer_auth::extension::AuthorizeValueTransfer::<
-					Runtime,
-					paseo_runtime_constants::ValueTransferAuthorizationPubkey,
-				>::default(),
+				(),
 				pallet_verify_signature::VerifySignature::<Runtime>::Disabled,
 				indiv_pallet_people::extension::AsPerson::<Runtime>::new(None),
 				indiv_pallet_proof_of_ink::extension::AsProofOfInkParticipant::<Runtime>::new(None),
@@ -1111,33 +1111,6 @@ mod benches {
 #[cfg(feature = "runtime-benchmarks")]
 use benches::*;
 
-/// Temporarily lifts the value-transfer block flag for the duration of a runtime-API call,
-/// restoring the previous value on drop.
-///
-/// Dry-runs (`DryRunApi`) do not execute transaction extensions, so
-/// `AuthorizeValueTransfer::prepare` never calls `block_flag::unblock()` during fee-estimation.
-/// This lets a client fee-estimate a People->AH withdraw (`WithdrawAsset` of the protected asset
-/// executed on People) without `ProtectedAssetTransactor::withdraw_asset` returning `NoPermission`
-/// and emptying `forwarded_xcms`. The RAII guard save-and-restores the prior flag (rather than a
-/// blind `block()`), which is mandatory because `block_flag` is a Wasm `static mut` that persists
-/// across runtime-API calls and is not rolled back by the dry-run overlay.
-fn value_transfer_block_flag_scope() -> impl Drop {
-	use indiv_pallet_value_transfer_auth::extension::block_flag;
-	struct Restore(bool);
-	impl Drop for Restore {
-		fn drop(&mut self) {
-			if self.0 {
-				block_flag::block();
-			} else {
-				block_flag::unblock();
-			}
-		}
-	}
-	let prev = block_flag::is_blocked();
-	block_flag::unblock();
-	Restore(prev)
-}
-
 impl_runtime_apis! {
 	impl sp_consensus_aura::AuraApi<Block, AuraId> for Runtime {
 		fn slot_duration() -> sp_consensus_aura::SlotDuration {
@@ -1328,12 +1301,10 @@ impl_runtime_apis! {
 
 	impl xcm_runtime_apis::dry_run::DryRunApi<Block, RuntimeCall, RuntimeEvent, OriginCaller> for Runtime {
 		fn dry_run_call(origin: OriginCaller, call: RuntimeCall, result_xcms_version: XcmVersion) -> Result<CallDryRunEffects<RuntimeEvent>, XcmDryRunApiError> {
-			let _guard = value_transfer_block_flag_scope();
 			PolkadotXcm::dry_run_call::<Runtime, xcm_config::XcmRouter, OriginCaller, RuntimeCall>(origin, call, result_xcms_version)
 		}
 
 		fn dry_run_xcm(origin_location: VersionedLocation, xcm: VersionedXcm<RuntimeCall>) -> Result<XcmDryRunEffects<RuntimeEvent>, XcmDryRunApiError> {
-			let _guard = value_transfer_block_flag_scope();
 			PolkadotXcm::dry_run_xcm::<xcm_config::XcmRouter>(origin_location, xcm)
 		}
 	}
