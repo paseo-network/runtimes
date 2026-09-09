@@ -242,12 +242,25 @@ impl OnRuntimeUpgrade for SeedCoinageInstanceZero {
 	fn pre_upgrade() -> Result<alloc::vec::Vec<u8>, sp_runtime::TryRuntimeError> {
 		use codec::Encode;
 
+		// Already seeded: `on_runtime_upgrade` is a no-op from here on, and the pre-state this
+		// hook would otherwise capture (`UnderlyingAssetId`, the legacy markers) is gone. Encode
+		// `None` so `post_upgrade` only asserts that instance 0 is still there. This keeps the
+		// hooks idempotent, which `try-runtime --checks pre-and-post` requires when it replays
+		// the migration set a second time.
+		if Instances::<Runtime>::contains_key(LEGACY_INSTANCE_ID) {
+			log::info!(
+				target: "runtime::coinage-migration",
+				"pre_upgrade: instance {LEGACY_INSTANCE_ID} already seeded; nothing to capture",
+			);
+			return Ok(None::<(FungiblesAssetIdOf<Runtime>, alloc::vec::Vec<i8>)>.encode());
+		}
+
 		ensure!(
 			Instances::<Runtime>::iter().next().is_none(),
 			"coinage: instances already exist; this runtime has been migrated already",
 		);
-		let asset_id = old::UnderlyingAssetId::<Runtime>::get();
-		ensure!(asset_id.is_some(), "coinage: no UnderlyingAssetId to seed instance 0 from",);
+		let asset_id = old::UnderlyingAssetId::<Runtime>::get()
+			.ok_or("coinage: no UnderlyingAssetId to seed instance 0 from")?;
 
 		let denominations: alloc::vec::Vec<i8> =
 			old::RecyclerCollectionCreated::<Runtime>::iter_keys().collect();
@@ -256,23 +269,29 @@ impl OnRuntimeUpgrade for SeedCoinageInstanceZero {
 			"pre_upgrade: seeding from asset {asset_id:?}; {} denomination(s) to re-key",
 			denominations.len(),
 		);
-		Ok((asset_id, denominations).encode())
+		Ok(Some((asset_id, denominations)).encode())
 	}
 
 	#[cfg(feature = "try-runtime")]
 	fn post_upgrade(state: alloc::vec::Vec<u8>) -> Result<(), sp_runtime::TryRuntimeError> {
 		use codec::Decode;
 
-		let (expected_asset, expected_denominations): (
-			Option<FungiblesAssetIdOf<Runtime>>,
-			alloc::vec::Vec<i8>,
-		) = Decode::decode(&mut &state[..])
-			.map_err(|_| "coinage: could not decode the pre_upgrade capture")?;
-		let expected_asset =
-			expected_asset.ok_or("coinage: pre_upgrade captured no underlying asset")?;
+		let captured: Option<(FungiblesAssetIdOf<Runtime>, alloc::vec::Vec<i8>)> =
+			Decode::decode(&mut &state[..])
+				.map_err(|_| "coinage: could not decode the pre_upgrade capture")?;
 
 		let record = Instances::<Runtime>::get(LEGACY_INSTANCE_ID)
 			.ok_or("coinage: instance 0 was not seeded")?;
+
+		// Already-seeded path: `on_runtime_upgrade` skipped, so the only invariant that can be
+		// stated without the pre-state is that instance 0 survived the upgrade.
+		let Some((expected_asset, expected_denominations)) = captured else {
+			log::info!(
+				target: "runtime::coinage-migration",
+				"post_upgrade: instance {LEGACY_INSTANCE_ID} was already seeded; still present",
+			);
+			return Ok(());
+		};
 		ensure!(record.asset_id == expected_asset, "coinage: instance 0 has the wrong asset");
 		ensure!(
 			record.asset_unit == LEGACY_ASSET_UNIT,
