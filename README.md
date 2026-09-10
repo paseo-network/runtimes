@@ -77,12 +77,28 @@ If the token is broken, the workflow fails loudly and says so on the PR rather t
 
 ### Runner provisioning
 
-The runner needs the build toolchain, `frame-omni-bencher` (pinned by
-`FRAME_OMNI_BENCHER_RELEASE_VERSION` in `.github/env`) and `subweight`. CI only verifies these and
-fails early with an actionable message; provision the host once with:
+The workflow provisions the runner itself, so a freshly re-registered or rebuilt machine needs no
+manual preparation. Before benchmarking it runs:
 
 ```sh
-./.github/scripts/bench-deps.sh install
+./.github/scripts/bench-deps.sh ensure
+```
+
+which installs only what is actually missing — the apt build toolchain, `frame-omni-bencher` (pinned
+by `FRAME_OMNI_BENCHER_RELEASE_VERSION` in `.github/env`) and `subweight`. On an already-provisioned
+runner it does no apt work at all and costs a second or two.
+
+Package presence is checked with `dpkg`, not `command -v`, so packages that ship only headers
+(`libssl-dev`, `libclang-dev`) are verified too rather than being discovered at link time.
+
+Installing needs passwordless `sudo`. Without it the step fails immediately, naming the packages to
+install by hand, rather than blocking on a password prompt until the job times out.
+
+The other two modes are for humans:
+
+```sh
+./.github/scripts/bench-deps.sh check     # verify only, change nothing
+./.github/scripts/bench-deps.sh install   # force a full (re)install
 ```
 
 ---

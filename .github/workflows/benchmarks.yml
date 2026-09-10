@@ -381,8 +381,11 @@ jobs:
           targets: wasm32v1-none,wasm32-unknown-unknown
           components: rust-src
 
-      - name: Check benchmark dependencies
-        run: ./.github/scripts/bench-deps.sh check
+      # Installs only what is missing, so a provisioned runner spends a second or two here. The
+      # machine is re-registered from outside this repo and can come back bare, so the run heals
+      # itself rather than depending on the host having been prepared by hand.
+      - name: Install benchmark dependencies
+        run: ./.github/scripts/bench-deps.sh ensure
 
       # No rust-cache here on purpose: the runner is persistent and keeps its `target/` between
       # runs, so uploading a multi-GB cache of a `production` build would only cost time.
