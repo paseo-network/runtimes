@@ -318,6 +318,12 @@ jobs:
     runs-on: [self-hosted, benchmarks]
     # A full sweep across all runtimes and pallets takes many hours.
     timeout-minutes: 1440
+    # Needs `contents: write` on top of the workflow-wide set, to push the regenerated weights.
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      actions: read
     env:
       JOB_NAME: bench
       BENCH_ARGS: ${{ needs.preflight.outputs.args }}
@@ -359,9 +365,10 @@ jobs:
         with:
           repository: ${{ env.TARGET_REPO }}
           ref: ${{ env.TARGET_REF }}
-          # A PAT, not GITHUB_TOKEN: the weights are pushed back to the branch below, and for a
-          # PR from a fork GITHUB_TOKEN has no write access to it.
-          token: ${{ secrets.PASEO_CI_PAT }}
+          # GITHUB_TOKEN for a branch in this repo, which is the common case and keeps the run
+          # working even when the PAT is unhealthy. The PAT is only needed for a PR from a fork,
+          # where GITHUB_TOKEN cannot push the weights back.
+          token: ${{ needs.preflight.outputs.repo == github.repository && secrets.GITHUB_TOKEN || secrets.PASEO_CI_PAT }}
           fetch-depth: 0
 
       - name: Set rust version via common env file
