@@ -18,7 +18,6 @@ use super::*;
 
 pub mod coinage;
 pub mod ring_roots;
-pub mod xcmp_queue_v7;
 use alloc::vec::Vec;
 use assets_common::{
 	local_and_foreign_assets::ForeignAssetReserveData,
@@ -29,12 +28,6 @@ use xcm::v5::{Junction::Parachain, Location};
 /// Unreleased migrations. Add new ones here:
 pub type Unreleased = (
 	cumulus_pallet_xcmp_queue::migration::v6::MigrateV5ToV6<Runtime>,
-	// PASEO-LOCAL, in the slot where upstream's `migration::v7::MigrateV6ToV7` would go.
-	// On-chain storage version is 6, in-code is 7, but `OutboundXcmpStatus` is already in the
-	// v7 layout (written by the v7 code since v2.5.0), so upstream's translate would fail on
-	// it and log a defensive error at enactment. Version bump only; see the module doc.
-	// `VersionedMigration`, so it is self-guarding. Drop once enacted.
-	xcmp_queue_v7::XcmpQueueSetStorageVersion7<Runtime>,
 	cumulus_pallet_parachain_system::migration::Migration<Runtime>,
 	// ---- individuality v0.3.1 ----
 	//
