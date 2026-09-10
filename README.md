@@ -65,6 +65,16 @@ truth — a runtime absent from it is never benchmarked. Per runtime:
 When adding a runtime, also add it to the `runtime` dropdown in the workflow's
 `workflow_dispatch` inputs.
 
+### Authorization
+
+`/bench` is gated on *active* `paseo-core` team membership. The check uses the `PASEO_CI_PAT`
+organisation secret, which must be a valid, unexpired token with `read:org` (classic) or
+organisation **Members: read** (fine-grained) — the team is `closed`, so a token without that scope
+cannot see it at all and every lookup returns 404.
+
+If the token is broken, the workflow fails loudly and says so on the PR rather than reporting
+"you are not a member".
+
 ### Runner provisioning
 
 The runner needs the build toolchain, `frame-omni-bencher` (pinned by

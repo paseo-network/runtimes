@@ -87,18 +87,54 @@ jobs:
           GH_TOKEN: ${{ secrets.PASEO_CI_PAT }}
           COMMENTER: ${{ github.event.comment.user.login }}
         run: |
-          state=$(curl -sS \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/orgs/${{ github.repository_owner }}/teams/${PASEO_CORE_TEAM}/memberships/${COMMENTER}" \
-            | jq -r '.state // empty')
+          set -uo pipefail
+          api="https://api.github.com/orgs/${{ github.repository_owner }}"
 
-          if [ "$state" = "active" ]; then
-            echo "is_allowed=true" >> $GITHUB_OUTPUT
-          else
-            echo "is_allowed=false" >> $GITHUB_OUTPUT
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::error::PASEO_CI_PAT is empty - the secret is not available to this repository."
+            exit 1
           fi
+
+          call() {
+            curl -sS -w '\n%{http_code}' \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "$1"
+          }
+
+          response=$(call "$api/teams/${PASEO_CORE_TEAM}/memberships/${COMMENTER}")
+          status=$(printf '%s' "$response" | tail -n1)
+          state=$(printf '%s' "$response" | sed '$d' | jq -r '.state // empty')
+          echo "membership lookup for ${COMMENTER}: HTTP $status, state='${state:-none}'"
+
+          case "$status" in
+            200)
+              if [ "$state" = "active" ]; then
+                echo "is_allowed=true" >> $GITHUB_OUTPUT
+              else
+                echo "is_allowed=false" >> $GITHUB_OUTPUT
+              fi
+              ;;
+            404)
+              # 404 is ambiguous: either the commenter really is not in the team, or the token
+              # cannot see a `closed` team at all. Probe the team itself to tell those apart -
+              # otherwise a broken token silently looks like "you are not a member", which is
+              # exactly how this went unnoticed in comment-trigger.yml.
+              team_status=$(call "$api/teams/${PASEO_CORE_TEAM}" | tail -n1)
+              if [ "$team_status" = "200" ]; then
+                echo "${COMMENTER} is not a member of ${PASEO_CORE_TEAM}"
+                echo "is_allowed=false" >> $GITHUB_OUTPUT
+              else
+                echo "::error::PASEO_CI_PAT cannot read the ${PASEO_CORE_TEAM} team (HTTP $team_status). It needs 'read:org' (classic PAT) or organization 'Members: read' (fine-grained PAT), and must not be expired."
+                exit 1
+              fi
+              ;;
+            *)
+              echo "::error::Membership lookup failed with HTTP $status. Check that PASEO_CI_PAT is valid and not expired."
+              exit 1
+              ;;
+          esac
 
       # Benchmarks run untrusted PR code on a persistent, self-hosted machine, so a non-member
       # comment must stop here and never reach the `bench` job.
@@ -121,6 +157,28 @@ jobs:
               body: `Sorry, only members of \`${process.env.PASEO_CORE_TEAM}\` can run benchmarks.`
             })
             core.setFailed('Commenter is not a member of ${{ env.PASEO_CORE_TEAM }}')
+
+      # When the gate itself breaks (bad or under-scoped PAT) the job aborts before the rejection
+      # step, so say so on the PR instead of leaving `/bench` to look like it was ignored.
+      - name: Report a broken authorization check
+        if: ${{ failure() && github.event_name == 'issue_comment' && steps.check-team.outcome == 'failure' }}
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            await github.rest.reactions.createForIssueComment({
+              comment_id: ${{ github.event.comment.id }},
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              content: 'confused'
+            })
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `Could not verify \`${process.env.PASEO_CORE_TEAM}\` membership, so \`/bench\` did not run. This is a CI configuration problem, not a permissions decision about you — [see the logs](${runUrl}).`
+            })
 
       - name: Acknowledge the comment
         if: github.event_name == 'issue_comment'
