@@ -67,7 +67,7 @@ When adding a runtime, also add it to the `runtime` dropdown in the workflow's
 
 ### Authorization
 
-`/bench` is gated on *active* `paseo-core` team membership. The check uses the `PASEO_CI_PAT`
+`/bench` is gated on *active* `paseo-core` team membership. The check uses the `PASEO_BENCH_PAT`
 organisation secret, which must be a valid, unexpired token with `read:org` (classic) or
 organisation **Members: read** (fine-grained) — the team is `closed`, so a token without that scope
 cannot see it at all and every lookup returns 404.

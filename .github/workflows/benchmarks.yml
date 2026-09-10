@@ -84,14 +84,14 @@ jobs:
         id: check-team
         if: github.event_name == 'issue_comment'
         env:
-          GH_TOKEN: ${{ secrets.PASEO_CI_PAT }}
+          GH_TOKEN: ${{ secrets.PASEO_BENCH_PAT }}
           COMMENTER: ${{ github.event.comment.user.login }}
         run: |
           set -uo pipefail
           api="https://api.github.com/orgs/${{ github.repository_owner }}"
 
           if [ -z "${GH_TOKEN:-}" ]; then
-            echo "::error::PASEO_CI_PAT is empty - the secret is not available to this repository."
+            echo "::error::PASEO_BENCH_PAT is empty - the secret is not available to this repository."
             exit 1
           fi
 
@@ -126,12 +126,12 @@ jobs:
                 echo "${COMMENTER} is not a member of ${PASEO_CORE_TEAM}"
                 echo "is_allowed=false" >> $GITHUB_OUTPUT
               else
-                echo "::error::PASEO_CI_PAT cannot read the ${PASEO_CORE_TEAM} team (HTTP $team_status). It needs 'read:org' (classic PAT) or organization 'Members: read' (fine-grained PAT), and must not be expired."
+                echo "::error::PASEO_BENCH_PAT cannot read the ${PASEO_CORE_TEAM} team (HTTP $team_status). It needs 'read:org' (classic PAT) or organization 'Members: read' (fine-grained PAT), and must not be expired."
                 exit 1
               fi
               ;;
             *)
-              echo "::error::Membership lookup failed with HTTP $status. Check that PASEO_CI_PAT is valid and not expired."
+              echo "::error::Membership lookup failed with HTTP $status. Check that PASEO_BENCH_PAT is valid and not expired."
               exit 1
               ;;
           esac
@@ -368,7 +368,7 @@ jobs:
           # GITHUB_TOKEN for a branch in this repo, which is the common case and keeps the run
           # working even when the PAT is unhealthy. The PAT is only needed for a PR from a fork,
           # where GITHUB_TOKEN cannot push the weights back.
-          token: ${{ needs.preflight.outputs.repo == github.repository && secrets.GITHUB_TOKEN || secrets.PASEO_CI_PAT }}
+          token: ${{ needs.preflight.outputs.repo == github.repository && secrets.GITHUB_TOKEN || secrets.PASEO_BENCH_PAT }}
           fetch-depth: 0
 
       - name: Set rust version via common env file
