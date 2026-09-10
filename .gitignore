@@ -19,6 +19,7 @@
 **/*.rs.bk
 **/hfuzz_target/
 **/hfuzz_workspace/
+**/__pycache__/
 **/node_modules
 **/target/
 **/wip/*.stderr
