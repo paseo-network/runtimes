@@ -1,0 +1,54 @@
+[
+  {
+    "name": "paseo",
+    "package": "paseo-runtime",
+    "path": "relay/paseo",
+    "is_relay": true,
+    "genesis_builder_preset": "local_testnet",
+    "build_extra_features": "paseo-ahm",
+    "benchmarks_exclude_pallets": [
+      "pallet_referenda"
+    ],
+    "benchmarks_templates": {
+      "pallet_xcm_benchmarks::generic": ".maintain/xcm-bench-template.hbs",
+      "pallet_xcm_benchmarks::fungible": ".maintain/xcm-bench-template.hbs"
+    }
+  },
+  {
+    "name": "asset-hub-paseo",
+    "package": "asset-hub-paseo-runtime",
+    "path": "system-parachains/asset-hub-paseo",
+    "is_relay": false,
+    "genesis_builder_preset": "local_testnet",
+    "build_extra_features": "paseo-ahm",
+    "benchmarks_templates": {
+      "pallet_xcm_benchmarks::generic": ".maintain/xcm-bench-template.hbs",
+      "pallet_xcm_benchmarks::fungible": ".maintain/xcm-bench-template.hbs"
+    }
+  },
+  {
+    "name": "people-paseo",
+    "package": "people-paseo-runtime",
+    "path": "system-parachains/people-paseo",
+    "is_relay": false,
+    "genesis_builder_preset": "local_testnet",
+    "benchmarks_exclude_pallets": [
+      "pallet_referenda"
+    ],
+    "benchmarks_templates": {
+      "pallet_xcm_benchmarks::generic": ".maintain/xcm-bench-template.hbs",
+      "pallet_xcm_benchmarks::fungible": ".maintain/xcm-bench-template.hbs"
+    }
+  },
+  {
+    "name": "bulletin-paseo",
+    "package": "bulletin-paseo-runtime",
+    "path": "system-parachains/bulletin-paseo",
+    "is_relay": false,
+    "genesis_builder_preset": "local_testnet",
+    "benchmarks_templates": {
+      "pallet_xcm_benchmarks::generic": ".maintain/xcm-bench-template.hbs",
+      "pallet_xcm_benchmarks::fungible": ".maintain/xcm-bench-template.hbs"
+    }
+  }
+]

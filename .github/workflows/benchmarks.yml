@@ -1,0 +1,443 @@
+name: Benchmarks
+
+# Regenerates runtime weights on the org's self-hosted benchmark runner (`gh-runner-03`,
+# labels: self-hosted + benchmarks) and pushes them back to the branch being benchmarked.
+#
+# Two ways in:
+#
+#   1. Comment `/bench ...` on a pull request. Only members of the `paseo-core` team can do
+#      this. Note that GitHub always runs the `main` version of this file for `issue_comment`
+#      events, so changes here only take effect once merged.
+#
+#        /bench                                              # every pallet of all four runtimes
+#        /bench --runtime paseo                              # one runtime, all pallets
+#        /bench --runtime people-paseo --pallet pallet_proxy # one runtime, one pallet
+#        /bench --pallet pallet_balances --continue-on-fail
+#        /bench --help
+#
+#   2. Run this workflow manually (Actions -> Benchmarks -> Run workflow) against any branch.
+#
+# The set of runtimes, their genesis presets and their weight templates live in
+# .github/workflows/runtimes-matrix.json; the benchmarking itself is .github/scripts/cmd/cmd.py.
+
+on:
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      runtime:
+        description: Runtime to benchmark
+        type: choice
+        default: all
+        options:
+          - all
+          - paseo
+          - asset-hub-paseo
+          - people-paseo
+          - bulletin-paseo
+      pallet:
+        description: 'Pallet(s), space separated. Empty means every pallet of the runtime.'
+        type: string
+        default: ''
+      steps:
+        description: Number of steps across component ranges
+        type: string
+        default: '50'
+      repeat:
+        description: Number of times each benchmark repeats per step
+        type: string
+        default: '20'
+      continue_on_fail:
+        description: Keep going (and push) when individual pallets fail
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+  actions: read
+
+# One benchmark run at a time - there is a single benchmark machine, and weights measured
+# while it is busy with something else are not worth having.
+concurrency:
+  group: benchmarks
+  cancel-in-progress: false
+
+env:
+  PASEO_CORE_TEAM: paseo-core
+
+jobs:
+  preflight:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.comment.body, '/bench')
+    runs-on: ubuntu-22.04
+    outputs:
+      # Arguments passed to `cmd.py bench`, e.g. "--runtime paseo --pallet pallet_balances".
+      args: ${{ steps.args.outputs.args }}
+      # Where the benchmark job checks out from, and pushes the weights back to.
+      repo: ${{ steps.args.outputs.repo }}
+      ref: ${{ steps.args.outputs.ref }}
+      pr-number: ${{ steps.args.outputs.pr_number }}
+      is-help: ${{ steps.parse-comment.outputs.is_help }}
+    steps:
+      - name: Check team membership
+        id: check-team
+        if: github.event_name == 'issue_comment'
+        env:
+          GH_TOKEN: ${{ secrets.PASEO_CI_PAT }}
+          COMMENTER: ${{ github.event.comment.user.login }}
+        run: |
+          state=$(curl -sS \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/orgs/${{ github.repository_owner }}/teams/${PASEO_CORE_TEAM}/memberships/${COMMENTER}" \
+            | jq -r '.state // empty')
+
+          if [ "$state" = "active" ]; then
+            echo "is_allowed=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_allowed=false" >> $GITHUB_OUTPUT
+          fi
+
+      # Benchmarks run untrusted PR code on a persistent, self-hosted machine, so a non-member
+      # comment must stop here and never reach the `bench` job.
+      - name: Reject non-members
+        if: github.event_name == 'issue_comment' && steps.check-team.outputs.is_allowed != 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.reactions.createForIssueComment({
+              comment_id: ${{ github.event.comment.id }},
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              content: 'confused'
+            })
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `Sorry, only members of \`${process.env.PASEO_CORE_TEAM}\` can run benchmarks.`
+            })
+            core.setFailed('Commenter is not a member of ${{ env.PASEO_CORE_TEAM }}')
+
+      - name: Acknowledge the comment
+        if: github.event_name == 'issue_comment'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.reactions.createForIssueComment({
+              comment_id: ${{ github.event.comment.id }},
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              content: 'eyes'
+            })
+
+      - name: Parse the comment
+        id: parse-comment
+        if: github.event_name == 'issue_comment'
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          # Only the first line counts, so a command can be followed by prose.
+          first_line=$(printf '%s' "$COMMENT_BODY" | head -n1 | tr -d '\r')
+
+          if [[ ! "$first_line" =~ ^/bench([[:space:]]+[-a-zA-Z0-9_.:=[:space:]]*)?$ ]]; then
+            echo "::error::Could not parse '$first_line'. Expected: /bench [--runtime ...] [--pallet ...] [--continue-on-fail] [--help]"
+            exit 1
+          fi
+
+          # Normalise whitespace via word splitting. Not `xargs`: with no command it runs `echo`,
+          # which would eat a leading `--help`.
+          read -r -a parts <<< "${BASH_REMATCH[1]:-}"
+          bench_args="${parts[*]:-}"
+          echo "args=$bench_args" >> $GITHUB_OUTPUT
+
+          if [[ "$bench_args" == *"--help"* ]]; then
+            echo "is_help=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_help=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Resolve the PR branch
+        id: pr
+        if: github.event_name == 'issue_comment'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            if (!context.payload.issue.pull_request) {
+              core.setFailed('/bench only works on pull requests');
+              return;
+            }
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+            core.setOutput('repo', pr.data.head.repo.full_name);
+            core.setOutput('ref', pr.data.head.ref);
+
+      - name: Collect the arguments
+        id: args
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          # Everything below is attacker-influenceable, so it goes through the environment
+          # rather than being interpolated into the shell.
+          COMMENT_ARGS: ${{ steps.parse-comment.outputs.args }}
+          PR_REPO: ${{ steps.pr.outputs.repo }}
+          PR_REF: ${{ steps.pr.outputs.ref }}
+          PR_NUM: ${{ github.event.issue.number }}
+          INPUT_RUNTIME: ${{ inputs.runtime }}
+          INPUT_PALLET: ${{ inputs.pallet }}
+          INPUT_STEPS: ${{ inputs.steps }}
+          INPUT_REPEAT: ${{ inputs.repeat }}
+          INPUT_CONTINUE_ON_FAIL: ${{ inputs.continue_on_fail }}
+        run: |
+          if [ "$EVENT_NAME" = "issue_comment" ]; then
+            echo "args=$COMMENT_ARGS" >> $GITHUB_OUTPUT
+            echo "repo=$PR_REPO" >> $GITHUB_OUTPUT
+            echo "ref=$PR_REF" >> $GITHUB_OUTPUT
+            echo "pr_number=$PR_NUM" >> $GITHUB_OUTPUT
+          else
+            # Plain `if`s, not `[ ... ] && ...`: the latter returns 1 when the test fails, which
+            # under the default `bash -e` would abort the step.
+            args="--steps $INPUT_STEPS --repeat $INPUT_REPEAT"
+            if [ "$INPUT_RUNTIME" != "all" ]; then args="$args --runtime $INPUT_RUNTIME"; fi
+            if [ -n "$INPUT_PALLET" ]; then args="$args --pallet $INPUT_PALLET"; fi
+            if [ "$INPUT_CONTINUE_ON_FAIL" = "true" ]; then args="$args --continue-on-fail"; fi
+            echo "args=$args" >> $GITHUB_OUTPUT
+            echo "repo=${{ github.repository }}" >> $GITHUB_OUTPUT
+            echo "ref=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+            echo "pr_number=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Summary
+        run: |
+          echo "args:   ${{ steps.args.outputs.args }}"
+          echo "repo:   ${{ steps.args.outputs.repo }}"
+          echo "ref:    ${{ steps.args.outputs.ref }}"
+          echo "help:   ${{ steps.parse-comment.outputs.is_help }}"
+
+  # `/bench --help` is cheap and does not need the benchmark machine.
+  help:
+    needs: [preflight]
+    if: needs.preflight.outputs.is-help == 'true'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Render help
+        id: help
+        run: |
+          {
+            echo 'help<<CMDHELP'
+            python3 .github/scripts/cmd/cmd.py bench --help
+            echo 'CMDHELP'
+          } >> $GITHUB_OUTPUT
+
+      - name: Comment PR (Help)
+        uses: actions/github-script@v7
+        env:
+          HELP: ${{ steps.help.outputs.help }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `<details><summary>Benchmark command help:</summary>\n\n\`\`\`\n${process.env.HELP}\n\`\`\`\n\n</details>`
+            })
+
+  bench:
+    needs: [preflight]
+    if: needs.preflight.outputs.is-help != 'true'
+    # The org runner registered by the "Paseo Benchmarks" app. `ubuntu-latest` is also set on it
+    # as a custom label, but it is deliberately not used here: it collides with the name of a
+    # GitHub-hosted runner image and makes routing ambiguous.
+    runs-on: [self-hosted, benchmarks]
+    # A full sweep across all runtimes and pallets takes many hours.
+    timeout-minutes: 1440
+    env:
+      JOB_NAME: bench
+      BENCH_ARGS: ${{ needs.preflight.outputs.args }}
+      TARGET_REPO: ${{ needs.preflight.outputs.repo }}
+      TARGET_REF: ${{ needs.preflight.outputs.ref }}
+      PR_NUMBER: ${{ needs.preflight.outputs.pr-number }}
+    steps:
+      - name: Build workflow links
+        id: links
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          jobs=$(curl -sS \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs")
+          job_url=$(echo "$jobs" | jq -r --arg name "$JOB_NAME" '.jobs[] | select(.name | contains($name)) | .html_url' | head -n1)
+          run_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "job_url=${job_url:-$run_url}" >> $GITHUB_OUTPUT
+          echo "run_url=$run_url" >> $GITHUB_OUTPUT
+
+      - name: Comment PR (Start)
+        if: env.PR_NUMBER != '' && !contains(github.event.comment.body, '--quiet')
+        uses: actions/github-script@v7
+        env:
+          JOB_URL: ${{ steps.links.outputs.job_url }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: Number(process.env.PR_NUMBER),
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `Benchmarks \`${process.env.BENCH_ARGS || '(all runtimes, all pallets)'}\` have started 🚀 [See logs here](${process.env.JOB_URL})`
+            })
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.TARGET_REPO }}
+          ref: ${{ env.TARGET_REF }}
+          # A PAT, not GITHUB_TOKEN: the weights are pushed back to the branch below, and for a
+          # PR from a fork GITHUB_TOKEN has no write access to it.
+          token: ${{ secrets.PASEO_CI_PAT }}
+          fetch-depth: 0
+
+      - name: Set rust version via common env file
+        run: cat .github/env >> $GITHUB_ENV
+
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_STABLE_VERSION }}
+          targets: wasm32v1-none,wasm32-unknown-unknown
+          components: rust-src
+
+      - name: Check benchmark dependencies
+        run: ./.github/scripts/bench-deps.sh check
+
+      # No rust-cache here on purpose: the runner is persistent and keeps its `target/` between
+      # runs, so uploading a multi-GB cache of a `production` build would only cost time.
+
+      - name: Run benchmarks
+        run: |
+          echo "Running: cmd.py bench $BENCH_ARGS on ${TARGET_REPO}@${TARGET_REF}"
+          python3 .github/scripts/cmd/cmd.py bench $BENCH_ARGS
+          git status --porcelain
+
+      - name: Commit and push the weights
+        id: push
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "Nothing to commit"
+            echo "pushed=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Weights land in a PR, never straight on the protected default branch.
+          if [ "$TARGET_REF" = "${{ github.event.repository.default_branch }}" ]; then
+            echo "::warning::Refusing to push weights to $TARGET_REF; download them from the run artifact and open a PR instead."
+            echo "pushed=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+          git add .
+          # Cargo.lock can move when the runtimes are built with `runtime-benchmarks`; that is a
+          # build artefact of this run, not a weights change.
+          git restore --staged Cargo.lock || true
+          git checkout -- Cargo.lock || true
+
+          git commit -m "Update weights (${BENCH_ARGS:-all runtimes, all pallets})"
+          git pull --rebase origin "$TARGET_REF"
+          git push origin "HEAD:$TARGET_REF"
+          echo "pushed=true" >> $GITHUB_OUTPUT
+
+      - name: Compare weights with subweight
+        id: subweight
+        continue-on-error: true
+        run: |
+          # Compare against the base repo's main, not `origin/main` - for a PR from a fork,
+          # `origin` is the fork.
+          git fetch --no-tags https://github.com/${{ github.repository }}.git main
+          result=$(subweight compare commits \
+            --path-pattern "./**/weights/**/*.rs" \
+            --method asymptotic \
+            --format markdown \
+            --no-color \
+            --change added changed \
+            --ignore-errors \
+            FETCH_HEAD HEAD)
+
+          {
+            echo "result<<SUBWEIGHT"
+            echo "$result"
+            echo "SUBWEIGHT"
+          } >> $GITHUB_OUTPUT
+
+      - name: Upload the weights
+        uses: actions/upload-artifact@v4
+        with:
+          name: weights-${{ github.run_id }}
+          path: |
+            relay/*/src/weights/**/*.rs
+            system-parachains/*/src/weights/**/*.rs
+          if-no-files-found: warn
+
+      - name: Comment PR (Success)
+        if: ${{ !failure() && env.PR_NUMBER != '' && !contains(github.event.comment.body, '--quiet') }}
+        uses: actions/github-script@v7
+        env:
+          RUN_URL: ${{ steps.links.outputs.run_url }}
+          SUBWEIGHT: ${{ steps.subweight.outputs.result }}
+          PUSHED: ${{ steps.push.outputs.pushed }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const subweight = process.env.SUBWEIGHT;
+            const details = subweight
+              ? `\n\n<details>\n\n<summary>Subweight results:</summary>\n\n${subweight}\n\n</details>`
+              : '';
+            const pushed = process.env.PUSHED === 'true'
+              ? 'The updated weights have been pushed to this branch.'
+              : 'No weight changed.';
+
+            github.rest.issues.createComment({
+              issue_number: Number(process.env.PR_NUMBER),
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `Benchmarks \`${process.env.BENCH_ARGS || '(all runtimes, all pallets)'}\` have finished ✅ ${pushed} [See logs here](${process.env.RUN_URL})${details}`
+            })
+
+      - name: Comment PR (Failure)
+        if: ${{ failure() && env.PR_NUMBER != '' && !contains(github.event.comment.body, '--quiet') }}
+        uses: actions/github-script@v7
+        env:
+          JOB_URL: ${{ steps.links.outputs.job_url }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: Number(process.env.PR_NUMBER),
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `Benchmarks \`${process.env.BENCH_ARGS || '(all runtimes, all pallets)'}\` have failed ❌ [See logs here](${process.env.JOB_URL})`
+            })
+
+      - name: React on the comment
+        if: ${{ always() && github.event_name == 'issue_comment' }}
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.reactions.createForIssueComment({
+              comment_id: ${{ github.event.comment.id }},
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              content: '${{ job.status }}' === 'success' ? '+1' : 'confused'
+            })
