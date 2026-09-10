@@ -192,15 +192,12 @@ fn rotating_the_network_suffix_moves_every_derived_context() {
 /// allowance in `pallet-origin-restriction` to bound it. An addition, a removal or a reorder
 /// anywhere in this list is therefore a deliberate decision, not an implementation detail — and it
 /// changes the transaction encoding, so it also requires a `transaction_version` bump.
-///
-/// 🔴 Slot 0 is `AuthorizeValueTransfer`, a Paseo-local deviation that upstream does not carry
-/// (upstream has `()` there). It must survive every sync.
 #[test]
 fn the_transaction_extension_pipeline_is_the_expected_one() {
 	use sp_runtime::traits::TransactionExtension;
 
 	const PIPELINE: [&str; 23] = [
-		"AuthorizeValueTransfer",
+		"UnitTransactionExtension",
 		"VerifyMultiSignature",
 		"AsPerson",
 		"AsProofOfInkParticipant",

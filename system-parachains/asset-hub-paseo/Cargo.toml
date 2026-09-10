@@ -36,7 +36,6 @@ indiv-pallet-network-suffix = { workspace = true }
 indiv-pallet-members-subscriber = { workspace = true }
 indiv-pallet-origin-restriction = { workspace = true }
 indiv-pallet-pgas = { workspace = true }
-indiv-pallet-value-transfer-auth = { workspace = true }
 indiv-precompile-personhood = { workspace = true }
 indiv-support = { workspace = true }
 verifiable = { workspace = true }
@@ -213,7 +212,6 @@ runtime-benchmarks = [
 	"indiv-pallet-network-suffix/runtime-benchmarks",
 	"indiv-pallet-origin-restriction/runtime-benchmarks",
 	"indiv-pallet-pgas/runtime-benchmarks",
-	"indiv-pallet-value-transfer-auth/runtime-benchmarks",
 	"indiv-precompile-personhood/runtime-benchmarks",
 	"indiv-support/genesis",
 	"indiv-support/runtime-benchmarks",
@@ -308,7 +306,6 @@ try-runtime = [
 	"indiv-pallet-network-suffix/try-runtime",
 	"indiv-pallet-origin-restriction/try-runtime",
 	"indiv-pallet-pgas/try-runtime",
-	"indiv-pallet-value-transfer-auth/try-runtime",
 	"indiv-precompile-personhood/try-runtime",
 	"pallet-ah-ops/try-runtime",
 	"pallet-asset-conversion-precompiles/try-runtime",
@@ -410,7 +407,6 @@ std = [
 	"indiv-pallet-network-suffix/std",
 	"indiv-pallet-origin-restriction/std",
 	"indiv-pallet-pgas/std",
-	"indiv-pallet-value-transfer-auth/std",
 	"indiv-precompile-personhood/std",
 	"indiv-support/std",
 	"kusama-runtime-constants/std",

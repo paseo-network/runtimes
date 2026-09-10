@@ -14,6 +14,8 @@
 // limitations under the License.
 
 //! The runtime migrations per release.
+pub mod xcmp_queue_v7;
+
 use crate::Runtime;
 use frame_support::parameter_types;
 
@@ -143,6 +145,12 @@ pub type Unreleased = (
 	// Remove an old staking value
 	crate::staking::RemoveMarchTIValue,
 	cumulus_pallet_xcmp_queue::migration::v6::MigrateV5ToV6<crate::Runtime>,
+	// PASEO-LOCAL, in the slot where upstream's `migration::v7::MigrateV6ToV7` would go.
+	// On-chain storage version is 6, in-code is 7, but `OutboundXcmpStatus` is already in the
+	// v7 layout (written by the v7 code since v2.5.0), so upstream's translate would fail on
+	// it and log a defensive error at enactment. Version bump only; see the module doc.
+	// `VersionedMigration`, so it is self-guarding. Drop once enacted.
+	xcmp_queue_v7::XcmpQueueSetStorageVersion7<crate::Runtime>,
 	cumulus_pallet_parachain_system::migration::Migration<Runtime>,
 	// DAP V1->V2: seed `BudgetAllocation` and `LastIssuanceTimestamp`, credit a one-shot
 	// catch-up drip. Required when moving staking to non-minting mode (see SDK PR #11616).
@@ -188,6 +196,13 @@ pub type Unreleased = (
 	// Live `AccountNames` entries are in the old two-`Option<BaseLabel>` shape and would fail
 	// to decode. `VersionedMigration`, so it is self-guarding and cannot run twice.
 	indiv_pallet_dotns_gateway::migration::MigrateV0ToV1<Runtime>,
+	// PASEO-LOCAL. `Usages.at_block` keeps type `u32` but changes meaning: local para block ->
+	// relay block. Ships on both chains (see the pallet's `migration.rs`, section
+	// "asset-hub-paseo needs this even though its map is empty today"): the map is empty here
+	// at the time of writing, but on-chain storage version is 0 and in-code is 1, and any entry
+	// written before the upgrade block would be locked out on the relay clock otherwise.
+	// `VersionedMigration`, so it is self-guarding and cannot run twice.
+	indiv_pallet_origin_restriction::migration::MigrateV0ToV1<Runtime>,
 );
 
 /// Migrations/checks that do not need to be versioned and can run on every update.

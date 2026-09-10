@@ -17,9 +17,9 @@ use cumulus_primitives_core::ParaId;
 pub use TreasuryAccount as RelayTreasuryPalletAccount;
 
 use super::{
-	treasury, AccountId, AllPalletsWithSystem, AssetConversion, Assets, Balance, Balances,
-	CollatorSelection, ForeignAssets, GeneralAdmin, NativeAndAssets, ParachainInfo,
-	ParachainSystem, PaseoWeightToFee as WeightToFee, PolkadotXcm, PoolAssets,
+	treasury, AccountId, AllExceptReapStash, AllPalletsWithSystem, AssetConversion, Assets,
+	Balance, Balances, CollatorSelection, ForeignAssets, GeneralAdmin, NativeAndAssets,
+	ParachainInfo, ParachainSystem, PaseoWeightToFee as WeightToFee, PolkadotXcm, PoolAssets,
 	PriceForParentDelivery, Runtime, RuntimeCall, RuntimeEvent, RuntimeHoldReason, RuntimeOrigin,
 	StakingAdmin, ToKusamaXcmRouter, Treasurer, XcmpQueue,
 };
@@ -43,9 +43,6 @@ use frame_support::{
 	},
 };
 use frame_system::EnsureRoot;
-use indiv_pallet_value_transfer_auth::{
-	allow_only_siblings::AllowOnlySiblings, ProtectedAssetTransactor,
-};
 use pallet_xcm::{AuthorizedAliasers, XcmPassthrough};
 use parachains_common::xcm_config::{
 	AllSiblingSystemParachains, ConcreteAssetFromSystem, ParentRelayOrSiblingParachains,
@@ -91,8 +88,6 @@ parameter_types! {
 	pub PoolAssetsPalletLocation: Location =
 		PalletInstance(<PoolAssets as PalletInfoAccess>::index() as u8).into();
 	pub StakingPot: AccountId = CollatorSelection::account_id();
-	pub AssetHubParaId: u32 = system_parachain::ASSET_HUB_ID;
-	pub PeopleParaId: u32 = system_parachain::PEOPLE_ID;
 	// Test [`crate::tests::treasury_pallet_account_not_none`] ensures that the result of location
 	// conversion is not `None`.
 	// Account address: `14xmwinmCEz6oRrFdczHKqHgWNMiCysE2KrA4jXXAAM1Eogk`
@@ -200,15 +195,7 @@ pub type PoolAssetsConvertedConcreteId =
 	assets_common::PoolAssetsConvertedConcreteId<PoolAssetsPalletLocation, Balance>;
 
 /// Means for transacting assets on this chain.
-// The protected asset is a local trust-backed asset on Asset Hub, so the executor presents it
-// to the transactor in the chain-local (`parents: 0`) form. Key the guard off that anchor
-// (`ExternalAssetLocation`), not the sibling (`parents: 1`) `ProtectedAssetLocation` used on the
-// People chain — otherwise the guard never matches and the block flag is bypassable here.
-pub type AssetTransactors = ProtectedAssetTransactor<
-	(FungibleTransactor, FungiblesTransactor, ForeignFungiblesTransactor),
-	ExternalAssetLocation,
-	AllowOnlySiblings<AssetHubParaId, PeopleParaId>,
->;
+pub type AssetTransactors = (FungibleTransactor, FungiblesTransactor, ForeignFungiblesTransactor);
 
 /// Asset converter for pool assets.
 /// Used to convert one asset to another, when there is a pool available between the two.
@@ -527,13 +514,7 @@ impl xcm_executor::Config for XcmConfig {
 	type UniversalAliases =
 		(bridging::to_kusama::UniversalAliases, bridging::to_ethereum::UniversalAliases);
 	type CallDispatcher = RuntimeCall;
-	// Inbound XCM `Transact` is bounced through the same protected-asset value-transfer gate as
-	// local dispatch: the block flag defaults to BLOCKED because no
-	// `AuthorizeValueTransfer::prepare` runs for XCM-borne calls, so any protected-asset-touching
-	// call carried inside a `Transact` is rejected before dispatch.
-	type SafeCallFilter = indiv_pallet_value_transfer_auth::BlockValueTransfersWhenFlagSet<
-		crate::value_transfer_filter::AhValueTransferFilter,
-	>;
+	type SafeCallFilter = AllExceptReapStash;
 	type Aliasers = TrustedAliasers;
 	type TransactionalProcessor = FrameTransactionalProcessor;
 	type HrmpNewChannelOpenRequestHandler = ();

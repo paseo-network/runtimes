@@ -33,9 +33,6 @@ use frame_support::{
 	},
 };
 use frame_system::EnsureRoot;
-use indiv_pallet_value_transfer_auth::{
-	allow_only_siblings::AllowOnlySiblings, ProtectedAssetTransactor,
-};
 use pallet_xcm::{AuthorizedAliasers, XcmPassthrough};
 use parachains_common::{
 	xcm_config::{
@@ -45,10 +42,7 @@ use parachains_common::{
 	},
 	TREASURY_PALLET_ID,
 };
-use paseo_runtime_constants::{
-	system_parachain::{self, ASSET_HUB_ID},
-	ProtectedAssetLocation,
-};
+use paseo_runtime_constants::system_parachain::{self, ASSET_HUB_ID};
 use polkadot_parachain_primitives::primitives::Sibling;
 use sp_runtime::traits::{AccountIdConversion, ConvertInto};
 use xcm::latest::prelude::*;
@@ -95,8 +89,6 @@ parameter_types! {
 		LocationToAccountId::convert_location(&RelayTreasuryLocation::get())
 			.unwrap_or(TreasuryAccount::get());
 	pub StakingPot: AccountId = CollatorSelection::account_id();
-	pub AssetHubParaId: u32 = system_parachain::ASSET_HUB_ID;
-	pub PeopleParaId: u32 = system_parachain::PEOPLE_ID;
 }
 
 pub type PriceForParentDelivery = polkadot_runtime_common::xcm_sender::ExponentialPrice<
@@ -327,11 +319,7 @@ pub type TrustedAliasers = (
 );
 
 /// The asset transactors responsible for handling assets in XCM.
-pub type AssetTransactors = ProtectedAssetTransactor<
-	(FungibleTransactor, FungiblesTransactor),
-	ProtectedAssetLocation,
-	AllowOnlySiblings<AssetHubParaId, PeopleParaId>,
->;
+pub type AssetTransactors = (FungibleTransactor, FungiblesTransactor);
 
 // This calls into the Assets pallet's default `BalanceToAssetBalance` implementation, which
 // uses the ratio of minimum balances and requires asset sufficiency.
@@ -430,9 +418,7 @@ impl xcm_executor::Config for XcmConfig {
 	type MessageExporter = ();
 	type UniversalAliases = Nothing;
 	type CallDispatcher = RuntimeCall;
-	type SafeCallFilter = indiv_pallet_value_transfer_auth::BlockValueTransfersWhenFlagSet<
-		crate::value_transfer_filter::PeopleValueTransferFilter,
-	>;
+	type SafeCallFilter = Everything;
 	type Aliasers = Nothing;
 	type TransactionalProcessor = FrameTransactionalProcessor;
 	type HrmpNewChannelOpenRequestHandler = ();

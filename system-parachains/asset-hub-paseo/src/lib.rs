@@ -69,12 +69,10 @@ pub mod bridge_to_ethereum_config;
 pub mod genesis_config_presets;
 pub mod governance;
 pub mod migrations;
-pub mod protected_asset_erc20_guard;
 #[cfg(all(test, feature = "try-runtime"))]
 mod remote_tests;
 pub mod staking;
 pub mod treasury;
-pub mod value_transfer_filter;
 mod weights;
 pub mod xcm_config;
 
@@ -140,7 +138,6 @@ use frame_system::{
 	pallet_prelude::BlockNumberFor,
 	EnsureRoot, EnsureSigned, EnsureSignedBy,
 };
-use indiv_pallet_value_transfer_auth::extension::AuthorizeValueTransfer;
 use indiv_precompile_personhood::PersonhoodCheck;
 use pallet_asset_conversion_precompiles::AssetConversion as AssetConversionPrecompile;
 use pallet_assets_precompiles::{ForeignAssetId, ForeignIdConfig, InlineIdConfig, ERC20};
@@ -200,7 +197,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	impl_name: Cow::Borrowed("asset-hub-paseo"),
 	spec_name: Cow::Borrowed("asset-hub-paseo"),
 	authoring_version: 1,
-	spec_version: 2_005_000,
+	spec_version: 2_005_002,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	// BUMPED 16 -> 17 for the individuality v0.3.1 port. This is mandatory, not hygiene:
@@ -208,7 +205,13 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// the transaction extension tuple that every signer must construct. `AsRingAlias` is
 	// present in live Asset Hub metadata today, so an unbumped `transaction_version` would let
 	// wallets keep building the old, now-undecodable, extension payload.
-	transaction_version: 17,
+	//
+	// BUMPED 17 -> 18: the W3S `AuthorizeValueTransfer` extension was replaced by the unit `()`
+	// extension in slot 0 of the `TxExtension` origin-modifier tuple (as upstream), which changes
+	// the transaction extension tuple that every signer must construct. Mandatory, not hygiene: an
+	// unbumped `transaction_version` would let wallets keep building the old, now-undecodable,
+	// extension payload.
+	transaction_version: 18,
 	system_version: 1,
 };
 
@@ -267,26 +270,9 @@ impl Contains<RuntimeCall> for AllExceptReapStash {
 	}
 }
 
-/// Base call filter composing the two independent runtime-level restrictions:
-///
-/// - [`AllExceptReapStash`]: filters `reap_stash` out during the `MinValidatorBond` transition.
-/// - [`indiv_pallet_value_transfer_auth::BlockValueTransfersWhenFlagSet`]: blocks moves of the
-///   protected asset when the protected-asset kill switch flag is set.
-///
-/// A call is admitted only if both filters admit it.
-pub struct BaseCallFilter;
-impl Contains<RuntimeCall> for BaseCallFilter {
-	fn contains(call: &RuntimeCall) -> bool {
-		AllExceptReapStash::contains(call) &&
-			indiv_pallet_value_transfer_auth::BlockValueTransfersWhenFlagSet::<
-				crate::value_transfer_filter::AhValueTransferFilter,
-			>::contains(call)
-	}
-}
-
 // Configure FRAME pallets to include in runtime.
 impl frame_system::Config for Runtime {
-	type BaseCallFilter = BaseCallFilter;
+	type BaseCallFilter = AllExceptReapStash;
 	type BlockWeights = RuntimeBlockWeights;
 	type BlockLength = RuntimeBlockLength;
 	type AccountId = AccountId;
@@ -1580,11 +1566,7 @@ impl pallet_revive::Config for Runtime {
 	// TODO(#840): use `weights::pallet_revive::WeightInfo` here
 	type WeightInfo = pallet_revive::weights::SubstrateWeight<Self>;
 	type Precompiles = (
-		protected_asset_erc20_guard::RestrictProtectedAssetErc20<
-			Self,
-			InlineIdConfig<0x120>,
-			TrustBackedAssetsInstance,
-		>,
+		ERC20<Self, InlineIdConfig<0x120>, TrustBackedAssetsInstance>,
 		ERC20<Self, InlineIdConfig<0x320>, PoolAssetsInstance>,
 		ERC20<Self, ForeignIdConfig<0x220, Self, ForeignAssetsInstance>, ForeignAssetsInstance>,
 		XcmPrecompile<Self>,
@@ -2616,10 +2598,10 @@ pub type TxExtension = cumulus_pallet_weight_reclaim::StorageWeightReclaim<
 	(
 		// Origin modifiers
 		(
-			AuthorizeValueTransfer<
-				Runtime,
-				paseo_runtime_constants::ValueTransferAuthorizationPubkey,
-			>,
+			// Slot 0 is the unit extension, as upstream individuality keeps it after removing the
+			// Paseo-only W3S `AuthorizeValueTransfer` gate: `UnitTransactionExtension` in
+			// metadata.
+			(),
 			frame_system::AuthorizeCall<Runtime>,
 			indiv_pallet_pgas::AsPgas<Runtime>,
 			// `indiv_pallet_alias_accounts::AsRingAlias` was removed in individuality v0.3.1
@@ -2661,10 +2643,7 @@ impl pallet_revive::evm::runtime::EthExtra for EthExtraImpl {
 	fn get_eth_extension(nonce: u32, tip: Balance) -> Self::ExtensionV0 {
 		(
 			(
-				AuthorizeValueTransfer::<
-					Runtime,
-					paseo_runtime_constants::ValueTransferAuthorizationPubkey,
-				>::default(),
+				(),
 				frame_system::AuthorizeCall::<Runtime>::new(),
 				indiv_pallet_pgas::AsPgas::<Runtime>::new(None),
 				indiv_pallet_dotns_gateway::AsDotnsGateway::<Runtime>::new(None),
@@ -2705,10 +2684,7 @@ where
 	fn create_extension() -> Self::Extension {
 		TxExtension::from((
 			(
-				AuthorizeValueTransfer::<
-					Runtime,
-					paseo_runtime_constants::ValueTransferAuthorizationPubkey,
-				>::default(),
+				(),
 				frame_system::AuthorizeCall::<Runtime>::new(),
 				indiv_pallet_pgas::AsPgas::<Runtime>::new(None),
 				indiv_pallet_dotns_gateway::AsDotnsGateway::<Runtime>::new(None),
@@ -3385,33 +3361,6 @@ mod benches {
 #[cfg(feature = "runtime-benchmarks")]
 use benches::*;
 
-/// Temporarily lifts the value-transfer block flag for the duration of a runtime-API call,
-/// restoring the previous value on drop.
-///
-/// Dry-runs (`DryRunApi`) do not execute transaction extensions, so
-/// `AuthorizeValueTransfer::prepare` never calls `block_flag::unblock()` during fee-estimation.
-/// Without this, `ProtectedAssetTransactor::withdraw_asset` returns `NoPermission` for the
-/// protected asset and `forwarded_xcms` comes back empty, black-screening the client. The RAII
-/// guard save-and-restores the prior flag (rather than a blind `block()`), which is mandatory
-/// because `block_flag` is a Wasm `static mut` that persists across runtime-API calls and is not
-/// rolled back by the dry-run overlay.
-fn value_transfer_block_flag_scope() -> impl Drop {
-	use indiv_pallet_value_transfer_auth::extension::block_flag;
-	struct Restore(bool);
-	impl Drop for Restore {
-		fn drop(&mut self) {
-			if self.0 {
-				block_flag::block();
-			} else {
-				block_flag::unblock();
-			}
-		}
-	}
-	let prev = block_flag::is_blocked();
-	block_flag::unblock();
-	Restore(prev)
-}
-
 pallet_revive::impl_runtime_apis_plus_revive_traits!(
 	Runtime,
 	Revive,
@@ -3612,12 +3561,10 @@ pallet_revive::impl_runtime_apis_plus_revive_traits!(
 
 	impl xcm_runtime_apis::dry_run::DryRunApi<Block, RuntimeCall, RuntimeEvent, OriginCaller> for Runtime {
 		fn dry_run_call(origin: OriginCaller, call: RuntimeCall, result_xcms_version: XcmVersion) -> Result<CallDryRunEffects<RuntimeEvent>, XcmDryRunApiError> {
-			let _guard = value_transfer_block_flag_scope();
 			PolkadotXcm::dry_run_call::<Runtime, xcm_config::XcmRouter, OriginCaller, RuntimeCall>(origin, call, result_xcms_version)
 		}
 
 		fn dry_run_xcm(origin_location: VersionedLocation, xcm: VersionedXcm<RuntimeCall>) -> Result<XcmDryRunEffects<RuntimeEvent>, XcmDryRunApiError> {
-			let _guard = value_transfer_block_flag_scope();
 			PolkadotXcm::dry_run_xcm::<xcm_config::XcmRouter>(origin_location, xcm)
 		}
 	}
