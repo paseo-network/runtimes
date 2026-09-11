@@ -14,7 +14,7 @@
 // limitations under the License.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-#![recursion_limit = "256"]
+#![recursion_limit = "512"]
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
@@ -203,7 +203,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// The `codeSubstitutes` entry must nevertheless stay in the distributed spec forever: blocks
 	// 6546979..<this upgrade> can only be replayed with it, so any archive or resyncing node
 	// still needs it to cross that range.
-	spec_version: 3_000_000,
+	spec_version: 2_005_002,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	// BUMPED 1 -> 2 for the individuality v0.3.1 port. MANDATORY, not hygiene: coinage call
@@ -841,6 +841,7 @@ construct_runtime!(
 		ProofOfInk: indiv_pallet_proof_of_ink = 53,
 		Game: indiv_pallet_game = 55,
 		Score: indiv_pallet_score = 56,
+		NftCredits: indiv_pallet_nft_credits = 57,
 		DummyDim: indiv_pallet_dummy_dim = 59,
 		StorageInitialization: indiv_pallet_storage_initialization = 60,
 		PeopleLite: indiv_pallet_people_lite = 62,
@@ -851,6 +852,7 @@ construct_runtime!(
 		MembersNotifier: indiv_pallet_members_notifier = 69,
 		Airdrop: indiv_pallet_airdrop = 70,
 		Honour: indiv_pallet_honour = 71,
+		PeopleAirdrops: indiv_pallet_people_airdrops = 72,
 		// Index 74 matches upstream's `next-people-paseo`; confirmed free in live metadata.
 		Parameters: pallet_parameters = 73,
 		NetworkSuffix: indiv_pallet_network_suffix = 74,
@@ -916,6 +918,8 @@ mod benches {
 		[indiv_pallet_coinage, Coinage]
 		[indiv_pallet_airdrop, Airdrop]
 		[indiv_pallet_honour, Honour]
+		[indiv_pallet_nft_credits, NftCredits]
+		[indiv_pallet_people_airdrops, PeopleAirdrops]
 	);
 
 	impl frame_system_benchmarking::Config for Runtime {
@@ -1342,6 +1346,29 @@ impl_runtime_apis! {
 			xcm_runtime_apis::authorized_aliases::Error
 		> {
 			PolkadotXcm::is_authorized_alias(origin, target)
+		}
+	}
+
+	impl indiv_pallet_nft_credits::runtime_api::NftCreditsApi<Block, AccountId, BlockNumber> for Runtime {
+		fn nft_claim_credit_roots(
+			claimant: indiv_support::identity::AccountOrPerson<AccountId>,
+		) -> Vec<(BlockNumber, indiv_support::credit_trees::NftClaimCreditTree)> {
+			NftCredits::nft_claim_credit_roots(&claimant)
+		}
+
+		fn nft_claim_credit_proofs(
+			award_block: BlockNumber,
+			claimant: indiv_support::identity::AccountOrPerson<AccountId>,
+		) -> Result<Vec<indiv_pallet_nft_credits::NftClaimCreditProof>, indiv_pallet_nft_credits::NftClaimCreditProofError> {
+			NftCredits::nft_claim_credit_proofs(award_block, &claimant)
+		}
+
+		fn nft_claim_credit_proof_from_awards(
+			award_block: BlockNumber,
+			awards: Vec<indiv_pallet_nft_credits::NftClaimCreditAward<AccountId>>,
+			leaf_index: u32,
+		) -> Result<indiv_pallet_nft_credits::NftClaimCreditProof, indiv_pallet_nft_credits::NftClaimCreditProofError> {
+			NftCredits::nft_claim_credit_proof_from_awards(award_block, awards, leaf_index)
 		}
 	}
 

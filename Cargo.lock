@@ -1381,9 +1381,13 @@ dependencies = [
  "indiv-pallet-dotns-gateway",
  "indiv-pallet-members-subscriber",
  "indiv-pallet-network-suffix",
+ "indiv-pallet-nft-claims",
  "indiv-pallet-origin-restriction",
  "indiv-pallet-pgas",
+ "indiv-pallet-scarcity",
+ "indiv-precompile-nft-claims",
  "indiv-precompile-personhood",
+ "indiv-precompile-scarcity",
  "indiv-support",
  "kusama-runtime-constants",
  "log",
@@ -4619,7 +4623,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -6009,7 +6013,7 @@ dependencies = [
  "hyper 1.8.1",
  "libc",
  "pin-project-lite",
- "socket2 0.6.2",
+ "socket2 0.5.10",
  "tokio",
  "tower-service",
  "tracing",
@@ -6320,10 +6324,10 @@ dependencies = [
 
 [[package]]
 name = "indiv-pallet-airdrop"
-version = "2.3.1"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#68cab75a9e2f6cf3d7f79da4a05593e033e42d91"
 dependencies = [
  "frame-benchmarking",
- "frame-executive",
  "frame-support",
  "frame-system",
  "indiv-support",
@@ -6331,44 +6335,39 @@ dependencies = [
  "merlin",
  "pallet-assets",
  "pallet-assets-holder",
- "pallet-balances",
  "parity-scale-codec",
- "parking_lot 0.12.5",
  "rand_core 0.6.4",
  "scale-info",
  "schnorrkel",
  "sp-core",
  "sp-crypto-hashing",
  "sp-io",
- "sp-keystore",
  "sp-runtime",
  "verifiable",
 ]
 
 [[package]]
 name = "indiv-pallet-alias-accounts"
-version = "2.3.1"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#68cab75a9e2f6cf3d7f79da4a05593e033e42d91"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "indiv-support",
  "log",
- "pallet-assets",
- "pallet-balances",
  "parity-scale-codec",
- "parking_lot 0.12.5",
  "scale-info",
  "sp-core",
  "sp-io",
  "sp-runtime",
- "staging-xcm",
  "verifiable",
 ]
 
 [[package]]
 name = "indiv-pallet-chunks-manager"
-version = "2.3.1"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#68cab75a9e2f6cf3d7f79da4a05593e033e42d91"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6383,27 +6382,20 @@ dependencies = [
 
 [[package]]
 name = "indiv-pallet-coinage"
-version = "2.3.1"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#68cab75a9e2f6cf3d7f79da4a05593e033e42d91"
 dependencies = [
  "frame-benchmarking",
- "frame-executive",
  "frame-support",
  "frame-system",
  "hex-literal",
- "indiv-pallet-chunks-manager",
- "indiv-pallet-members",
  "indiv-support",
  "log",
  "pallet-asset-conversion",
- "pallet-assets",
- "pallet-assets-holder",
- "pallet-balances",
  "parity-scale-codec",
- "parking_lot 0.12.5",
  "scale-info",
  "sp-core",
  "sp-crypto-hashing",
- "sp-io",
  "sp-runtime",
  "sp-trie",
  "staging-xcm",
@@ -6412,7 +6404,8 @@ dependencies = [
 
 [[package]]
 name = "indiv-pallet-dotns-gateway"
-version = "2.3.1"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#68cab75a9e2f6cf3d7f79da4a05593e033e42d91"
 dependencies = [
  "alloy-core",
  "frame-benchmarking",
@@ -6421,39 +6414,35 @@ dependencies = [
  "indiv-pallet-members-subscriber",
  "indiv-support",
  "log",
- "pallet-balances",
  "parity-scale-codec",
  "scale-info",
  "sp-core",
  "sp-crypto-hashing",
  "sp-io",
  "sp-runtime",
- "staging-xcm",
  "verifiable",
 ]
 
 [[package]]
 name = "indiv-pallet-dummy-dim"
-version = "2.3.1"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#68cab75a9e2f6cf3d7f79da4a05593e033e42d91"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "indiv-pallet-chunks-manager",
- "indiv-pallet-members",
- "indiv-pallet-people",
  "indiv-support",
  "parity-scale-codec",
  "scale-info",
  "sp-core",
  "sp-io",
  "sp-runtime",
- "verifiable",
 ]
 
 [[package]]
 name = "indiv-pallet-game"
-version = "2.3.1"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#68cab75a9e2f6cf3d7f79da4a05593e033e42d91"
 dependencies = [
  "binary-merkle-tree",
  "cumulus-pallet-parachain-system",
@@ -6462,18 +6451,11 @@ dependencies = [
  "frame-support",
  "frame-system",
  "indiv-pallet-airdrop",
- "indiv-pallet-chunks-manager",
- "indiv-pallet-members",
  "indiv-pallet-people",
- "indiv-pallet-people-lite",
  "indiv-pallet-score",
  "indiv-support",
  "log",
- "pallet-assets",
- "pallet-assets-holder",
- "pallet-balances",
  "parity-scale-codec",
- "parking_lot 0.12.5",
  "scale-info",
  "sp-api",
  "sp-core",
@@ -6488,7 +6470,8 @@ dependencies = [
 
 [[package]]
 name = "indiv-pallet-honour"
-version = "2.3.1"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#68cab75a9e2f6cf3d7f79da4a05593e033e42d91"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6498,24 +6481,22 @@ dependencies = [
  "scale-info",
  "sp-core",
  "sp-crypto-hashing",
- "sp-io",
  "sp-runtime",
  "verifiable",
 ]
 
 [[package]]
 name = "indiv-pallet-members"
-version = "2.3.1"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#68cab75a9e2f6cf3d7f79da4a05593e033e42d91"
 dependencies = [
  "frame-benchmarking",
- "frame-executive",
  "frame-support",
  "frame-system",
  "indiv-pallet-chunks-manager",
  "indiv-support",
  "log",
  "parity-scale-codec",
- "parking_lot 0.12.5",
  "scale-info",
  "sp-core",
  "sp-crypto-hashing",
@@ -6526,19 +6507,17 @@ dependencies = [
 
 [[package]]
 name = "indiv-pallet-members-notifier"
-version = "2.3.1"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#68cab75a9e2f6cf3d7f79da4a05593e033e42d91"
 dependencies = [
  "cumulus-primitives-core",
  "frame-benchmarking",
- "frame-executive",
  "frame-support",
  "frame-system",
  "indiv-pallet-people",
  "indiv-support",
  "log",
- "pallet-balances",
  "parity-scale-codec",
- "parking_lot 0.12.5",
  "scale-info",
  "serde",
  "sp-core",
@@ -6551,16 +6530,15 @@ dependencies = [
 
 [[package]]
 name = "indiv-pallet-members-subscriber"
-version = "2.3.1"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#68cab75a9e2f6cf3d7f79da4a05593e033e42d91"
 dependencies = [
  "frame-benchmarking",
- "frame-executive",
  "frame-support",
  "frame-system",
  "indiv-support",
  "log",
  "parity-scale-codec",
- "parking_lot 0.12.5",
  "scale-info",
  "sp-core",
  "sp-io",
@@ -6571,14 +6549,14 @@ dependencies = [
 
 [[package]]
 name = "indiv-pallet-mob-rule"
-version = "2.3.1"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#68cab75a9e2f6cf3d7f79da4a05593e033e42d91"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "indiv-support",
  "log",
- "pallet-balances",
  "parity-scale-codec",
  "scale-info",
  "sp-api",
@@ -6591,7 +6569,8 @@ dependencies = [
 
 [[package]]
 name = "indiv-pallet-network-suffix"
-version = "2.3.1"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#68cab75a9e2f6cf3d7f79da4a05593e033e42d91"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6599,18 +6578,58 @@ dependencies = [
  "indiv-support",
  "parity-scale-codec",
  "scale-info",
+]
+
+[[package]]
+name = "indiv-pallet-nft-claims"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#68cab75a9e2f6cf3d7f79da4a05593e033e42d91"
+dependencies = [
+ "binary-merkle-tree",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "indiv-pallet-scarcity",
+ "indiv-support",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-api",
+ "sp-core",
+ "sp-runtime",
+ "staging-xcm",
+]
+
+[[package]]
+name = "indiv-pallet-nft-credits"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#68cab75a9e2f6cf3d7f79da4a05593e033e42d91"
+dependencies = [
+ "binary-merkle-tree",
+ "cumulus-primitives-core",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "indiv-pallet-game",
+ "indiv-pallet-score",
+ "indiv-support",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-api",
  "sp-io",
  "sp-runtime",
+ "staging-xcm",
 ]
 
 [[package]]
 name = "indiv-pallet-origin-restriction"
-version = "2.3.1"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#68cab75a9e2f6cf3d7f79da4a05593e033e42d91"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "log",
  "pallet-transaction-payment",
  "parity-scale-codec",
  "scale-info",
@@ -6621,17 +6640,15 @@ dependencies = [
 
 [[package]]
 name = "indiv-pallet-people"
-version = "2.3.1"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#68cab75a9e2f6cf3d7f79da4a05593e033e42d91"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "indiv-pallet-chunks-manager",
- "indiv-pallet-members",
  "indiv-support",
  "log",
  "parity-scale-codec",
- "parking_lot 0.12.5",
  "scale-info",
  "sp-core",
  "sp-crypto-hashing",
@@ -6641,8 +6658,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "indiv-pallet-people-airdrops"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#68cab75a9e2f6cf3d7f79da4a05593e033e42d91"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "indiv-pallet-airdrop",
+ "indiv-support",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-crypto-hashing",
+ "sp-runtime",
+]
+
+[[package]]
 name = "indiv-pallet-people-lite"
-version = "2.3.1"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#68cab75a9e2f6cf3d7f79da4a05593e033e42d91"
 dependencies = [
  "ed25519-zebra",
  "frame-benchmarking",
@@ -6650,7 +6686,6 @@ dependencies = [
  "frame-system",
  "indiv-support",
  "log",
- "pallet-balances",
  "parity-scale-codec",
  "scale-info",
  "sp-core",
@@ -6662,18 +6697,15 @@ dependencies = [
 
 [[package]]
 name = "indiv-pallet-pgas"
-version = "2.3.1"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#68cab75a9e2f6cf3d7f79da4a05593e033e42d91"
 dependencies = [
  "frame-benchmarking",
- "frame-executive",
  "frame-support",
  "frame-system",
  "indiv-support",
  "log",
- "pallet-assets",
- "pallet-balances",
  "parity-scale-codec",
- "parking_lot 0.12.5",
  "scale-info",
  "sp-core",
  "sp-crypto-hashing",
@@ -6684,14 +6716,14 @@ dependencies = [
 
 [[package]]
 name = "indiv-pallet-proof-of-ink"
-version = "2.3.1"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#68cab75a9e2f6cf3d7f79da4a05593e033e42d91"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "indiv-support",
  "log",
- "pallet-balances",
  "parity-scale-codec",
  "scale-info",
  "sp-api",
@@ -6705,7 +6737,8 @@ dependencies = [
 
 [[package]]
 name = "indiv-pallet-relay-randomness"
-version = "2.3.1"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#68cab75a9e2f6cf3d7f79da4a05593e033e42d91"
 dependencies = [
  "cumulus-pallet-parachain-system",
  "cumulus-primitives-core",
@@ -6715,28 +6748,23 @@ dependencies = [
  "indiv-support",
  "parity-scale-codec",
  "scale-info",
- "sp-io",
  "sp-runtime",
  "sp-trie",
 ]
 
 [[package]]
 name = "indiv-pallet-resources"
-version = "2.3.1"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#68cab75a9e2f6cf3d7f79da4a05593e033e42d91"
 dependencies = [
  "frame-benchmarking",
- "frame-executive",
  "frame-support",
  "frame-system",
- "indiv-pallet-chunks-manager",
- "indiv-pallet-members",
  "indiv-pallet-people",
  "indiv-pallet-people-lite",
  "indiv-support",
  "log",
- "pallet-balances",
  "parity-scale-codec",
- "parking_lot 0.12.5",
  "scale-info",
  "sp-core",
  "sp-crypto-hashing",
@@ -6747,18 +6775,33 @@ dependencies = [
 ]
 
 [[package]]
-name = "indiv-pallet-score"
-version = "2.3.1"
+name = "indiv-pallet-scarcity"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#68cab75a9e2f6cf3d7f79da4a05593e033e42d91"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "indiv-pallet-chunks-manager",
- "indiv-pallet-members",
+ "indiv-support",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-api",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
+name = "indiv-pallet-score"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#68cab75a9e2f6cf3d7f79da4a05593e033e42d91"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
  "indiv-pallet-people",
  "indiv-support",
  "log",
- "pallet-balances",
  "parity-scale-codec",
  "scale-info",
  "sp-core",
@@ -6804,31 +6847,60 @@ dependencies = [
 ]
 
 [[package]]
-name = "indiv-precompile-personhood"
-version = "2.3.1"
+name = "indiv-precompile-nft-claims"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#68cab75a9e2f6cf3d7f79da4a05593e033e42d91"
 dependencies = [
  "frame-support",
  "frame-system",
- "hex-literal",
- "indiv-pallet-alias-accounts",
- "indiv-pallet-members-subscriber",
+ "indiv-pallet-nft-claims",
+ "indiv-pallet-scarcity",
+ "indiv-precompile-support",
+ "pallet-revive",
+]
+
+[[package]]
+name = "indiv-precompile-personhood"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#68cab75a9e2f6cf3d7f79da4a05593e033e42d91"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "indiv-precompile-support",
  "indiv-support",
  "log",
- "pallet-assets",
- "pallet-balances",
  "pallet-revive",
  "parity-scale-codec",
- "scale-info",
- "sp-core",
- "sp-io",
+]
+
+[[package]]
+name = "indiv-precompile-scarcity"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#68cab75a9e2f6cf3d7f79da4a05593e033e42d91"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "indiv-pallet-scarcity",
+ "indiv-precompile-support",
+ "pallet-revive",
+]
+
+[[package]]
+name = "indiv-precompile-support"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#68cab75a9e2f6cf3d7f79da4a05593e033e42d91"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "pallet-revive",
  "sp-runtime",
- "staging-xcm",
- "verifiable",
 ]
 
 [[package]]
 name = "indiv-support"
-version = "2.3.1"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#68cab75a9e2f6cf3d7f79da4a05593e033e42d91"
 dependencies = [
  "ark-bls12-381-ext 0.6.0",
  "ark-ec 0.6.0",
@@ -6838,11 +6910,9 @@ dependencies = [
  "frame-support",
  "frame-system",
  "getrandom 0.2.17",
- "pallet-asset-conversion",
+ "log",
  "pallet-asset-conversion-tx-payment",
  "pallet-asset-tx-payment",
- "pallet-assets",
- "pallet-balances",
  "pallet-transaction-payment",
  "parity-scale-codec",
  "scale-info",
@@ -8586,7 +8656,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -11373,8 +11443,10 @@ dependencies = [
  "indiv-pallet-members-notifier",
  "indiv-pallet-mob-rule",
  "indiv-pallet-network-suffix",
+ "indiv-pallet-nft-credits",
  "indiv-pallet-origin-restriction",
  "indiv-pallet-people",
+ "indiv-pallet-people-airdrops",
  "indiv-pallet-people-lite",
  "indiv-pallet-proof-of-ink",
  "indiv-pallet-relay-randomness",
@@ -12349,8 +12421,8 @@ version = "0.13.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "be769465445e8c1474e9c5dac2018218498557af32d9ed057325ec9a41ae81bf"
 dependencies = [
- "heck 0.5.0",
- "itertools 0.14.0",
+ "heck 0.4.1",
+ "itertools 0.12.1",
  "log",
  "multimap",
  "once_cell",
@@ -12369,8 +12441,8 @@ version = "0.14.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "343d3bd7056eda839b03204e68deff7d1b13aba7af2b2fd16890697274262ee7"
 dependencies = [
- "heck 0.5.0",
- "itertools 0.14.0",
+ "heck 0.4.1",
+ "itertools 0.12.1",
  "log",
  "multimap",
  "petgraph 0.8.3",
@@ -12402,7 +12474,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a56d757972c98b346a9b766e3f02746cde6dd1cd1d1d563472929fdd74bec4d"
 dependencies = [
  "anyhow",
- "itertools 0.14.0",
+ "itertools 0.12.1",
  "proc-macro2",
  "quote",
  "syn 2.0.117",
@@ -12415,7 +12487,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "27c6023962132f4b30eb4c172c91ce92d933da334c59c23cddee82358ddafb0b"
 dependencies = [
  "anyhow",
- "itertools 0.14.0",
+ "itertools 0.12.1",
  "proc-macro2",
  "quote",
  "syn 2.0.117",
@@ -12504,7 +12576,7 @@ dependencies = [
  "quinn-udp 0.5.14",
  "rustc-hash 2.1.1",
  "rustls",
- "socket2 0.6.2",
+ "socket2 0.5.10",
  "thiserror 2.0.18",
  "tokio",
  "tracing",
@@ -12541,9 +12613,9 @@ dependencies = [
  "cfg_aliases",
  "libc",
  "once_cell",
- "socket2 0.6.2",
+ "socket2 0.5.10",
  "tracing",
- "windows-sys 0.60.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -12554,9 +12626,9 @@ checksum = "3ca72c3f2792761ab5fa848490694cbc728c7f659669ed4320c4c79c12150966"
 dependencies = [
  "cfg_aliases",
  "libc",
- "socket2 0.6.2",
+ "socket2 0.5.10",
  "tracing",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -13268,7 +13340,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -16937,7 +17009,7 @@ dependencies = [
  "getrandom 0.4.2",
  "once_cell",
  "rustix",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -18271,7 +18343,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]

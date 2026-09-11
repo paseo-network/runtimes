@@ -33,10 +33,14 @@ system-parachains-common = { workspace = true }
 indiv-pallet-alias-accounts = { workspace = true }
 indiv-pallet-dotns-gateway = { workspace = true }
 indiv-pallet-network-suffix = { workspace = true }
+indiv-pallet-nft-claims = { workspace = true }
 indiv-pallet-members-subscriber = { workspace = true }
 indiv-pallet-origin-restriction = { workspace = true }
 indiv-pallet-pgas = { workspace = true }
+indiv-pallet-scarcity = { workspace = true }
+indiv-precompile-nft-claims = { workspace = true }
 indiv-precompile-personhood = { workspace = true }
+indiv-precompile-scarcity = { workspace = true }
 indiv-support = { workspace = true }
 verifiable = { workspace = true }
 
@@ -210,9 +214,13 @@ runtime-benchmarks = [
 	"indiv-pallet-dotns-gateway/runtime-benchmarks",
 	"indiv-pallet-members-subscriber/runtime-benchmarks",
 	"indiv-pallet-network-suffix/runtime-benchmarks",
+	"indiv-pallet-nft-claims/runtime-benchmarks",
 	"indiv-pallet-origin-restriction/runtime-benchmarks",
 	"indiv-pallet-pgas/runtime-benchmarks",
+	"indiv-pallet-scarcity/runtime-benchmarks",
+	"indiv-precompile-nft-claims/runtime-benchmarks",
 	"indiv-precompile-personhood/runtime-benchmarks",
+	"indiv-precompile-scarcity/runtime-benchmarks",
 	"indiv-support/genesis",
 	"indiv-support/runtime-benchmarks",
 	"kusama-runtime-constants/runtime-benchmarks",
@@ -304,9 +312,13 @@ try-runtime = [
 	"indiv-pallet-dotns-gateway/try-runtime",
 	"indiv-pallet-members-subscriber/try-runtime",
 	"indiv-pallet-network-suffix/try-runtime",
+	"indiv-pallet-nft-claims/try-runtime",
 	"indiv-pallet-origin-restriction/try-runtime",
 	"indiv-pallet-pgas/try-runtime",
+	"indiv-pallet-scarcity/try-runtime",
+	"indiv-precompile-nft-claims/try-runtime",
 	"indiv-precompile-personhood/try-runtime",
+	"indiv-precompile-scarcity/try-runtime",
 	"pallet-ah-ops/try-runtime",
 	"pallet-asset-conversion-precompiles/try-runtime",
 	"pallet-asset-conversion-tx-payment/try-runtime",
@@ -405,9 +417,13 @@ std = [
 	"indiv-pallet-dotns-gateway/std",
 	"indiv-pallet-members-subscriber/std",
 	"indiv-pallet-network-suffix/std",
+	"indiv-pallet-nft-claims/std",
 	"indiv-pallet-origin-restriction/std",
 	"indiv-pallet-pgas/std",
+	"indiv-pallet-scarcity/std",
+	"indiv-precompile-nft-claims/std",
 	"indiv-precompile-personhood/std",
+	"indiv-precompile-scarcity/std",
 	"indiv-support/std",
 	"kusama-runtime-constants/std",
 	"log/std",

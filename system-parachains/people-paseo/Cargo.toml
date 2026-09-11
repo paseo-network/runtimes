@@ -73,6 +73,8 @@ indiv-pallet-airdrop = { workspace = true }
 # added to this runtime. See `CoinageFeeConversion` in people.rs.
 pallet-asset-conversion = { workspace = true }
 indiv-pallet-network-suffix = { workspace = true }
+indiv-pallet-nft-credits = { workspace = true, features = ["testnet"] }
+indiv-pallet-people-airdrops = { workspace = true }
 indiv-pallet-relay-randomness = { workspace = true }
 indiv-pallet-chunks-manager = { workspace = true }
 indiv-pallet-coinage = { workspace = true }
@@ -160,7 +162,9 @@ std = [
 	"indiv-pallet-members/std",
 	"indiv-pallet-mob-rule/std",
 	"indiv-pallet-network-suffix/std",
+	"indiv-pallet-nft-credits/std",
 	"indiv-pallet-origin-restriction/std",
+	"indiv-pallet-people-airdrops/std",
 	"indiv-pallet-people-lite/std",
 	"indiv-pallet-people/std",
 	"indiv-pallet-proof-of-ink/std",
@@ -251,7 +255,9 @@ runtime-benchmarks = [
 	"indiv-pallet-members/runtime-benchmarks",
 	"indiv-pallet-mob-rule/runtime-benchmarks",
 	"indiv-pallet-network-suffix/runtime-benchmarks",
+	"indiv-pallet-nft-credits/runtime-benchmarks",
 	"indiv-pallet-origin-restriction/runtime-benchmarks",
+	"indiv-pallet-people-airdrops/runtime-benchmarks",
 	"indiv-pallet-people-lite/runtime-benchmarks",
 	"indiv-pallet-people/runtime-benchmarks",
 	"indiv-pallet-proof-of-ink/runtime-benchmarks",
@@ -319,7 +325,9 @@ try-runtime = [
 	"indiv-pallet-members/try-runtime",
 	"indiv-pallet-mob-rule/try-runtime",
 	"indiv-pallet-network-suffix/try-runtime",
+	"indiv-pallet-nft-credits/try-runtime",
 	"indiv-pallet-origin-restriction/try-runtime",
+	"indiv-pallet-people-airdrops/try-runtime",
 	"indiv-pallet-people-lite/try-runtime",
 	"indiv-pallet-people/try-runtime",
 	"indiv-pallet-proof-of-ink/try-runtime",
