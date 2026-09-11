@@ -197,7 +197,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	impl_name: Cow::Borrowed("asset-hub-paseo"),
 	spec_name: Cow::Borrowed("asset-hub-paseo"),
 	authoring_version: 1,
-	spec_version: 2_005_002,
+	spec_version: 3_000_000,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	// BUMPED 16 -> 17 for the individuality v0.3.1 port. This is mandatory, not hygiene:

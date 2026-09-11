@@ -203,7 +203,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// The `codeSubstitutes` entry must nevertheless stay in the distributed spec forever: blocks
 	// 6546979..<this upgrade> can only be replayed with it, so any archive or resyncing node
 	// still needs it to cross that range.
-	spec_version: 2_005_002,
+	spec_version: 3_000_000,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	// BUMPED 1 -> 2 for the individuality v0.3.1 port. MANDATORY, not hygiene: coinage call
