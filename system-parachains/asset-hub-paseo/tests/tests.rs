@@ -18,9 +18,10 @@
 //! Tests for the Paseo Asset Hub (previously known as Statemint) chain.
 
 use asset_hub_paseo_runtime::{
+	genesis_config_presets::EXTERNAL_ASSET_ID,
 	xcm_config::{
-		bridging, CheckingAccount, DotLocation, LocationToAccountId, RelayChainLocation,
-		TrustBackedAssetsPalletLocation, XcmConfig,
+		bridging, CheckingAccount, DotLocation, ExternalAssetLocation, LocationToAccountId,
+		RelayChainLocation, TrustBackedAssetsPalletLocation, XcmConfig,
 	},
 	AllPalletsWithoutSystem, AssetDeposit, Assets, Balances, Block, Dap, ExistentialDeposit,
 	ForeignAssets, ForeignAssetsInstance, MetadataDepositBase, MetadataDepositPerByte,
@@ -1344,4 +1345,866 @@ fn session_keys_are_compatible_between_ah_and_rc() {
 		paseo_runtime::SessionKeys::key_ids(),
 		"Session key type IDs must match between AssetHub and Paseo"
 	);
+}
+
+mod pgas_fees {
+	use asset_hub_paseo_runtime::{
+		Assets, Balances, Executive, ExistentialDeposit, PgasAssetId, PgasMinBalance, Runtime,
+		RuntimeCall, RuntimeEvent, SessionKeys, System, TxExtension, UncheckedExtrinsic,
+	};
+	use codec::Encode;
+	use frame_support::{
+		assert_ok,
+		dispatch::GetDispatchInfo,
+		traits::{
+			fungible::Inspect as FungibleInspect,
+			fungibles::{Inspect as FungiblesInspect, Mutate as FungiblesMutate},
+			SignedTransactionBuilder,
+		},
+	};
+	use parachains_common::{AccountId, AuraId};
+	use paseo_runtime_constants::system_parachain::ASSET_HUB_ID;
+	use sp_keyring::Sr25519Keyring;
+	use sp_runtime::{
+		generic,
+		transaction_validity::{InvalidTransaction, TransactionValidityError},
+		MultiSignature,
+	};
+
+	use asset_test_utils::ExtBuilder;
+
+	use super::ALICE;
+
+	/// Builds a signed extrinsic whose `ChargePGAS` has the PGAS path enabled. The `dap` module's
+	/// helper cannot be reused: it goes through `EthExtraImpl::get_eth_extension`, which
+	/// constructs `ChargePGAS` with `new_skip_pgas`.
+	fn construct_extrinsic(sender: Sr25519Keyring, call: RuntimeCall) -> UncheckedExtrinsic {
+		let account_id = AccountId::from(sender.public());
+		let nonce = frame_system::Pallet::<Runtime>::account(&account_id).nonce;
+		let tx_ext = TxExtension::from((
+			(
+				(),
+				indiv_pallet_scarcity::extension::AsScarcity::<Runtime>::new(None),
+				frame_system::AuthorizeCall::<Runtime>::new(),
+				indiv_pallet_pgas::AsPgas::<Runtime>::new(None),
+				indiv_pallet_dotns_gateway::AsDotnsGateway::<Runtime>::new(None),
+			),
+			indiv_pallet_origin_restriction::RestrictOrigin::<Runtime>::new(true),
+			frame_system::CheckNonZeroSender::<Runtime>::new(),
+			frame_system::CheckSpecVersion::<Runtime>::new(),
+			frame_system::CheckTxVersion::<Runtime>::new(),
+			frame_system::CheckGenesis::<Runtime>::new(),
+			frame_system::CheckEra::<Runtime>::from(generic::Era::Immortal),
+			frame_system::CheckNonce::<Runtime>::from(nonce),
+			frame_system::CheckWeight::<Runtime>::new(),
+			pallet_pgas_allowance::ChargePGAS::<
+				Runtime,
+				pallet_asset_conversion_tx_payment::ChargeAssetTxPayment<Runtime>,
+			>::from(pallet_asset_conversion_tx_payment::ChargeAssetTxPayment::<Runtime>::from(
+				0, None,
+			)),
+			(
+				polkadot_runtime_common::claims::PrevalidateAttests::<Runtime>::new(),
+				frame_metadata_hash_extension::CheckMetadataHash::<Runtime>::new(false),
+				pallet_revive::evm::tx_extension::SetOrigin::<Runtime>::default(),
+			),
+		));
+		let payload = generic::SignedPayload::new(call.clone(), tx_ext.clone()).unwrap();
+		let signature = payload.using_encoded(|e| sender.sign(e));
+		UncheckedExtrinsic::new_signed_transaction(
+			call,
+			account_id.into(),
+			MultiSignature::Sr25519(signature),
+			tx_ext,
+		)
+	}
+
+	/// Paseo deviation from upstream `next-asset-hub-paseo`: `PGASCallFilter` lets only `Revive`
+	/// calls (and utility batches of them) be paid in PGAS. A Revive call from a signer holding
+	/// nothing but PGAS goes through; the same signer's `remark` is refused as unpayable, and a
+	/// signer one planck short of the fee in PGAS is refused too.
+	#[test]
+	fn pgas_pays_the_fee_of_revive_calls_only() {
+		let alice = AccountId::from(ALICE);
+		let bob = AccountId::from(Sr25519Keyring::Bob.public());
+		let charlie = AccountId::from(Sr25519Keyring::Charlie.public());
+
+		ExtBuilder::<Runtime>::default()
+			.with_collators(vec![alice.clone()])
+			.with_session_keys(vec![(
+				alice.clone(),
+				alice.clone(),
+				SessionKeys { aura: AuraId::from(sp_core::sr25519::Public::from_raw(ALICE)) },
+			)])
+			.with_para_id(ASSET_HUB_ID.into())
+			.build()
+			.execute_with(|| {
+				assert_ok!(indiv_pallet_pgas::Pallet::<Runtime>::do_create_pgas_asset());
+				let pgas = PgasAssetId::get();
+				let endowment = 100 * ExistentialDeposit::get();
+				assert_ok!(<Assets as FungiblesMutate<AccountId>>::mint_into(
+					pgas, &bob, endowment
+				));
+
+				let revive_call = RuntimeCall::Revive(pallet_revive::Call::map_account {});
+				let remark = RuntimeCall::System(frame_system::Call::remark { remark: vec![] });
+				let xt_bob_revive = construct_extrinsic(Sr25519Keyring::Bob, revive_call.clone());
+				let xt_charlie = construct_extrinsic(Sr25519Keyring::Charlie, revive_call);
+
+				assert_eq!(<Balances as FungibleInspect<AccountId>>::balance(&bob), 0);
+				assert_eq!(<Balances as FungibleInspect<AccountId>>::balance(&charlie), 0);
+				assert!(!frame_system::Pallet::<Runtime>::account_exists(&charlie));
+
+				// Endow Charlie one planck short of the fee. The balance keeps his account alive
+				let fee = pallet_transaction_payment::Pallet::<Runtime>::compute_fee(
+					xt_charlie.encoded_size() as u32,
+					&xt_charlie.get_dispatch_info(),
+					0,
+				);
+				let charlie_endowment = fee - 1;
+				assert!(
+					charlie_endowment >= PgasMinBalance::get(),
+					"the PGAS endowment must be holdable yet insufficient for the fee"
+				);
+				assert_ok!(<Assets as FungiblesMutate<AccountId>>::mint_into(
+					pgas,
+					&charlie,
+					charlie_endowment
+				));
+				assert!(frame_system::Pallet::<Runtime>::account_exists(&charlie));
+
+				// A Revive call is fee-payable in PGAS whatever its dispatch outcome.
+				assert!(Executive::apply_extrinsic(xt_bob_revive).is_ok());
+
+				let paid = endowment - <Assets as FungiblesInspect<AccountId>>::balance(pgas, &bob);
+				assert!(paid > 0, "the fee should have been taken in PGAS");
+				assert_eq!(<Balances as FungibleInspect<AccountId>>::balance(&bob), 0);
+				assert!(
+					System::events().iter().any(|record| matches!(
+						record.event,
+						RuntimeEvent::PgasAllowance(
+							pallet_pgas_allowance::Event::PGASFeePaid { actual_fee, .. }
+						) if actual_fee == paid
+					)),
+					"a PGASFeePaid event should report the fee burned"
+				);
+
+				// The filter keeps a non-Revive call off the PGAS path, and Bob holds no native.
+				let xt_bob_remark = construct_extrinsic(Sr25519Keyring::Bob, remark);
+				let pgas_left = <Assets as FungiblesInspect<AccountId>>::balance(pgas, &bob);
+				assert_eq!(
+					Executive::apply_extrinsic(xt_bob_remark),
+					Err(TransactionValidityError::Invalid(InvalidTransaction::Payment))
+				);
+				assert_eq!(<Assets as FungiblesInspect<AccountId>>::balance(pgas, &bob), pgas_left);
+
+				assert_eq!(
+					Executive::apply_extrinsic(xt_charlie),
+					Err(TransactionValidityError::Invalid(InvalidTransaction::Payment))
+				);
+				assert_eq!(
+					<Assets as FungiblesInspect<AccountId>>::balance(pgas, &charlie),
+					charlie_endowment,
+					"a rejected transaction does not touch the signer's PGAS"
+				);
+			});
+	}
+
+	/// A signer whose PGAS balance does not cover the fee pays it in the native asset instead.
+	#[test]
+	fn dot_pays_the_fee_when_pgas_is_insufficient() {
+		let alice = AccountId::from(ALICE);
+		let bob = AccountId::from(Sr25519Keyring::Bob.public());
+		let endowment = 100 * ExistentialDeposit::get();
+
+		ExtBuilder::<Runtime>::default()
+			.with_collators(vec![alice.clone()])
+			.with_session_keys(vec![(
+				alice.clone(),
+				alice.clone(),
+				SessionKeys { aura: AuraId::from(sp_core::sr25519::Public::from_raw(ALICE)) },
+			)])
+			.with_balances(vec![
+				(bob.clone(), endowment),
+				(pallet_dap::Pallet::<Runtime>::staging_account(), ExistentialDeposit::get()),
+			])
+			.with_para_id(ASSET_HUB_ID.into())
+			.build()
+			.execute_with(|| {
+				assert_ok!(indiv_pallet_pgas::Pallet::<Runtime>::do_create_pgas_asset());
+				let pgas = PgasAssetId::get();
+
+				let call = RuntimeCall::Revive(pallet_revive::Call::map_account {});
+				let xt = construct_extrinsic(Sr25519Keyring::Bob, call);
+
+				let info = xt.get_dispatch_info();
+				let fee = pallet_transaction_payment::Pallet::<Runtime>::compute_fee(
+					xt.encoded_size() as u32,
+					&info,
+					0,
+				);
+				let pgas_endowment = fee - 1;
+				assert!(
+					pgas_endowment >= PgasMinBalance::get(),
+					"the PGAS endowment must be holdable yet insufficient for the fee"
+				);
+				assert_ok!(<Assets as FungiblesMutate<AccountId>>::mint_into(
+					pgas,
+					&bob,
+					pgas_endowment
+				));
+
+				assert!(Executive::apply_extrinsic(xt).is_ok());
+
+				let paid = endowment - <Balances as FungibleInspect<AccountId>>::balance(&bob);
+				assert!(paid > 0, "the fee should have been taken from the native balance");
+				assert_eq!(
+					<Assets as FungiblesInspect<AccountId>>::balance(pgas, &bob),
+					pgas_endowment,
+					"the insufficient PGAS balance should be left untouched"
+				);
+				assert!(
+					System::events().iter().any(|record| matches!(
+						record.event,
+						RuntimeEvent::TransactionPayment(
+							pallet_transaction_payment::Event::TransactionFeePaid {
+								actual_fee, ..
+							}
+						) if actual_fee == paid
+					)),
+					"a TransactionFeePaid event should report the native fee"
+				);
+				assert!(
+					!System::events().iter().any(|record| matches!(
+						record.event,
+						RuntimeEvent::PgasAllowance(
+							pallet_pgas_allowance::Event::PGASFeePaid { .. }
+						)
+					)),
+					"no fee should have been taken in PGAS"
+				);
+			});
+	}
+}
+
+mod external_asset_teleport {
+	// The trusted-reserve teleporter reads `ParachainInfo`, so every check runs inside
+	// externalities.
+	use super::*;
+	use paseo_runtime_constants::system_parachain::PEOPLE_ID;
+
+	type IsTeleporter = <XcmConfig as xcm_executor::Config>::IsTeleporter;
+
+	fn people_origin() -> Location {
+		Location::new(1, [Parachain(PEOPLE_ID)])
+	}
+
+	fn external_asset(amount: u128) -> Asset {
+		(ExternalAssetLocation::get(), amount).into()
+	}
+
+	#[test]
+	fn external_asset_teleport_from_people_is_accepted() {
+		sp_io::TestExternalities::default().execute_with(|| {
+			assert!(IsTeleporter::contains(&external_asset(1_000), &people_origin()));
+		});
+	}
+
+	#[test]
+	fn external_asset_teleport_from_relay_is_rejected() {
+		sp_io::TestExternalities::default().execute_with(|| {
+			assert!(!IsTeleporter::contains(&external_asset(1_000), &Location::parent()));
+		});
+	}
+
+	#[test]
+	fn external_asset_teleport_from_random_sibling_is_rejected() {
+		sp_io::TestExternalities::default().execute_with(|| {
+			let random_sibling = Location::new(1, [Parachain(4242)]);
+			assert!(!IsTeleporter::contains(&external_asset(1_000), &random_sibling));
+		});
+	}
+
+	#[test]
+	fn wrong_asset_teleport_from_people_is_rejected() {
+		sp_io::TestExternalities::default().execute_with(|| {
+			// Different GeneralIndex (not the external asset).
+			let wrong_asset: Asset = (
+				Location::new(
+					0,
+					[PalletInstance(50), GeneralIndex((EXTERNAL_ASSET_ID + 1) as u128)],
+				),
+				1_000u128,
+			)
+				.into();
+			assert!(!IsTeleporter::contains(&wrong_asset, &people_origin()));
+		});
+	}
+
+	#[test]
+	fn wrong_pallet_index_teleport_from_people_is_rejected() {
+		sp_io::TestExternalities::default().execute_with(|| {
+			// Right asset id, wrong pallet instance.
+			let wrong_asset: Asset = (
+				Location::new(0, [PalletInstance(99), GeneralIndex(EXTERNAL_ASSET_ID as u128)]),
+				1_000u128,
+			)
+				.into();
+			assert!(!IsTeleporter::contains(&wrong_asset, &people_origin()));
+		});
+	}
+
+	#[test]
+	fn dot_teleport_from_relay_still_works() {
+		sp_io::TestExternalities::default().execute_with(|| {
+			// Regression: pre-existing native-asset teleport rules unaffected.
+			let dot: Asset = (DotLocation::get(), 1_000u128).into();
+			assert!(IsTeleporter::contains(&dot, &Location::parent()));
+		});
+	}
+}
+
+/// The transaction pipeline is what decides whether a call can reach dispatch unpaid, so its shape
+/// is an invariant of this chain, not an implementation detail.
+mod tx_extension_pipeline {
+	use asset_hub_paseo_runtime::{RuntimeCall, TxExtension};
+	use sp_runtime::traits::TransactionExtension;
+
+	/// Every extension of the pipeline, in the order it runs.
+	///
+	/// The four ahead of `RestrictOrigins` are the ones that replace the origin, and everything
+	/// that charges the transaction runs after it. An extension that installs an origin the
+	/// payment extensions do not charge therefore needs an allowance in
+	/// `pallet-origin-restriction` to bound it, which is why an addition anywhere in this list is
+	/// a deliberate change rather than an implementation detail.
+	///
+	/// Paseo deviation from upstream `next-asset-hub-paseo`: `PrevalidateAttests` (the claims
+	/// pallet's extension) sits between `ChargeAssetTxPayment` and `CheckMetadataHash`.
+	const PIPELINE: [&str; 18] = [
+		"UnitTransactionExtension",
+		"AsScarcity",
+		"AuthorizeCall",
+		"AsPgas",
+		"AsDotnsGateway",
+		"RestrictOrigins",
+		"CheckNonZeroSender",
+		"CheckSpecVersion",
+		"CheckTxVersion",
+		"CheckGenesis",
+		"CheckMortality",
+		"CheckNonce",
+		"CheckWeight",
+		"ChargeAssetTxPayment",
+		"PrevalidateAttests",
+		"CheckMetadataHash",
+		"EthSetOrigin",
+		"StorageWeightReclaim",
+	];
+
+	#[test]
+	fn the_pipeline_is_the_expected_one() {
+		let identifiers = <TxExtension as TransactionExtension<RuntimeCall>>::metadata()
+			.into_iter()
+			.map(|meta| meta.identifier)
+			.collect::<Vec<_>>();
+
+		assert_eq!(identifiers, PIPELINE);
+	}
+}
+
+/// `EnsureCreditClaimant` is the only path from a transaction to a claimant identity, and
+/// `ClaimantKind` is the only thing that selects between the two: no extension installs an alias
+/// origin, so a claim resolves the person from the signer's binding.
+mod credit_claimant_origin {
+	use asset_hub_paseo_runtime::{
+		AliasAccounts, EnsureCreditClaimant, MembersSubscriber, Runtime, RuntimeOrigin,
+	};
+	use frame_support::traits::{EnsureOriginWithArg, Get};
+	use indiv_pallet_alias_accounts::{AccountToAlias, AliasAccountInfo, PEOPLE_IDENTIFIER};
+	use indiv_pallet_members_subscriber::types::RingCommitmentRecord;
+	use indiv_pallet_nft_claims::ClaimantKind;
+	use indiv_support::{
+		crypto::BandersnatchVrfVerifiable,
+		identity::AccountOrPerson,
+		traits::{Context, ContextualAlias, PersonhoodLookup},
+	};
+	use parachains_common::AccountId;
+	use sp_runtime::BoundedVec;
+	use verifiable::{ring::RingDomainSize, GenerateVerifiable};
+
+	const ALIAS: [u8; 32] = [9u8; 32];
+	const CONTEXT: Context = [3u8; 32];
+	/// Time the seeded ring roots are committed at, in seconds.
+	const SOURCE_TIME: u64 = 1_000_000;
+
+	/// Window `personhood_info` keeps accepting a superseded revision for.
+	fn retention() -> u64 {
+		<<Runtime as indiv_pallet_members_subscriber::Config>::OldRootRetentionDuration as Get<
+			u64,
+		>>::get()
+	}
+
+	fn signer() -> AccountId {
+		AccountId::from([8u8; 32])
+	}
+
+	/// Records `revisions` roots for ring 0 of the people collection, numbered from 0 and all
+	/// committed at [`SOURCE_TIME`]. The retention check reads only the revision numbers and their
+	/// source times, so an empty ring commitment stands in for the real root.
+	fn seed_ring(revisions: u32) {
+		let root = BandersnatchVrfVerifiable::finish_members(
+			BandersnatchVrfVerifiable::start_members(RingDomainSize::Domain11),
+		);
+		let roots = (0..revisions)
+			.map(|revision| RingCommitmentRecord {
+				root: root.clone(),
+				revision,
+				source_time: SOURCE_TIME,
+				source_sequence: 1,
+			})
+			.collect::<Vec<_>>();
+		MembersSubscriber::set_current_ring_roots(
+			PEOPLE_IDENTIFIER,
+			0,
+			BoundedVec::try_from(roots).expect("revisions within MaxRecentRootsPerRing"),
+		);
+	}
+
+	/// Moves the clock the retention check reads to `SOURCE_TIME + offset` seconds. Writes `Now`
+	/// directly, since `set_timestamp` runs Aura's `OnTimestampSet` hook, which requires the slot
+	/// to match.
+	fn set_now(offset: u64) {
+		pallet_timestamp::Now::<Runtime>::put(
+			SOURCE_TIME.saturating_add(offset).saturating_mul(1_000),
+		);
+	}
+
+	/// The alias `personhood_info` resolves for `signer()` in [`CONTEXT`].
+	fn personhood_alias() -> Option<[u8; 32]> {
+		<AliasAccounts as PersonhoodLookup<AccountId, _>>::personhood_info(&signer(), &CONTEXT)
+			.0
+			.map(|(_collection, alias)| alias)
+	}
+
+	/// Binds `signer()` to [`ALIAS`], as `set_alias_account` does for a person who proved a ring
+	/// membership.
+	fn bind_alias() {
+		AccountToAlias::<Runtime>::insert(
+			signer(),
+			AliasAccountInfo {
+				collection: *PEOPLE_IDENTIFIER,
+				ring: 0,
+				revision: 0,
+				ca: ContextualAlias { alias: ALIAS, context: CONTEXT },
+			},
+		);
+	}
+
+	/// `try_origin`'s success value, dropping the origin it hands back on failure so this does not
+	/// depend on `RuntimeOrigin` being printable.
+	fn claimant(origin: RuntimeOrigin, kind: ClaimantKind) -> Option<AccountOrPerson<AccountId>> {
+		EnsureCreditClaimant::try_origin(origin, &kind).ok()
+	}
+
+	#[test]
+	fn a_signer_claims_what_was_awarded_to_its_account() {
+		sp_io::TestExternalities::default().execute_with(|| {
+			let origin = RuntimeOrigin::signed(signer());
+			assert_eq!(
+				claimant(origin, ClaimantKind::Account),
+				Some(AccountOrPerson::Account(signer()))
+			);
+		});
+	}
+
+	/// Revision 0 is the ring's latest, so the binding is one both lookups accept. This is the
+	/// baseline [`a_stale_binding_still_resolves_to_its_person`] moves away from.
+	#[test]
+	fn a_signer_claims_as_the_person_its_account_is_bound_to() {
+		sp_io::TestExternalities::default().execute_with(|| {
+			bind_alias();
+			seed_ring(1);
+			set_now(0);
+			assert_eq!(personhood_alias(), Some(ALIAS));
+
+			let origin = RuntimeOrigin::signed(signer());
+			assert_eq!(
+				claimant(origin, ClaimantKind::Person),
+				Some(AccountOrPerson::Person(ALIAS))
+			);
+		});
+	}
+
+	/// Claiming as a person is what the binding authorizes, so an account without one is rejected
+	/// rather than falling back to claiming as itself.
+	#[test]
+	fn an_unbound_signer_cannot_claim_as_a_person() {
+		sp_io::TestExternalities::default().execute_with(|| {
+			let origin = RuntimeOrigin::signed(signer());
+			assert_eq!(claimant(origin, ClaimantKind::Person), None);
+		});
+	}
+
+	/// Revision 1 supersedes the binding's revision 0 and the retention has passed, so
+	/// `personhood_info` refuses the binding. The credit is awarded to the alias before the claim,
+	/// so the claim still resolves the same person.
+	#[test]
+	fn a_stale_binding_still_resolves_to_its_person() {
+		sp_io::TestExternalities::default().execute_with(|| {
+			bind_alias();
+			seed_ring(2);
+			set_now(retention() + 1);
+			assert_eq!(personhood_alias(), None);
+
+			let origin = RuntimeOrigin::signed(signer());
+			assert_eq!(
+				claimant(origin, ClaimantKind::Person),
+				Some(AccountOrPerson::Person(ALIAS))
+			);
+		});
+	}
+
+	#[test]
+	fn an_unsigned_origin_cannot_claim() {
+		sp_io::TestExternalities::default().execute_with(|| {
+			bind_alias();
+			assert_eq!(claimant(RuntimeOrigin::root(), ClaimantKind::Person), None);
+			assert_eq!(claimant(RuntimeOrigin::none(), ClaimantKind::Account), None);
+		});
+	}
+}
+
+/// Worst-case notifier-to-subscriber calls must fit the per-XCM-message weight budget.
+/// The calls arrive only via XCM Transact, so their declared dispatch weight is weighed
+/// into the message; a call above the MessageQueue service weight is marked permanently
+/// overweight and never executes.
+mod members_subscriber_xcm_budget {
+	use super::*;
+	use frame_support::{dispatch::GetDispatchInfo, traits::Get};
+	use indiv_pallet_members_subscriber::types::{
+		RingRootOp, RingRootUpdate, RingRootUpdatesBatch,
+	};
+	use indiv_support::{crypto::BandersnatchVrfVerifiable, traits::RingExponent};
+	use sp_runtime::BoundedVec;
+	use verifiable::{ring::RingDomainSize, GenerateVerifiable};
+
+	/// A full batch whose ring counter sits at the far end of its range, proving the
+	/// weight annotation is capped rather than growing with the counter.
+	fn worst_case_batch() -> RingRootUpdatesBatch<Runtime> {
+		let root = BandersnatchVrfVerifiable::finish_members(
+			BandersnatchVrfVerifiable::start_members(RingDomainSize::Domain11),
+		);
+		let max_updates =
+			<Runtime as indiv_pallet_members_subscriber::Config>::MaxUpdatesPerBatch::get();
+		let updates = (0..max_updates)
+			.map(|i| RingRootUpdate {
+				ring_index: i,
+				op: RingRootOp::Built { revision: 1, root: root.clone() },
+			})
+			.collect::<Vec<_>>();
+		RingRootUpdatesBatch {
+			identifier: *indiv_pallet_alias_accounts::PEOPLE_IDENTIFIER,
+			sequence: 1,
+			source_time: 1,
+			updates: BoundedVec::try_from(updates).expect("within MaxUpdatesPerBatch"),
+			next_ring_index: u32::MAX,
+		}
+	}
+
+	#[test]
+	fn subscriber_calls_fit_the_xcm_message_budget() {
+		sp_io::TestExternalities::default().execute_with(|| {
+			let budget =
+				asset_hub_paseo_runtime::dynamic_params::message_queue::MaxOnInitWeight::get()
+					.expect("MQ service weight configured");
+
+			// Transact instruction overhead is negligible next to the slack this asserts.
+			let calls = [
+				(
+					"initialize_ring_roots",
+					indiv_pallet_members_subscriber::Call::<Runtime>::initialize_ring_roots {
+						ring_exponent: RingExponent::R2e9,
+						roots: worst_case_batch(),
+					},
+				),
+				(
+					"process_ring_updates",
+					indiv_pallet_members_subscriber::Call::<Runtime>::process_ring_updates {
+						batch: worst_case_batch(),
+					},
+				),
+				(
+					"terminate_subscription",
+					indiv_pallet_members_subscriber::Call::<Runtime>::terminate_subscription {},
+				),
+			];
+			for (name, call) in calls {
+				let weight = call.get_dispatch_info().call_weight;
+				assert!(
+					weight.all_lte(budget),
+					"`{name}` worst-case weight {weight:?} exceeds the XCM message budget {budget:?}",
+				);
+			}
+		});
+	}
+}
+
+/// The removal of a credit tree, from the claim that mints its last credit to the message the game
+/// chain receives. These tests run against the runtime's own configuration, not the pallet's mock.
+mod credit_tree_removal {
+	use super::*;
+	use asset_hub_paseo_runtime::{
+		Balances, CreditTreeTtl, ExistentialDeposit, NftClaims, Runtime, RuntimeEvent,
+		RuntimeOrigin, Scarcity, System, XcmpQueue,
+	};
+	use cumulus_primitives_core::XcmpMessageSource;
+	use frame_support::{pallet_prelude::TransactionSource, BoundedVec};
+	use indiv_pallet_nft_claims::{ClaimantKind, CreditTrees, PendingTreeDeletions, TreeExpiries};
+	use indiv_support::{
+		credit_trees::{
+			credit_leaf, expiry_deadline, oldest_expiry, AwardBlock, CreditProofNode,
+			CreditTreeDelivery, ExpiryTimestamp, NftClaimCreditTree,
+		},
+		identity::AccountOrPerson,
+	};
+	use paseo_runtime_constants::system_parachain::{ASSET_HUB_ID, PEOPLE_ID};
+
+	const BLOCK: AwardBlock = 1;
+	/// The wall-clock time the delivered tree commits to. The value is arbitrary, because
+	/// `due_at` derives the deadline from it.
+	const TIMESTAMP: u32 = 1_000_000;
+
+	/// The first second at which the delivered tree is past its deadline.
+	fn due_at() -> u64 {
+		expiry_deadline(TIMESTAMP, CreditTreeTtl::get())
+	}
+
+	fn game_chain_origin() -> RuntimeOrigin {
+		cumulus_pallet_xcm::Origin::SiblingParachain(PEOPLE_ID.into()).into()
+	}
+
+	fn set_now(secs: u64) {
+		pallet_timestamp::Now::<Runtime>::put(secs.saturating_mul(1_000));
+	}
+
+	/// Creates the collection and item a claim mints into, and registers it for claims as its owner
+	/// does beforehand. Returns the collection's identifier.
+	fn prepare_collection() -> indiv_pallet_scarcity::CollectionId {
+		use frame_support::traits::fungible::Mutate;
+		use indiv_pallet_nft_claims::ItemSelection;
+
+		let owner = AccountId::from([254u8; 32]);
+		Balances::set_balance(&owner, 1_000 * ExistentialDeposit::get());
+		let collection = indiv_pallet_scarcity::NextCollectionId::<Runtime>::get();
+		assert_ok!(Scarcity::do_create_collection(owner.clone()));
+		assert_ok!(Scarcity::do_define_item(
+			owner.clone(),
+			collection,
+			indiv_pallet_scarcity::Transferability::Transferable,
+			Vec::new()
+		));
+		assert_ok!(NftClaims::set_collection_minter(
+			RuntimeOrigin::signed(owner),
+			collection,
+			Some(ItemSelection::Random)
+		));
+
+		collection
+	}
+
+	/// Delivers a one-leaf tree for [`BLOCK`] that commits to `claimant`'s `credit`, as the game
+	/// chain does. Returns its leaf.
+	fn deliver_tree(
+		claimant: &AccountOrPerson<AccountId>,
+		credit: [u8; 32],
+	) -> indiv_support::credit_trees::NftClaimCreditLeaf {
+		let leaf = credit_leaf(claimant, &credit);
+		let tree = NftClaimCreditTree {
+			game_index: 0,
+			root: CreditProofNode(sp_io::hashing::blake2_256(&leaf.encode())),
+			leaf_count: 1,
+			timestamp: TIMESTAMP,
+		};
+		assert_ok!(NftClaims::receive_credit_trees(
+			game_chain_origin(),
+			indiv_support::credit_trees::CreditTreeBatch {
+				source_time: TIMESTAMP as u64,
+				trees: BoundedVec::truncate_from(vec![CreditTreeDelivery {
+					sequence: Some(0),
+					block: BLOCK,
+					tree,
+				}]),
+			}
+		));
+		leaf
+	}
+
+	fn ext() -> sp_io::TestExternalities {
+		let mut ext = ExtBuilder::<Runtime>::default().with_para_id(ASSET_HUB_ID.into()).build();
+		ext.execute_with(|| {
+			System::set_block_number(1);
+			set_now(TIMESTAMP as u64);
+			open_channel_to_game_chain();
+			// The router refuses a destination whose XCM version it does not know.
+			assert_ok!(PolkadotXcm::force_default_xcm_version(
+				RuntimeOrigin::root(),
+				Some(xcm::latest::VERSION)
+			));
+		});
+		ext
+	}
+
+	/// Opens the egress HRMP channel the deletions travel over. The router checks it before it
+	/// accepts a message.
+	fn open_channel_to_game_chain() {
+		use cumulus_pallet_parachain_system::RelevantMessagingState;
+		use cumulus_primitives_core::relay_chain::AbridgedHrmpChannel;
+
+		let channel = AbridgedHrmpChannel {
+			max_capacity: 1000,
+			max_total_size: 1_000_000,
+			max_message_size: 102_400,
+			msg_count: 0,
+			total_size: 0,
+			mqc_head: None,
+		};
+		RelevantMessagingState::<Runtime>::put(
+			cumulus_pallet_parachain_system::relay_state_snapshot::MessagingStateSnapshot {
+				dmq_mqc_head: Default::default(),
+				relay_dispatch_queue_remaining_capacity: Default::default(),
+				ingress_channels: Vec::new(),
+				egress_channels: vec![(PEOPLE_ID.into(), channel)],
+			},
+		);
+	}
+
+	#[test]
+	fn the_last_claim_of_a_tree_queues_the_game_chains_deletion() {
+		ext().execute_with(|| {
+			let collection = prepare_collection();
+			let claimant = AccountId::from([1u8; 32]);
+			let credit = [7u8; 32];
+			deliver_tree(&AccountOrPerson::Account(claimant.clone()), credit);
+			assert!(TreeExpiries::<Runtime>::contains_key(ExpiryTimestamp::from(TIMESTAMP), BLOCK));
+
+			assert_ok!(NftClaims::claim(
+				RuntimeOrigin::signed(claimant),
+				ClaimantKind::Account,
+				BLOCK,
+				credit,
+				0,
+				Default::default(),
+				collection,
+				AccountId::from([2u8; 32])
+			));
+
+			assert!(
+				!CreditTrees::<Runtime>::contains_key(BLOCK),
+				"the fully claimed tree is removed"
+			);
+			assert_eq!(PendingTreeDeletions::<Runtime>::get().to_vec(), vec![BLOCK]);
+			// The spent leaf and the expiry entry that gets it removed outlive the tree.
+			assert!(indiv_pallet_nft_claims::Pallet::<Runtime>::leaf_is_claimed(
+				&indiv_pallet_nft_claims::ClaimedLeaves::<Runtime>::get(BLOCK),
+				0
+			));
+			assert!(TreeExpiries::<Runtime>::contains_key(ExpiryTimestamp::from(TIMESTAMP), BLOCK));
+		});
+	}
+
+	#[test]
+	fn a_tree_past_its_deadline_is_swept_and_its_deletion_queued() {
+		ext().execute_with(|| {
+			let claimant = AccountId::from([1u8; 32]);
+			deliver_tree(&AccountOrPerson::Account(claimant), [7u8; 32]);
+			assert_eq!(oldest_expiry::<TreeExpiries<Runtime>, AwardBlock>(), Some(TIMESTAMP));
+
+			// One second before the tree falls due, the pallet's own check rejects the sweep.
+			set_now(due_at() - 1);
+			assert!(NftClaims::authorize_sweep_expired_trees(TransactionSource::Local, &TIMESTAMP)
+				.is_err());
+
+			set_now(due_at());
+			assert!(NftClaims::authorize_sweep_expired_trees(TransactionSource::Local, &TIMESTAMP)
+				.is_ok());
+			assert_ok!(NftClaims::sweep_expired_trees(
+				RuntimeOrigin::from(frame_system::RawOrigin::Authorized),
+				TIMESTAMP,
+				1
+			));
+
+			assert!(!CreditTrees::<Runtime>::contains_key(BLOCK));
+			assert_eq!(PendingTreeDeletions::<Runtime>::get().to_vec(), vec![BLOCK]);
+			assert_eq!(oldest_expiry::<TreeExpiries<Runtime>, AwardBlock>(), None);
+			assert!(System::events().iter().any(|record| matches!(
+				record.event,
+				RuntimeEvent::NftClaims(indiv_pallet_nft_claims::Event::CreditTreesExpired {
+					count,
+				}) if count == 1
+			)));
+		});
+	}
+
+	#[test]
+	fn a_tree_delivered_past_its_deadline_is_not_stored() {
+		ext().execute_with(|| {
+			set_now(TIMESTAMP as u64 + CreditTreeTtl::get());
+
+			let claimant = AccountId::from([1u8; 32]);
+			deliver_tree(&AccountOrPerson::Account(claimant), [7u8; 32]);
+
+			assert!(!CreditTrees::<Runtime>::contains_key(BLOCK));
+			assert_eq!(oldest_expiry::<TreeExpiries<Runtime>, AwardBlock>(), None);
+		});
+	}
+
+	/// The message the deletions travel in has to name the dispatchable that receives them on the
+	/// game chain. Only configuration makes the two chains agree, so this compares the encoded
+	/// call against what next-people-paseo's own `RuntimeCall` encodes to.
+	#[test]
+	fn the_deletion_message_names_the_game_chains_dispatchable() {
+		use xcm::latest::{Instruction, Xcm};
+
+		ext().execute_with(|| {
+			let claimant = AccountId::from([1u8; 32]);
+			deliver_tree(&AccountOrPerson::Account(claimant), [7u8; 32]);
+			set_now(due_at());
+			assert_ok!(NftClaims::sweep_expired_trees(
+				RuntimeOrigin::from(frame_system::RawOrigin::Authorized),
+				TIMESTAMP,
+				1
+			));
+
+			// The sweep queued the one tree delivered, so `BLOCK` is the front it left.
+			assert_ok!(NftClaims::send_tree_deletions(
+				RuntimeOrigin::from(frame_system::RawOrigin::Authorized),
+				BLOCK,
+				1
+			));
+			assert!(PendingTreeDeletions::<Runtime>::get().is_empty());
+
+			// The call the pallet built, read back out of the message it queued.
+			let encoded = XcmpQueue::take_outbound_messages(usize::MAX, &[])
+				.into_iter()
+				.find_map(|(para, data)| (u32::from(para) == PEOPLE_ID).then_some(data))
+				.expect("a message went to the game chain");
+			// The page carries a one-byte format prefix ahead of the versioned fragment.
+			let mut bytes = &encoded[1..];
+			let message: Xcm<()> = xcm::VersionedXcm::<()>::decode(&mut bytes)
+				.expect("the fragment decodes")
+				.try_into()
+				.expect("the fragment is the latest version");
+			let call = message
+				.0
+				.into_iter()
+				.find_map(|instruction| match instruction {
+					Instruction::Transact { call, .. } => Some(call.into_encoded()),
+					_ => None,
+				})
+				.expect("the XCM carries a Transact");
+
+			let expected = (57u8, 20u8, codec::Compact(1u32), BLOCK).encode();
+			assert_eq!(call, expected, "the pallet and call indices are the game chain's");
+		});
+	}
 }
