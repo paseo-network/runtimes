@@ -21,8 +21,9 @@ use crate::{
 		LongTermStorageAllowanceForLitePeople, LongTermStorageAllowanceForPeople,
 		LongTermStorageClaimsPerPeriod, LongTermStorageCleanupLimit, LongTermStorageGraceWindow,
 		LongTermStoragePeriodDuration, NotificationAllowance, NotificationPeriodDuration,
-		NotificationSlotsPerPeriod, PersonStatementLimit, StmtStoreCleanupLimit,
-		StmtStoreGraceWindow, StmtStoreReplacementCooldown, StmtStoreSlotsPerPeriod,
+		NotificationSlotsPerPeriod, PeopleAirdropsPrizeSource, PersonStatementLimit,
+		StmtStoreCleanupLimit, StmtStoreGraceWindow, StmtStoreReplacementCooldown,
+		StmtStoreSlotsPerPeriod,
 	},
 	xcm_config::LocationToAccountId,
 };
@@ -263,7 +264,7 @@ use frame_support::{
 	pallet_prelude::PhantomData,
 	traits::{
 		fungible::{HoldConsideration, ItemOf},
-		ConstU128, ConstU32, ConstU64, ConstUint, ContainsPair, Get, LinearStoragePrice,
+		ConstU128, ConstU32, ConstU64, ConstU8, ConstUint, ContainsPair, Get, LinearStoragePrice,
 		Randomness,
 	},
 };
@@ -276,6 +277,7 @@ use indiv_support::{
 	traits::{Alias, AllocateStorage, Context},
 	utils::TypedGetToGet,
 };
+use paseo_runtime_constants::system_parachain::AssetHubParaId;
 #[cfg(feature = "runtime-benchmarks")]
 use paseo_runtime_constants::system_parachain::ASSET_HUB_ID;
 #[cfg(feature = "runtime-benchmarks")]
@@ -322,7 +324,8 @@ impl frame_support::traits::Contains<Context> for AccountContexts {
 		// with `InvalidTransaction::Call` — while its unit tests keep passing.
 		l == &indiv_pallet_mob_rule::MOB_CONTEXT ||
 			l == &indiv_pallet_score::Pallet::<Runtime>::score_context() ||
-			l == &indiv_pallet_resources::Pallet::<Runtime>::resources_context()
+			l == &indiv_pallet_resources::Pallet::<Runtime>::resources_context() ||
+			l == &indiv_pallet_people_airdrops::Pallet::<Runtime>::people_airdrops_context()
 	}
 }
 
@@ -837,11 +840,8 @@ impl indiv_pallet_game::Config for Runtime {
 	// ~6 months ahead, so the top-up keeper runs at most twice a year.
 	type MaxGameSchedules = ConstU32<26>;
 	type MaxAttendanceHistoryDepth = ConstU32<12>;
-	// This runtime plays games but mints nothing from them, which is the case upstream
-	// documents for `()`: "A runtime that plays games without minting anything sets this to
-	// `()`" (`pallets/game/src/lib.rs`). `indiv-pallet-nft-credits` and the Asset Hub
-	// `indiv-pallet-nft-claims` half of that pipeline are not adopted here.
-	type NftClaimCredits = ();
+	// Game credits become NFT claims on Asset Hub through `NftCredits` / `NftClaims`.
+	type NftClaimCredits = NftCredits;
 	type DefaultPhaseDurations = GamePhaseDurations;
 	type AccountSignature = Signature;
 	type PlayerStatementLimit = PlayerStatementLimit;
@@ -860,6 +860,172 @@ impl indiv_pallet_game::Config for Runtime {
 	type AirdropSource = GameAirdropSource;
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = GamePalletBenchmarkHelper;
+}
+
+/// What the credits benchmarks cannot set up themselves: only the runtime knows how its HRMP
+/// channels are made.
+#[cfg(feature = "runtime-benchmarks")]
+pub struct NftCreditsBenchmarkHelper;
+
+#[cfg(feature = "runtime-benchmarks")]
+impl indiv_pallet_nft_credits::benchmarking::BenchmarkHelper for NftCreditsBenchmarkHelper {
+	fn set_unix_time(secs: u64) {
+		// `pallet_timestamp` holds the clock in milliseconds, and its `set` is an inherent, so this
+		// writes the value straight to storage.
+		pallet_timestamp::Now::<Runtime>::put(secs.saturating_mul(1_000));
+	}
+
+	fn open_nft_claims_channel(max_message_size: u32) {
+		use cumulus_pallet_parachain_system::RelevantMessagingState;
+		use cumulus_primitives_core::relay_chain::AbridgedHrmpChannel;
+
+		let channel = AbridgedHrmpChannel {
+			max_capacity: 1000,
+			max_total_size: 1_000_000,
+			max_message_size,
+			msg_count: 0,
+			total_size: 0,
+			mqc_head: None,
+		};
+		let claims_chain = <Runtime as indiv_pallet_nft_credits::Config>::NftClaimsParaId::get();
+		let mut messaging_state = RelevantMessagingState::<Runtime>::get().unwrap_or(
+			cumulus_pallet_parachain_system::relay_state_snapshot::MessagingStateSnapshot {
+				dmq_mqc_head: Default::default(),
+				relay_dispatch_queue_remaining_capacity: Default::default(),
+				ingress_channels: alloc::vec::Vec::new(),
+				egress_channels: alloc::vec::Vec::new(),
+			},
+		);
+		messaging_state.egress_channels.retain(|(id, _)| *id != claims_chain);
+		messaging_state.egress_channels.push((claims_chain, channel));
+		messaging_state.egress_channels.sort_by_key(|(id, _)| *id);
+		RelevantMessagingState::<Runtime>::put(messaging_state);
+	}
+}
+
+impl indiv_pallet_nft_credits::Config for Runtime {
+	type WeightInfo = weights::indiv_pallet_nft_credits::WeightInfo<Runtime>;
+	// Sized above what one block can award, so no `report` awards a credit the block has no room
+	// for, which would be committed to no root and lost. A worst-case report awards
+	// `(MaxGroupSize - 1) * MaxRounds = 15` credits and is charged the awards entry's
+	// `MaxEncodedLen` of `2 + 65 * MaxCreditsPerBlock` bytes, so at 1200 about 65 reports fit the
+	// 7,864,320-byte `Normal` proof budget, awarding 975 credits together. The game pallet's
+	// `integrity_test` recomputes that floor from the block limits and the generated `report`
+	// weight, so a value below it fails `runtime_integrity_tests`.
+	//
+	// The remaining fifth is margin against a regeneration that makes a report cheaper, fitting
+	// more per block and lifting the floor. It is cheap, since the charge that buys it lowers the
+	// floor in turn: at 1080 the floor was 1050, thin enough that any regeneration would have
+	// moved it past.
+	//
+	// The claims chain sizes its claimed-leaf bitmap from its own copy of this bound and refuses a
+	// tree over it, so raising this needs `MaxCreditsPerAwardBlock` raised there first.
+	type MaxCreditsPerBlock = ConstU32<1200>;
+	type XcmRouter = crate::xcm_config::XcmRouter;
+	type NftClaimsParaId = AssetHubParaId;
+	// Matches the `NftClaims` index in asset-hub-paseo's `construct_runtime!`.
+	type NftClaimsPalletIndex = ConstU8<96>;
+	type ChannelInfo = ParachainSystem;
+	// One tree per block at most, and the offchain worker ships them every block, so the queue
+	// only fills while delivery to Asset Hub is down. Matched to `MaxRetainedAwardBlocks`, which
+	// counts the same award blocks: the oldest tree still queued is then one whose awards are
+	// ordinarily still in state, so a delivery that outlasts the outage needs no proof rebuilt
+	// from events. A `replay_credit_trees` during the outage breaks that, its tree being claimable
+	// on Asset Hub while the delivery is still queued here, so its last claim there has that
+	// chain ask for a deletion the queue entry then finds nothing to deliver. Eight full messages
+	// drain it.
+	//
+	// An entry is 12 bytes and the queue is read at the value's `MaxEncodedLen`, so
+	// `authorize_send_credit_trees` pays about 3 KB of the `Normal` proof budget for it. A tree
+	// past the bound is dropped from delivery, not lost: its root stays on chain for
+	// `replay_credit_trees`.
+	type MaxQueuedCreditTrees = ConstU32<256>;
+	type MaxCreditTreesPerMessage = ConstU32<32>;
+	type ReplayCooldownSeconds = ConstU64<60>;
+	type NftClaimsRemoteWeight = NftClaimsRemoteWeight;
+	// Entries are the distinct blocks a claimant was awarded in, not a window of consecutive
+	// ones, so the bound counts games rather than time. One game awards a claimant at most
+	// `(MaxGroupSize - 1) * MaxRounds = 15` credits, one per co-player that reported `Person`
+	// on them, plus the attendance backfill, which awards the rest in a single call. Those
+	// land in 16 distinct blocks only if no two reports ever share one, out of the 300 blocks
+	// the 10-minute reporting phase spans; reports cluster, so a few per game is the norm.
+	//
+	// A game cycle runs 17.5 minutes, so back to back games fill this in about two hours at
+	// the usual few entries each, and in two games if both hit the worst case. That is the
+	// intended horizon: the index is a lookup aid for trees recent enough to still be worth
+	// minting against, not a record for the chain's lifetime, and the oldest block drops out
+	// once it is full.
+	type MaxCreditBlocksPerClaimant = ConstU32<32>;
+	// The window in which a claim is provable from state alone, counted in award blocks. Reports
+	// cluster inside a game's 10-minute reporting phase, so a game contributes a few dozen award
+	// blocks and this covers several games, well past the two hours the per-claimant index spans.
+	//
+	// It is also the state the chain carries for them: at most this many entries of
+	// `MaxCreditsPerBlock` awards, an award being 65 bytes, so about 17 MB were every retained
+	// block saturated, and proportional to the mints actually outstanding otherwise. A block that
+	// drops out delays no mint, because its root stays on chain until the claims chain is finished
+	// with it or the root TTL runs out. Its awards then have to come from the block's events.
+	type MaxRetainedAwardBlocks = ConstU32<256>;
+	type EnsureClaimsChainOrigin = EnsureClaimsChainSibling;
+	// At least the claims pallet's `MaxTreeDeletionsPerMessage`. A larger message fails to decode
+	// here, and the root TTL then removes the roots its deletions named.
+	type MaxTreeDeletionsPerMessage = ConstU32<64>;
+	type ClaimsChainTreeTtl = ClaimsChainTreeTtl;
+	// One block records at most one root, so a day holds 43200 of them at 2 seconds a block, which
+	// 64 a block clears in about 20 minutes. The root TTL is the longer of the two, so a sweep only
+	// removes roots the claims chain has already given up on, with a month of slack for a backlog.
+	type MaxRootsPerSweep = ConstU32<64>;
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = NftCreditsBenchmarkHelper;
+}
+
+parameter_types! {
+	/// The claims chain's `TreeTtl`, duplicated here. The root TTL this chain sweeps by is
+	/// `ROOT_TTL_GRACE` past it, so a root outlives the tree built from it.
+	///
+	/// Keep it in step with `CreditTreeTtl` in asset-hub-paseo. A value below the real one keeps
+	/// roots for less time than the claims chain gives a claimant, which strands credits inside their
+	/// deadline. A value above it keeps roots after the last credit has expired.
+	pub const ClaimsChainTreeTtl: u64 = 90 * 24 * 60 * 60;
+}
+
+/// Origin check for the parachain the credit trees are delivered to. Only that chain may name the
+/// roots this chain deletes.
+///
+/// Any origin that passes this check can strand a credit, so it accepts that one chain, not
+/// siblings in general.
+pub struct EnsureClaimsChainSibling;
+impl frame_support::traits::EnsureOrigin<RuntimeOrigin> for EnsureClaimsChainSibling {
+	type Success = ();
+
+	fn try_origin(o: RuntimeOrigin) -> Result<Self::Success, RuntimeOrigin> {
+		let claims_chain = <Runtime as indiv_pallet_nft_credits::Config>::NftClaimsParaId::get();
+		match o.clone().into() {
+			Ok(cumulus_pallet_xcm::Origin::SiblingParachain(id)) if id == claims_chain => Ok(()),
+			_ => Err(o),
+		}
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn try_successful_origin() -> Result<RuntimeOrigin, ()> {
+		let claims_chain = <Runtime as indiv_pallet_nft_credits::Config>::NftClaimsParaId::get();
+		Ok(cumulus_pallet_xcm::Origin::SiblingParachain(claims_chain).into())
+	}
+}
+
+parameter_types! {
+	/// Upper bound on what one credit tree of a `receive_credit_trees` batch costs to execute on
+	/// the NFT claims chain. Charged to the caller of `replay_credit_trees`, so a repair pays for
+	/// the remote work it causes. What bounds replay traffic is `ReplayCooldownSeconds`; this
+	/// prices the work the replays that pass it cause.
+	///
+	/// Derived from the marginal per-tree cost of `receive_credit_trees` on Asset Hub: one
+	/// `CreditTrees` read and write, the per-tree execution term, and the `max_size` of a
+	/// `CreditTrees` entry in proof. Rounded up, and both dimensions carried, since a batch that
+	/// only paid `ref_time` would push a proof no one was charged for. Re-derive it whenever the
+	/// claims chain's `indiv_pallet_nft_claims` weights are regenerated; `integrity_test` holds
+	/// the whole `replay_credit_trees` charge, surcharge included, to the block's budget.
+	pub NftClaimsRemoteWeight: Weight = Weight::from_parts(150_000_000, 2_600);
 }
 
 parameter_types! {
@@ -964,6 +1130,114 @@ impl indiv_pallet_airdrop::Config for Runtime {
 	type OffchainWorkerInterval = ConstU32<1>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = AirdropBenchmarkHelper;
+}
+
+impl indiv_pallet_people_airdrops::Config for Runtime {
+	type WeightInfo = weights::indiv_pallet_people_airdrops::WeightInfo<Runtime>;
+	type Suffix = NetworkSuffix;
+	type EnsurePerson = indiv_pallet_people::EnsurePersonalAliasInContext<Runtime>;
+	type AirdropAssetId = <Runtime as pallet_assets::Config>::AssetId;
+	type AirdropAssetBalance = Balance;
+	type Airdrop = Airdrop;
+	type ManagerOrigin = EnsureRoot<Self::AccountId>;
+	type PrizeSource = PeopleAirdropsPrizeSource;
+	type Randomness = indiv_pallet_relay_randomness::RelayBlockRandomness<Runtime>;
+	type UnixTime = Timestamp;
+	type MaxScheduleBatch = ConstU32<16>;
+	type MaxRegisterBatch = ConstU32<16>;
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = PeopleAirdropsBenchmarkHelper;
+}
+
+/// Benchmark hooks for the people-airdrops pallet: places draws into lifecycle phases by writing
+/// the airdrop pallet's storage directly, since the `Airdrop` trait deliberately cannot.
+#[cfg(feature = "runtime-benchmarks")]
+pub struct PeopleAirdropsBenchmarkHelper;
+
+#[cfg(feature = "runtime-benchmarks")]
+impl indiv_pallet_people_airdrops::benchmarking::BenchmarkHelper<Runtime>
+	for PeopleAirdropsBenchmarkHelper
+{
+	fn fund_prize_source(
+		source: &AccountId,
+		draws: u32,
+	) -> alloc::vec::Vec<indiv_pallet_people_airdrops::AirdropEventInfoOf<Runtime>> {
+		use frame_support::traits::fungibles::Mutate;
+		use indiv_pallet_airdrop::{benchmarking::BenchmarkHelper as _, pallet::SupportedAssets};
+		const BENCH_ASSET_BASE: u32 = 42;
+		const BENCH_PRIZE: Balance = 1_000;
+		// `UnixTime::now` is read on the claim path; make sure it is past genesis.
+		if pallet_timestamp::Now::<Runtime>::get() == 0 {
+			Self::set_unix_time(1);
+		}
+		let pot = indiv_pallet_airdrop::Pallet::<Runtime>::airdrop_pot_id();
+		// One distinct asset per draw so a batch schedule touches distinct asset storage per draw
+		// (see the `BenchmarkHelper` trait doc).
+		(0..draws)
+			.map(|i| {
+				let asset_id =
+					AirdropBenchmarkHelper::create_asset_id_parameter(BENCH_ASSET_BASE + i);
+				// Mirror `enable_asset`: mark the asset supported and keep the pot's asset account
+				// alive.
+				if !SupportedAssets::<Runtime>::contains_key(&asset_id) {
+					Assets::mint_into(asset_id.clone(), &pot, 1).expect("fund pot ed");
+					SupportedAssets::<Runtime>::insert(&asset_id, 1u128);
+				}
+				Assets::mint_into(asset_id.clone(), source, BENCH_PRIZE)
+					.expect("fund prize source");
+				indiv_pallet_people_airdrops::AirdropEventInfoOf::<Runtime> {
+					prize: indiv_pallet_airdrop::types::AirdropPrize {
+						asset_id,
+						asset_amount: BENCH_PRIZE,
+						max_winners: 1,
+						winner_cap: sp_runtime::Permill::one(),
+					},
+					registration_starts: 100,
+					draw_time: 200,
+					end_time: 300,
+				}
+			})
+			.collect()
+	}
+
+	fn open_registration(event_id: &indiv_pallet_airdrop::types::EventId) {
+		indiv_pallet_airdrop::pallet::Events::<Runtime>::mutate(event_id, |event| {
+			if let Some(event) = event {
+				event.status =
+					indiv_pallet_airdrop::types::Status::Registering { total_participants: 0 };
+			}
+		});
+	}
+
+	fn start_claiming(event_id: &indiv_pallet_airdrop::types::EventId) {
+		use indiv_pallet_airdrop::pallet::{Registrations, Winners};
+		let registrations =
+			Registrations::<Runtime>::iter_prefix(event_id).collect::<alloc::vec::Vec<_>>();
+		for (slot, entry) in &registrations {
+			Winners::<Runtime>::insert(event_id, entry.clone(), *slot);
+		}
+		indiv_pallet_airdrop::pallet::Events::<Runtime>::mutate(event_id, |event| {
+			if let Some(event) = event {
+				event.status = indiv_pallet_airdrop::types::Status::Claiming {
+					total_participants: registrations.len() as u32,
+					effective_winners: registrations.len() as u32,
+					claimed: 0,
+				};
+			}
+		});
+	}
+
+	fn count_registrations(event_id: &indiv_pallet_airdrop::types::EventId) -> u32 {
+		indiv_pallet_airdrop::pallet::Registrations::<Runtime>::iter_prefix(event_id).count() as u32
+	}
+
+	fn count_winners(event_id: &indiv_pallet_airdrop::types::EventId) -> u32 {
+		indiv_pallet_airdrop::pallet::Winners::<Runtime>::iter_prefix(event_id).count() as u32
+	}
+
+	fn set_unix_time(now_secs: u64) {
+		pallet_timestamp::Now::<Runtime>::put(now_secs * 1_000);
+	}
 }
 
 // `ParentHashRandomness` was DELETED here, not re-shimmed.

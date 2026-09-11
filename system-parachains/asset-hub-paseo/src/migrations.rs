@@ -139,6 +139,47 @@ impl frame_support::traits::OnRuntimeUpgrade for MigrateBountyAccountAssets {
 	}
 }
 
+/// Resets a pallet's on-chain storage version to 0.
+///
+/// The Paseo-local v2.5.x migrations of the individuality pallets were `VersionedMigration`s and
+/// left the on-chain storage version of their pallets at 1 once they ran. Those pallets now come
+/// straight from upstream `individuality-community`, which ships them **without** a
+/// `#[pallet::storage_version]`, and a pallet without one fails its try-runtime `post_upgrade`
+/// while its on-chain version is non-zero ("On chain storage version set, while the pallet
+/// doesn't have the `#[pallet::storage_version(VERSION)]` attribute"). Upstream's
+/// genesis-launched chains carry version 0 for them; this puts Paseo in the same state.
+///
+/// Idempotent: a single read once the version is 0, so it is safe to leave in the tuple.
+pub struct ResetStorageVersion<P>(core::marker::PhantomData<P>);
+impl<P: frame_support::traits::PalletInfoAccess> frame_support::traits::OnRuntimeUpgrade
+	for ResetStorageVersion<P>
+{
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		use frame_support::traits::StorageVersion;
+		let db = <Runtime as frame_system::Config>::DbWeight::get();
+		if StorageVersion::get::<P>() == StorageVersion::new(0) {
+			return db.reads(1);
+		}
+		log::info!(
+			target: "runtime::migrations",
+			"resetting the on-chain storage version of {} to 0 (upstream declares none)",
+			P::name(),
+		);
+		StorageVersion::new(0).put::<P>();
+		db.reads_writes(1, 1)
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade(_state: alloc::vec::Vec<u8>) -> Result<(), sp_runtime::TryRuntimeError> {
+		use frame_support::traits::StorageVersion;
+		frame_support::ensure!(
+			StorageVersion::get::<P>() == StorageVersion::new(0),
+			"ResetStorageVersion: the on-chain storage version is still non-zero"
+		);
+		Ok(())
+	}
+}
+
 /// Unreleased migrations. Add new ones here:
 pub type Unreleased = (
 	// Remove an old staking value
@@ -156,46 +197,18 @@ pub type Unreleased = (
 	MigrateBountyAccountAssets,
 	// Create the PGAS asset (id 2_000_000_000) used by the individuality pallets.
 	indiv_pallet_pgas::migration::CreatePgasAsset<Runtime>,
-	// PCF-authored, and the first `VersionedMigration` in this repo — see the pallet's
-	// `migration.rs` for the full write-up.
-	//
-	// individuality v0.3.1 breaks `MembersSubscriber` (index 97) storage in three ways at once,
-	// none of which upstream migrates because upstream's `next-asset-hub-paseo` genesis-es the
-	// v0.3.x shape:
-	//   1. `RingRoots` gains a leading `Generation` key, orphaning all 3 live roots;
-	//   2. `RingCollectionState` gains `next_scan_index` MID-STRUCT, so both live 10-byte values
-	//      fail to decode and `ValueQuery` silently substitutes `Default`;
-	//   3. the forced `verifiable` bump (git rev 93464a6 -> crates.io 0.3.0) reshapes the ring
-	//      commitment itself from 768 to 288 bytes, dropping a leading 480-byte KZG verifier key.
-	//      Item 3 is NOT in INDIVIDUALITY_MIGRATIONS_DESIGN.md §3, and it is why that document's
-	//      "copy the value bytes verbatim" instruction must not be followed.
-	//
-	// `Subscription` is `Active` and `ProcessingState.last_processed_sequence` is in the low
-	// thousands: this pallet is live and mid-stream. Untreated, every ring-proof-gated call on
-	// AssetHub breaks. Single-block: 3 `RingRoots` entries (8 records) and 2
-	// `RingCollectionStates` — see the pallet migration's doc comment for why not an MBM.
-	indiv_pallet_members_subscriber::migration::MigrateV0ToV1<Runtime>,
-	// PASEO-LOCAL. Writes the `NetworkSuffix` key into state.
-	//
-	// The pallet's `ValueQuery` default already answers every *on-chain* read, so nothing in
-	// the runtime needs this. Off-chain readers do: `state_getStorage` over an unwritten key
-	// returns `null`, and the Android client reads that key directly and throws on `null`.
-	// Ordered before the dotNS gateway migration so that anything reading the suffix during
-	// this upgrade sees a materialised value rather than relying on the default.
-	// Idempotent and safe to leave in the tuple: once the key exists it is a single read, and
-	// it will never clobber a suffix that governance has since changed.
-	indiv_pallet_network_suffix::migration::SeedNetworkSuffix<Runtime>,
 	// individuality v0.3.1 gave `AccountNameRecord` a `chat` field on each of `lite`/`full`.
 	// Live `AccountNames` entries are in the old two-`Option<BaseLabel>` shape and would fail
 	// to decode. `VersionedMigration`, so it is self-guarding and cannot run twice.
 	indiv_pallet_dotns_gateway::migration::MigrateV0ToV1<Runtime>,
-	// PASEO-LOCAL. `Usages.at_block` keeps type `u32` but changes meaning: local para block ->
-	// relay block. Ships on both chains (see the pallet's `migration.rs`, section
-	// "asset-hub-paseo needs this even though its map is empty today"): the map is empty here
-	// at the time of writing, but on-chain storage version is 0 and in-code is 1, and any entry
-	// written before the upgrade block would be locked out on the relay clock otherwise.
-	// `VersionedMigration`, so it is self-guarding and cannot run twice.
-	indiv_pallet_origin_restriction::migration::MigrateV0ToV1<Runtime>,
+	// The v2.5.0 Paseo-local `MembersSubscriber` and `OriginRestriction` migrations have run on
+	// chain and are retired; see `ResetStorageVersion` for the version they left behind.
+	ResetStorageVersion<crate::MembersSubscriber>,
+	ResetStorageVersion<crate::OriginRestriction>,
+	// Storage-version bootstrap for the two pallets added in this release, as upstream
+	// `next-asset-hub-paseo` carries them. Both are `VersionedMigration`s over empty maps here.
+	indiv_pallet_scarcity::migration::MigrateV0ToV1<Runtime>,
+	indiv_pallet_nft_claims::migration::MigrateV0ToV1<Runtime>,
 );
 
 /// Migrations/checks that do not need to be versioned and can run on every update.
