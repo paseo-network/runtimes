@@ -374,12 +374,24 @@ jobs:
       - name: Set rust version via common env file
         run: cat .github/env >> $GITHUB_ENV
 
+      # RUST_STABLE_VERSION must name the same toolchain as rust-toolchain.toml (channel "1.91"),
+      # because that file is what cargo actually honours. "1.91.0" here installed a second,
+      # separately-named toolchain and put rust-src on it, leaving the one the build used without
+      # it - pallet-revive-fixtures builds with build-std and dies on "unable to build with the
+      # standard library".
       - name: Install stable toolchain
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.RUST_STABLE_VERSION }}
           targets: wasm32v1-none,wasm32-unknown-unknown
           components: rust-src
+
+      # Belt and braces against that drift returning: add the component to whichever toolchain
+      # rust-toolchain.toml actually selects. A no-op while the two agree.
+      - name: Ensure the pinned toolchain has rust-src
+        run: |
+          rustup show active-toolchain
+          rustup component add rust-src
 
       # The runner is registered from outside this repo and can come back bare, so the run installs
       # what it needs rather than assuming the host was prepared by hand. apt-get is a no-op once
