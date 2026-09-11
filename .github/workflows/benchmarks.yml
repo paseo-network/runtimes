@@ -1,7 +1,7 @@
 name: Benchmarks
 
 # Regenerates runtime weights on the org's self-hosted benchmark runner (`gh-runner-03`,
-# labels: self-hosted + benchmarks) and pushes them back to the branch being benchmarked.
+# labels: self-hosted + ubuntu-latest + benchmarks) and pushes the weights back to the branch.
 #
 # Two ways in:
 #
@@ -312,10 +312,10 @@ jobs:
   bench:
     needs: [preflight]
     if: needs.preflight.outputs.is-help != 'true'
-    # The org runner registered by the "Paseo Benchmarks" app. `ubuntu-latest` is also set on it
-    # as a custom label, but it is deliberately not used here: it collides with the name of a
-    # GitHub-hosted runner image and makes routing ambiguous.
-    runs-on: [self-hosted, benchmarks]
+    # All three labels the benchmark runner carries, matching the convention its operator uses for
+    # the other jobs on that machine. `ubuntu-latest` is a custom label on the runner, not the
+    # GitHub-hosted image - `self-hosted` in the same list is what keeps routing unambiguous.
+    runs-on: [self-hosted, ubuntu-latest, benchmarks]
     # A full sweep across all runtimes and pallets takes many hours.
     timeout-minutes: 1440
     # Needs `contents: write` on top of the workflow-wide set, to push the regenerated weights.
@@ -374,6 +374,11 @@ jobs:
       - name: Set rust version via common env file
         run: cat .github/env >> $GITHUB_ENV
 
+      # RUST_STABLE_VERSION must name the same toolchain as rust-toolchain.toml (channel "1.91"),
+      # because that file is what cargo actually honours. "1.91.0" here installed a second,
+      # separately-named toolchain and put rust-src on it, leaving the one the build used without
+      # it - pallet-revive-fixtures builds with build-std and dies on "unable to build with the
+      # standard library".
       - name: Install stable toolchain
         uses: dtolnay/rust-toolchain@master
         with:
@@ -381,8 +386,56 @@ jobs:
           targets: wasm32v1-none,wasm32-unknown-unknown
           components: rust-src
 
-      - name: Check benchmark dependencies
-        run: ./.github/scripts/bench-deps.sh check
+      # Belt and braces against that drift returning: add the component to whichever toolchain
+      # rust-toolchain.toml actually selects. A no-op while the two agree.
+      - name: Ensure the pinned toolchain has rust-src
+        run: |
+          rustup show active-toolchain
+          rustup component add rust-src
+
+      # The runner is registered from outside this repo and can come back bare, so the run installs
+      # what it needs rather than assuming the host was prepared by hand. apt-get is a no-op once
+      # the packages are there. libssl-dev and libclang-dev ship only headers, so they are easy to
+      # leave out and only show up as a link error much later in the build.
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential clang cmake protobuf-compiler pkg-config \
+            libssl-dev libclang-dev python3
+
+      # Not apt packages: cmd.py drives frame-omni-bencher, and the closing PR comment uses
+      # subweight. The bencher is pinned in .github/env and re-fetched each run so it always
+      # matches the pin.
+      - name: Install frame-omni-bencher
+        run: |
+          curl -sSL --retry 5 --retry-delay 10 --retry-all-errors --max-time 600 \
+            "https://github.com/paritytech/polkadot-sdk/releases/download/${FRAME_OMNI_BENCHER_RELEASE_VERSION}/frame-omni-bencher" \
+            -o frame-omni-bencher
+          chmod +x frame-omni-bencher
+          sudo mv frame-omni-bencher /usr/local/bin/frame-omni-bencher
+          frame-omni-bencher --version
+
+      - name: Install subweight
+        run: command -v subweight || cargo install subweight --locked
+
+      # pallet-revive-fixtures compiles its Solidity fixtures by shelling out to solc and then
+      # resolc, and every runtime here reaches it through system-parachains-constants, so the
+      # build needs both even for runtimes that never instantiate pallet_revive. Versions are
+      # pinned in .github/env: resolc matches what polkadot-sdk pins for
+      # FRAME_OMNI_BENCHER_RELEASE_VERSION, and the fixtures declare `pragma solidity ^0.8.30`.
+      - name: Install solc and resolc
+        run: |
+          curl -sSL --retry 5 --retry-delay 10 --retry-all-errors --max-time 600 \
+            "https://github.com/ethereum/solidity/releases/download/v${SOLC_VERSION}/${SOLC_NAME}" \
+            -o solc
+          curl -sSL --retry 5 --retry-delay 10 --retry-all-errors --max-time 600 \
+            "https://github.com/paritytech/revive/releases/download/v${RESOLC_VERSION}/resolc-x86_64-unknown-linux-musl" \
+            -o resolc
+          chmod +x solc resolc
+          sudo mv solc resolc /usr/local/bin/
+          solc --version
+          resolc --version
 
       # No rust-cache here on purpose: the runner is persistent and keeps its `target/` between
       # runs, so uploading a multi-GB cache of a `production` build would only cost time.
