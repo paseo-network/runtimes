@@ -381,8 +381,31 @@ jobs:
           targets: wasm32v1-none,wasm32-unknown-unknown
           components: rust-src
 
-      - name: Check benchmark dependencies
-        run: ./.github/scripts/bench-deps.sh check
+      # The runner is registered from outside this repo and can come back bare, so the run installs
+      # what it needs rather than assuming the host was prepared by hand. apt-get is a no-op once
+      # the packages are there. libssl-dev and libclang-dev ship only headers, so they are easy to
+      # leave out and only show up as a link error much later in the build.
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential clang cmake protobuf-compiler pkg-config \
+            libssl-dev libclang-dev python3
+
+      # Not apt packages: cmd.py drives frame-omni-bencher, and the closing PR comment uses
+      # subweight. The bencher is pinned in .github/env and re-fetched each run so it always
+      # matches the pin.
+      - name: Install frame-omni-bencher
+        run: |
+          curl -sSL --retry 5 --retry-delay 10 --retry-all-errors --max-time 600 \
+            "https://github.com/paritytech/polkadot-sdk/releases/download/${FRAME_OMNI_BENCHER_RELEASE_VERSION}/frame-omni-bencher" \
+            -o frame-omni-bencher
+          chmod +x frame-omni-bencher
+          sudo mv frame-omni-bencher /usr/local/bin/frame-omni-bencher
+          frame-omni-bencher --version
+
+      - name: Install subweight
+        run: command -v subweight || cargo install subweight --locked
 
       # No rust-cache here on purpose: the runner is persistent and keeps its `target/` between
       # runs, so uploading a multi-GB cache of a `production` build would only cost time.

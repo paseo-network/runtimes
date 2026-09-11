@@ -77,12 +77,25 @@ If the token is broken, the workflow fails loudly and says so on the PR rather t
 
 ### Runner provisioning
 
-The runner needs the build toolchain, `frame-omni-bencher` (pinned by
-`FRAME_OMNI_BENCHER_RELEASE_VERSION` in `.github/env`) and `subweight`. CI only verifies these and
-fails early with an actionable message; provision the host once with:
+The workflow installs what it needs, so a freshly re-registered or rebuilt machine needs no manual
+preparation. Three steps ahead of the benchmark do it, all no-ops once the runner is warm:
+
+- **apt packages** — `build-essential clang cmake protobuf-compiler pkg-config libssl-dev
+  libclang-dev python3`. `libssl-dev` and `libclang-dev` ship only headers, so they are easy to
+  leave out of a list and surface much later as a link error.
+- **`frame-omni-bencher`** — not an apt package. Downloaded from the polkadot-sdk release pinned by
+  `FRAME_OMNI_BENCHER_RELEASE_VERSION` in `.github/env`, re-fetched each run so it always matches
+  the pin. Bump that variable to move versions.
+- **`subweight`** — `cargo install`ed only when absent. The first install takes a few minutes; after
+  that it is a `command -v` check.
+
+Installing apt packages needs passwordless `sudo` on the runner.
+
+If you would rather prepare a host by hand, the same list works directly:
 
 ```sh
-./.github/scripts/bench-deps.sh install
+sudo apt-get update && sudo apt-get install -y \
+  build-essential clang cmake protobuf-compiler pkg-config libssl-dev libclang-dev python3
 ```
 
 ---
