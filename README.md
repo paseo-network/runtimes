@@ -77,28 +77,25 @@ If the token is broken, the workflow fails loudly and says so on the PR rather t
 
 ### Runner provisioning
 
-The workflow provisions the runner itself, so a freshly re-registered or rebuilt machine needs no
-manual preparation. Before benchmarking it runs:
+The workflow installs what it needs, so a freshly re-registered or rebuilt machine needs no manual
+preparation. Three steps ahead of the benchmark do it, all no-ops once the runner is warm:
+
+- **apt packages** — `build-essential clang cmake protobuf-compiler pkg-config libssl-dev
+  libclang-dev python3`. `libssl-dev` and `libclang-dev` ship only headers, so they are easy to
+  leave out of a list and surface much later as a link error.
+- **`frame-omni-bencher`** — not an apt package. Downloaded from the polkadot-sdk release pinned by
+  `FRAME_OMNI_BENCHER_RELEASE_VERSION` in `.github/env`, re-fetched each run so it always matches
+  the pin. Bump that variable to move versions.
+- **`subweight`** — `cargo install`ed only when absent. The first install takes a few minutes; after
+  that it is a `command -v` check.
+
+Installing apt packages needs passwordless `sudo` on the runner.
+
+If you would rather prepare a host by hand, the same list works directly:
 
 ```sh
-./.github/scripts/bench-deps.sh ensure
-```
-
-which installs only what is actually missing — the apt build toolchain, `frame-omni-bencher` (pinned
-by `FRAME_OMNI_BENCHER_RELEASE_VERSION` in `.github/env`) and `subweight`. On an already-provisioned
-runner it does no apt work at all and costs a second or two.
-
-Package presence is checked with `dpkg`, not `command -v`, so packages that ship only headers
-(`libssl-dev`, `libclang-dev`) are verified too rather than being discovered at link time.
-
-Installing needs passwordless `sudo`. Without it the step fails immediately, naming the packages to
-install by hand, rather than blocking on a password prompt until the job times out.
-
-The other two modes are for humans:
-
-```sh
-./.github/scripts/bench-deps.sh check     # verify only, change nothing
-./.github/scripts/bench-deps.sh install   # force a full (re)install
+sudo apt-get update && sudo apt-get install -y \
+  build-essential clang cmake protobuf-compiler pkg-config libssl-dev libclang-dev python3
 ```
 
 ---
