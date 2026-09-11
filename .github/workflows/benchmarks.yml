@@ -419,6 +419,24 @@ jobs:
       - name: Install subweight
         run: command -v subweight || cargo install subweight --locked
 
+      # pallet-revive-fixtures compiles its Solidity fixtures by shelling out to solc and then
+      # resolc, and every runtime here reaches it through system-parachains-constants, so the
+      # build needs both even for runtimes that never instantiate pallet_revive. Versions are
+      # pinned in .github/env: resolc matches what polkadot-sdk pins for
+      # FRAME_OMNI_BENCHER_RELEASE_VERSION, and the fixtures declare `pragma solidity ^0.8.30`.
+      - name: Install solc and resolc
+        run: |
+          curl -sSL --retry 5 --retry-delay 10 --retry-all-errors --max-time 600 \
+            "https://github.com/ethereum/solidity/releases/download/v${SOLC_VERSION}/${SOLC_NAME}" \
+            -o solc
+          curl -sSL --retry 5 --retry-delay 10 --retry-all-errors --max-time 600 \
+            "https://github.com/paritytech/revive/releases/download/v${RESOLC_VERSION}/resolc-x86_64-unknown-linux-musl" \
+            -o resolc
+          chmod +x solc resolc
+          sudo mv solc resolc /usr/local/bin/
+          solc --version
+          resolc --version
+
       # No rust-cache here on purpose: the runner is persistent and keeps its `target/` between
       # runs, so uploading a multi-GB cache of a `production` build would only cost time.
 

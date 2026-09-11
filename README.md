@@ -78,7 +78,7 @@ If the token is broken, the workflow fails loudly and says so on the PR rather t
 ### Runner provisioning
 
 The workflow installs what it needs, so a freshly re-registered or rebuilt machine needs no manual
-preparation. Three steps ahead of the benchmark do it, all no-ops once the runner is warm:
+preparation. Four steps ahead of the benchmark do it, all no-ops once the runner is warm:
 
 - **apt packages** — `build-essential clang cmake protobuf-compiler pkg-config libssl-dev
   libclang-dev python3`. `libssl-dev` and `libclang-dev` ship only headers, so they are easy to
@@ -88,6 +88,11 @@ preparation. Three steps ahead of the benchmark do it, all no-ops once the runne
   the pin. Bump that variable to move versions.
 - **`subweight`** — `cargo install`ed only when absent. The first install takes a few minutes; after
   that it is a `command -v` check.
+- **`solc` and `resolc`** — `pallet-revive-fixtures` compiles its Solidity fixtures by shelling out
+  to both, and every runtime reaches that crate through `system-parachains-constants`, so the build
+  needs them even for runtimes that never instantiate `pallet_revive`. Pinned by `SOLC_VERSION` and
+  `RESOLC_VERSION` in `.github/env`; keep `RESOLC_VERSION` in step with what polkadot-sdk pins for
+  the release named by `FRAME_OMNI_BENCHER_RELEASE_VERSION`.
 
 Installing apt packages needs passwordless `sudo` on the runner.
 
