@@ -177,6 +177,7 @@ asset-test-utils = { workspace = true }
 hex = { workspace = true }
 parachains-runtimes-test-utils = { workspace = true }
 paseo-runtime = { workspace = true }
+sp-keyring = { workspace = true, default-features = true }
 sp-tracing = { workspace = true, default-features = true }
 remote-externalities = { workspace = true }
 frame-try-runtime = { workspace = true }

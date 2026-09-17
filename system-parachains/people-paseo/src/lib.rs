@@ -1357,18 +1357,18 @@ impl_runtime_apis! {
 		}
 
 		fn nft_claim_credit_proofs(
-			award_block: BlockNumber,
+			tree_block: BlockNumber,
 			claimant: indiv_support::identity::AccountOrPerson<AccountId>,
 		) -> Result<Vec<indiv_pallet_nft_credits::NftClaimCreditProof>, indiv_pallet_nft_credits::NftClaimCreditProofError> {
-			NftCredits::nft_claim_credit_proofs(award_block, &claimant)
+			NftCredits::nft_claim_credit_proofs(tree_block, &claimant)
 		}
 
 		fn nft_claim_credit_proof_from_awards(
-			award_block: BlockNumber,
+			tree_block: BlockNumber,
 			awards: Vec<indiv_pallet_nft_credits::NftClaimCreditAward<AccountId>>,
 			leaf_index: u32,
 		) -> Result<indiv_pallet_nft_credits::NftClaimCreditProof, indiv_pallet_nft_credits::NftClaimCreditProofError> {
-			NftCredits::nft_claim_credit_proof_from_awards(award_block, awards, leaf_index)
+			NftCredits::nft_claim_credit_proof_from_awards(tree_block, awards, leaf_index)
 		}
 	}
 
