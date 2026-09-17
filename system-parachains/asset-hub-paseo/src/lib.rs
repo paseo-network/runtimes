@@ -2230,10 +2230,10 @@ impl indiv_pallet_nft_claims::Config for Runtime {
 	// next-people-paseo, so a proof carries at most 11 sibling hashes. 16 covers 65536 leaves,
 	// leaving room for that bound to grow without stranding the tail of a tree.
 	type MaxProofNodes = ConstU32<16>;
-	// The game pallet's `MaxCreditsPerBlock`. `ClaimedLeaves` holds one bit per leaf, so a block
-	// costs 150 bytes there, and a tree over this bound is refused rather than stored with leaves
-	// this chain cannot spend.
-	type MaxCreditsPerAwardBlock = ConstU32<1200>;
+    // The game pallet's `AWARDS_PER_TREE`, which is the most leaves one tree carries.
+	// `ClaimedLeaves` holds one bit per leaf, so a tree costs 256 bytes there, and a tree over this
+	// bound is refused rather than stored with leaves this chain cannot spend.
+	type MaxCreditsPerTree = ConstU32<2048>;
 	type UnixTime = Timestamp;
 	type TreeTtl = CreditTreeTtl;
 	// Above `MaxTreeDeletionsPerMessage`, so one sweep drops no deletion of its own, and with room
