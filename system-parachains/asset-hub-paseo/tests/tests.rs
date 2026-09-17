@@ -1962,7 +1962,7 @@ mod credit_tree_removal {
 	use indiv_pallet_nft_claims::{ClaimantKind, CreditTrees, PendingTreeDeletions, TreeExpiries};
 	use indiv_support::{
 		credit_trees::{
-			credit_leaf, expiry_deadline, oldest_expiry, CreditTreeBlock, CreditProofNode,
+			credit_leaf, expiry_deadline, oldest_expiry, CreditProofNode, CreditTreeBlock,
 			CreditTreeDelivery, ExpiryTimestamp, NftClaimCreditTree,
 		},
 		identity::AccountOrPerson,
