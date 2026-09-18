@@ -55,6 +55,10 @@ bench_example = '''**Examples**:
 
  %(prog)s --runtime paseo people-paseo --pallet pallet_balances pallet_multisig --quiet --clean
 
+ > runs every pallet of people-paseo except the two listed
+
+ %(prog)s --runtime people-paseo --exclude-pallets indiv_pallet_coinage pallet_proxy
+
  '''
 
 parser_bench = subparsers.add_parser('bench', help='Runs benchmarks', epilog=bench_example,
@@ -66,6 +70,8 @@ for arg, config in common_args.items():
 parser_bench.add_argument('--runtime', help='Runtime(s) space separated', choices=runtimeNames, nargs='*',
                           default=runtimeNames)
 parser_bench.add_argument('--pallet', help='Pallet(s) space separated', nargs='*', default=[])
+parser_bench.add_argument('--exclude-pallets', help='Pallet(s) space separated to skip, on top of the runtime\'s '
+                                                    'benchmarks_exclude_pallets', nargs='*', default=[])
 parser_bench.add_argument('--profile', help='Cargo profile used to build the runtimes', default='production')
 parser_bench.add_argument('--steps', help='Number of steps across component ranges', default='50')
 parser_bench.add_argument('--repeat', help='Number of times the benchmark repeats per step', default='20')
@@ -152,6 +158,16 @@ if args.pallet:
             new_pallets_map[runtime] = matched
 
     runtime_pallets_map = new_pallets_map
+
+# Unlike `benchmarks_exclude_pallets` in the matrix, this is an explicit request, so it applies
+# even alongside `--pallet`.
+if args.exclude_pallets:
+    print(f'Excluding pallets: {args.exclude_pallets}')
+    runtime_pallets_map = {
+        runtime: kept
+        for runtime, pallets in runtime_pallets_map.items()
+        if (kept := [p for p in pallets if p not in args.exclude_pallets])
+    }
 
 print(f'Filtered out runtimes & pallets: {runtime_pallets_map}')
 
