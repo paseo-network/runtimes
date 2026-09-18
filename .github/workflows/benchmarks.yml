@@ -13,12 +13,17 @@ name: Benchmarks
 #        /bench --runtime paseo                              # one runtime, all pallets
 #        /bench --runtime people-paseo --pallet pallet_proxy # one runtime, one pallet
 #        /bench --pallet pallet_balances --continue-on-fail
+#        /bench --runtime people-paseo --exclude-pallets indiv_pallet_coinage   # all pallets but one
 #        /bench --help
 #
 #   2. Run this workflow manually (Actions -> Benchmarks -> Run workflow) against any branch.
 #
 # The set of runtimes, their genesis presets and their weight templates live in
 # .github/workflows/runtimes-matrix.json; the benchmarking itself is .github/scripts/cmd/cmd.py.
+#
+# A full sweep can run for days. The `bench` job only benchmarks and commits locally; everything
+# that talks to GitHub afterwards (pushing the weights, commenting, reacting) lives in `publish`,
+# because a job's GITHUB_TOKEN expires after 24 hours and `publish` gets a fresh one when it starts.
 
 on:
   issue_comment:
@@ -37,6 +42,10 @@ on:
           - bulletin-paseo
       pallet:
         description: 'Pallet(s), space separated. Empty means every pallet of the runtime.'
+        type: string
+        default: ''
+      exclude_pallets:
+        description: 'Pallet(s), space separated, to skip.'
         type: string
         default: ''
       steps:
@@ -203,7 +212,7 @@ jobs:
           first_line=$(printf '%s' "$COMMENT_BODY" | head -n1 | tr -d '\r')
 
           if [[ ! "$first_line" =~ ^/bench([[:space:]]+[-a-zA-Z0-9_.:=[:space:]]*)?$ ]]; then
-            echo "::error::Could not parse '$first_line'. Expected: /bench [--runtime ...] [--pallet ...] [--continue-on-fail] [--help]"
+            echo "::error::Could not parse '$first_line'. Expected: /bench [--runtime ...] [--pallet ...] [--exclude-pallets ...] [--continue-on-fail] [--help]"
             exit 1
           fi
 
@@ -249,6 +258,7 @@ jobs:
           PR_NUM: ${{ github.event.issue.number }}
           INPUT_RUNTIME: ${{ inputs.runtime }}
           INPUT_PALLET: ${{ inputs.pallet }}
+          INPUT_EXCLUDE_PALLETS: ${{ inputs.exclude_pallets }}
           INPUT_STEPS: ${{ inputs.steps }}
           INPUT_REPEAT: ${{ inputs.repeat }}
           INPUT_CONTINUE_ON_FAIL: ${{ inputs.continue_on_fail }}
@@ -264,6 +274,7 @@ jobs:
             args="--steps $INPUT_STEPS --repeat $INPUT_REPEAT"
             if [ "$INPUT_RUNTIME" != "all" ]; then args="$args --runtime $INPUT_RUNTIME"; fi
             if [ -n "$INPUT_PALLET" ]; then args="$args --pallet $INPUT_PALLET"; fi
+            if [ -n "$INPUT_EXCLUDE_PALLETS" ]; then args="$args --exclude-pallets $INPUT_EXCLUDE_PALLETS"; fi
             if [ "$INPUT_CONTINUE_ON_FAIL" = "true" ]; then args="$args --continue-on-fail"; fi
             echo "args=$args" >> $GITHUB_OUTPUT
             echo "repo=${{ github.repository }}" >> $GITHUB_OUTPUT
@@ -316,14 +327,22 @@ jobs:
     # the other jobs on that machine. `ubuntu-latest` is a custom label on the runner, not the
     # GitHub-hosted image - `self-hosted` in the same list is what keeps routing unambiguous.
     runs-on: [self-hosted, ubuntu-latest, benchmarks]
-    # A full sweep across all runtimes and pallets takes many hours.
-    timeout-minutes: 1440
-    # Needs `contents: write` on top of the workflow-wide set, to push the regenerated weights.
+    # A full sweep across all runtimes and pallets can take days (people-paseo alone ran past 24h
+    # in run 35198320986). 7200 minutes is the 5-day ceiling GitHub enforces on self-hosted jobs
+    # anyway; anything longer has to be split into several `/bench` runs, e.g. via
+    # `--exclude-pallets` / `--pallet`.
+    timeout-minutes: 7200
+    # Nothing in this job may call the GitHub API or push after the benchmarks: its GITHUB_TOKEN
+    # is dead by then on a long run. That is the `publish` job's work. The write scopes here are
+    # only for the "started" comment, posted while the token is still fresh.
     permissions:
-      contents: write
+      contents: read
       issues: write
       pull-requests: write
       actions: read
+    outputs:
+      job-url: ${{ steps.links.outputs.job_url }}
+      changed: ${{ steps.commit.outputs.changed }}
     env:
       JOB_NAME: bench
       BENCH_ARGS: ${{ needs.preflight.outputs.args }}
@@ -374,10 +393,9 @@ jobs:
         with:
           repository: ${{ env.TARGET_REPO }}
           ref: ${{ env.TARGET_REF }}
-          # GITHUB_TOKEN for a branch in this repo, which is the common case and keeps the run
-          # working even when the PAT is unhealthy. The PAT is only needed for a PR from a fork,
-          # where GITHUB_TOKEN cannot push the weights back.
-          token: ${{ needs.preflight.outputs.repo == github.repository && secrets.GITHUB_TOKEN || secrets.PASEO_BENCH_PAT }}
+          # Read-only, and not persisted: the token would be expired by the time the post-bench
+          # `git fetch` runs, and a stale credential breaks even an anonymous fetch of a public repo.
+          persist-credentials: false
           fetch-depth: 0
 
       - name: Set rust version via common env file
@@ -440,15 +458,112 @@ jobs:
           python3 .github/scripts/cmd/cmd.py bench $BENCH_ARGS
           git status --porcelain
 
-      - name: Commit and push the weights
-        id: push
+      # Everything from here on stays local to the runner - see the note on `permissions` above.
+      # The commit is shipped to `publish` as a patch, which pushes it with a fresh token.
+      - name: Commit the weights locally
+        id: commit
         run: |
+          # Cargo.lock can move when the runtimes are built with `runtime-benchmarks`; that is a
+          # build artefact of this run, not a weights change.
+          git checkout -- Cargo.lock || true
+
           if [ -z "$(git status --porcelain)" ]; then
             echo "Nothing to commit"
-            echo "pushed=false" >> $GITHUB_OUTPUT
+            echo "changed=false" >> $GITHUB_OUTPUT
             exit 0
           fi
 
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add .
+          git commit -m "Update weights (${BENCH_ARGS:-all runtimes, all pallets})"
+          mkdir -p bench-result
+          git format-patch -1 --stdout > bench-result/weights.patch
+          echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Compare weights with subweight
+        if: steps.commit.outputs.changed == 'true'
+        continue-on-error: true
+        run: |
+          # Compare against the base repo's main, not `origin/main` - for a PR from a fork,
+          # `origin` is the fork. Anonymous on purpose: the repo is public and the token is stale.
+          git fetch --no-tags https://github.com/${{ github.repository }}.git main
+          subweight compare commits \
+            --path-pattern "./**/weights/**/*.rs" \
+            --method asymptotic \
+            --format markdown \
+            --no-color \
+            --change added changed \
+            --ignore-errors \
+            FETCH_HEAD HEAD > bench-result/subweight.md
+
+      - name: Upload the result for publishing
+        if: steps.commit.outputs.changed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-result-${{ github.run_id }}
+          path: bench-result/
+          if-no-files-found: error
+
+      # `always()`: cmd.py writes each pallet's weights as soon as that pallet finishes, so a run
+      # that times out or fails part-way still leaves the completed pallets here to download.
+      - name: Upload the weights
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: weights-${{ github.run_id }}
+          path: |
+            relay/*/src/weights/**/*.rs
+            system-parachains/*/src/weights/**/*.rs
+          if-no-files-found: warn
+
+  # Pushes the weights and reports back. A separate job because GITHUB_TOKEN expires after 24
+  # hours, and a job gets its token when it starts - so this one always has a live token, however
+  # long `bench` took. Hosted, so it does not queue behind the benchmark machine. `ubuntu-24.04`,
+  # not `ubuntu-latest`: the benchmark runner carries a custom `ubuntu-latest` label.
+  publish:
+    needs: [preflight, bench]
+    if: ${{ always() && needs.preflight.result == 'success' && needs.preflight.outputs.is-help != 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    # Needs `contents: write` on top of the workflow-wide set, to push the regenerated weights.
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      actions: read
+    env:
+      BENCH_ARGS: ${{ needs.preflight.outputs.args }}
+      TARGET_REPO: ${{ needs.preflight.outputs.repo }}
+      TARGET_REF: ${{ needs.preflight.outputs.ref }}
+      PR_NUMBER: ${{ needs.preflight.outputs.pr-number }}
+      BENCH_RESULT: ${{ needs.bench.result }}
+      RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      JOB_URL: ${{ needs.bench.outputs.job-url }}
+    steps:
+      - name: Checkout
+        if: needs.bench.result == 'success' && needs.bench.outputs.changed == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.TARGET_REPO }}
+          ref: ${{ env.TARGET_REF }}
+          # GITHUB_TOKEN for a branch in this repo, which is the common case and keeps the run
+          # working even when the PAT is unhealthy. The PAT is only needed for a PR from a fork,
+          # where GITHUB_TOKEN cannot push the weights back.
+          token: ${{ needs.preflight.outputs.repo == github.repository && secrets.GITHUB_TOKEN || secrets.PASEO_BENCH_PAT }}
+          fetch-depth: 0
+
+      - name: Download the result
+        if: needs.bench.result == 'success' && needs.bench.outputs.changed == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: bench-result-${{ github.run_id }}
+          path: ${{ runner.temp }}/bench-result
+
+      - name: Push the weights
+        id: push
+        if: needs.bench.result == 'success' && needs.bench.outputs.changed == 'true'
+        run: |
           # Weights land in a PR, never straight on the protected default branch.
           if [ "$TARGET_REF" = "${{ github.event.repository.default_branch }}" ]; then
             echo "::warning::Refusing to push weights to $TARGET_REF; download them from the run artifact and open a PR instead."
@@ -458,66 +573,31 @@ jobs:
 
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-
-          git add .
-          # Cargo.lock can move when the runtimes are built with `runtime-benchmarks`; that is a
-          # build artefact of this run, not a weights change.
-          git restore --staged Cargo.lock || true
-          git checkout -- Cargo.lock || true
-
-          git commit -m "Update weights (${BENCH_ARGS:-all runtimes, all pallets})"
-          git pull --rebase origin "$TARGET_REF"
+          # The branch may have moved during a multi-day run; --3way lets the weights land on top.
+          git am --3way "$RUNNER_TEMP/bench-result/weights.patch"
           git push origin "HEAD:$TARGET_REF"
           echo "pushed=true" >> $GITHUB_OUTPUT
 
-      - name: Compare weights with subweight
-        id: subweight
-        continue-on-error: true
-        run: |
-          # Compare against the base repo's main, not `origin/main` - for a PR from a fork,
-          # `origin` is the fork.
-          git fetch --no-tags https://github.com/${{ github.repository }}.git main
-          result=$(subweight compare commits \
-            --path-pattern "./**/weights/**/*.rs" \
-            --method asymptotic \
-            --format markdown \
-            --no-color \
-            --change added changed \
-            --ignore-errors \
-            FETCH_HEAD HEAD)
-
-          {
-            echo "result<<SUBWEIGHT"
-            echo "$result"
-            echo "SUBWEIGHT"
-          } >> $GITHUB_OUTPUT
-
-      - name: Upload the weights
-        uses: actions/upload-artifact@v4
-        with:
-          name: weights-${{ github.run_id }}
-          path: |
-            relay/*/src/weights/**/*.rs
-            system-parachains/*/src/weights/**/*.rs
-          if-no-files-found: warn
-
       - name: Comment PR (Success)
-        if: ${{ !failure() && env.PR_NUMBER != '' && !contains(github.event.comment.body, '--quiet') }}
+        if: ${{ success() && needs.bench.result == 'success' && env.PR_NUMBER != '' && !contains(github.event.comment.body, '--quiet') }}
         uses: actions/github-script@v7
         env:
-          RUN_URL: ${{ steps.links.outputs.run_url }}
-          SUBWEIGHT: ${{ steps.subweight.outputs.result }}
           PUSHED: ${{ steps.push.outputs.pushed }}
+          CHANGED: ${{ needs.bench.outputs.changed }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const subweight = process.env.SUBWEIGHT;
+            const fs = require('fs');
+            const file = `${process.env.RUNNER_TEMP}/bench-result/subweight.md`;
+            const subweight = fs.existsSync(file) ? fs.readFileSync(file, 'utf8').trim() : '';
             const details = subweight
               ? `\n\n<details>\n\n<summary>Subweight results:</summary>\n\n${subweight}\n\n</details>`
               : '';
             const pushed = process.env.PUSHED === 'true'
               ? 'The updated weights have been pushed to this branch.'
-              : 'No weight changed.';
+              : process.env.CHANGED === 'true'
+                ? 'The updated weights were not pushed - download them from the run artifacts.'
+                : 'No weight changed.';
 
             github.rest.issues.createComment({
               issue_number: Number(process.env.PR_NUMBER),
@@ -526,19 +606,23 @@ jobs:
               body: `Benchmarks \`${process.env.BENCH_ARGS || '(all runtimes, all pallets)'}\` have finished ✅ ${pushed} [See logs here](${process.env.RUN_URL})${details}`
             })
 
+      # Also covers a cancelled or timed-out `bench` (which `failure()` alone would miss), and
+      # a failure to push here.
       - name: Comment PR (Failure)
-        if: ${{ failure() && env.PR_NUMBER != '' && !contains(github.event.comment.body, '--quiet') }}
+        if: ${{ (failure() || needs.bench.result != 'success') && env.PR_NUMBER != '' && !contains(github.event.comment.body, '--quiet') }}
         uses: actions/github-script@v7
-        env:
-          JOB_URL: ${{ steps.links.outputs.job_url }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const result = process.env.BENCH_RESULT;
+            const what = result === 'cancelled'
+              ? 'were cancelled or timed out ⏹️'
+              : result === 'success' ? 'finished, but the weights could not be pushed ❌' : 'have failed ❌';
             github.rest.issues.createComment({
               issue_number: Number(process.env.PR_NUMBER),
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `Benchmarks \`${process.env.BENCH_ARGS || '(all runtimes, all pallets)'}\` have failed ❌ [See logs here](${process.env.JOB_URL})`
+              body: `Benchmarks \`${process.env.BENCH_ARGS || '(all runtimes, all pallets)'}\` ${what} Weights of the pallets that completed are in the \`weights-${context.runId}\` artifact. [See logs here](${process.env.JOB_URL || process.env.RUN_URL})`
             })
 
       - name: React on the comment
@@ -547,9 +631,10 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const ok = process.env.BENCH_RESULT === 'success' && '${{ job.status }}' === 'success';
             github.rest.reactions.createForIssueComment({
               comment_id: ${{ github.event.comment.id }},
               owner: context.repo.owner,
               repo: context.repo.repo,
-              content: '${{ job.status }}' === 'success' ? '+1' : 'confused'
+              content: ok ? '+1' : 'confused'
             })
