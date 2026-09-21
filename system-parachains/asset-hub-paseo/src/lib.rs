@@ -1328,6 +1328,7 @@ impl frame_support::traits::EnsureOriginWithArg<RuntimeOrigin, RuntimeParameters
 			// technical params, can be controlled by the fellowship voice.
 			Scheduler(_) |
 			MessageQueue(_) |
+			DotnsGateway(_) |
 			AliasAccounts(
 				dynamic_params::alias_accounts::ParametersKey::StaleAliasSweepInterval(_),
 			) => EitherOfDiverse::<EnsureRoot<AccountId>, WhitelistedCaller>::ensure_origin(
@@ -1453,6 +1454,25 @@ pub mod dynamic_params {
 		/// the scan proves expensive on a chain with many mappings.
 		#[codec(index = 1)]
 		pub static StaleAliasSweepInterval: BlockNumber = HOURS;
+	}
+
+	/// Parameters about the dotNS gateway pallet.
+	#[dynamic_pallet_params]
+	#[codec(index = 4)]
+	pub mod dotns_gateway {
+		/// Maximum weight available to one dotNS registry-contract call.
+		///
+		/// A dotNS v0.8.0 lite reservation with a base-label reservation measures ~2.26 MB of
+		/// proof, above the 2 MiB previously hardcoded here.
+		#[codec(index = 0)]
+		pub static DotnsMaxContractCallWeight: Weight =
+			Weight::from_parts(100_000_000_000, 3 * 1024 * 1024);
+		/// Maximum age of a dotNS attestation signature.
+		#[codec(index = 1)]
+		pub static DotnsMaxValiditySeconds: u64 = 3 * 24 * 60 * 60;
+		/// Permitted future clock skew for a dotNS attestation signature.
+		#[codec(index = 2)]
+		pub static DotnsMaxFutureSkewSeconds: u64 = 30;
 	}
 }
 
@@ -1644,7 +1664,7 @@ impl indiv_pallet_dotns_gateway::ContractCaller for ReviveContractCaller {
 			dest,
 			value.into(),
 			TransactionLimits::WeightAndDeposit {
-				weight_limit: DotnsMaxContractCallWeight::get(),
+				weight_limit: dynamic_params::dotns_gateway::DotnsMaxContractCallWeight::get(),
 				// Root origin does not pay the deposit cost; per-call storage growth
 				// is bounded by `weight_limit.proof_size`.
 				deposit_limit: u128::MAX,
@@ -1661,14 +1681,6 @@ impl indiv_pallet_dotns_gateway::ContractCaller for ReviveContractCaller {
 			Err(e) => Err(indiv_pallet_dotns_gateway::ContractCallError::from(e)),
 		}
 	}
-}
-
-parameter_types! {
-	// On-chain measured weight is below these limits so this is to have some margin.
-	pub const DotnsMaxContractCallWeight: Weight =
-		Weight::from_parts(100_000_000_000, 2 * 1024 * 1024);
-	pub const DotnsMaxValiditySeconds: u64 = 3 * 24 * 60 * 60; // 3 days
-	pub const DotnsMaxFutureSkewSeconds: u64 = 30;
 }
 
 parameter_types! {
@@ -1705,9 +1717,9 @@ impl indiv_pallet_dotns_gateway::Config for Runtime {
 	type MemberService = MembersSubscriber;
 	type ContractCaller = ReviveContractCaller;
 	type AddressMapper = ReviveAddressMapper;
-	type MaxContractCallWeight = DotnsMaxContractCallWeight;
-	type MaxValiditySeconds = DotnsMaxValiditySeconds;
-	type MaxFutureSkewSeconds = DotnsMaxFutureSkewSeconds;
+	type MaxContractCallWeight = dynamic_params::dotns_gateway::DotnsMaxContractCallWeight;
+	type MaxValiditySeconds = dynamic_params::dotns_gateway::DotnsMaxValiditySeconds;
+	type MaxFutureSkewSeconds = dynamic_params::dotns_gateway::DotnsMaxFutureSkewSeconds;
 	type UnixTime = Timestamp;
 	type AttestationAllowanceManager = EnsureRoot<AccountId>;
 	type DispatcherAddressManager = EnsureRoot<AccountId>;
@@ -4307,6 +4319,46 @@ mod tests {
 				4
 			);
 			assert_eq!(total_unbonding_pools(), 32);
+		});
+	}
+
+	#[test]
+	fn whitelisted_caller_sets_dotns_gateway_parameters() {
+		use dynamic_params::dotns_gateway::*;
+		use frame_support::traits::EnsureOriginWithArg;
+		use governance::pallet_custom_origins::Origin::{StakingAdmin, WhitelistedCaller};
+
+		let keys = [
+			RuntimeParametersKey::DotnsGateway(DotnsMaxContractCallWeight.into()),
+			RuntimeParametersKey::DotnsGateway(DotnsMaxValiditySeconds.into()),
+			RuntimeParametersKey::DotnsGateway(DotnsMaxFutureSkewSeconds.into()),
+		];
+
+		for key in &keys {
+			for origin in [RuntimeOrigin::root(), WhitelistedCaller.into()] {
+				assert!(DynamicParameterOrigin::try_origin(origin, key).is_ok());
+			}
+			assert!(DynamicParameterOrigin::try_origin(StakingAdmin.into(), key).is_err());
+		}
+	}
+
+	/// The gateway declares its calls at their pallet weight plus the contract-call cap, so the
+	/// cap must leave both calls includable as a single normal extrinsic.
+	#[test]
+	fn dotns_gateway_calls_fit_one_normal_extrinsic() {
+		use indiv_pallet_dotns_gateway::WeightInfo;
+		type GatewayWeights = <Runtime as indiv_pallet_dotns_gateway::Config>::WeightInfo;
+
+		sp_io::TestExternalities::new(Default::default()).execute_with(|| {
+			let cap = dynamic_params::dotns_gateway::DotnsMaxContractCallWeight::get();
+			let max = RuntimeBlockWeights::get()
+				.get(DispatchClass::Normal)
+				.max_extrinsic
+				.expect("normal class has a max extrinsic weight");
+			for declared in [GatewayWeights::reserve_name(), GatewayWeights::register_name()] {
+				let declared = declared.saturating_add(cap);
+				assert!(declared.all_lte(max), "{declared:?} exceeds max extrinsic {max:?}");
+			}
 		});
 	}
 }
