@@ -232,7 +232,7 @@ def output_path(config, pallet):
     return default_path if not pallet.startswith("pallet_xcm_benchmarks") else xcm_path
 
 
-def bench_cmd(runtime, pallet, out_dir, steps, repeat):
+def bench_cmd(runtime, pallet, out_dir, smoke):
     config = runtimesMatrix[runtime]
     templates = config.get("benchmarks_templates", {}) or {}
     template = templates.get(pallet)
@@ -247,29 +247,33 @@ def bench_cmd(runtime, pallet, out_dir, steps, repeat):
         f"--pallet={pallet}",
         "--genesis-builder=runtime",
         f"--genesis-builder-preset={config.get('genesis_builder_preset', 'local_testnet')}",
-        f"--header={HEADER_PATH}",
-        f"--output={out_dir}",
         "--wasm-execution=compiled",
-        f"--steps={steps}",
-        f"--repeat={repeat}",
         "--heap-pages=4096",
         "--min-duration", "1",
         "--quiet",
     ]
-    if template:
-        cmd.append(f"--template={template}")
+    if smoke:
+        # Only whether every benchmark executes matters here. Two samples per component are too
+        # few to fit a weight when a benchmark skips one (`only has 1 unique value(s)`), so the
+        # smoke pass writes no weight file and runs no regression.
+        cmd += ["--steps=2", "--repeat=1", "--no-median-slopes", "--no-min-squares"]
+    else:
+        cmd += [f"--steps={args.steps}", f"--repeat={args.repeat}", f"--header={HEADER_PATH}",
+                f"--output={out_dir}"]
+        if template:
+            cmd.append(f"--template={template}")
     if excluded_string:
         cmd.append(f"--exclude-extrinsics={excluded_string}")
     return cmd
 
 
-def run_bench(runtime, pallet, steps, repeat, stop, fail_fast):
+def run_bench(runtime, pallet, smoke, stop, fail_fast):
     """Benchmarks one pallet into a private temp dir, so pallets running in parallel never see each
     other's files. Returns (exit status, temp dir holding the generated files)."""
     if stop.is_set():
         return None, None
     out_dir = tempfile.mkdtemp(prefix='bench-')
-    cmd = bench_cmd(runtime, pallet, out_dir, steps, repeat)
+    cmd = bench_cmd(runtime, pallet, out_dir, smoke)
     tag = f'[{runtime}/{pallet}]'
     log(f'{tag} running: {shlex.join(cmd)}')
     # Prefix every line, or the logs of parallel pallets are impossible to tell apart.
@@ -285,12 +289,12 @@ def run_bench(runtime, pallet, steps, repeat, stop, fail_fast):
     return status, out_dir
 
 
-def run_all(work, steps, repeat, jobs, on_done, fail_fast):
+def run_all(work, smoke, jobs, on_done, fail_fast):
     """Runs `work` (a list of (runtime, pallet)) on `jobs` workers and calls `on_done` from this
     thread, one pallet at a time, as they finish."""
     stop = threading.Event()
     with ThreadPoolExecutor(max_workers=jobs) as pool:
-        futures = {pool.submit(run_bench, r, p, steps, repeat, stop, fail_fast): (r, p) for r, p in work}
+        futures = {pool.submit(run_bench, r, p, smoke, stop, fail_fast): (r, p) for r, p in work}
         for future in as_completed(futures):
             runtime, pallet = futures[future]
             status, out_dir = future.result()
@@ -330,7 +334,7 @@ if not args.no_smoke:
             smoke_failed.append((runtime, pallet))
 
     log(f'-- smoke-testing {len(work)} pallets')
-    run_all(work, 2, 1, os.cpu_count() or 1, on_smoke_done, fail_fast=False)
+    run_all(work, True, os.cpu_count() or 1, on_smoke_done, fail_fast=False)
 
     for runtime, pallet in smoke_failed:
         failed_benchmarks[runtime] = failed_benchmarks.get(runtime, []) + [pallet]
@@ -368,7 +372,7 @@ def on_bench_done(runtime, pallet, status, out_dir):
 
 
 log(f'-- benchmarking {len(work)} pallets, {args.jobs} at a time')
-run_all(work, args.steps, args.repeat, args.jobs, on_bench_done, fail_fast=not continue_on_fail)
+run_all(work, False, args.jobs, on_bench_done, fail_fast=not continue_on_fail)
 
 if failed_benchmarks:
     print('❌ Failed benchmarks of runtimes/pallets:')
