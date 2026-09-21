@@ -1695,8 +1695,17 @@ impl indiv_pallet_coinage::BenchmarkHelper<Runtime> for CoinageBenchHelper {
 
 	fn fund_account(who: &AccountId, amount: u128) {
 		use frame_support::traits::fungibles::Mutate;
-		<AssetsWithHolder as Mutate<_>>::mint_into(ExternalAssetLocation::get(), who, amount)
-			.expect("Failed to fund account");
+		// Headroom for fees paid in the asset. The `*_into_external_asset_non_anonymous_1_2`
+		// benchmarks fund the caller with 10x the unloaded amount and expect that to cover the
+		// paid unload token fee too; with Paseo's fee curve it does not for n <= 2, and the call
+		// fails with "Account that is desired to remain would die".
+		let fee_headroom = 1_000 * COINAGE_ASSET_UNIT;
+		<AssetsWithHolder as Mutate<_>>::mint_into(
+			ExternalAssetLocation::get(),
+			who,
+			amount.saturating_add(fee_headroom),
+		)
+		.expect("Failed to fund account");
 	}
 
 	fn create_extra_asset(seed: u32, who: &AccountId) -> Location {
@@ -1937,7 +1946,11 @@ parameter_types! {
 	/// preserves current on-chain behaviour. Setting it `true` at enactment would open
 	/// permissionless instance creation on a live chain in the same block as the upgrade,
 	/// silently and with no extrinsic. Root can turn it on deliberately afterwards.
-	pub storage CoinageEnablePermissionless: bool = false;
+	///
+	/// `true` under `runtime-benchmarks` only: the upstream benchmarks create sponsored instances
+	/// in their set-up and fail with `SponsoredInstancesDisabled` otherwise. The storage read
+	/// costs the same either way, and release builds never enable that feature.
+	pub storage CoinageEnablePermissionless: bool = cfg!(feature = "runtime-benchmarks");
 }
 
 impl indiv_pallet_coinage::Config for Runtime {

@@ -1092,10 +1092,9 @@ mod benches {
 		}
 
 		fn alias_origin() -> Result<(Location, Location), BenchmarkError> {
-			Ok((
-				Location::new(1, [Parachain(1000)]),
-				Location::new(1, [Parachain(1000), AccountId32 { id: [111u8; 32], network: None }]),
-			))
+			// `Aliasers = Nothing`: this chain does not support `AliasOrigin`, so there is no
+			// valid pair to benchmark. Weighed as `Weight::MAX` in `weights/xcm/mod.rs` instead.
+			Err(BenchmarkError::Skip)
 		}
 	}
 
