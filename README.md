@@ -35,18 +35,36 @@ they ship with.
 /bench --runtime paseo                                # one runtime, every pallet
 /bench --runtime people-paseo --pallet pallet_proxy   # one runtime, one pallet
 /bench --pallet pallet_balances --continue-on-fail    # keep going when a pallet fails
+/bench --runtime people-paseo --exclude-pallets indiv_pallet_coinage   # every pallet but one
+/bench --runtime people-paseo --jobs 4                # 4 pallets at a time
 /bench --help
 ```
 
 The workflow builds the affected runtimes with `--features runtime-benchmarks`, runs
-`frame-omni-bencher` per pallet, commits the regenerated weights back to the PR branch, and posts a
-[`subweight`](https://github.com/ggwpez/subweight) diff against `main` as a comment.
+`frame-omni-bencher` per pallet, pushes the regenerated weights back to the PR branch as one commit
+per pallet, and posts a [`subweight`](https://github.com/ggwpez/subweight) diff against `main` as a
+comment.
+
+A failed pallet costs as little as possible:
+
+- Before the real run, every pallet is run once at `--steps 2 --repeat 1`. That takes minutes and
+  catches benchmarks that cannot run at all; those pallets are reported and skipped.
+- A sweep without `--pallet` keeps going past a failed pallet. With `--pallet`, the first failure
+  stops the run unless `--continue-on-fail` is given.
+- Every pallet that completed is pushed, even when the run fails, is cancelled or times out.
+
+`--jobs N` benchmarks N pallets at the same time. `frame-omni-bencher` is single-threaded, so
+without it a run uses one core of the runner. Pallets running side by side compete for caches and
+memory bandwidth and come out somewhat heavier, so use `--jobs` to iterate and a plain run for the
+weights that ship.
 
 **Without a PR** — run the workflow manually from *Actions → Benchmarks → Run workflow* against any
 branch.
 
 Because `issue_comment` events always execute the workflow file as it exists on `main`, changes to
-the workflow itself only take effect once merged.
+the workflow itself only take effect once merged. The same goes for the tooling it drives:
+`cmd.py` and `runtimes-matrix.json` are always taken from `main`, never from the PR branch, so a PR
+branch does not need to be rebased to pick up a tooling fix.
 
 ### Adding or changing a runtime
 
