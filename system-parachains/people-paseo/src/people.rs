@@ -371,7 +371,7 @@ parameter_types! {
 }
 
 impl indiv_pallet_chunks_manager::Config for Runtime {
-	type WeightInfo = indiv_pallet_chunks_manager::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_chunks_manager::WeightInfo<Runtime>;
 	type Chunk = <BandersnatchVrfVerifiable as GenerateVerifiable>::StaticChunk;
 	type PageSize = ChunkPageSize;
 	type ManagerOrigin = EnsureRoot<Self::AccountId>;
@@ -1113,7 +1113,7 @@ parameter_types! {
 }
 
 impl indiv_pallet_airdrop::Config for Runtime {
-	type WeightInfo = indiv_pallet_airdrop::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_airdrop::WeightInfo<Runtime>;
 	type MemberService = Members;
 	type Fungibles = AssetsWithHolder;
 	type ManagerOrigin = EnsureRoot<Self::AccountId>;

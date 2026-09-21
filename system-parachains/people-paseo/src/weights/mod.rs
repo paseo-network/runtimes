@@ -22,6 +22,8 @@ pub mod cumulus_pallet_xcmp_queue;
 pub mod extrinsic_weights;
 pub mod frame_system;
 pub mod frame_system_extensions;
+pub mod indiv_pallet_airdrop;
+pub mod indiv_pallet_chunks_manager;
 pub mod indiv_pallet_nft_credits;
 pub mod indiv_pallet_people_airdrops;
 pub mod pallet_asset_rate;
