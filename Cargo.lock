@@ -1478,6 +1478,7 @@ dependencies = [
  "sp-genesis-builder",
  "sp-inherents",
  "sp-io",
+ "sp-keyring",
  "sp-npos-elections",
  "sp-offchain",
  "sp-runtime",

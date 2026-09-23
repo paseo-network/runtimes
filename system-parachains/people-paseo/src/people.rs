@@ -905,35 +905,18 @@ impl indiv_pallet_nft_credits::benchmarking::BenchmarkHelper for NftCreditsBench
 
 impl indiv_pallet_nft_credits::Config for Runtime {
 	type WeightInfo = weights::indiv_pallet_nft_credits::WeightInfo<Runtime>;
-	// Sized above what one block can award, so no `report` awards a credit the block has no room
-	// for, which would be committed to no root and lost. A worst-case report awards
-	// `(MaxGroupSize - 1) * MaxRounds = 15` credits and is charged the awards entry's
-	// `MaxEncodedLen` of `2 + 65 * MaxCreditsPerBlock` bytes, so at 1200 about 65 reports fit the
-	// 7,864,320-byte `Normal` proof budget, awarding 975 credits together. The game pallet's
-	// `integrity_test` recomputes that floor from the block limits and the generated `report`
-	// weight, so a value below it fails `runtime_integrity_tests`.
-	//
-	// The remaining fifth is margin against a regeneration that makes a report cheaper, fitting
-	// more per block and lifting the floor. It is cheap, since the charge that buys it lowers the
-	// floor in turn: at 1080 the floor was 1050, thin enough that any regeneration would have
-	// moved it past.
-	//
-	// The claims chain sizes its claimed-leaf bitmap from its own copy of this bound and refuses a
-	// tree over it, so raising this needs `MaxCreditsPerAwardBlock` raised there first.
-	type MaxCreditsPerBlock = ConstU32<1200>;
 	type XcmRouter = crate::xcm_config::XcmRouter;
 	type NftClaimsParaId = AssetHubParaId;
 	// Matches the `NftClaims` index in asset-hub-paseo's `construct_runtime!`.
 	type NftClaimsPalletIndex = ConstU8<96>;
 	type ChannelInfo = ParachainSystem;
 	// One tree per block at most, and the offchain worker ships them every block, so the queue
-	// only fills while delivery to Asset Hub is down. Matched to `MaxRetainedAwardBlocks`, which
-	// counts the same award blocks: the oldest tree still queued is then one whose awards are
-	// ordinarily still in state, so a delivery that outlasts the outage needs no proof rebuilt
-	// from events. A `replay_credit_trees` during the outage breaks that, its tree being claimable
-	// on Asset Hub while the delivery is still queued here, so its last claim there has that
-	// chain ask for a deletion the queue entry then finds nothing to deliver. Eight full messages
-	// drain it.
+	// only fills while delivery to Asset Hub is down. Matched to `MaxRetainedCreditTrees`, which
+	// counts the same trees: the oldest tree still queued is then one whose awards are ordinarily
+	// still in state, so a delivery that outlasts the outage needs no proof rebuilt from events. A
+	// `replay_credit_trees` during the outage breaks that, its tree being claimable on Asset Hub
+	// while the delivery is still queued here, so its last claim there has that chain ask for a
+	// deletion the queue entry then finds nothing to deliver. Eight full messages drain it.
 	//
 	// An entry is 12 bytes and the queue is read at the value's `MaxEncodedLen`, so
 	// `authorize_send_credit_trees` pays about 3 KB of the `Normal` proof budget for it. A tree
@@ -943,12 +926,9 @@ impl indiv_pallet_nft_credits::Config for Runtime {
 	type MaxCreditTreesPerMessage = ConstU32<32>;
 	type ReplayCooldownSeconds = ConstU64<60>;
 	type NftClaimsRemoteWeight = NftClaimsRemoteWeight;
-	// Entries are the distinct blocks a claimant was awarded in, not a window of consecutive
-	// ones, so the bound counts games rather than time. One game awards a claimant at most
-	// `(MaxGroupSize - 1) * MaxRounds = 15` credits, one per co-player that reported `Person`
-	// on them, plus the attendance backfill, which awards the rest in a single call. Those
-	// land in 16 distinct blocks only if no two reports ever share one, out of the 300 blocks
-	// the 10-minute reporting phase spans; reports cluster, so a few per game is the norm.
+	// Entries are the distinct blocks whose trees commit a claimant's credits, not a window of
+	// consecutive ones, so the bound counts games rather than time. One game awards a claimant at
+	// most `(MaxGroupSize - 1) * MaxRounds = 15` credits, one per co-player that reported `Person`-
 	//
 	// A game cycle runs 17.5 minutes, so back to back games fill this in about two hours at
 	// the usual few entries each, and in two games if both hit the worst case. That is the
@@ -956,16 +936,17 @@ impl indiv_pallet_nft_credits::Config for Runtime {
 	// minting against, not a record for the chain's lifetime, and the oldest block drops out
 	// once it is full.
 	type MaxCreditBlocksPerClaimant = ConstU32<32>;
-	// The window in which a claim is provable from state alone, counted in award blocks. Reports
-	// cluster inside a game's 10-minute reporting phase, so a game contributes a few dozen award
-	// blocks and this covers several games, well past the two hours the per-claimant index spans.
+	// The window in which a claim is provable from state alone, counted in trees. Reports cluster
+	// inside a game's 10-minute reporting phase, so a game contributes a few dozen trees and this
+	// covers several games, well past the two hours the per-claimant index spans.
 	//
-	// It is also the state the chain carries for them: at most this many entries of
-	// `MaxCreditsPerBlock` awards, an award being 65 bytes, so about 17 MB were every retained
-	// block saturated, and proportional to the mints actually outstanding otherwise. A block that
-	// drops out delays no mint, because its root stays on chain until the claims chain is finished
-	// with it or the root TTL runs out. Its awards then have to come from the block's events.
-	type MaxRetainedAwardBlocks = ConstU32<256>;
+	// It is also the state the chain carries for them: at most this many trees of the pallet's
+	// `AWARDS_PER_TREE` awards, an award being 65 bytes, so about 34 MB were every retained tree
+	// saturated. Trees run that full only while the chain awards faster than one tree a block, so
+	// the figure tracks the mints actually outstanding. A tree that drops out delays no mint,
+	// because its root stays on chain until the claims chain is finished with it or the root TTL
+	// runs out. Its awards then have to come from the events naming its tree block.
+	type MaxRetainedCreditTrees = ConstU32<256>;
 	type EnsureClaimsChainOrigin = EnsureClaimsChainSibling;
 	// At least the claims pallet's `MaxTreeDeletionsPerMessage`. A larger message fails to decode
 	// here, and the root TTL then removes the roots its deletions named.
