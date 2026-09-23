@@ -306,6 +306,10 @@ jobs:
   generate-chain-specs:
     needs: create-tag
     runs-on: ubuntu-latest
+    # Chain specs are a convenience artifact, not part of a runtime release: v2.5.3's job
+    # died installing `pop` (brew cannot tap homebrew/core on the runner image) after every
+    # runtime had built, and took the release with it. Never block the release again.
+    continue-on-error: true
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
@@ -437,6 +441,8 @@ jobs:
 
   create-release:
     needs: [create-tag, generate-chain-specs, build-runtimes]
+    # `needs` alone would skip this job when chain specs fail, so gate on the jobs that matter.
+    if: ${{ !cancelled() && needs.create-tag.result == 'success' && needs.build-runtimes.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
