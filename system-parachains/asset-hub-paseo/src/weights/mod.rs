@@ -21,6 +21,8 @@ pub mod cumulus_pallet_xcmp_queue;
 pub mod extrinsic_weights;
 pub mod frame_system;
 pub mod frame_system_extensions;
+pub mod indiv_pallet_nft_claims;
+pub mod indiv_pallet_scarcity;
 pub mod pallet_ah_ops;
 pub mod pallet_asset_conversion;
 pub mod pallet_asset_conversion_tx_payment;

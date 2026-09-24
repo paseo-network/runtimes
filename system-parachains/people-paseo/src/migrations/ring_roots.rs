@@ -61,7 +61,7 @@
 //!
 //! # Relationship to Asset Hub
 //!
-//! `indiv_pallet_members_subscriber::migration::MigrateV0ToV1` performs the same reshape for
+//! Asset Hub's v2.5.0 `MembersSubscriber` migration (since retired) performed the same reshape for
 //! `MembersSubscriber::RingRoots` on Asset Hub, and owns the canonical write-up of the constant.
 //! The two runtimes share no local crate — `system-parachains-common` is a fellowship git
 //! dependency we do not own — so the hash below is duplicated deliberately and pinned by a test in
@@ -85,7 +85,8 @@ pub const KZG_VERIFIER_KEY_LEN: usize = OLD_MEMBERS_LEN - NEW_MEMBERS_LEN;
 
 /// `blake2_256` of the 480-byte KZG verifier key that prefixes every live ring commitment.
 ///
-/// Must equal `indiv_pallet_members_subscriber::migration::old::CANONICAL_KZG_VERIFIER_KEY_HASH`.
+/// Must equal
+/// `paseo_individuality_migrations::members_subscriber::v1::CANONICAL_KZG_VERIFIER_KEY_HASH`.
 /// Derived twice independently — from Asset Hub's live state when that migration was written, and
 /// again from People's 24 live `Members::Root` records here — with identical results.
 ///

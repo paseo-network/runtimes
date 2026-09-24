@@ -230,7 +230,8 @@ impl<Call> XcmWeightInfo<Call> for PeoplePolkadotXcmWeight<Call> {
 		XcmGeneric::<Runtime>::clear_topic()
 	}
 	fn alias_origin(_: &Location) -> Weight {
-		XcmGeneric::<Runtime>::alias_origin()
+		// Benchmark skipped - not supported (`Aliasers = Nothing`).
+		Weight::MAX
 	}
 	fn unpaid_execution(_: &WeightLimit, _: &Option<Location>) -> Weight {
 		XcmGeneric::<Runtime>::unpaid_execution()
