@@ -138,21 +138,7 @@ pub mod migrations {
 	use super::*;
 
 	/// Unreleased migrations. Add new ones here:
-	///
-	/// `MigrateV6ToV7` comes with the stable2606 `cumulus-pallet-xcmp-queue`, which drops the
-	/// per-channel signal bookkeeping from `OutboundXcmpStatus`. Ordered first, matching
-	/// upstream's `bulletin-paseo`.
-	///
-	/// `RelocateFromTransactionStorage` is the one-shot move of `Renewals`,
-	/// `PendingAutoRenewals` (landing as `PendingRenewals`) and `PermanentStorageUsed` out
-	/// of the `TransactionStorage` prefix and into the new `DataRenewal` pallet's. The
-	/// source key literals keep their pre-split names. `Authorizations` is deliberately
-	/// untouched: `AuthorizationExtent::extra` occupies the slot the pre-split
-	/// `bytes_permanent` field had, so existing values already decode as the new layout.
-	pub type Unreleased = (
-		cumulus_pallet_xcmp_queue::migration::v7::MigrateV6ToV7<Runtime>,
-		pallet_bulletin_data_renewal::migrations::RelocateFromTransactionStorage<Runtime>,
-	);
+	pub type Unreleased = ();
 
 	/// Migrations/checks that do not need to be versioned and can run on every update.
 	pub type Permanent = (
@@ -1212,6 +1198,11 @@ impl_runtime_apis! {
 						fun: Fungible(ExistentialDeposit::get()),
 					}
 				}
+
+				/// `Utility::batch`, so weighing a `Transact` recurses over every nested call.
+				fn batch_call(calls: Vec<RuntimeCall>) -> Option<RuntimeCall> {
+					Some(RuntimeCall::Utility(pallet_utility::Call::<Runtime>::batch { calls }))
+				}
 			}
 
 			parameter_types! {
@@ -1321,10 +1312,10 @@ impl_runtime_apis! {
 				}
 
 				fn alias_origin() -> Result<(Location, Location), BenchmarkError> {
-					Ok((
-						Location::new(1, [Parachain(1000)]),
-						Location::new(1, [Parachain(1000), AccountId32 { id: [111u8; 32], network: None }]),
-					))
+					// Worst case: `AuthorizedAliasers`, the last and priciest `Aliasers` entry.
+					Ok(parachains_common::benchmarking::set_up_worst_case_authorized_alias::<
+						Runtime,
+					>())
 				}
 			}
 
