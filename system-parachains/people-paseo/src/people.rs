@@ -581,7 +581,7 @@ pub mod benchmark_utils {
 		}
 
 		fn setup_ring_roots(count: u32) {
-			use indiv_support::traits::Identifier;
+			use indiv_support::traits::{Identifier, RingExponent, RingMode};
 			use verifiable::ring::RingDomainSize;
 
 			// Creating a valid intermediate and root using the smallest domain size.
@@ -608,6 +608,19 @@ pub mod benchmark_utils {
 				<Runtime as indiv_pallet_members_notifier::Config>::MaxCollections::get();
 			for coll in 0..max_collections {
 				let identifier = test_identifier(coll);
+				// `RingRootsProvider` reports no roots for an identifier without a collection.
+				indiv_pallet_members::Collections::<Runtime>::insert(
+					identifier,
+					indiv_pallet_members::types::CollectionInfo {
+						owner: indiv_pallet_members::types::CollectionOwner::External(
+							PeopleCollectionOwner::get(),
+						),
+						mode: RingMode::Flexible,
+						// `R2e9` has the `Domain11` domain of the roots below.
+						ring_size: RingExponent::R2e9,
+						self_inclusion_delay: None,
+					},
+				);
 				for i in 0..count {
 					let ring_root = indiv_pallet_members::RingRoot::<Runtime> {
 						root: root.clone(),
@@ -955,7 +968,7 @@ impl indiv_pallet_nft_credits::Config for Runtime {
 	// costs about 290 KB of the proof budget and eight of them about half of it. The
 	// `integrity_test` is what holds this to the budget. A block records at most one tree block, so
 	// a call per block removes them eight times faster than they are made.
-	type MaxAwardBlocksPerSweep = ConstU32<8>;
+	type MaxAwardBlocksPerSweep = ConstU32<8>;f
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = NftCreditsBenchmarkHelper;
 }
