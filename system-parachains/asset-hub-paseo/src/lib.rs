@@ -1675,8 +1675,7 @@ impl indiv_pallet_scarcity::Config for Runtime {
 	type MaxKeyLen = ConstU32<32>;
 	type MaxValueLen = ConstU32<256>;
 	type MaxInstanceMetadata = ConstU32<100>;
-	// Matches Coinage's `CoinFailureLockPeriod`; purse transactions must use an era
-	// shorter than this (see the pallet's replay and mortality rules).
+    // Matches Coinage's `CoinFailureLockPeriod` and paces retries of a failing purse key.
 	type LockPeriod = ConstU64<60>;
 	type MaxTransferPriority = ConstU64<1_000_000>;
 	// Clears a collection's nft-claims minter registration when the collection is deleted, so no
