@@ -1431,7 +1431,7 @@ dependencies = [
  "pallet-scheduler",
  "pallet-session",
  "pallet-staking",
- "pallet-staking-async 0.15.0",
+ "pallet-staking-async",
  "pallet-staking-async-rc-client",
  "pallet-staking-runtime-api",
  "pallet-state-trie-migration",
@@ -9309,16 +9309,16 @@ dependencies = [
 [[package]]
 name = "pallet-ah-ops"
 version = "0.1.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.4.0#b3f18b26b80a2255dab06f78f70416358df64d61"
+source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.5.0#3936c7e4d42b449b964e41bd7b69d5f1db1e3a1f"
 dependencies = [
  "cumulus-primitives-core",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
- "pallet-assets 52.0.0",
+ "pallet-assets 53.0.0",
  "pallet-balances",
- "pallet-staking-async 0.14.0",
+ "pallet-staking-async",
  "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",
@@ -10324,7 +10324,7 @@ dependencies = [
  "pallet-bags-list",
  "pallet-delegated-staking",
  "pallet-nomination-pools",
- "pallet-staking-async 0.15.0",
+ "pallet-staking-async",
  "parity-scale-codec",
  "scale-info",
  "sp-runtime",
@@ -10513,7 +10513,7 @@ dependencies = [
  "pallet-session",
  "pallet-society",
  "pallet-staking",
- "pallet-staking-async 0.15.0",
+ "pallet-staking-async",
  "pallet-staking-async-ah-client",
  "pallet-state-trie-migration",
  "pallet-treasury",
@@ -10807,33 +10807,6 @@ dependencies = [
  "serde",
  "sp-application-crypto",
  "sp-io",
- "sp-runtime",
- "sp-staking",
-]
-
-[[package]]
-name = "pallet-staking-async"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9bcad125ef451745a2907e9fc4f2dd6af78da055c8a381186b85c552136f48a7"
-dependencies = [
- "frame-benchmarking",
- "frame-election-provider-support",
- "frame-support",
- "frame-system",
- "log",
- "pallet-staking-async-rc-client",
- "parity-scale-codec",
- "rand 0.8.8",
- "rand_chacha 0.3.1",
- "scale-info",
- "serde",
- "sp-application-crypto",
- "sp-arithmetic",
- "sp-core",
- "sp-crypto-hashing",
- "sp-io",
- "sp-npos-elections",
  "sp-runtime",
  "sp-staking",
 ]

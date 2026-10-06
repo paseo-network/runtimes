@@ -20,13 +20,13 @@ use super::{
 	CollatorSelection, ParachainInfo, ParachainSystem, PasWeightToFee as WeightToFee, PolkadotXcm,
 	Runtime, RuntimeCall, RuntimeEvent, RuntimeHoldReason, RuntimeOrigin, XcmpQueue,
 };
-use crate::{TransactionByteFee, CENTS};
+use crate::{system_para_deposit, TransactionByteFee, CENTS};
 #[cfg(feature = "runtime-benchmarks")]
 use assets_common::local_and_foreign_assets::ForeignAssetReserveData;
 use frame_support::{
 	parameter_types,
 	traits::{
-		fungible::ItemOf,
+		fungible::{HoldConsideration, ItemOf},
 		tokens::{imbalance::ResolveTo, ConversionToAssetBalance},
 		ConstU32, Contains, ContainsPair, Equals, Everything, LinearStoragePrice, Nothing,
 		ProcessMessageError,
@@ -456,8 +456,8 @@ pub type XcmRouter = WithUniqueTopic<(
 )>;
 
 parameter_types! {
-	pub const DepositPerItem: Balance = crate::deposit(1, 0);
-	pub const DepositPerByte: Balance = crate::deposit(0, 1);
+	pub const DepositPerItem: Balance = system_para_deposit(1, 0);
+	pub const DepositPerByte: Balance = system_para_deposit(0, 1);
 	pub const AuthorizeAliasHoldReason: RuntimeHoldReason =
 		RuntimeHoldReason::PolkadotXcm(pallet_xcm::HoldReason::AuthorizeAlias);
 }

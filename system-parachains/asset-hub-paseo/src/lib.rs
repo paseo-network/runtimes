@@ -144,7 +144,7 @@ use indiv_precompile_nft_claims::NftClaimsMinter;
 use indiv_precompile_personhood::PersonhoodCheck;
 use indiv_precompile_scarcity::{ScarcityCollection, ScarcityFactory};
 use pallet_asset_conversion_precompiles::AssetConversion as AssetConversionPrecompile;
-use pallet_assets_precompiles::{ForeignAssetId, ForeignIdConfig, InlineIdConfig, ERC20};
+use pallet_assets_precompiles::{ForeignIdConfig, InlineIdConfig, ERC20};
 use pallet_nfts::PalletFeatures;
 use pallet_nomination_pools::PoolId;
 use pallet_vesting_precompiles::Vesting as VestingPrecompile;
@@ -1071,7 +1071,7 @@ impl pallet_asset_conversion_tx_payment::Config for Runtime {
 impl pallet_sudo::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeCall = RuntimeCall;
-	type WeightInfo = pallet_sudo::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::pallet_sudo::WeightInfo<Runtime>;
 }
 
 parameter_types! {

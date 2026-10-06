@@ -81,7 +81,7 @@ indiv-pallet-score = { git = "https://github.com/paritytech/individuality-commun
 # Paseo-only individuality crates that upstream does not carry.
 indiv-pallet-storage-initialization = { path = "pallets/storage-initialization", default-features = false }
 pallet-rc-migrator = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.5.0", default-features = false }
-pallet-ah-ops = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.4.0", default-features = false }
+pallet-ah-ops = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.5.0", default-features = false }
 pallet-election-provider-multi-block = { version = "0.11.0", default-features = false }
 pallet-staking-async = { version = "0.15.0", default-features = false }
 hex = { version = "0.4.3", default-features = false }

@@ -15,7 +15,10 @@
 
 //! The runtime migrations per release.
 
-use crate::Runtime;
+use crate::{
+	Assets, PgasAdmin, PgasAssetId, PgasMinBalance, Runtime, RuntimeOrigin,
+	TrustBackedAssetsInstance, Weight,
+};
 use frame_support::parameter_types;
 
 /// Provides the initial `LastIssuanceTimestamp` for the DAP V1->V2 migration.
@@ -262,7 +265,7 @@ pub type Unreleased = (
 		crate::dynamic_params::staking_election::MaxEraDuration,
 	>,
 	MigrateBountyAccountAssets,
-	pallet_staking_async::migration::SetWeightedPointsFormulaStartEra<Runtime>,
+	pallet_staking_async::migrations::SetWeightedPointsFormulaStartEra<Runtime>,
 	// Create the PGAS asset (id 2_000_000_000) used by the individuality pallets.
 	ForceCreatePgasAsset,
 	// individuality v0.3.1 gave `AccountNameRecord` a `chat` field on each of `lite`/`full`.

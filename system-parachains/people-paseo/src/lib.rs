@@ -715,7 +715,7 @@ impl cumulus_pallet_weight_reclaim::Config for Runtime {
 impl pallet_sudo::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeCall = RuntimeCall;
-	type WeightInfo = pallet_sudo::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::pallet_sudo::WeightInfo<Runtime>;
 }
 
 impl<LocalCall> CreateBare<LocalCall> for Runtime
@@ -1352,21 +1352,6 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl xcm_runtime_apis::authorized_aliases::AuthorizedAliasersApi<Block> for Runtime {
-		fn authorized_aliasers(target: VersionedLocation) -> Result<
-			Vec<xcm_runtime_apis::authorized_aliases::OriginAliaser>,
-			xcm_runtime_apis::authorized_aliases::Error
-		> {
-			PolkadotXcm::authorized_aliasers(target)
-		}
-		fn is_authorized_alias(origin: VersionedLocation, target: VersionedLocation) -> Result<
-			bool,
-			xcm_runtime_apis::authorized_aliases::Error
-		> {
-			PolkadotXcm::is_authorized_alias(origin, target)
-		}
-	}
-
 	impl indiv_pallet_nft_credits::runtime_api::NftCreditsApi<Block, AccountId, BlockNumber> for Runtime {
 		fn nft_claim_credit_roots(
 			claimant: indiv_support::identity::AccountOrPerson<AccountId>,
@@ -1399,15 +1384,6 @@ impl_runtime_apis! {
 	impl cumulus_primitives_core::GetParachainInfo<Block> for Runtime {
 		fn parachain_id() -> ParaId {
 			ParachainInfo::parachain_id()
-		}
-	}
-
-	impl xcm_runtime_apis::trusted_query::TrustedQueryApi<Block> for Runtime {
-		fn is_trusted_reserve(asset: VersionedAsset, location: VersionedLocation) -> xcm_runtime_apis::trusted_query::XcmTrustedQueryResult {
-			PolkadotXcm::is_trusted_reserve(asset, location)
-		}
-		fn is_trusted_teleporter(asset: VersionedAsset, location: VersionedLocation) -> xcm_runtime_apis::trusted_query::XcmTrustedQueryResult {
-			PolkadotXcm::is_trusted_teleporter(asset, location)
 		}
 	}
 
