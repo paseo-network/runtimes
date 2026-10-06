@@ -127,9 +127,10 @@ use frame_support::{
 		fungible::{self, HoldConsideration},
 		fungibles,
 		tokens::imbalance::{ResolveAssetTo, ResolveTo},
-		AsEnsureOriginWithArg, ConstBool, ConstU16, ConstU32, ConstU64, ConstU8, ConstantStoragePrice,
-		Contains, ContainsPair, EitherOf, EitherOfDiverse, Equals, InstanceFilter,
-		LinearStoragePrice, NeverEnsureOrigin, PrivilegeCmp, TransformOrigin, WithdrawReasons,
+		AsEnsureOriginWithArg, ConstBool, ConstU16, ConstU32, ConstU64, ConstU8,
+		ConstantStoragePrice, Contains, ContainsPair, EitherOf, EitherOfDiverse, Equals,
+		InstanceFilter, LinearStoragePrice, NeverEnsureOrigin, PrivilegeCmp, TransformOrigin,
+		WithdrawReasons,
 	},
 	weights::{ConstantMultiplier, Weight},
 	PalletId,
@@ -1674,15 +1675,15 @@ impl indiv_pallet_scarcity::Config for Runtime {
 	type MetadataDeposit = ScarcityStoragePrice;
 	type MaxKeyLen = ConstU32<32>;
 	type MaxValueLen = ConstU32<256>;
-type MaxCollectionMetadata = ConstU32<100>;
+	type MaxCollectionMetadata = ConstU32<100>;
 	type MaxItemMetadata = ConstU32<100>;
 	type MaxInstanceMetadata = ConstU32<16>;
-    // Matches Coinage's `CoinFailureLockPeriod` and paces retries of a failing purse key.
+	// Matches Coinage's `CoinFailureLockPeriod` and paces retries of a failing purse key.
 	type LockPeriod = ConstU64<60>;
 	type MaxTransferPriority = ConstU64<1_000_000>;
 	// Matches Coinage's `MaximumAge`: the feeless moves one mint buys, after which a move is paid
 	// for and the budget refills.
-	type MaximumMoves = ConstU16<16>;f
+	type MaximumMoves = ConstU16<16>;
 	// Clears a collection's nft-claims minter registration when the collection is deleted, so no
 	// registration outlives the collection it names.
 	type OnCollectionDeleted = indiv_pallet_nft_claims::ClearCollectionMinter<Runtime>;
@@ -3301,8 +3302,8 @@ mod benches {
 	use super::*;
 	use alloc::boxed::Box;
 	use frame_support::assert_ok;
+	use indiv_system_parachains_commmon::benchmarking::set_up_worst_case_authorized_alias;
 	use paseo_runtime_constants::system_parachain::PeopleParaId;
-    use indiv_system_parachains_commmon::benchmarking::set_up_worst_case_authorized_alias;
 	use system_parachains_constants::paseo::locations::PeopleLocation;
 
 	frame_benchmarking::define_benchmarks!(
@@ -3802,7 +3803,7 @@ mod benches {
 		}
 
 		fn alias_origin() -> Result<(Location, Location), BenchmarkError> {
-Ok(set_up_worst_case_authorized_alias::<Runtime>())
+			Ok(set_up_worst_case_authorized_alias::<Runtime>())
 		}
 	}
 

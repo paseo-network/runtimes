@@ -18,7 +18,7 @@ use super::{
 	people::{ExternalAssetLocation, FungibleExternalAsset},
 	AccountId, AllPalletsWithSystem, AssetRate, Assets as AssetsPallet, Balance, Balances,
 	CollatorSelection, ParachainInfo, ParachainSystem, PasWeightToFee as WeightToFee, PolkadotXcm,
-	Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, XcmpQueue, RuntimeHoldReason
+	Runtime, RuntimeCall, RuntimeEvent, RuntimeHoldReason, RuntimeOrigin, XcmpQueue,
 };
 use crate::{TransactionByteFee, CENTS};
 #[cfg(feature = "runtime-benchmarks")]
@@ -28,7 +28,7 @@ use frame_support::{
 	traits::{
 		fungible::ItemOf,
 		tokens::{imbalance::ResolveTo, ConversionToAssetBalance},
-		ConstU32, Contains, ContainsPair, LinearStoragePrice, Equals, Everything, Nothing,
+		ConstU32, Contains, ContainsPair, Equals, Everything, LinearStoragePrice, Nothing,
 		ProcessMessageError,
 	},
 };
@@ -248,7 +248,7 @@ pub type Barrier = TrailingSetTopicAsId<
 							Equals<AssetHubLocation>,
 							AssetHubPlurality,
 						),
-                        // The barrier runs before fees: keep this computation-only.
+						// The barrier runs before fees: keep this computation-only.
 						// Do not use `TrustedAliasers` here.
 						CheapTrustedAliasers,
 					>,
@@ -492,7 +492,7 @@ impl pallet_xcm::Config for Runtime {
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type MaxRemoteLockConsumers = ConstU32<0>;
 	type RemoteLockConsumerIdentifier = ();
-    	// xcm_executor::Config::Aliasers includes pallet_xcm::AuthorizedAliasers.
+	// xcm_executor::Config::Aliasers includes pallet_xcm::AuthorizedAliasers.
 	type AuthorizedAliasConsideration = HoldConsideration<
 		AccountId,
 		Balances,

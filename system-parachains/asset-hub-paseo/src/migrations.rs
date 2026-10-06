@@ -276,7 +276,7 @@ pub type Unreleased = (
 	// Storage-version bootstrap for the two pallets added in this release, as upstream
 	// `next-asset-hub-paseo` carries them. Both are `VersionedMigration`s over empty maps here.
 	indiv_pallet_scarcity::migration::MigrateV0ToV1<Runtime>,
-    indiv_pallet_scarcity::migration::MigrateV1ToV2<Runtime>,
+	indiv_pallet_scarcity::migration::MigrateV1ToV2<Runtime>,
 	indiv_pallet_nft_claims::migration::MigrateV0ToV1<Runtime>,
 );
 

@@ -1092,7 +1092,9 @@ mod benches {
 		}
 
 		fn alias_origin() -> Result<(Location, Location), BenchmarkError> {
-					Ok(indiv_system_parachains_common::benchmarking::set_up_worst_case_authorized_alias::<Runtime>())
+			Ok(indiv_system_parachains_common::benchmarking::set_up_worst_case_authorized_alias::<
+				Runtime,
+			>())
 		}
 	}
 

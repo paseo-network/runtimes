@@ -968,7 +968,7 @@ impl indiv_pallet_nft_credits::Config for Runtime {
 	// costs about 290 KB of the proof budget and eight of them about half of it. The
 	// `integrity_test` is what holds this to the budget. A block records at most one tree block, so
 	// a call per block removes them eight times faster than they are made.
-	type MaxAwardBlocksPerSweep = ConstU32<8>;f
+	type MaxAwardBlocksPerSweep = ConstU32<8>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = NftCreditsBenchmarkHelper;
 }
