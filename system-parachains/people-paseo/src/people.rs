@@ -911,17 +911,15 @@ impl indiv_pallet_nft_credits::Config for Runtime {
 	type NftClaimsPalletIndex = ConstU8<96>;
 	type ChannelInfo = ParachainSystem;
 	// One tree per block at most, and the offchain worker ships them every block, so the queue
-	// only fills while delivery to Asset Hub is down. Matched to `MaxRetainedCreditTrees`, which
-	// counts the same trees: the oldest tree still queued is then one whose awards are ordinarily
-	// still in state, so a delivery that outlasts the outage needs no proof rebuilt from events. A
-	// `replay_credit_trees` during the outage breaks that, its tree being claimable on Asset Hub
-	// while the delivery is still queued here, so its last claim there has that chain ask for a
-	// deletion the queue entry then finds nothing to deliver. Eight full messages drain it.
+    // only fills while delivery to Asset Hub is down. Far fewer blocks than `AwardRetentionTtl`
+	// retains, so the oldest queued tree is one whose awards are still in state and a delivery that
+	// outlasts an outage needs no proof rebuilt from events. Eight full messages drain it. A
+	// `replay_credit_trees` during the outage breaks that: its tree is claimable on Asset Hub while
+	// the delivery is still queued here, so the last claim there asks for a deletion this entry
+	// then cannot deliver.
 	//
-	// An entry is 12 bytes and the queue is read at the value's `MaxEncodedLen`, so
-	// `authorize_send_credit_trees` pays about 3 KB of the `Normal` proof budget for it. A tree
-	// past the bound is dropped from delivery, not lost: its root stays on chain for
-	// `replay_credit_trees`.
+    // An entry is 12 bytes, read at the value's `MaxEncodedLen`, so
+	// `authorize_send_credit_trees` pays about 3 KB of the `Normal` proof budget.
 	type MaxQueuedCreditTrees = ConstU32<256>;
 	type MaxCreditTreesPerMessage = ConstU32<32>;
 	type ReplayCooldownSeconds = ConstU64<60>;
@@ -929,33 +927,35 @@ impl indiv_pallet_nft_credits::Config for Runtime {
 	// Entries are the distinct blocks whose trees commit a claimant's credits, not a window of
 	// consecutive ones, so the bound counts games rather than time. One game awards a claimant at
 	// most `(MaxGroupSize - 1) * MaxRounds = 15` credits, one per co-player that reported `Person`-
+    // on them, plus the attendance backfill, which awards the rest in a single call. Those land in
+	// 16 distinct blocks only if no two reports ever share one, and reports cluster. At one game a
+	// week `AwardRetentionTtl` spans about 13 games, so 208 entries cover the window even at that
+	// worst case; this leaves margin over it, and about 85 games at the few blocks a game usually
+	// takes. The list costs 1 KB at this bound.
 	//
-	// A game cycle runs 17.5 minutes, so back to back games fill this in about two hours at
-	// the usual few entries each, and in two games if both hit the worst case. That is the
-	// intended horizon: the index is a lookup aid for trees recent enough to still be worth
-	// minting against, not a record for the chain's lifetime, and the oldest block drops out
-	// once it is full.
-	type MaxCreditBlocksPerClaimant = ConstU32<32>;
-	// The window in which a claim is provable from state alone, counted in trees. Reports cluster
-	// inside a game's 10-minute reporting phase, so a game contributes a few dozen trees and this
-	// covers several games, well past the two hours the per-claimant index spans.
-	//
-	// It is also the state the chain carries for them: at most this many trees of the pallet's
-	// `AWARDS_PER_TREE` awards, an award being 65 bytes, so about 34 MB were every retained tree
-	// saturated. Trees run that full only while the chain awards faster than one tree a block, so
-	// the figure tracks the mints actually outstanding. A tree that drops out delays no mint,
-	// because its root stays on chain until the claims chain is finished with it or the root TTL
-	// runs out. Its awards then have to come from the events naming its tree block.
-	type MaxRetainedCreditTrees = ConstU32<256>;
+	// Being a count, the window shortens as games run more often. Governance sets the schedule and
+	// `new_game` only refuses a concurrent game, so back-to-back games would fill this in a day.
+	type MaxCreditBlocksPerClaimant = ConstU32<256>;
+	// The claims chain's own deadline, which is what the two have to agree on. What it costs this
+	// chain follows participation rather than a constant: a player earns at most
+	// `(MaxGroupSize - 1) * MaxRounds = 15` credits a game, so at one game a week 90 days is about
+	// 195 credits, or 13 KB at 65 bytes an award. Retaining personhood needs one game per
+	// `NonPlayingKickoutTime` and costs a fraction of that.
+	type AwardRetentionTtl = ClaimsChainTreeTtl;
 	type EnsureClaimsChainOrigin = EnsureClaimsChainSibling;
 	// At least the claims pallet's `MaxTreeDeletionsPerMessage`. A larger message fails to decode
 	// here, and the root TTL then removes the roots its deletions named.
 	type MaxTreeDeletionsPerMessage = ConstU32<64>;
 	type ClaimsChainTreeTtl = ClaimsChainTreeTtl;
-	// One block records at most one root, so a day holds 43200 of them at 2 seconds a block, which
-	// 64 a block clears in about 20 minutes. The root TTL is the longer of the two, so a sweep only
-	// removes roots the claims chain has already given up on, with a month of slack for a backlog.
+	// One block records at most one root, so a day holds 43200 at 2 seconds a block, which 64 per
+	// block clears in about 20 minutes. The root TTL is the longer of the two, so a sweep only
+	// removes roots the claims chain has given up on, with a month of slack for a backlog.
 	type MaxRootsPerSweep = ConstU32<64>;
+	// A tree block's awards are `CHUNKS_PER_TREE` keys, each charged at a full chunk, so one block
+	// costs about 290 KB of the proof budget and eight of them about half of it. The
+	// `integrity_test` is what holds this to the budget. A block records at most one tree block, so
+	// a call per block removes them eight times faster than they are made.
+	type MaxAwardBlocksPerSweep = ConstU32<8>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = NftCreditsBenchmarkHelper;
 }
