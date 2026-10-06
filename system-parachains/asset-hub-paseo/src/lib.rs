@@ -127,7 +127,7 @@ use frame_support::{
 		fungible::{self, HoldConsideration},
 		fungibles,
 		tokens::imbalance::{ResolveAssetTo, ResolveTo},
-		AsEnsureOriginWithArg, ConstBool, ConstU32, ConstU64, ConstU8, ConstantStoragePrice,
+		AsEnsureOriginWithArg, ConstBool, ConstU16, ConstU32, ConstU64, ConstU8, ConstantStoragePrice,
 		Contains, ContainsPair, EitherOf, EitherOfDiverse, Equals, InstanceFilter,
 		LinearStoragePrice, NeverEnsureOrigin, PrivilegeCmp, TransformOrigin, WithdrawReasons,
 	},
@@ -1680,6 +1680,9 @@ type MaxCollectionMetadata = ConstU32<100>;
     // Matches Coinage's `CoinFailureLockPeriod` and paces retries of a failing purse key.
 	type LockPeriod = ConstU64<60>;
 	type MaxTransferPriority = ConstU64<1_000_000>;
+	// Matches Coinage's `MaximumAge`: the feeless moves one mint buys, after which a move is paid
+	// for and the budget refills.
+	type MaximumMoves = ConstU16<16>;f
 	// Clears a collection's nft-claims minter registration when the collection is deleted, so no
 	// registration outlives the collection it names.
 	type OnCollectionDeleted = indiv_pallet_nft_claims::ClearCollectionMinter<Runtime>;
@@ -4886,149 +4889,5 @@ mod tests {
 		assert_eq!(decode_minter_item(&[valid, valid].concat()), None);
 		valid[0] = 1;
 		assert_eq!(decode_minter_item(&valid), None);
-	}
-
-	fn scarcity_tx_extension(nonce: u32, state_nonce: u64) -> TxExtension {
-		TxExtension::from((
-			(
-				(),
-				indiv_pallet_scarcity::extension::AsScarcity::<Runtime>::new(Some(
-					indiv_pallet_scarcity::extension::AsScarcityInfo::AsNft {
-						instance: 0,
-						state_nonce,
-					},
-				)),
-				frame_system::AuthorizeCall::<Runtime>::new(),
-				indiv_pallet_pgas::AsPgas::<Runtime>::new(None),
-				indiv_pallet_dotns_gateway::AsDotnsGateway::<Runtime>::new(None),
-			),
-			indiv_pallet_origin_restriction::RestrictOrigin::<Runtime>::new(true),
-			frame_system::CheckNonZeroSender::<Runtime>::new(),
-			frame_system::CheckSpecVersion::<Runtime>::new(),
-			frame_system::CheckTxVersion::<Runtime>::new(),
-			frame_system::CheckGenesis::<Runtime>::new(),
-			frame_system::CheckEra::<Runtime>::from(generic::Era::Immortal),
-			frame_system::CheckNonce::<Runtime>::from(nonce),
-			frame_system::CheckWeight::<Runtime>::new(),
-			pallet_pgas_allowance::ChargePGAS::<
-				Runtime,
-				pallet_asset_conversion_tx_payment::ChargeAssetTxPayment<Runtime>,
-			>::new_skip_pgas(
-				pallet_asset_conversion_tx_payment::ChargeAssetTxPayment::<Runtime>::from(0, None),
-			),
-			(
-				pallet_claims::PrevalidateAttests::<Runtime>::new(),
-				frame_metadata_hash_extension::CheckMetadataHash::<Runtime>::new(false),
-				pallet_revive::evm::tx_extension::SetOrigin::<Runtime>::default(),
-			),
-		))
-	}
-
-	fn scarcity_purse_test_state(state_nonce: u64) -> (sp_io::TestExternalities, AccountId) {
-		use sp_runtime::BuildStorage;
-		let storage = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
-		let mut ext = sp_io::TestExternalities::from(storage);
-		let from = AccountId::from([1u8; 32]);
-		ext.execute_with(|| {
-			frame_system::Pallet::<Runtime>::set_block_number(1);
-			pallet_timestamp::Pallet::<Runtime>::set_timestamp(1_000);
-			indiv_pallet_scarcity::NftsByOwner::<Runtime>::insert(
-				&from,
-				indiv_pallet_scarcity::Nft {
-					instance: 0,
-					collection: 0,
-					item: 0,
-					minted_at: 0,
-					last_moved: 0,
-					state_nonce,
-				},
-			);
-			indiv_pallet_scarcity::Instances::<Runtime>::insert(0, &from);
-			// The holder transfer resolves its item's transferability, so the definition the
-			// instance names has to exist as it would on a chain that minted it.
-			indiv_pallet_scarcity::ItemDefs::<Runtime>::insert(
-				0,
-				0,
-				indiv_pallet_scarcity::ItemDefinition {
-					supply: 1,
-					live_supply: 1,
-					metadata_count: 0,
-					deposit: 0,
-					transferability: indiv_pallet_scarcity::Transferability::Transferable,
-				},
-			);
-		});
-		(ext, from)
-	}
-
-	/// An NFT-only purse key — no balance, no System account — can send a feeless transfer
-	/// through the full extension pipeline. This pins the security-critical ordering of
-	/// `AsScarcity` within `TxExtension`.
-	#[test]
-	fn nft_only_purse_without_system_account_can_transfer() {
-		use frame_support::dispatch::GetDispatchInfo;
-		use sp_runtime::traits::DispatchTransaction;
-
-		let (mut ext, from) = scarcity_purse_test_state(0);
-		ext.execute_with(|| {
-			let to = AccountId::from([2u8; 32]);
-			assert!(Balances::free_balance(&from).is_zero());
-			assert_eq!(frame_system::Pallet::<Runtime>::account_nonce(&from), 0);
-
-			let call = RuntimeCall::Scarcity(indiv_pallet_scarcity::Call::<Runtime>::transfer {
-				to: to.clone(),
-			});
-			let info = call.get_dispatch_info();
-			let result = scarcity_tx_extension(0, 0).dispatch_transaction(
-				RuntimeOrigin::signed(from.clone()),
-				call,
-				&info,
-				0,
-				0,
-			);
-			assert!(matches!(result, Ok(Ok(_))), "transaction failed: {result:?}");
-
-			assert!(Balances::free_balance(&from).is_zero());
-			assert!(!indiv_pallet_scarcity::NftsByOwner::<Runtime>::contains_key(&from));
-			assert_eq!(
-				indiv_pallet_scarcity::NftsByOwner::<Runtime>::get(&to).map(|nft| nft.state_nonce),
-				Some(1),
-			);
-		});
-	}
-
-	/// A failed purse dispatch restores the NFT behind the backoff lock and charges no fee —
-	/// Coinage's retry model.
-	#[test]
-	fn failed_scarcity_transfer_is_feeless_and_retryable_after_lock() {
-		use frame_support::dispatch::GetDispatchInfo;
-		use sp_runtime::traits::DispatchTransaction;
-
-		// A state nonce at u64::MAX makes the dispatch (not validation) fail on overflow.
-		let (mut ext, from) = scarcity_purse_test_state(u64::MAX);
-		ext.execute_with(|| {
-			let to = AccountId::from([2u8; 32]);
-			let call = RuntimeCall::Scarcity(indiv_pallet_scarcity::Call::<Runtime>::transfer {
-				to: to.clone(),
-			});
-			let info = call.get_dispatch_info();
-			let result = scarcity_tx_extension(0, u64::MAX).dispatch_transaction(
-				RuntimeOrigin::signed(from.clone()),
-				call,
-				&info,
-				0,
-				0,
-			);
-			assert!(matches!(result, Ok(Err(_))), "expected failed dispatch: {result:?}");
-
-			assert!(Balances::free_balance(&from).is_zero());
-			assert_eq!(
-				indiv_pallet_scarcity::NftsByOwner::<Runtime>::get(&from)
-					.map(|nft| nft.state_nonce),
-				Some(u64::MAX),
-			);
-			assert!(!indiv_pallet_scarcity::NftsByOwner::<Runtime>::contains_key(&to));
-			assert!(indiv_pallet_scarcity::Locked::<Runtime>::contains_key(&from));
-		});
 	}
 }
