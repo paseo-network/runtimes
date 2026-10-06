@@ -56,7 +56,7 @@ impl pallet_assets::Config for Runtime {
 	type Extra = ();
 	type WeightInfo = weights::pallet_assets::WeightInfo<Runtime>;
 	type CallbackHandle = ();
-    type AssetIdAllocator = ();
+	type AssetIdAllocator = ();
 	type AssetAccountDeposit = AssetAccountDeposit;
 	type ReserveData = ForeignAssetReserveData;
 	type RemoveItemsLimit = frame_support::traits::ConstU32<1000>;
@@ -239,7 +239,7 @@ impl pallet_assets::Config<PoolAssetsInstance> for Runtime {
 	type Holder = ();
 	type Extra = ();
 	type CallbackHandle = ();
-    type AssetIdAllocator = ();
+	type AssetIdAllocator = ();
 	// ⚠️ In-crate reference weights: this runtime has no benchmarked `pallet_assets_pool` module.
 	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]

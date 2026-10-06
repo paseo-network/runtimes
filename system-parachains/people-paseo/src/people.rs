@@ -911,14 +911,14 @@ impl indiv_pallet_nft_credits::Config for Runtime {
 	type NftClaimsPalletIndex = ConstU8<96>;
 	type ChannelInfo = ParachainSystem;
 	// One tree per block at most, and the offchain worker ships them every block, so the queue
-    // only fills while delivery to Asset Hub is down. Far fewer blocks than `AwardRetentionTtl`
+	// only fills while delivery to Asset Hub is down. Far fewer blocks than `AwardRetentionTtl`
 	// retains, so the oldest queued tree is one whose awards are still in state and a delivery that
 	// outlasts an outage needs no proof rebuilt from events. Eight full messages drain it. A
 	// `replay_credit_trees` during the outage breaks that: its tree is claimable on Asset Hub while
 	// the delivery is still queued here, so the last claim there asks for a deletion this entry
 	// then cannot deliver.
 	//
-    // An entry is 12 bytes, read at the value's `MaxEncodedLen`, so
+	// An entry is 12 bytes, read at the value's `MaxEncodedLen`, so
 	// `authorize_send_credit_trees` pays about 3 KB of the `Normal` proof budget.
 	type MaxQueuedCreditTrees = ConstU32<256>;
 	type MaxCreditTreesPerMessage = ConstU32<32>;
@@ -927,7 +927,7 @@ impl indiv_pallet_nft_credits::Config for Runtime {
 	// Entries are the distinct blocks whose trees commit a claimant's credits, not a window of
 	// consecutive ones, so the bound counts games rather than time. One game awards a claimant at
 	// most `(MaxGroupSize - 1) * MaxRounds = 15` credits, one per co-player that reported `Person`-
-    // on them, plus the attendance backfill, which awards the rest in a single call. Those land in
+	// on them, plus the attendance backfill, which awards the rest in a single call. Those land in
 	// 16 distinct blocks only if no two reports ever share one, and reports cluster. At one game a
 	// week `AwardRetentionTtl` spans about 13 games, so 208 entries cover the window even at that
 	// worst case; this leaves margin over it, and about 85 games at the few blocks a game usually

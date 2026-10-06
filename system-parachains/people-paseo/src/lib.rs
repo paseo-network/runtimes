@@ -1386,7 +1386,7 @@ impl_runtime_apis! {
 		}
 	}
 
-    impl xcm_runtime_apis::trusted_query::TrustedQueryApi<Block> for Runtime {
+	impl xcm_runtime_apis::trusted_query::TrustedQueryApi<Block> for Runtime {
 		fn is_trusted_reserve(asset: VersionedAsset, location: VersionedLocation) -> xcm_runtime_apis::trusted_query::XcmTrustedQueryResult {
 			PolkadotXcm::is_trusted_reserve(asset, location)
 		}
