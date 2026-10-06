@@ -28,6 +28,7 @@ kusama-runtime-constants = { workspace = true }
 paseo-runtime-constants = { workspace = true }
 system-parachains-constants = { workspace = true }
 system-parachains-common = { workspace = true }
+indiv-system-parachains-common = { workspace = true }
 
 # Individuality
 indiv-pallet-alias-accounts = { workspace = true }
@@ -290,8 +291,8 @@ runtime-benchmarks = [
 	"snowbridge-runtime-common/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"sp-staking/runtime-benchmarks",
-	"system-parachains-common/runtime-benchmarks",
 	"system-parachains-constants/runtime-benchmarks",
+	"indiv-system-parachains-common/runtime-benchmarks",
 	"verifiable/no-std-prover",
 	"xcm-builder/runtime-benchmarks",
 	"xcm-executor/runtime-benchmarks",
@@ -384,6 +385,7 @@ try-runtime = [
 	"snowbridge-runtime-common/try-runtime",
 	"sp-runtime/try-runtime",
 	"system-parachains-common/try-runtime",
+	"indiv-system-parachains-common/try-runtime",
 	"system-parachains-constants/try-runtime",
 ]
 std = [
@@ -525,6 +527,7 @@ std = [
 	"sp-weights/std",
 	"substrate-wasm-builder",
 	"system-parachains-common/std",
+	"indiv-system-parachains-common/std",
 	"system-parachains-constants/std",
 	"verifiable/std",
 	"xcm-builder/std",

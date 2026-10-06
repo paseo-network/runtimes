@@ -48,6 +48,7 @@ pallet-pgas-allowance = { version = "0.4.0", default-features = false }
 # ---- Individuality (proof-of-personhood) crates, consumed from upstream `main` ----
 # The pallets, precompiles and `indiv-support` are no longer vendored in this repository. Cargo.lock
 # pins the exact upstream commit; bump it with `cargo update -p indiv-support` (and friends).
+indiv-system-parachains-common = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false}
 indiv-support = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
 indiv-precompile-nft-claims = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
 indiv-precompile-personhood = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }

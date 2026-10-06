@@ -1092,9 +1092,7 @@ mod benches {
 		}
 
 		fn alias_origin() -> Result<(Location, Location), BenchmarkError> {
-			// `Aliasers = Nothing`: this chain does not support `AliasOrigin`, so there is no
-			// valid pair to benchmark. Weighed as `Weight::MAX` in `weights/xcm/mod.rs` instead.
-			Err(BenchmarkError::Skip)
+					Ok(indiv_system_parachains_common::benchmarking::set_up_worst_case_authorized_alias::<Runtime>())
 		}
 	}
 
@@ -1324,6 +1322,22 @@ impl_runtime_apis! {
 				AccountId,
 				xcm_config::LocationToAccountId,
 			>::convert_location(location)
+		}
+	}
+
+	impl xcm_runtime_apis::authorized_aliases::AuthorizedAliasersApi<Block> for Runtime {
+		fn authorized_aliasers(target: VersionedLocation) -> Result<
+			Vec<xcm_runtime_apis::authorized_aliases::OriginAliaser>,
+			xcm_runtime_apis::authorized_aliases::Error
+		> {
+			PolkadotXcm::authorized_aliasers(target)
+		}
+
+		fn is_authorized_alias(origin: VersionedLocation, target: VersionedLocation) -> Result<
+			bool,
+			xcm_runtime_apis::authorized_aliases::Error
+		> {
+			PolkadotXcm::is_authorized_alias(origin, target)
 		}
 	}
 

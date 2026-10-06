@@ -3295,6 +3295,7 @@ mod benches {
 	use alloc::boxed::Box;
 	use frame_support::assert_ok;
 	use paseo_runtime_constants::system_parachain::PeopleParaId;
+    use indiv_system_parachains_commmon::benchmarking::set_up_worst_case_authorized_alias;
 	use system_parachains_constants::paseo::locations::PeopleLocation;
 
 	frame_benchmarking::define_benchmarks!(
@@ -3794,10 +3795,7 @@ mod benches {
 		}
 
 		fn alias_origin() -> Result<(Location, Location), BenchmarkError> {
-			Ok((
-				Location::new(1, [Parachain(1001)]),
-				Location::new(1, [Parachain(1001), AccountId32 { id: [111u8; 32], network: None }]),
-			))
+Ok(set_up_worst_case_authorized_alias::<Runtime>())
 		}
 	}
 

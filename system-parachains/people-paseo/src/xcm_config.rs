@@ -18,7 +18,7 @@ use super::{
 	people::{ExternalAssetLocation, FungibleExternalAsset},
 	AccountId, AllPalletsWithSystem, AssetRate, Assets as AssetsPallet, Balance, Balances,
 	CollatorSelection, ParachainInfo, ParachainSystem, PasWeightToFee as WeightToFee, PolkadotXcm,
-	Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, XcmpQueue,
+	Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, XcmpQueue, RuntimeHoldReason
 };
 use crate::{TransactionByteFee, CENTS};
 #[cfg(feature = "runtime-benchmarks")]
@@ -28,7 +28,7 @@ use frame_support::{
 	traits::{
 		fungible::ItemOf,
 		tokens::{imbalance::ResolveTo, ConversionToAssetBalance},
-		ConstU32, Contains, ContainsPair, Disabled, Equals, Everything, Nothing,
+		ConstU32, Contains, ContainsPair, LinearStoragePrice, Equals, Everything, Nothing,
 		ProcessMessageError,
 	},
 };
@@ -248,7 +248,9 @@ pub type Barrier = TrailingSetTopicAsId<
 							Equals<AssetHubLocation>,
 							AssetHubPlurality,
 						),
-						TrustedAliasers,
+                        // The barrier runs before fees: keep this computation-only.
+						// Do not use `TrustedAliasers` here.
+						CheapTrustedAliasers,
 					>,
 					// Subscriptions for version tracking are OK.
 					AllowSubscriptionsFrom<ParentRelayOrSiblingParachains>,
@@ -305,18 +307,30 @@ impl ContainsPair<Asset, Location> for AssetHubReserveAsset {
 	}
 }
 
-/// Defines origin aliasing rules for this chain.
-///
-/// - Allow any origin to alias into a child sub-location (equivalent to DescendOrigin),
-/// - Allow same accounts to alias into each other across system chains,
-/// - Allow AssetHub root to alias into anything,
-/// - Allow origins explicitly authorized to alias into target location.
-pub type TrustedAliasers = (
+/// Rejects aliases into the location that `LocationAsSuperuser` converts to Root.
+pub struct DenyAliasIntoSuperuser<Inner>(core::marker::PhantomData<Inner>);
+impl<Inner: ContainsPair<Location, Location>> ContainsPair<Location, Location>
+	for DenyAliasIntoSuperuser<Inner>
+{
+	fn contains(origin: &Location, target: &Location) -> bool {
+		target != &AssetHubLocation::get() && Inner::contains(origin, target)
+	}
+}
+
+/// Aliasing rules that the barrier evaluates before charging fees.
+/// These filters must not read storage selected by an untrusted message.
+/// Stored authorizations belong only in [`TrustedAliasers`].
+pub type CheapTrustedAliasers = DenyAliasIntoSuperuser<UnguardedCheapAliasers>;
+
+type UnguardedCheapAliasers = (
 	AliasChildLocation,
 	AliasAccountId32FromSiblingSystemChain,
 	AliasOriginRootUsingFilter<AssetHubLocation, Everything>,
-	AuthorizedAliasers<Runtime>,
 );
+
+/// Execution permits cheap aliases and stored authorizations except into the superuser location.
+pub type TrustedAliasers =
+	DenyAliasIntoSuperuser<(UnguardedCheapAliasers, AuthorizedAliasers<Runtime>)>;
 
 /// The asset transactors responsible for handling assets in XCM.
 pub type AssetTransactors = (FungibleTransactor, FungiblesTransactor);
@@ -419,7 +433,7 @@ impl xcm_executor::Config for XcmConfig {
 	type UniversalAliases = Nothing;
 	type CallDispatcher = RuntimeCall;
 	type SafeCallFilter = Everything;
-	type Aliasers = Nothing;
+	type Aliasers = TrustedAliasers;
 	type TransactionalProcessor = FrameTransactionalProcessor;
 	type HrmpNewChannelOpenRequestHandler = ();
 	type HrmpChannelAcceptedHandler = ();
@@ -440,6 +454,13 @@ pub type XcmRouter = WithUniqueTopic<(
 	// ..and XCMP to communicate with the sibling chains.
 	XcmpQueue,
 )>;
+
+parameter_types! {
+	pub const DepositPerItem: Balance = crate::deposit(1, 0);
+	pub const DepositPerByte: Balance = crate::deposit(0, 1);
+	pub const AuthorizeAliasHoldReason: RuntimeHoldReason =
+		RuntimeHoldReason::PolkadotXcm(pallet_xcm::HoldReason::AuthorizeAlias);
+}
 
 impl pallet_xcm::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
@@ -471,7 +492,13 @@ impl pallet_xcm::Config for Runtime {
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type MaxRemoteLockConsumers = ConstU32<0>;
 	type RemoteLockConsumerIdentifier = ();
-	type AuthorizedAliasConsideration = Disabled;
+    	// xcm_executor::Config::Aliasers includes pallet_xcm::AuthorizedAliasers.
+	type AuthorizedAliasConsideration = HoldConsideration<
+		AccountId,
+		Balances,
+		AuthorizeAliasHoldReason,
+		LinearStoragePrice<DepositPerItem, DepositPerByte, Balance>,
+	>;
 }
 
 impl cumulus_pallet_xcm::Config for Runtime {
