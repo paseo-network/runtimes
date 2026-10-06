@@ -1674,7 +1674,9 @@ impl indiv_pallet_scarcity::Config for Runtime {
 	type MetadataDeposit = ScarcityStoragePrice;
 	type MaxKeyLen = ConstU32<32>;
 	type MaxValueLen = ConstU32<256>;
-	type MaxInstanceMetadata = ConstU32<100>;
+type MaxCollectionMetadata = ConstU32<100>;
+	type MaxItemMetadata = ConstU32<100>;
+	type MaxInstanceMetadata = ConstU32<16>;
     // Matches Coinage's `CoinFailureLockPeriod` and paces retries of a failing purse key.
 	type LockPeriod = ConstU64<60>;
 	type MaxTransferPriority = ConstU64<1_000_000>;
@@ -2255,7 +2257,7 @@ impl indiv_pallet_nft_claims::CollectionSelector<AccountId> for NftClaimsCollect
 	fn validate(contract: sp_core::H160) -> sp_runtime::DispatchResult {
 		frame_support::ensure!(
 			pallet_revive::AccountInfo::<Runtime>::is_contract(&contract),
-			sp_runtime::DispatchError::Other("no contract code at the minter address")
+			indiv_pallet_nft_claims::Error::<Runtime>::MinterNotAContract
 		);
 		Ok(())
 	}
@@ -2283,7 +2285,9 @@ impl indiv_pallet_nft_claims::CollectionSelector<AccountId> for NftClaimsCollect
 				"minter contract {contract:?} reverted with 0x{}",
 				sp_core::hexdisplay::HexDisplay::from(&ret.data)
 			);
-			return Err(fail(sp_runtime::DispatchError::Other("minter contract reverted")));
+			return Err(fail(
+				indiv_pallet_nft_claims::Error::<Runtime>::MinterContractReverted.into(),
+			));
 		}
 		let item = decode_minter_item(&ret.data).ok_or_else(|| {
 			log::debug!(
@@ -2291,7 +2295,7 @@ impl indiv_pallet_nft_claims::CollectionSelector<AccountId> for NftClaimsCollect
 				"minter contract {contract:?} returned no canonical uint32 item: 0x{}",
 				sp_core::hexdisplay::HexDisplay::from(&ret.data)
 			);
-			fail(sp_runtime::DispatchError::Other("minter contract returned no item"))
+			fail(indiv_pallet_nft_claims::Error::<Runtime>::MinterContractInvalidReturn.into())
 		})?;
 		Ok(indiv_pallet_nft_claims::Selection { item, weight_consumed })
 	}
@@ -4141,22 +4145,16 @@ pallet_revive::impl_runtime_apis_plus_revive_traits!(
 
 	impl indiv_pallet_scarcity::runtime_api::ScarcityApi<Block> for Runtime {
 		fn metadata_batch(
-			queries: Vec<indiv_pallet_scarcity::runtime_api::MetadataQuery>,
-		) -> Result<
-			Vec<indiv_pallet_scarcity::runtime_api::MetadataLayers>,
-			indiv_pallet_scarcity::runtime_api::BatchError,
-		> {
+			queries: indiv_pallet_scarcity::runtime_api::MetadataQueries,
+		) -> Vec<indiv_pallet_scarcity::runtime_api::MetadataLayers> {
 			Scarcity::metadata_batch(queries)
 		}
 	}
 
 	impl indiv_pallet_nft_claims::runtime_api::NftClaimsApi<Block> for Runtime {
 		fn preview_mints(
-			queries: Vec<indiv_pallet_nft_claims::runtime_api::PreviewQuery>,
-		) -> Result<
-			Vec<indiv_pallet_nft_claims::runtime_api::PreviewOutcome>,
-			indiv_pallet_nft_claims::runtime_api::BatchError,
-		> {
+			queries: indiv_pallet_nft_claims::runtime_api::PreviewQueries,
+		) -> Vec<indiv_pallet_nft_claims::runtime_api::PreviewOutcome> {
 			NftClaims::preview_mints(queries)
 		}
 	}
