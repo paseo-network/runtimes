@@ -195,6 +195,7 @@ pub type Unreleased = (
 		crate::dynamic_params::staking_election::MaxEraDuration,
 	>,
 	MigrateBountyAccountAssets,
+    pallet_staking_async::migration::SetWeightedPointsFormulaStartEra<Runtime>,
 	// Create the PGAS asset (id 2_000_000_000) used by the individuality pallets.
 	indiv_pallet_pgas::migration::CreatePgasAsset<Runtime>,
 	// individuality v0.3.1 gave `AccountNameRecord` a `chat` field on each of `lite`/`full`.
