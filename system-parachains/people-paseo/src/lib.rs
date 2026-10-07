@@ -715,7 +715,7 @@ impl cumulus_pallet_weight_reclaim::Config for Runtime {
 impl pallet_sudo::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeCall = RuntimeCall;
-	type WeightInfo = pallet_sudo::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::pallet_sudo::WeightInfo<Runtime>;
 }
 
 impl<LocalCall> CreateBare<LocalCall> for Runtime
@@ -1092,9 +1092,9 @@ mod benches {
 		}
 
 		fn alias_origin() -> Result<(Location, Location), BenchmarkError> {
-			// `Aliasers = Nothing`: this chain does not support `AliasOrigin`, so there is no
-			// valid pair to benchmark. Weighed as `Weight::MAX` in `weights/xcm/mod.rs` instead.
-			Err(BenchmarkError::Skip)
+			Ok(indiv_system_parachains_common::benchmarking::set_up_worst_case_authorized_alias::<
+				Runtime,
+			>())
 		}
 	}
 
@@ -1282,7 +1282,10 @@ impl_runtime_apis! {
 
 	impl xcm_runtime_apis::fees::XcmPaymentApi<Block> for Runtime {
 		fn query_acceptable_payment_assets(xcm_version: xcm::Version) -> Result<Vec<VersionedAssetId>, XcmPaymentApiError> {
-			let acceptable_assets = vec![AssetId(xcm_config::RelayLocation::get())];
+			let acceptable_assets = alloc::vec![
+				AssetId(xcm_config::RelayLocation::get()),
+				AssetId(people::ExternalAssetLocation::get()),
+			];
 			PolkadotXcm::query_acceptable_payment_assets(xcm_version, acceptable_assets)
 		}
 
@@ -1324,15 +1327,6 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl xcm_runtime_apis::trusted_query::TrustedQueryApi<Block> for Runtime {
-		fn is_trusted_reserve(asset: VersionedAsset, location: VersionedLocation) -> xcm_runtime_apis::trusted_query::XcmTrustedQueryResult {
-			PolkadotXcm::is_trusted_reserve(asset, location)
-		}
-		fn is_trusted_teleporter(asset: VersionedAsset, location: VersionedLocation) -> xcm_runtime_apis::trusted_query::XcmTrustedQueryResult {
-			PolkadotXcm::is_trusted_teleporter(asset, location)
-		}
-	}
-
 	impl xcm_runtime_apis::authorized_aliases::AuthorizedAliasersApi<Block> for Runtime {
 		fn authorized_aliasers(target: VersionedLocation) -> Result<
 			Vec<xcm_runtime_apis::authorized_aliases::OriginAliaser>,
@@ -1340,11 +1334,21 @@ impl_runtime_apis! {
 		> {
 			PolkadotXcm::authorized_aliasers(target)
 		}
+
 		fn is_authorized_alias(origin: VersionedLocation, target: VersionedLocation) -> Result<
 			bool,
 			xcm_runtime_apis::authorized_aliases::Error
 		> {
 			PolkadotXcm::is_authorized_alias(origin, target)
+		}
+	}
+
+	impl xcm_runtime_apis::trusted_query::TrustedQueryApi<Block> for Runtime {
+		fn is_trusted_reserve(asset: VersionedAsset, location: VersionedLocation) -> xcm_runtime_apis::trusted_query::XcmTrustedQueryResult {
+			PolkadotXcm::is_trusted_reserve(asset, location)
+		}
+		fn is_trusted_teleporter(asset: VersionedAsset, location: VersionedLocation) -> xcm_runtime_apis::trusted_query::XcmTrustedQueryResult {
+			PolkadotXcm::is_trusted_teleporter(asset, location)
 		}
 	}
 

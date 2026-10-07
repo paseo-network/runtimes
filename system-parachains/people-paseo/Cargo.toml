@@ -91,6 +91,7 @@ indiv-pallet-proof-of-ink = { workspace = true }
 indiv-pallet-resources = { workspace = true }
 indiv-pallet-score = { workspace = true }
 indiv-pallet-storage-initialization = { workspace = true }
+indiv-system-parachains-common = { workspace = true }
 
 # Polkadot
 pallet-xcm = { workspace = true }
@@ -173,6 +174,7 @@ std = [
 	"indiv-pallet-score/std",
 	"indiv-pallet-storage-initialization/std",
 	"indiv-support/std",
+	"indiv-system-parachains-common/std",
 	"log/std",
 	"pallet-asset-conversion/std",
 	"pallet-asset-rate/std",
@@ -266,6 +268,7 @@ runtime-benchmarks = [
 	"indiv-pallet-score/runtime-benchmarks",
 	"indiv-pallet-storage-initialization/runtime-benchmarks",
 	"indiv-support/runtime-benchmarks",
+	"indiv-system-parachains-common/runtime-benchmarks",
 	"pallet-asset-conversion/runtime-benchmarks",
 	"pallet-asset-rate/runtime-benchmarks",
 	"pallet-asset-tx-payment/runtime-benchmarks",
@@ -335,6 +338,7 @@ try-runtime = [
 	"indiv-pallet-resources/try-runtime",
 	"indiv-pallet-score/try-runtime",
 	"indiv-pallet-storage-initialization/try-runtime",
+	"indiv-system-parachains-common/try-runtime",
 	"pallet-asset-conversion/try-runtime",
 	"pallet-asset-rate/try-runtime",
 	"pallet-asset-tx-payment/try-runtime",
