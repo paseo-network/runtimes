@@ -3302,7 +3302,7 @@ mod benches {
 	use super::*;
 	use alloc::boxed::Box;
 	use frame_support::assert_ok;
-	use indiv_system_parachains_commmon::benchmarking::set_up_worst_case_authorized_alias;
+	use indiv_system_parachains_common::benchmarking::set_up_worst_case_authorized_alias;
 	use paseo_runtime_constants::system_parachain::PeopleParaId;
 	use system_parachains_constants::paseo::locations::PeopleLocation;
 
