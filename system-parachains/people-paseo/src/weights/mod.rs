@@ -28,7 +28,7 @@ pub mod indiv_pallet_nft_credits;
 pub mod indiv_pallet_people_airdrops;
 pub mod pallet_asset_rate;
 pub mod pallet_asset_tx_payment;
-pub mod pallet_assets;
+pub mod pallet_assets_local;
 pub mod pallet_balances;
 pub mod pallet_collator_selection;
 pub mod pallet_identity;
