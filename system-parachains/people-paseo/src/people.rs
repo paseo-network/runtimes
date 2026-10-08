@@ -1689,17 +1689,11 @@ impl indiv_pallet_coinage::BenchmarkHelper<Runtime> for CoinageBenchHelper {
 
 	fn fund_account(who: &AccountId, amount: u128) {
 		use frame_support::traits::fungibles::Mutate;
-		// Headroom for fees paid in the asset. The `*_into_external_asset_non_anonymous_1_2`
-		// benchmarks fund the caller with 10x the unloaded amount and expect that to cover the
-		// paid unload token fee too; with Paseo's fee curve it does not for n <= 2, and the call
-		// fails with "Account that is desired to remain would die".
-		let fee_headroom = 1_000 * COINAGE_ASSET_UNIT;
-		<AssetsWithHolder as Mutate<_>>::mint_into(
-			ExternalAssetLocation::get(),
-			who,
-			amount.saturating_add(fee_headroom),
-		)
-		.expect("Failed to fund account");
+		// Exactly `amount`, as upstream: the `*_fee_fail` benchmarks fund the signer with
+		// precisely the quoted fee so that its withdrawal is what fails. The headroom Paseo's
+		// steeper fee curve needs is priced into the pool `setup_fee_conversion` seeds instead.
+		<AssetsWithHolder as Mutate<_>>::mint_into(ExternalAssetLocation::get(), who, amount)
+			.expect("Failed to fund account");
 	}
 
 	fn create_extra_asset(seed: u32, who: &AccountId) -> Location {
@@ -1747,12 +1741,23 @@ impl indiv_pallet_coinage::BenchmarkHelper<Runtime> for CoinageBenchHelper {
 			return;
 		}
 
-		// Native has 10 decimals, the external asset has 6, and 1 raw asset ($10^-6) is worth
-		// 10^4 raw native ($10^-10), so the pool holds that ratio — the same 10^4 rate the
-		// deleted `setup_conversion_rate` wrote into `pallet_asset_rate`. The depth is far above
-		// any benchmarked fee so that the conversions do not move the price.
-		let native_liquidity: Balance = 1_000 * UNITS;
-		let asset_liquidity: Balance = native_liquidity / 10_000;
+		// Native has 10 decimals and the external asset has 6. At the real rate 1 raw asset
+		// ($10^-6) is worth 10^4 raw native ($10^-10), which is the ratio upstream's
+		// `next-people-paseo` seeds. This pool prices the asset 100x above that, at 10^6 raw
+		// native per raw asset, because of Paseo's fee curve: `CENTS` per 200 extrinsic base
+		// weights (25 ms of ref time) against upstream's `CENTS` per second, 40x steeper. The
+		// upstream benchmarks budget the asset-denominated fee for their curve: the non-anonymous
+		// unload benchmarks fund the caller with 10x the unloaded amount and expect it to cover
+		// the paid unload token fee, which at the real rate it does not for `n <= 2` ("Account
+		// that is desired to remain would die"), while the `*_fee_fail` benchmarks fund the
+		// signer with exactly the quoted fee, so `fund_account` cannot pad it. The pool is
+		// benchmark-only and its rate moves no weight, so it absorbs the difference: at 100x the
+		// asset fee lands below upstream's, with margin for the fee multiplier.
+		//
+		// The depth is far above any benchmarked fee so that the conversions do not move the
+		// price.
+		let asset_liquidity: Balance = 100_000 * COINAGE_ASSET_UNIT; // 10^9 raw, $1,000
+		let native_liquidity: Balance = asset_liquidity * 1_000_000;
 
 		let provider: AccountId = [42u8; 32].into();
 		Balances::mint_into(&provider, native_liquidity.saturating_mul(2))
