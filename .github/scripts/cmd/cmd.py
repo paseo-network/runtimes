@@ -146,8 +146,13 @@ for runtime in runtimesMatrix.values():
     if features_extra:
         features += "," + features_extra
     print(f'-- with features {features}')
+    # `pallet-revive-fixtures` silently compiles to `None` fixtures when this is set, and every
+    # benchmark that deploys a contract (pallet_revive, pallet_vesting_precompiles, the
+    # individuality precompiles, ...) then panics at runtime. Never inherit it from the host.
+    build_env = {k: v for k, v in os.environ.items() if k != "SKIP_PALLET_REVIVE_FIXTURES"}
     result = subprocess.run(
-        ["cargo", "build", "-p", runtime['package'], "--profile", profile, "-q", "--features", features])
+        ["cargo", "build", "-p", runtime['package'], "--profile", profile, "-q", "--features", features],
+        env=build_env)
     if result.returncode != 0:
         print(f"Failed to build {runtime['name']}")
         sys.exit(1)
