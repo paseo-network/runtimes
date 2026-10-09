@@ -74,7 +74,7 @@ truth — a runtime absent from it is never benchmarked. Per runtime:
 | Field | Meaning |
 | --- | --- |
 | `name` / `package` / `path` | `--runtime` value, cargo package, and where `src/weights` lives |
-| `genesis_builder_preset` | Genesis preset built for benchmarking (`local_testnet` everywhere today) |
+| `genesis_builder_preset` | Genesis preset built for benchmarking (`local_testnet`, except `development` for asset-hub) |
 | `build_extra_features` | Extra cargo features on top of `runtime-benchmarks` (e.g. `paseo-ahm`) |
 | `benchmarks_templates` | Per-pallet weight template; XCM pallets need `.maintain/xcm-bench-template.hbs` |
 | `benchmarks_exclude_pallets` | Pallets skipped in a full sweep; still run if named with `--pallet` |
@@ -107,12 +107,9 @@ preparation. Three steps ahead of the benchmark do it, all no-ops once the runne
 - **`subweight`** — `cargo install`ed only when absent. The first install takes a few minutes; after
   that it is a `command -v` check.
 
-`solc` and `resolc` are deliberately **not** installed. `pallet-revive-fixtures` would need both to
-compile its Solidity fixtures, and every runtime reaches that crate through
-`system-parachains-constants` — but no runtime benchmarks `pallet_revive` today, so the workflow
-sets `SKIP_PALLET_REVIVE_FIXTURES=1` and keeps them off the runner. Closing asset-hub's
-`TODO(#840)` means benchmarking `pallet_revive` for real, which needs the fixtures: PR #431 carries
-the working install step and validated pins (solc 0.8.30, resolc 1.0.0) to restore.
+`solc` and `resolc` are downloaded each run, pinned by `SOLC_VERSION` and `RESOLC_VERSION` in
+`.github/env`: `pallet-revive-fixtures` compiles its Solidity fixtures with them, and the workflow
+does not set `SKIP_PALLET_REVIVE_FIXTURES`, so contract-deploying benchmarks get real fixtures.
 
 Installing apt packages needs passwordless `sudo` on the runner.
 

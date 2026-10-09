@@ -408,15 +408,6 @@ jobs:
       TARGET_REPO: ${{ needs.preflight.outputs.repo }}
       TARGET_REF: ${{ needs.preflight.outputs.ref }}
       PR_NUMBER: ${{ needs.preflight.outputs.pr-number }}
-      # pallet-revive-fixtures compiles Solidity fixtures by shelling out to solc and resolc, and
-      # every runtime reaches that crate through system-parachains-constants. No runtime here
-      # benchmarks pallet_revive today, so the fixtures are only needed to make the build link -
-      # skipping them keeps solc and resolc off the runner entirely.
-      #
-      # This has to be revisited for TODO(#840) in asset-hub, which wants locally generated
-      # pallet_revive weights: benchmarking that pallet needs real fixtures. PR #431 has the
-      # working install step and the validated pins (solc 0.8.30, resolc 1.0.0) to restore.
-      SKIP_PALLET_REVIVE_FIXTURES: 1
     steps:
       - name: Build workflow links
         id: links
@@ -526,6 +517,21 @@ jobs:
 
       - name: Install subweight
         run: command -v subweight || cargo install subweight --locked
+
+      # pallet-revive-fixtures compiles its Solidity fixtures with solc and resolc, and every
+      # contract-deploying benchmark needs real fixtures - so SKIP_PALLET_REVIVE_FIXTURES is not set.
+      - name: Install solc and resolc
+        run: |
+          curl -fsSL --retry 5 --retry-delay 10 --retry-all-errors --max-time 600 \
+            "https://github.com/ethereum/solidity/releases/download/v${SOLC_VERSION:?not set in .github/env}/${SOLC_NAME:?not set in .github/env}" \
+            -o solc
+          curl -fsSL --retry 5 --retry-delay 10 --retry-all-errors --max-time 600 \
+            "https://github.com/paritytech/revive/releases/download/v${RESOLC_VERSION:?not set in .github/env}/resolc-x86_64-unknown-linux-musl" \
+            -o resolc
+          chmod +x solc resolc
+          sudo mv solc resolc /usr/local/bin/
+          solc --version
+          resolc --version
 
       # No rust-cache here on purpose: the runner is persistent and keeps its `target/` between
       # runs, so uploading a multi-GB cache of a `production` build would only cost time.
