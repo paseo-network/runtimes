@@ -380,7 +380,7 @@ impl indiv_pallet_chunks_manager::Config for Runtime {
 }
 
 impl indiv_pallet_members::Config for Runtime {
-	type WeightInfo = indiv_pallet_members::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_members::WeightInfo<Runtime>;
 	type Crypto = verifiable::ring::bandersnatch::BandersnatchVrfVerifiable;
 	type Location = xcm::v5::Location;
 	type ChunksManager = ChunksManager;
@@ -405,7 +405,7 @@ parameter_types! {
 }
 
 impl indiv_pallet_people::Config for Runtime {
-	type WeightInfo = indiv_pallet_people::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_people::WeightInfo<Runtime>;
 	type MemberService = Members;
 	type RingExponent = MembersFlexibleRingExponent;
 	type CollectionOwner = PeopleCollectionOwner;
@@ -419,7 +419,7 @@ impl indiv_pallet_people::Config for Runtime {
 }
 
 impl indiv_pallet_dummy_dim::Config for Runtime {
-	type WeightInfo = indiv_pallet_dummy_dim::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_dummy_dim::WeightInfo<Runtime>;
 	type UpdateOrigin = EnsureRoot<AccountId>;
 	type MaxPersonBatchSize = ConstU32<1000>;
 	type People = People;
@@ -581,7 +581,7 @@ pub mod benchmark_utils {
 		}
 
 		fn setup_ring_roots(count: u32) {
-			use indiv_support::traits::Identifier;
+			use indiv_support::traits::{Identifier, RingExponent, RingMode};
 			use verifiable::ring::RingDomainSize;
 
 			// Creating a valid intermediate and root using the smallest domain size.
@@ -608,6 +608,19 @@ pub mod benchmark_utils {
 				<Runtime as indiv_pallet_members_notifier::Config>::MaxCollections::get();
 			for coll in 0..max_collections {
 				let identifier = test_identifier(coll);
+				// `RingRootsProvider` reports no roots for an identifier without a collection.
+				indiv_pallet_members::Collections::<Runtime>::insert(
+					identifier,
+					indiv_pallet_members::types::CollectionInfo {
+						owner: indiv_pallet_members::types::CollectionOwner::External(
+							PeopleCollectionOwner::get(),
+						),
+						mode: RingMode::Flexible,
+						// `R2e9` has the `Domain11` domain of the roots below.
+						ring_size: RingExponent::R2e9,
+						self_inclusion_delay: None,
+					},
+				);
 				for i in 0..count {
 					let ring_root = indiv_pallet_members::RingRoot::<Runtime> {
 						root: root.clone(),
@@ -644,7 +657,7 @@ parameter_types! {
 }
 
 impl indiv_pallet_mob_rule::Config for Runtime {
-	type WeightInfo = indiv_pallet_mob_rule::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_mob_rule::WeightInfo<Runtime>;
 	type Currency = FungibleExternalAsset;
 	type CurrencyLocationInfo = ExternalAssetLocation;
 	// 24 hours
@@ -742,7 +755,7 @@ impl indiv_pallet_proof_of_ink::BenchmarkHelper<Runtime> for PoIBenchmarkHelper 
 }
 
 impl indiv_pallet_proof_of_ink::Config for Runtime {
-	type WeightInfo = indiv_pallet_proof_of_ink::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_proof_of_ink::WeightInfo<Runtime>;
 	type Deposit = HoldConsideration<
 		AccountId,
 		Balances,
@@ -787,7 +800,7 @@ impl indiv_pallet_score::benchmarking::BenchmarkHelper<Runtime> for ScoreBenchma
 }
 
 impl indiv_pallet_score::Config for Runtime {
-	type WeightInfo = indiv_pallet_score::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_score::WeightInfo<Runtime>;
 	// Same source of truth as every other `Suffix` binding in this runtime: the on-chain
 	// `NetworkSuffix` pallet, whose default is the shared `system-parachains-constants` value.
 	type Suffix = NetworkSuffix;
@@ -818,7 +831,7 @@ parameter_types! {
 
 impl indiv_pallet_game::Config for Runtime {
 	const TESTNET: bool = true;
-	type WeightInfo = indiv_pallet_game::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_game::WeightInfo<Runtime>;
 	type MaxGroupSize = ConstU32<6>;
 	type UnixTime = Timestamp;
 	type MaxRounds = ConstU32<3>;
@@ -911,17 +924,15 @@ impl indiv_pallet_nft_credits::Config for Runtime {
 	type NftClaimsPalletIndex = ConstU8<96>;
 	type ChannelInfo = ParachainSystem;
 	// One tree per block at most, and the offchain worker ships them every block, so the queue
-	// only fills while delivery to Asset Hub is down. Matched to `MaxRetainedCreditTrees`, which
-	// counts the same trees: the oldest tree still queued is then one whose awards are ordinarily
-	// still in state, so a delivery that outlasts the outage needs no proof rebuilt from events. A
-	// `replay_credit_trees` during the outage breaks that, its tree being claimable on Asset Hub
-	// while the delivery is still queued here, so its last claim there has that chain ask for a
-	// deletion the queue entry then finds nothing to deliver. Eight full messages drain it.
+	// only fills while delivery to Asset Hub is down. Far fewer blocks than `AwardRetentionTtl`
+	// retains, so the oldest queued tree is one whose awards are still in state and a delivery that
+	// outlasts an outage needs no proof rebuilt from events. Eight full messages drain it. A
+	// `replay_credit_trees` during the outage breaks that: its tree is claimable on Asset Hub while
+	// the delivery is still queued here, so the last claim there asks for a deletion this entry
+	// then cannot deliver.
 	//
-	// An entry is 12 bytes and the queue is read at the value's `MaxEncodedLen`, so
-	// `authorize_send_credit_trees` pays about 3 KB of the `Normal` proof budget for it. A tree
-	// past the bound is dropped from delivery, not lost: its root stays on chain for
-	// `replay_credit_trees`.
+	// An entry is 12 bytes, read at the value's `MaxEncodedLen`, so
+	// `authorize_send_credit_trees` pays about 3 KB of the `Normal` proof budget.
 	type MaxQueuedCreditTrees = ConstU32<256>;
 	type MaxCreditTreesPerMessage = ConstU32<32>;
 	type ReplayCooldownSeconds = ConstU64<60>;
@@ -929,33 +940,35 @@ impl indiv_pallet_nft_credits::Config for Runtime {
 	// Entries are the distinct blocks whose trees commit a claimant's credits, not a window of
 	// consecutive ones, so the bound counts games rather than time. One game awards a claimant at
 	// most `(MaxGroupSize - 1) * MaxRounds = 15` credits, one per co-player that reported `Person`-
+	// on them, plus the attendance backfill, which awards the rest in a single call. Those land in
+	// 16 distinct blocks only if no two reports ever share one, and reports cluster. At one game a
+	// week `AwardRetentionTtl` spans about 13 games, so 208 entries cover the window even at that
+	// worst case; this leaves margin over it, and about 85 games at the few blocks a game usually
+	// takes. The list costs 1 KB at this bound.
 	//
-	// A game cycle runs 17.5 minutes, so back to back games fill this in about two hours at
-	// the usual few entries each, and in two games if both hit the worst case. That is the
-	// intended horizon: the index is a lookup aid for trees recent enough to still be worth
-	// minting against, not a record for the chain's lifetime, and the oldest block drops out
-	// once it is full.
-	type MaxCreditBlocksPerClaimant = ConstU32<32>;
-	// The window in which a claim is provable from state alone, counted in trees. Reports cluster
-	// inside a game's 10-minute reporting phase, so a game contributes a few dozen trees and this
-	// covers several games, well past the two hours the per-claimant index spans.
-	//
-	// It is also the state the chain carries for them: at most this many trees of the pallet's
-	// `AWARDS_PER_TREE` awards, an award being 65 bytes, so about 34 MB were every retained tree
-	// saturated. Trees run that full only while the chain awards faster than one tree a block, so
-	// the figure tracks the mints actually outstanding. A tree that drops out delays no mint,
-	// because its root stays on chain until the claims chain is finished with it or the root TTL
-	// runs out. Its awards then have to come from the events naming its tree block.
-	type MaxRetainedCreditTrees = ConstU32<256>;
+	// Being a count, the window shortens as games run more often. Governance sets the schedule and
+	// `new_game` only refuses a concurrent game, so back-to-back games would fill this in a day.
+	type MaxCreditBlocksPerClaimant = ConstU32<256>;
+	// The claims chain's own deadline, which is what the two have to agree on. What it costs this
+	// chain follows participation rather than a constant: a player earns at most
+	// `(MaxGroupSize - 1) * MaxRounds = 15` credits a game, so at one game a week 90 days is about
+	// 195 credits, or 13 KB at 65 bytes an award. Retaining personhood needs one game per
+	// `NonPlayingKickoutTime` and costs a fraction of that.
+	type AwardRetentionTtl = ClaimsChainTreeTtl;
 	type EnsureClaimsChainOrigin = EnsureClaimsChainSibling;
 	// At least the claims pallet's `MaxTreeDeletionsPerMessage`. A larger message fails to decode
 	// here, and the root TTL then removes the roots its deletions named.
 	type MaxTreeDeletionsPerMessage = ConstU32<64>;
 	type ClaimsChainTreeTtl = ClaimsChainTreeTtl;
-	// One block records at most one root, so a day holds 43200 of them at 2 seconds a block, which
-	// 64 a block clears in about 20 minutes. The root TTL is the longer of the two, so a sweep only
-	// removes roots the claims chain has already given up on, with a month of slack for a backlog.
+	// One block records at most one root, so a day holds 43200 at 2 seconds a block, which 64 per
+	// block clears in about 20 minutes. The root TTL is the longer of the two, so a sweep only
+	// removes roots the claims chain has given up on, with a month of slack for a backlog.
 	type MaxRootsPerSweep = ConstU32<64>;
+	// A tree block's awards are `CHUNKS_PER_TREE` keys, each charged at a full chunk, so one block
+	// costs about 290 KB of the proof budget and eight of them about half of it. The
+	// `integrity_test` is what holds this to the budget. A block records at most one tree block, so
+	// a call per block removes them eight times faster than they are made.
+	type MaxAwardBlocksPerSweep = ConstU32<8>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = NftCreditsBenchmarkHelper;
 }
@@ -1080,7 +1093,7 @@ impl indiv_pallet_honour::benchmarking::BenchmarkHelper<Runtime> for HonourBench
 }
 
 impl indiv_pallet_honour::Config for Runtime {
-	type WeightInfo = indiv_pallet_honour::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_honour::WeightInfo<Runtime>;
 	type MemberService = Members;
 	type Clock = Timestamp;
 	type PointFreezeDuration = HonourPointFreezeDuration;
@@ -1450,7 +1463,7 @@ parameter_types! {
 }
 
 impl indiv_pallet_storage_initialization::Config for Runtime {
-	type WeightInfo = indiv_pallet_storage_initialization::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_storage_initialization::WeightInfo<Runtime>;
 	type Assets = Assets;
 	type ReserveData = ForeignAssetReserveData;
 	type ReserveSetter = Assets;
@@ -1521,15 +1534,15 @@ parameter_types! {
 impl indiv_pallet_network_suffix::Config for Runtime {
 	type UpdateOrigin = EnsureRoot<Self::AccountId>;
 	type DefaultSuffix = DefaultNetworkSuffix;
-	type WeightInfo = indiv_pallet_network_suffix::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_network_suffix::WeightInfo<Runtime>;
 }
 
 impl indiv_pallet_relay_randomness::Config for Runtime {
-	type WeightInfo = indiv_pallet_relay_randomness::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_relay_randomness::WeightInfo<Runtime>;
 }
 
 impl indiv_pallet_people_lite::Config for Runtime {
-	type WeightInfo = indiv_pallet_people_lite::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_people_lite::WeightInfo<Runtime>;
 	type Currency = Balances;
 	type PotId = LitePeoplePotId;
 	// POLICY, FLAGGED. Gates `register_with_fee` (call index 3), which is NEW in v0.3.1 -- it
@@ -1676,17 +1689,11 @@ impl indiv_pallet_coinage::BenchmarkHelper<Runtime> for CoinageBenchHelper {
 
 	fn fund_account(who: &AccountId, amount: u128) {
 		use frame_support::traits::fungibles::Mutate;
-		// Headroom for fees paid in the asset. The `*_into_external_asset_non_anonymous_1_2`
-		// benchmarks fund the caller with 10x the unloaded amount and expect that to cover the
-		// paid unload token fee too; with Paseo's fee curve it does not for n <= 2, and the call
-		// fails with "Account that is desired to remain would die".
-		let fee_headroom = 1_000 * COINAGE_ASSET_UNIT;
-		<AssetsWithHolder as Mutate<_>>::mint_into(
-			ExternalAssetLocation::get(),
-			who,
-			amount.saturating_add(fee_headroom),
-		)
-		.expect("Failed to fund account");
+		// Exactly `amount`, as upstream: the `*_fee_fail` benchmarks fund the signer with
+		// precisely the quoted fee so that its withdrawal is what fails. The headroom Paseo's
+		// steeper fee curve needs is priced into the pool `setup_fee_conversion` seeds instead.
+		<AssetsWithHolder as Mutate<_>>::mint_into(ExternalAssetLocation::get(), who, amount)
+			.expect("Failed to fund account");
 	}
 
 	fn create_extra_asset(seed: u32, who: &AccountId) -> Location {
@@ -1734,12 +1741,23 @@ impl indiv_pallet_coinage::BenchmarkHelper<Runtime> for CoinageBenchHelper {
 			return;
 		}
 
-		// Native has 10 decimals, the external asset has 6, and 1 raw asset ($10^-6) is worth
-		// 10^4 raw native ($10^-10), so the pool holds that ratio — the same 10^4 rate the
-		// deleted `setup_conversion_rate` wrote into `pallet_asset_rate`. The depth is far above
-		// any benchmarked fee so that the conversions do not move the price.
-		let native_liquidity: Balance = 1_000 * UNITS;
-		let asset_liquidity: Balance = native_liquidity / 10_000;
+		// Native has 10 decimals and the external asset has 6. At the real rate 1 raw asset
+		// ($10^-6) is worth 10^4 raw native ($10^-10), which is the ratio upstream's
+		// `next-people-paseo` seeds. This pool prices the asset 100x above that, at 10^6 raw
+		// native per raw asset, because of Paseo's fee curve: `CENTS` per 200 extrinsic base
+		// weights (25 ms of ref time) against upstream's `CENTS` per second, 40x steeper. The
+		// upstream benchmarks budget the asset-denominated fee for their curve: the non-anonymous
+		// unload benchmarks fund the caller with 10x the unloaded amount and expect it to cover
+		// the paid unload token fee, which at the real rate it does not for `n <= 2` ("Account
+		// that is desired to remain would die"), while the `*_fee_fail` benchmarks fund the
+		// signer with exactly the quoted fee, so `fund_account` cannot pad it. The pool is
+		// benchmark-only and its rate moves no weight, so it absorbs the difference: at 100x the
+		// asset fee lands below upstream's, with margin for the fee multiplier.
+		//
+		// The depth is far above any benchmarked fee so that the conversions do not move the
+		// price.
+		let asset_liquidity: Balance = 100_000 * COINAGE_ASSET_UNIT; // 10^9 raw, $1,000
+		let native_liquidity: Balance = asset_liquidity * 1_000_000;
 
 		let provider: AccountId = [42u8; 32].into();
 		Balances::mint_into(&provider, native_liquidity.saturating_mul(2))
@@ -1940,7 +1958,7 @@ impl indiv_pallet_coinage::Config for Runtime {
 	type PaidUnloadTokenRingExponent = PaidUnloadTokenRingExponent;
 	type UnixTime = Timestamp;
 	type PalletId = CoinagePalletId;
-	type WeightInfo = indiv_pallet_coinage::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_coinage::WeightInfo<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = CoinageBenchHelper;
 	type MaximumAge = ConstU16<16>;
@@ -2026,7 +2044,7 @@ impl frame_support::traits::EnsureOrigin<RuntimeOrigin> for EnsureSiblingParacha
 }
 
 impl indiv_pallet_members_notifier::Config for Runtime {
-	type WeightInfo = indiv_pallet_members_notifier::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_members_notifier::WeightInfo<Runtime>;
 	type XcmRouter = crate::xcm_config::XcmRouter;
 	type ChannelInfo = ParachainSystem;
 	type ManageOrigin = EnsureRoot<AccountId>;
@@ -2330,7 +2348,7 @@ impl indiv_pallet_origin_restriction::BenchmarkHelper<OriginCaller, RuntimeCall>
 }
 
 impl indiv_pallet_origin_restriction::Config for Runtime {
-	type WeightInfo = indiv_pallet_origin_restriction::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_origin_restriction::WeightInfo<Runtime>;
 	// individuality v0.3.1 moved `Usages.at_block` from the local para clock to the relay
 	// clock. The type is unchanged (`u32`), so this compiles either way and the live values
 	// silently become far-future timestamps — see `migrations::RebaseOriginRestrictionUsages`,
@@ -2361,7 +2379,7 @@ impl pallet_verify_signature::BenchmarkHelper<MultiSignature, AccountId>
 impl pallet_verify_signature::Config for Runtime {
 	type Signature = MultiSignature;
 	type AccountIdentifier = MultiSigner;
-	type WeightInfo = ();
+	type WeightInfo = weights::pallet_verify_signature::WeightInfo<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = VerifySignatureBenchmarkHelper;
 }

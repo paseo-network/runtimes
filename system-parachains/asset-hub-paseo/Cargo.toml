@@ -28,6 +28,7 @@ kusama-runtime-constants = { workspace = true }
 paseo-runtime-constants = { workspace = true }
 system-parachains-constants = { workspace = true }
 system-parachains-common = { workspace = true }
+indiv-system-parachains-common = { workspace = true }
 
 # Individuality
 indiv-pallet-alias-accounts = { workspace = true }
@@ -83,6 +84,7 @@ pallet-parameters = { workspace = true }
 pallet-pgas-allowance = { workspace = true }
 pallet-preimage = { workspace = true }
 pallet-proxy = { workspace = true }
+pallet-psm = { workspace = true }
 pallet-referenda = { workspace = true }
 pallet-revive = { workspace = true }
 pallet-scheduler = { workspace = true }
@@ -224,6 +226,7 @@ runtime-benchmarks = [
 	"indiv-precompile-scarcity/runtime-benchmarks",
 	"indiv-support/genesis",
 	"indiv-support/runtime-benchmarks",
+	"indiv-system-parachains-common/runtime-benchmarks",
 	"kusama-runtime-constants/runtime-benchmarks",
 	"pallet-ah-ops/runtime-benchmarks",
 	"pallet-asset-conversion-precompiles/runtime-benchmarks",
@@ -255,6 +258,7 @@ runtime-benchmarks = [
 	"pallet-pgas-allowance/runtime-benchmarks",
 	"pallet-preimage/runtime-benchmarks",
 	"pallet-proxy/runtime-benchmarks",
+	"pallet-psm/runtime-benchmarks",
 	"pallet-rc-migrator/runtime-benchmarks",
 	"pallet-referenda/runtime-benchmarks",
 	"pallet-revive/runtime-benchmarks",
@@ -288,7 +292,6 @@ runtime-benchmarks = [
 	"snowbridge-runtime-common/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"sp-staking/runtime-benchmarks",
-	"system-parachains-common/runtime-benchmarks",
 	"system-parachains-constants/runtime-benchmarks",
 	"verifiable/no-std-prover",
 	"xcm-builder/runtime-benchmarks",
@@ -320,6 +323,7 @@ try-runtime = [
 	"indiv-precompile-nft-claims/try-runtime",
 	"indiv-precompile-personhood/try-runtime",
 	"indiv-precompile-scarcity/try-runtime",
+	"indiv-system-parachains-common/try-runtime",
 	"pallet-ah-ops/try-runtime",
 	"pallet-asset-conversion-precompiles/try-runtime",
 	"pallet-asset-conversion-tx-payment/try-runtime",
@@ -351,6 +355,7 @@ try-runtime = [
 	"pallet-pgas-allowance/try-runtime",
 	"pallet-preimage/try-runtime",
 	"pallet-proxy/try-runtime",
+	"pallet-psm/try-runtime",
 	"pallet-rc-migrator/try-runtime",
 	"pallet-referenda/try-runtime",
 	"pallet-revive/try-runtime",
@@ -426,6 +431,7 @@ std = [
 	"indiv-precompile-personhood/std",
 	"indiv-precompile-scarcity/std",
 	"indiv-support/std",
+	"indiv-system-parachains-common/std",
 	"kusama-runtime-constants/std",
 	"log/std",
 	"pallet-ah-ops/std",
@@ -462,6 +468,7 @@ std = [
 	"pallet-pgas-allowance/std",
 	"pallet-preimage/std",
 	"pallet-proxy/std",
+	"pallet-psm/std",
 	"pallet-rc-migrator/std",
 	"pallet-referenda/std",
 	"pallet-revive/std",

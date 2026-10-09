@@ -715,7 +715,7 @@ impl cumulus_pallet_weight_reclaim::Config for Runtime {
 impl pallet_sudo::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeCall = RuntimeCall;
-	type WeightInfo = pallet_sudo::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::pallet_sudo::WeightInfo<Runtime>;
 }
 
 impl<LocalCall> CreateBare<LocalCall> for Runtime
@@ -879,7 +879,8 @@ mod benches {
 		[frame_system_extensions, SystemExtensionsBench::<Runtime>]
 		[pallet_asset_tx_payment, AssetTxPayment]
 		[pallet_asset_rate, AssetRate]
-		[pallet_assets, Assets]
+		[pallet_assets, Local]
+		[pallet_assets, Pool]
 		[pallet_asset_conversion, AssetConversion]
 		[pallet_balances, Balances]
 		[pallet_identity, Identity]
@@ -889,9 +890,11 @@ mod benches {
 		[pallet_multisig, Multisig]
 		[pallet_proxy, Proxy]
 		[pallet_session, SessionBench::<Runtime>]
+		[pallet_sudo, Sudo]
 		[pallet_transaction_payment, TransactionPayment]
 		[pallet_timestamp, Timestamp]
 		[pallet_utility, Utility]
+		[pallet_verify_signature, VerifySignature]
 		// Cumulus
 		[cumulus_pallet_parachain_system, ParachainSystem]
 		[cumulus_pallet_weight_reclaim, WeightReclaim]
@@ -903,6 +906,8 @@ mod benches {
 		[pallet_xcm_benchmarks::generic, XcmGeneric]
 		// Individuality (Proof of Personhood)
 		[indiv_pallet_origin_restriction, OriginRestriction]
+		[indiv_pallet_relay_randomness, RelayRandomness]
+		[indiv_pallet_network_suffix, NetworkSuffix]
 		[indiv_pallet_people, People]
 		[indiv_pallet_dummy_dim, DummyDim]
 		[indiv_pallet_game, Game]
@@ -1092,9 +1097,9 @@ mod benches {
 		}
 
 		fn alias_origin() -> Result<(Location, Location), BenchmarkError> {
-			// `Aliasers = Nothing`: this chain does not support `AliasOrigin`, so there is no
-			// valid pair to benchmark. Weighed as `Weight::MAX` in `weights/xcm/mod.rs` instead.
-			Err(BenchmarkError::Skip)
+			Ok(indiv_system_parachains_common::benchmarking::set_up_worst_case_authorized_alias::<
+				Runtime,
+			>())
 		}
 	}
 
@@ -1107,6 +1112,10 @@ mod benches {
 	pub use pallet_xcm::benchmarking::Pallet as PalletXcmExtrinsicsBenchmark;
 	pub type XcmBalances = pallet_xcm_benchmarks::fungible::Pallet<Runtime>;
 	pub type XcmGeneric = pallet_xcm_benchmarks::generic::Pallet<Runtime>;
+	// Two `pallet_assets` instances, so the bencher suffixes both weight files with the
+	// instance name: `pallet_assets_local.rs` and `pallet_assets_pool.rs`, as asset-hub-paseo.
+	pub type Local = pallet_assets::Pallet<Runtime>;
+	pub type Pool = pallet_assets::Pallet<Runtime, super::assets::PoolAssetsInstance>;
 	pub use frame_support::traits::WhitelistedStorageKeys;
 	pub use sp_storage::TrackedStorageKey;
 }
@@ -1282,7 +1291,10 @@ impl_runtime_apis! {
 
 	impl xcm_runtime_apis::fees::XcmPaymentApi<Block> for Runtime {
 		fn query_acceptable_payment_assets(xcm_version: xcm::Version) -> Result<Vec<VersionedAssetId>, XcmPaymentApiError> {
-			let acceptable_assets = vec![AssetId(xcm_config::RelayLocation::get())];
+			let acceptable_assets = alloc::vec![
+				AssetId(xcm_config::RelayLocation::get()),
+				AssetId(people::ExternalAssetLocation::get()),
+			];
 			PolkadotXcm::query_acceptable_payment_assets(xcm_version, acceptable_assets)
 		}
 
@@ -1324,15 +1336,6 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl xcm_runtime_apis::trusted_query::TrustedQueryApi<Block> for Runtime {
-		fn is_trusted_reserve(asset: VersionedAsset, location: VersionedLocation) -> xcm_runtime_apis::trusted_query::XcmTrustedQueryResult {
-			PolkadotXcm::is_trusted_reserve(asset, location)
-		}
-		fn is_trusted_teleporter(asset: VersionedAsset, location: VersionedLocation) -> xcm_runtime_apis::trusted_query::XcmTrustedQueryResult {
-			PolkadotXcm::is_trusted_teleporter(asset, location)
-		}
-	}
-
 	impl xcm_runtime_apis::authorized_aliases::AuthorizedAliasersApi<Block> for Runtime {
 		fn authorized_aliasers(target: VersionedLocation) -> Result<
 			Vec<xcm_runtime_apis::authorized_aliases::OriginAliaser>,
@@ -1340,11 +1343,21 @@ impl_runtime_apis! {
 		> {
 			PolkadotXcm::authorized_aliasers(target)
 		}
+
 		fn is_authorized_alias(origin: VersionedLocation, target: VersionedLocation) -> Result<
 			bool,
 			xcm_runtime_apis::authorized_aliases::Error
 		> {
 			PolkadotXcm::is_authorized_alias(origin, target)
+		}
+	}
+
+	impl xcm_runtime_apis::trusted_query::TrustedQueryApi<Block> for Runtime {
+		fn is_trusted_reserve(asset: VersionedAsset, location: VersionedLocation) -> xcm_runtime_apis::trusted_query::XcmTrustedQueryResult {
+			PolkadotXcm::is_trusted_reserve(asset, location)
+		}
+		fn is_trusted_teleporter(asset: VersionedAsset, location: VersionedLocation) -> xcm_runtime_apis::trusted_query::XcmTrustedQueryResult {
+			PolkadotXcm::is_trusted_teleporter(asset, location)
 		}
 	}
 
