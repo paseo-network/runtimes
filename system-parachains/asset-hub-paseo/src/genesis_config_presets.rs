@@ -21,7 +21,6 @@ use crate::{
 	*,
 };
 use alloc::vec::Vec;
-use pallet_revive::AddressMapper;
 use parachains_common::AuraId;
 use sp_core::sr25519;
 use sp_genesis_builder::PresetId;
@@ -105,7 +104,11 @@ fn asset_hub_paseo_genesis(
 			..Default::default()
 		},
 		"revive": ReviveConfig {
-			mapped_accounts: endowed_accounts.iter().filter(|x| !<Runtime as pallet_revive::Config>::AddressMapper::is_eth_derived(x)).cloned().collect(),
+			// `frame_system::OnNewAccount` is `pallet_revive::AutoMapper`, which maps every
+			// endowed account when the balances genesis creates it. Listing them here again
+			// made the revive genesis fail each mapping with `AccountAlreadyMapped` and log an
+			// error per account; the resulting state is the same.
+			mapped_accounts: Vec::new(),
 			accounts: Vec::new(),
 			debug_settings: None,
 		},
@@ -201,8 +204,6 @@ mod tests {
 
 	fn assert_preset_builds(id: &str) {
 		sp_io::TestExternalities::default().execute_with(|| {
-			// Preset generation itself reads storage (`AddressMapper::is_mapped`),
-			// so it must also run inside the externalities environment.
 			let preset = get_preset(&PresetId::from(id))
 				.unwrap_or_else(|| panic!("preset `{id}` is not defined"));
 			let patch = serde_json::from_slice(&preset).expect("preset is valid JSON; qed");

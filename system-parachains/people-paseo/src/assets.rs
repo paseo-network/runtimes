@@ -240,8 +240,7 @@ impl pallet_assets::Config<PoolAssetsInstance> for Runtime {
 	type Extra = ();
 	type CallbackHandle = ();
 	type AssetIdAllocator = ();
-	// ⚠️ In-crate reference weights: this runtime has no benchmarked `pallet_assets_pool` module.
-	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::pallet_assets_pool::WeightInfo<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = ();
 }
@@ -294,8 +293,7 @@ impl pallet_asset_conversion::Config for Runtime {
 	type PalletId = AssetConversionPalletId;
 	type MaxSwapPathLength = ConstU32<3>;
 	type MintMinLiquidity = ConstU128<100>;
-	// ⚠️ In-crate reference weights, not benchmarked on this runtime.
-	type WeightInfo = pallet_asset_conversion::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::pallet_asset_conversion::WeightInfo<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = assets_common::benchmarks::AssetPairFactory<
 		crate::xcm_config::RelayLocation,
