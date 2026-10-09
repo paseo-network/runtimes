@@ -56,27 +56,6 @@ install_omni_bencher() {
   "$dest/frame-omni-bencher" --version
 }
 
-# solc + resolc compile the `pallet-revive-fixtures` contracts during the runtime build. Without
-# them the build only succeeds with `SKIP_PALLET_REVIVE_FIXTURES=1`, which makes every
-# contract-deploying benchmark panic at runtime (`DUMMY fixture not available`).
-install_revive_compilers() {
-  local dest="$1"
-  echo "-- installing solc $SOLC_VERSION and resolc $RESOLC_VERSION into $dest"
-  mkdir -p "$dest"
-  curl -Lsf --show-error --retry 5 --retry-delay 10 --retry-all-errors \
-    --connect-timeout 10 --max-time 600 \
-    --output "$dest/solc" \
-    "https://github.com/ethereum/solidity/releases/download/v${SOLC_VERSION}/${SOLC_NAME}"
-  chmod +x "$dest/solc"
-  "$dest/solc" --version
-  curl -Lsf --show-error --retry 5 --retry-delay 10 --retry-all-errors \
-    --connect-timeout 10 --max-time 600 \
-    --output "$dest/resolc" \
-    "https://github.com/paritytech/revive/releases/download/v${RESOLC_VERSION}/resolc-x86_64-unknown-linux-musl"
-  chmod +x "$dest/resolc"
-  "$dest/resolc" --version
-}
-
 cmd="${1:-check}"
 
 case "$cmd" in
@@ -94,7 +73,6 @@ install)
   cargo install subweight --locked
 
   install_omni_bencher "$HOME/.local/bin"
-  install_revive_compilers "$HOME/.local/bin"
   echo
   echo "Make sure $HOME/.local/bin is on PATH for the runner service user."
   ;;
@@ -126,25 +104,7 @@ check)
   else
     echo "-- frame-omni-bencher $want already installed"
   fi
-
-  # Same for solc/resolc: pinned in .github/env, re-downloaded whenever the pins move.
-  want="solc-$SOLC_VERSION resolc-$RESOLC_VERSION"
-  stamp="$HOME/.local/share/revive-compilers.version"
-  if [[ ! -x "$HOME/.local/bin/solc" ]] || [[ ! -x "$HOME/.local/bin/resolc" ]] ||
-    [[ "$(cat "$stamp" 2>/dev/null || true)" != "$want" ]]; then
-    install_revive_compilers "$HOME/.local/bin"
-    mkdir -p "$(dirname "$stamp")"
-    echo "$want" >"$stamp"
-  else
-    echo "-- $want already installed"
-  fi
   echo "$HOME/.local/bin" >>"${GITHUB_PATH:-/dev/null}"
-
-  # The runner may have `SKIP_PALLET_REVIVE_FIXTURES` set globally (it was needed before solc and
-  # resolc were provisioned here). `cmd.py` drops it from the build environment, so it is harmless.
-  if [[ -n "${SKIP_PALLET_REVIVE_FIXTURES:-}" ]]; then
-    echo "-- SKIP_PALLET_REVIVE_FIXTURES is set on the host; cmd.py ignores it for the runtime build"
-  fi
 
   if ! command -v subweight >/dev/null 2>&1; then
     if ! command -v cargo >/dev/null 2>&1; then
