@@ -219,40 +219,6 @@ impl<T: frame_system::Config> indiv_pallet_nft_credits::WeightInfo for WeightInf
 	}
 	/// Storage: `Timestamp::Now` (r:1 w:0)
 	/// Proof: `Timestamp::Now` (`max_values`: Some(1), `max_size`: Some(8), added: 503, mode: `MaxEncodedLen`)
-	/// Storage: `NftCredits::NftClaimCreditAwardExpiries` (r:8 w:8)
-	/// Proof: `NftCredits::NftClaimCreditAwardExpiries` (`max_values`: None, `max_size`: Some(16), added: 2491, mode: `MaxEncodedLen`)
-	/// Storage: `NftCredits::NftClaimCreditAwards` (r:512 w:512)
-	/// Proof: `NftCredits::NftClaimCreditAwards` (`max_values`: None, `max_size`: Some(2105), added: 4580, mode: `MaxEncodedLen`)
-	/// The range of component `n` is `[0, 8]`.
-	fn sweep_expired_awards(n: u32, ) -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `284 + n * (3082 ±0)`
-		//  Estimated: `3604 + n * (293120 ±0)`
-		// Minimum execution time: 8_346_000 picoseconds.
-		Weight::from_parts(7_499_639, 0)
-			.saturating_add(Weight::from_parts(0, 3604))
-			// Standard Error: 84_965
-			.saturating_add(Weight::from_parts(59_882_241, 0).saturating_mul(n.into()))
-			.saturating_add(T::DbWeight::get().reads(2))
-			.saturating_add(T::DbWeight::get().reads((65_u64).saturating_mul(n.into())))
-			.saturating_add(T::DbWeight::get().writes((65_u64).saturating_mul(n.into())))
-			.saturating_add(Weight::from_parts(0, 293120).saturating_mul(n.into()))
-	}
-	/// Storage: `Timestamp::Now` (r:1 w:0)
-	/// Proof: `Timestamp::Now` (`max_values`: Some(1), `max_size`: Some(8), added: 503, mode: `MaxEncodedLen`)
-	/// Storage: `NftCredits::NftClaimCreditAwardExpiries` (r:1 w:0)
-	/// Proof: `NftCredits::NftClaimCreditAwardExpiries` (`max_values`: None, `max_size`: Some(16), added: 2491, mode: `MaxEncodedLen`)
-	fn authorize_sweep_expired_awards() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `386`
-		//  Estimated: `3481`
-		// Minimum execution time: 8_135_000 picoseconds.
-		Weight::from_parts(8_746_000, 0)
-			.saturating_add(Weight::from_parts(0, 3481))
-			.saturating_add(T::DbWeight::get().reads(2))
-	}
-	/// Storage: `Timestamp::Now` (r:1 w:0)
-	/// Proof: `Timestamp::Now` (`max_values`: Some(1), `max_size`: Some(8), added: 503, mode: `MaxEncodedLen`)
 	/// Storage: `NftCredits::NftClaimCreditAwardExpiries` (r:9 w:8)
 	/// Proof: `NftCredits::NftClaimCreditAwardExpiries` (`max_values`: None, `max_size`: Some(16), added: 2491, mode: `MaxEncodedLen`)
 	/// Storage: `NftCredits::NftClaimCreditAwards` (r:512 w:512)
