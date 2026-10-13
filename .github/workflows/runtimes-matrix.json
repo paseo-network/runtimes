@@ -19,7 +19,7 @@
     "package": "asset-hub-paseo-runtime",
     "path": "system-parachains/asset-hub-paseo",
     "is_relay": false,
-    "genesis_builder_preset": "local_testnet",
+    "genesis_builder_preset": "development",
     "build_extra_features": "paseo-ahm",
     "benchmarks_templates": {
       "pallet_xcm_benchmarks::generic": ".maintain/xcm-bench-template.hbs",

@@ -1714,7 +1714,7 @@ impl pallet_revive::Config for Runtime {
 	type DepositPerChildTrieItem = DepositPerChildTrieItem;
 	type DepositPerByte = DepositPerByte;
 	// TODO(#840): use `weights::pallet_revive::WeightInfo` here
-	type WeightInfo = pallet_revive::weights::SubstrateWeight<Self>;
+	type WeightInfo = weights::pallet_revive::WeightInfo<Runtime>;
 	type Precompiles = (
 		ERC20<Self, InlineIdConfig<0x120>, TrustBackedAssetsInstance>,
 		ERC20<Self, InlineIdConfig<0x320>, PoolAssetsInstance>,
@@ -1841,19 +1841,11 @@ parameter_types! {
 impl indiv_pallet_network_suffix::Config for Runtime {
 	type UpdateOrigin = EnsureRoot<Self::AccountId>;
 	type DefaultSuffix = DefaultNetworkSuffix;
-	type WeightInfo = NetworkSuffixWeightInfo;
-}
-
-/// Conservatively reuse the heavier `pallet_parameters` setter weight.
-pub struct NetworkSuffixWeightInfo;
-impl indiv_pallet_network_suffix::WeightInfo for NetworkSuffixWeightInfo {
-	fn set_network_suffix(_s: u32) -> Weight {
-		<weights::pallet_parameters::WeightInfo<Runtime> as pallet_parameters::WeightInfo>::set_parameter()
-	}
+	type WeightInfo = weights::indiv_pallet_network_suffix::WeightInfo<Runtime>;
 }
 
 impl indiv_pallet_dotns_gateway::Config for Runtime {
-	type WeightInfo = indiv_pallet_dotns_gateway::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_dotns_gateway::WeightInfo<Runtime>;
 	type Suffix = NetworkSuffix;
 	type MemberService = MembersSubscriber;
 	type ContractCaller = ReviveContractCaller;
@@ -2113,7 +2105,7 @@ impl indiv_pallet_origin_restriction::BenchmarkHelper<OriginCaller, RuntimeCall>
 }
 
 impl indiv_pallet_origin_restriction::Config for Runtime {
-	type WeightInfo = indiv_pallet_origin_restriction::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_origin_restriction::WeightInfo<Runtime>;
 	// individuality v0.3.1 added this associated type; the pallet requires a parachain to use the
 	// relay block number so the allowance recovery rate is independent of local block production.
 	// Matches upstream `next-asset-hub-paseo`.
@@ -2504,7 +2496,7 @@ impl frame_support::traits::EnsureOrigin<RuntimeOrigin> for EnsureNotifierSiblin
 }
 
 impl indiv_pallet_members_subscriber::Config for Runtime {
-	type WeightInfo = indiv_pallet_members_subscriber::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_members_subscriber::WeightInfo<Runtime>;
 	type Crypto = verifiable::ring::bandersnatch::BandersnatchVrfVerifiable;
 	type XcmSender = xcm_config::XcmRouter;
 	type RingRootsNotifier = RingRootsNotifierEndpoint;
@@ -2616,7 +2608,7 @@ parameter_types! {
 const BENCH_ALIAS_CONTEXT: indiv_support::traits::Context = *b"pop:ah-bench-context            ";
 
 impl indiv_pallet_alias_accounts::Config for Runtime {
-	type WeightInfo = indiv_pallet_alias_accounts::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_alias_accounts::WeightInfo<Runtime>;
 	type MemberService = MembersSubscriber;
 	type UnixTime = Timestamp;
 	type ProofValidityWindow = ConstU64<300>;
@@ -2838,7 +2830,7 @@ parameter_types! {
 }
 
 impl indiv_pallet_pgas::Config for Runtime {
-	type WeightInfo = indiv_pallet_pgas::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_pgas::WeightInfo<Runtime>;
 	type Suffix = NetworkSuffix;
 	type MembershipProver = MembersSubscriber;
 	type Clock = Timestamp;
@@ -2880,7 +2872,7 @@ impl pallet_pgas_allowance::Config for Runtime {
 	#[cfg(feature = "runtime-benchmarks")]
 	type CallFilter = frame_support::traits::Everything;
 
-	type WeightInfo = pallet_pgas_allowance::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::pallet_pgas_allowance::WeightInfo<Runtime>;
 
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = PGASBenchmarkHelper;
@@ -3350,13 +3342,13 @@ mod benches {
 		[polkadot_runtime_common::claims, Claims]
 		[pallet_ah_ops, AhOps]
 		[pallet_pgas_allowance, PgasAllowance]
-		// TODO(#840): uncomment this so that pallet-revive is also benchmarked with this runtime
-		// [pallet_revive, Revive]
+		[pallet_revive, Revive]
 
 		// Individuality
 		[indiv_pallet_alias_accounts, AliasAccounts]
 		[indiv_pallet_dotns_gateway, DotnsGateway]
 		[indiv_pallet_members_subscriber, MembersSubscriber]
+		[indiv_pallet_network_suffix, NetworkSuffix]
 		[indiv_pallet_nft_claims, NftClaims]
 		[indiv_pallet_origin_restriction, OriginRestriction]
 		[indiv_pallet_pgas, Pgas]

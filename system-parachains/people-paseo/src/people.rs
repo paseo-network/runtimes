@@ -380,7 +380,7 @@ impl indiv_pallet_chunks_manager::Config for Runtime {
 }
 
 impl indiv_pallet_members::Config for Runtime {
-	type WeightInfo = indiv_pallet_members::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_members::WeightInfo<Runtime>;
 	type Crypto = verifiable::ring::bandersnatch::BandersnatchVrfVerifiable;
 	type Location = xcm::v5::Location;
 	type ChunksManager = ChunksManager;
@@ -405,7 +405,7 @@ parameter_types! {
 }
 
 impl indiv_pallet_people::Config for Runtime {
-	type WeightInfo = indiv_pallet_people::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_people::WeightInfo<Runtime>;
 	type MemberService = Members;
 	type RingExponent = MembersFlexibleRingExponent;
 	type CollectionOwner = PeopleCollectionOwner;
@@ -419,7 +419,7 @@ impl indiv_pallet_people::Config for Runtime {
 }
 
 impl indiv_pallet_dummy_dim::Config for Runtime {
-	type WeightInfo = indiv_pallet_dummy_dim::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_dummy_dim::WeightInfo<Runtime>;
 	type UpdateOrigin = EnsureRoot<AccountId>;
 	type MaxPersonBatchSize = ConstU32<1000>;
 	type People = People;
@@ -657,7 +657,7 @@ parameter_types! {
 }
 
 impl indiv_pallet_mob_rule::Config for Runtime {
-	type WeightInfo = indiv_pallet_mob_rule::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_mob_rule::WeightInfo<Runtime>;
 	type Currency = FungibleExternalAsset;
 	type CurrencyLocationInfo = ExternalAssetLocation;
 	// 24 hours
@@ -755,7 +755,7 @@ impl indiv_pallet_proof_of_ink::BenchmarkHelper<Runtime> for PoIBenchmarkHelper 
 }
 
 impl indiv_pallet_proof_of_ink::Config for Runtime {
-	type WeightInfo = indiv_pallet_proof_of_ink::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_proof_of_ink::WeightInfo<Runtime>;
 	type Deposit = HoldConsideration<
 		AccountId,
 		Balances,
@@ -800,7 +800,7 @@ impl indiv_pallet_score::benchmarking::BenchmarkHelper<Runtime> for ScoreBenchma
 }
 
 impl indiv_pallet_score::Config for Runtime {
-	type WeightInfo = indiv_pallet_score::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_score::WeightInfo<Runtime>;
 	// Same source of truth as every other `Suffix` binding in this runtime: the on-chain
 	// `NetworkSuffix` pallet, whose default is the shared `system-parachains-constants` value.
 	type Suffix = NetworkSuffix;
@@ -831,7 +831,7 @@ parameter_types! {
 
 impl indiv_pallet_game::Config for Runtime {
 	const TESTNET: bool = true;
-	type WeightInfo = indiv_pallet_game::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_game::WeightInfo<Runtime>;
 	type MaxGroupSize = ConstU32<6>;
 	type UnixTime = Timestamp;
 	type MaxRounds = ConstU32<3>;
@@ -1093,7 +1093,7 @@ impl indiv_pallet_honour::benchmarking::BenchmarkHelper<Runtime> for HonourBench
 }
 
 impl indiv_pallet_honour::Config for Runtime {
-	type WeightInfo = indiv_pallet_honour::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_honour::WeightInfo<Runtime>;
 	type MemberService = Members;
 	type Clock = Timestamp;
 	type PointFreezeDuration = HonourPointFreezeDuration;
@@ -1463,7 +1463,7 @@ parameter_types! {
 }
 
 impl indiv_pallet_storage_initialization::Config for Runtime {
-	type WeightInfo = indiv_pallet_storage_initialization::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_storage_initialization::WeightInfo<Runtime>;
 	type Assets = Assets;
 	type ReserveData = ForeignAssetReserveData;
 	type ReserveSetter = Assets;
@@ -1534,15 +1534,15 @@ parameter_types! {
 impl indiv_pallet_network_suffix::Config for Runtime {
 	type UpdateOrigin = EnsureRoot<Self::AccountId>;
 	type DefaultSuffix = DefaultNetworkSuffix;
-	type WeightInfo = indiv_pallet_network_suffix::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_network_suffix::WeightInfo<Runtime>;
 }
 
 impl indiv_pallet_relay_randomness::Config for Runtime {
-	type WeightInfo = indiv_pallet_relay_randomness::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_relay_randomness::WeightInfo<Runtime>;
 }
 
 impl indiv_pallet_people_lite::Config for Runtime {
-	type WeightInfo = indiv_pallet_people_lite::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_people_lite::WeightInfo<Runtime>;
 	type Currency = Balances;
 	type PotId = LitePeoplePotId;
 	// POLICY, FLAGGED. Gates `register_with_fee` (call index 3), which is NEW in v0.3.1 -- it
@@ -1689,17 +1689,11 @@ impl indiv_pallet_coinage::BenchmarkHelper<Runtime> for CoinageBenchHelper {
 
 	fn fund_account(who: &AccountId, amount: u128) {
 		use frame_support::traits::fungibles::Mutate;
-		// Headroom for fees paid in the asset. The `*_into_external_asset_non_anonymous_1_2`
-		// benchmarks fund the caller with 10x the unloaded amount and expect that to cover the
-		// paid unload token fee too; with Paseo's fee curve it does not for n <= 2, and the call
-		// fails with "Account that is desired to remain would die".
-		let fee_headroom = 1_000 * COINAGE_ASSET_UNIT;
-		<AssetsWithHolder as Mutate<_>>::mint_into(
-			ExternalAssetLocation::get(),
-			who,
-			amount.saturating_add(fee_headroom),
-		)
-		.expect("Failed to fund account");
+		// Exactly `amount`, as upstream: the `*_fee_fail` benchmarks fund the signer with
+		// precisely the quoted fee so that its withdrawal is what fails. The headroom Paseo's
+		// steeper fee curve needs is priced into the pool `setup_fee_conversion` seeds instead.
+		<AssetsWithHolder as Mutate<_>>::mint_into(ExternalAssetLocation::get(), who, amount)
+			.expect("Failed to fund account");
 	}
 
 	fn create_extra_asset(seed: u32, who: &AccountId) -> Location {
@@ -1747,12 +1741,23 @@ impl indiv_pallet_coinage::BenchmarkHelper<Runtime> for CoinageBenchHelper {
 			return;
 		}
 
-		// Native has 10 decimals, the external asset has 6, and 1 raw asset ($10^-6) is worth
-		// 10^4 raw native ($10^-10), so the pool holds that ratio — the same 10^4 rate the
-		// deleted `setup_conversion_rate` wrote into `pallet_asset_rate`. The depth is far above
-		// any benchmarked fee so that the conversions do not move the price.
-		let native_liquidity: Balance = 1_000 * UNITS;
-		let asset_liquidity: Balance = native_liquidity / 10_000;
+		// Native has 10 decimals and the external asset has 6. At the real rate 1 raw asset
+		// ($10^-6) is worth 10^4 raw native ($10^-10), which is the ratio upstream's
+		// `next-people-paseo` seeds. This pool prices the asset 100x above that, at 10^6 raw
+		// native per raw asset, because of Paseo's fee curve: `CENTS` per 200 extrinsic base
+		// weights (25 ms of ref time) against upstream's `CENTS` per second, 40x steeper. The
+		// upstream benchmarks budget the asset-denominated fee for their curve: the non-anonymous
+		// unload benchmarks fund the caller with 10x the unloaded amount and expect it to cover
+		// the paid unload token fee, which at the real rate it does not for `n <= 2` ("Account
+		// that is desired to remain would die"), while the `*_fee_fail` benchmarks fund the
+		// signer with exactly the quoted fee, so `fund_account` cannot pad it. The pool is
+		// benchmark-only and its rate moves no weight, so it absorbs the difference: at 100x the
+		// asset fee lands below upstream's, with margin for the fee multiplier.
+		//
+		// The depth is far above any benchmarked fee so that the conversions do not move the
+		// price.
+		let asset_liquidity: Balance = 100_000 * COINAGE_ASSET_UNIT; // 10^9 raw, $1,000
+		let native_liquidity: Balance = asset_liquidity * 1_000_000;
 
 		let provider: AccountId = [42u8; 32].into();
 		Balances::mint_into(&provider, native_liquidity.saturating_mul(2))
@@ -1953,7 +1958,7 @@ impl indiv_pallet_coinage::Config for Runtime {
 	type PaidUnloadTokenRingExponent = PaidUnloadTokenRingExponent;
 	type UnixTime = Timestamp;
 	type PalletId = CoinagePalletId;
-	type WeightInfo = indiv_pallet_coinage::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_coinage::WeightInfo<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = CoinageBenchHelper;
 	type MaximumAge = ConstU16<16>;
@@ -2039,7 +2044,7 @@ impl frame_support::traits::EnsureOrigin<RuntimeOrigin> for EnsureSiblingParacha
 }
 
 impl indiv_pallet_members_notifier::Config for Runtime {
-	type WeightInfo = indiv_pallet_members_notifier::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_members_notifier::WeightInfo<Runtime>;
 	type XcmRouter = crate::xcm_config::XcmRouter;
 	type ChannelInfo = ParachainSystem;
 	type ManageOrigin = EnsureRoot<AccountId>;
@@ -2343,7 +2348,7 @@ impl indiv_pallet_origin_restriction::BenchmarkHelper<OriginCaller, RuntimeCall>
 }
 
 impl indiv_pallet_origin_restriction::Config for Runtime {
-	type WeightInfo = indiv_pallet_origin_restriction::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::indiv_pallet_origin_restriction::WeightInfo<Runtime>;
 	// individuality v0.3.1 moved `Usages.at_block` from the local para clock to the relay
 	// clock. The type is unchanged (`u32`), so this compiles either way and the live values
 	// silently become far-future timestamps — see `migrations::RebaseOriginRestrictionUsages`,
@@ -2374,7 +2379,7 @@ impl pallet_verify_signature::BenchmarkHelper<MultiSignature, AccountId>
 impl pallet_verify_signature::Config for Runtime {
 	type Signature = MultiSignature;
 	type AccountIdentifier = MultiSigner;
-	type WeightInfo = ();
+	type WeightInfo = weights::pallet_verify_signature::WeightInfo<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = VerifySignatureBenchmarkHelper;
 }

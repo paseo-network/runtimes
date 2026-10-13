@@ -879,7 +879,8 @@ mod benches {
 		[frame_system_extensions, SystemExtensionsBench::<Runtime>]
 		[pallet_asset_tx_payment, AssetTxPayment]
 		[pallet_asset_rate, AssetRate]
-		[pallet_assets, Assets]
+		[pallet_assets, Local]
+		[pallet_assets, Pool]
 		[pallet_asset_conversion, AssetConversion]
 		[pallet_balances, Balances]
 		[pallet_identity, Identity]
@@ -889,9 +890,11 @@ mod benches {
 		[pallet_multisig, Multisig]
 		[pallet_proxy, Proxy]
 		[pallet_session, SessionBench::<Runtime>]
+		[pallet_sudo, Sudo]
 		[pallet_transaction_payment, TransactionPayment]
 		[pallet_timestamp, Timestamp]
 		[pallet_utility, Utility]
+		[pallet_verify_signature, VerifySignature]
 		// Cumulus
 		[cumulus_pallet_parachain_system, ParachainSystem]
 		[cumulus_pallet_weight_reclaim, WeightReclaim]
@@ -903,6 +906,8 @@ mod benches {
 		[pallet_xcm_benchmarks::generic, XcmGeneric]
 		// Individuality (Proof of Personhood)
 		[indiv_pallet_origin_restriction, OriginRestriction]
+		[indiv_pallet_relay_randomness, RelayRandomness]
+		[indiv_pallet_network_suffix, NetworkSuffix]
 		[indiv_pallet_people, People]
 		[indiv_pallet_dummy_dim, DummyDim]
 		[indiv_pallet_game, Game]
@@ -1107,6 +1112,10 @@ mod benches {
 	pub use pallet_xcm::benchmarking::Pallet as PalletXcmExtrinsicsBenchmark;
 	pub type XcmBalances = pallet_xcm_benchmarks::fungible::Pallet<Runtime>;
 	pub type XcmGeneric = pallet_xcm_benchmarks::generic::Pallet<Runtime>;
+	// Two `pallet_assets` instances, so the bencher suffixes both weight files with the
+	// instance name: `pallet_assets_local.rs` and `pallet_assets_pool.rs`, as asset-hub-paseo.
+	pub type Local = pallet_assets::Pallet<Runtime>;
+	pub type Pool = pallet_assets::Pallet<Runtime, super::assets::PoolAssetsInstance>;
 	pub use frame_support::traits::WhitelistedStorageKeys;
 	pub use sp_storage::TrackedStorageKey;
 }
