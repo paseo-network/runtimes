@@ -35,82 +35,55 @@ len_zero = { level = "allow", priority = 2 }
 [workspace.dependencies]
 
 # ---- Individuality (proof-of-personhood) external deps ----
-# NOTE (PCF, individuality v0.3.1 port): `verifiable` moves from the git rev `93464a6` to
-# crates.io 0.3.0. The version number goes DOWN (the git rev self-reports 0.5.0) but 0.3.0 is
-# 42 commits NEWER: the maintainers reset the dev version for the first crates.io release
-# (`6a2cad6 "Set version to 0.3"`).
-# The move is FORCED, not optional: individuality v0.3.x's `pallets/members` and
-# `pallets/members-subscriber` do not compile against the git rev (`BatchProofItem` gained
-# `config`/`members` fields plus two generics, and `batch_validate` changed arity).
-# Ring builder-params / SRS blobs are byte-identical across the two revisions, so
-# `ChunkPageHashesInitialization` still no-ops over People's existing chunk page hashes and
-# ring verifier keys are unaffected.
-# WARNING: the stored `Members`/`MembersCommitment` shape is NOT identical (768 B -> 288 B);
-# that is a storage-migration concern handled per-pallet, not a pin concern.
-# See guides/_recon/INDIVIDUALITY_STAGE0_RESULT.md section 5.
+# `verifiable` must stay on the crates.io release train the upstream individuality pallets use.
 verifiable = { version = "0.3.0", default-features = false }
-alloy-core = { version = "1.2.1", default-features = false }
 ethereum-standards = { version = "0.1.3", default-features = false }
-bounded-collections = { version = "0.3.2", default-features = false }
 ed25519-zebra = { version = "4.0.3", default-features = false }
-merlin = { version = "3.0", default-features = false }
-schnorrkel = { version = "0.11.5", default-features = false }
-rand_core = { version = "0.6", default-features = false }
-parking_lot = { version = "0.12.3", default-features = false }
 sp-keystore = { version = "0.49.0", default-features = false }
 sp-statement-store = { version = "28.0.0", default-features = false }
-# frame companions required by the individuality runtimes (pinned to the frame-support 47 train)
-pallet-assets-freezer = { version = "0.17.0", default-features = false }
+# frame companions required by the individuality runtimes
 pallet-verify-signature = { version = "0.12.0", default-features = false }
 pallet-pgas-allowance = { version = "0.4.0", default-features = false }
-# needed by the individuality pallets from v0.3.x on (all `sp_core::blake2_256` call sites moved here)
-sp-crypto-hashing = { version = "0.1.0", default-features = false }
-# ---- arkworks / EC host-call split, required by `support/src/crypto*` from v0.3.x on ----
-# ⚠ `sp-crypto-ec-utils` is NOT frame-independent: it tracks `sp-runtime-interface`.
-#      0.21.1 -> sp-runtime-interface ^35  (polkadot-sdk 2603)
-#      0.23.0 -> sp-runtime-interface ^37  (polkadot-sdk 2606)
-#   This workspace is now on 2606 / frame 48, so 0.23.0 is the matching pin -- and it is the one
-#   individuality itself uses. 0.21.1 was correct only while the workspace was on 2603; keeping it
-#   here would drag sp-runtime-interface 35 into a 2606 graph.
-sp-crypto-ec-utils = { version = "0.23.0", default-features = false }
-ark-bls12-381-ext = { version = "0.6", default-features = false }
-ark-ec = { version = "0.6", default-features = false }
-ark-ed-on-bls12-381-bandersnatch-ext = { version = "0.6", default-features = false }
-ark-ff = { version = "0.6", default-features = false }
-ark-scale = { version = "0.0.14", default-features = false }
-getrandom = { version = "0.2", default-features = false }
-spin = { version = "0.9", default-features = false, features = ["once"] }
 
-
-# ---- Individuality (proof-of-personhood) local crates ----
-indiv-support = { path = "support", default-features = false }
-indiv-precompile-personhood = { path = "precompiles/personhood", default-features = false }
-indiv-pallet-airdrop = { path = "pallets/airdrop", default-features = false }
-indiv-pallet-alias-accounts = { path = "pallets/alias-accounts", default-features = false }
-indiv-pallet-chunks-manager = { path = "pallets/chunks-manager", default-features = false }
-indiv-pallet-coinage = { path = "pallets/coinage", default-features = false }
-indiv-pallet-dotns-gateway = { path = "pallets/dotns-gateway", default-features = false }
-indiv-pallet-dummy-dim = { path = "pallets/dummy-dim", default-features = false }
-indiv-pallet-game = { path = "pallets/game", default-features = false }
-indiv-pallet-honour = { path = "pallets/honour", default-features = false }
-indiv-pallet-members = { path = "pallets/members", default-features = false }
-indiv-pallet-members-notifier = { path = "pallets/members-notifier", default-features = false }
-indiv-pallet-members-subscriber = { path = "pallets/members-subscriber", default-features = false }
-indiv-pallet-mob-rule = { path = "pallets/mob-rule", default-features = false }
-indiv-pallet-network-suffix = { path = "pallets/network-suffix", default-features = false }
-indiv-pallet-origin-restriction = { path = "pallets/origin-restriction", default-features = false }
-indiv-pallet-people-lite = { path = "pallets/people-lite", default-features = false }
-indiv-pallet-people = { path = "pallets/people-multi", default-features = false }
-indiv-pallet-pgas = { path = "pallets/pgas", default-features = false }
-indiv-pallet-proof-of-ink = { path = "pallets/proof-of-ink", default-features = false }
-indiv-pallet-relay-randomness = { path = "pallets/relay-randomness", default-features = false }
-indiv-pallet-resources = { path = "pallets/resources", default-features = false }
-indiv-pallet-score = { path = "pallets/score", default-features = false }
+# ---- Individuality (proof-of-personhood) crates, consumed from upstream `main` ----
+# The pallets, precompiles and `indiv-support` are no longer vendored in this repository. Cargo.lock
+# pins the exact upstream commit; bump it with `cargo update -p indiv-support` (and friends).
+indiv-system-parachains-common = { git = "https://github.com/paritytech/individuality-community", branch = "main", package = "system-parachains-common", default-features = false }
+indiv-support = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-precompile-nft-claims = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-precompile-personhood = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-precompile-scarcity = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-airdrop = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-alias-accounts = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-chunks-manager = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-coinage = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-dotns-gateway = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-dummy-dim = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-game = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-honour = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-members = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-members-notifier = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-members-subscriber = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-mob-rule = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-network-suffix = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-nft-claims = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-nft-credits = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-origin-restriction = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-people-airdrops = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-people-lite = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-people = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-pgas = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-proof-of-ink = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-relay-randomness = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-resources = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-scarcity = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-score = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+# Paseo-only individuality crates that upstream does not carry.
 indiv-pallet-storage-initialization = { path = "pallets/storage-initialization", default-features = false }
 pallet-rc-migrator = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.5.0", default-features = false }
-pallet-ah-ops = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.4.0", default-features = false }
+pallet-ah-ops = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.5.0", default-features = false }
 pallet-election-provider-multi-block = { version = "0.11.0", default-features = false }
-pallet-staking-async = { version = "0.14.0", default-features = false }
+pallet-staking-async = { version = "0.15.0", default-features = false }
 hex = { version = "0.4.3", default-features = false }
 rand = { version = "0.9.2" }
 impl-trait-for-tuples = { version = "0.2.3", default-features = false }
@@ -158,13 +131,13 @@ paseo-emulated-chain = { path = "integration-tests/emulated/chains/relays/paseo"
 assert_matches = { version = "1.5.0" }
 approx = { version = "0.5.1" }
 array-bytes = { version = "9.3.0" }
-asset-test-utils = { version = "37.0.0" }
-assets-common = { version = "0.35.0", default-features = false }
+asset-test-utils = { version = "39.0.0" }
+assets-common = { version = "0.37.0", default-features = false }
 authority-discovery-primitives = { version = "43.0.0", default-features = false, package = "sp-authority-discovery" }
 babe-primitives = { version = "0.49.0", default-features = false, package = "sp-consensus-babe" }
 beefy-primitives = { version = "31.0.0", default-features = false, package = "sp-consensus-beefy" }
 binary-merkle-tree = { version = "16.1.1", default-features = false }
-bp-bridge-hub-cumulus = { version = "0.32.0", default-features = false }
+bp-bridge-hub-cumulus = { version = "0.36.0", default-features = false }
 bp-header-chain = { version = "0.28.0", default-features = false }
 bp-messages = { version = "0.28.0", default-features = false }
 bp-parachains = { version = "0.28.0", default-features = false }
@@ -180,21 +153,21 @@ clap = { version = "4.5.0" }
 codec = { package = "parity-scale-codec", version = "3.7.5", default-features = false }
 collectives-paseo-emulated-chain = { path = "integration-tests/emulated/chains/parachains/collectives/collectives-paseo" }
 coretime-paseo-emulated-chain = { path = "integration-tests/emulated/chains/parachains/coretime/coretime-paseo" }
-cumulus-pallet-aura-ext = { version = "0.29.0", default-features = false }
-cumulus-pallet-parachain-system = { version = "0.29.0", default-features = false }
+cumulus-pallet-aura-ext = { version = "0.30.0", default-features = false }
+cumulus-pallet-parachain-system = { version = "0.30.0", default-features = false }
 cumulus-pallet-weight-reclaim = { version = "0.11.0", default-features = false }
 cumulus-pallet-session-benchmarking = { version = "30.0.0", default-features = false }
 cumulus-pallet-xcm = { version = "0.27.0", default-features = false }
-cumulus-pallet-xcmp-queue = { version = "0.31.0", default-features = false }
+cumulus-pallet-xcmp-queue = { version = "0.32.0", default-features = false }
 cumulus-primitives-aura = { version = "0.24.0", default-features = false }
 cumulus-primitives-core = { version = "0.26.0", default-features = false }
-cumulus-primitives-utility = { version = "0.31.0", default-features = false }
+cumulus-primitives-utility = { version = "0.32.0", default-features = false }
 emulated-integration-tests-common = { version = "36.0.0" }
 enumflags2 = { version = "0.7.7" }
 frame-benchmarking = { version = "49.0.0", default-features = false }
 frame-election-provider-support = { version = "48.0.0", default-features = false }
 frame-executive = { version = "48.0.0", default-features = false }
-frame-support = { version = "48.0.0", default-features = false }
+frame-support = { version = "48.1.0", default-features = false }
 frame-system = { version = "48.0.0", default-features = false }
 frame-system-benchmarking = { version = "49.0.0", default-features = false }
 frame-system-rpc-runtime-api = { version = "43.0.0", default-features = false }
@@ -211,9 +184,10 @@ pallet-asset-conversion-tx-payment = { version = "31.0.0", default-features = fa
 pallet-asset-conversion-precompiles = { version = "0.5.0", default-features = false }
 pallet-asset-rate = { version = "28.0.0", default-features = false }
 pallet-asset-tx-payment = { version = "49.0.0", default-features = false }
-pallet-assets = { version = "52.0.0", default-features = false }
-pallet-assets-holder = { version = "0.12.0", default-features = false }
-pallet-assets-precompiles = { version = "0.10.0", default-features = false }
+pallet-assets = { version = "53.0.0", default-features = false }
+pallet-assets-freezer = { version = "0.18.0", default-features = false }
+pallet-assets-holder = { version = "0.13.0", default-features = false }
+pallet-assets-precompiles = { version = "0.11.1", default-features = false }
 pallet-aura = { version = "48.0.0", default-features = false }
 pallet-authority-discovery = { version = "49.0.0", default-features = false }
 pallet-authorship = { version = "48.0.0", default-features = false }
@@ -247,24 +221,26 @@ pallet-message-queue = { version = "52.0.0", default-features = false }
 pallet-mmr = { version = "49.0.0", default-features = false }
 pallet-multi-asset-bounties = { version = "0.6.1", default-features = false }
 pallet-multisig = { version = "49.0.0", default-features = false }
-pallet-nft-fractionalization = { version = "33.0.0", default-features = false }
+pallet-nft-fractionalization = { version = "34.0.0", default-features = false }
 pallet-nfts = { version = "43.0.0", default-features = false }
 pallet-nfts-runtime-api = { version = "33.0.0", default-features = false }
 pallet-nis = { version = "49.0.0", default-features = false }
 pallet-migrations = { version = "19.0.0", default-features = false }
 pallet-nomination-pools = { version = "47.0.0", default-features = false }
-pallet-nomination-pools-benchmarking = { version = "47.0.0", default-features = false }
+pallet-nomination-pools-benchmarking = { version = "48.0.0", default-features = false }
 pallet-nomination-pools-runtime-api = { version = "45.0.0", default-features = false }
 pallet-offences = { version = "47.0.0", default-features = false }
 pallet-offences-benchmarking = { version = "49.0.0", default-features = false }
 pallet-parameters = { version = "0.20.0", default-features = false }
 pallet-preimage = { version = "49.0.0", default-features = false }
 pallet-proxy = { version = "49.0.0", default-features = false }
+pallet-psm = { version = "0.5.1", default-features = false }
 pallet-ranked-collective = { version = "49.0.0", default-features = false }
 pallet-recovery = { version = "49.0.0", default-features = false }
 pallet-referenda = { version = "49.0.0", default-features = false }
 pallet-remote-proxy = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.4.0", package = "pallet-remote-proxy", default-features = false }
-pallet-revive = { version = "0.19.0", default-features = false }
+pallet-revive = { version = "0.19.1", default-features = false }
+pallet-revive-fixtures = { version = "0.15.1" }
 pallet-salary = { version = "34.0.0", default-features = false }
 pallet-scheduler = { version = "50.0.0", default-features = false }
 pallet-session = { version = "49.0.0", default-features = false }
@@ -278,7 +254,7 @@ pallet-staking-async-rc-client = { version = "0.11.0", default-features = false 
 pallet-staking-reward-curve = { version = "12.0.0" }
 pallet-staking-reward-fn = { version = "24.0.1", default-features = false }
 pallet-staking-runtime-api = { version = "33.0.0", default-features = false }
-pallet-state-trie-migration = { version = "55.0.0", default-features = false }
+pallet-state-trie-migration = { version = "56.0.0", default-features = false }
 pallet-sudo = { version = "49.0.0", default-features = false }
 pallet-timestamp = { version = "48.0.0", default-features = false }
 pallet-transaction-payment = { version = "49.0.0", default-features = false }
@@ -287,27 +263,25 @@ pallet-treasury = { version = "48.0.0", default-features = false }
 pallet-uniques = { version = "49.0.0", default-features = false }
 pallet-utility = { version = "49.0.1", default-features = false }
 pallet-vesting = { version = "49.0.0", default-features = false }
-pallet-vesting-precompiles = { version = "0.5.0", default-features = false }
+pallet-vesting-precompiles = { version = "0.5.1", default-features = false }
 pallet-whitelist = { version = "48.0.0", default-features = false }
-pallet-xcm = { version = "29.0.0", default-features = false }
+pallet-xcm = { version = "29.1.0", default-features = false }
 pallet-xcm-benchmarks = { version = "29.0.0", default-features = false }
-pallet-xcm-precompiles = { version = "0.9.0", default-features = false }
+pallet-xcm-precompiles = { version = "0.9.1", default-features = false }
 pallet-xcm-bridge-hub = { version = "0.25.0", default-features = false }
-pallet-xcm-bridge-hub-router = { version = "0.27.0", default-features = false }
+pallet-xcm-bridge-hub-router = { version = "0.28.0", default-features = false }
 parachain-info = { version = "0.28.0", default-features = false, package = "staging-parachain-info" }
-parachains-common = { version = "34.0.0", default-features = false }
-parachains-runtimes-test-utils = { version = "35.0.0" }
+parachains-common = { version = "36.0.0", default-features = false }
+parachains-runtimes-test-utils = { version = "37.0.0" }
 paste = { version = "1.0.14" }
 penpal-runtime = { version = "0.43.0" }
 people-kusama-emulated-chain = { path = "integration-tests/emulated/chains/parachains/people/people-kusama" }
 people-kusama-runtime = { path = "system-parachains/people/people-kusama" }
-paseo-core-primitives = { version = "21.0.0", default-features = false }
-paseo-parachain-primitives = { version = "20.0.0", default-features = false }
 paseo-primitives = { version = "25.0.0", package = "polkadot-primitives", default-features = false }
 polkadot-core-primitives = { version = "24.0.0", default-features = false }
 polkadot-parachain-primitives = { version = "23.0.0", default-features = false }
 polkadot-primitives = { version = "25.0.0", default-features = false }
-polkadot-runtime-common = { version = "30.0.0", default-features = false }
+polkadot-runtime-common = { version = "31.0.0", default-features = false }
 primitive-types = { version = "0.13.1", default-features = false }
 frame-metadata-hash-extension = { version = "0.16.0", default-features = false }
 remote-externalities = { version = "0.61.0", package = "frame-remote-externalities" }
@@ -316,18 +290,9 @@ sc-chain-spec = { version = "51.0.0" }
 sc-network = { version = "0.58.0" }
 scale-info = { version = "2.11.6", default-features = false }
 separator = { version = "0.4.1" }
-# ⚠ DEFAULT FEATURES ARE ON (std). The relay chain and all system parachains rely on that, so
-# do NOT flip it. But individuality's own workspace pins this `default-features = false`, and
-# its `pallets/members-notifier` declares `serde = { workspace = true }` + `"serde/std"` in its
-# own `std` feature — coherent only under individuality's pin. Cargo IGNORES a member-level
-# `default-features = false` when the workspace entry has default features on, so under this pin
-# `serde/std` is unconditionally enabled and the **wasm** build of that pallet fails with ~1900
-# `can't find crate for std` errors while the native build stays perfectly green.
-# When `pallets/members-notifier` is ported (port plan v2, chunk C4), replace its
-#   serde = { workspace = true }
-# with
-#   serde = { version = "1.0.214", default-features = false, features = ["alloc", "derive"] }
-# That 1-line member-local pin is the whole fix. See INDIVIDUALITY_STAGE0_RESULT.md §3 class (c).
+# Default features (std) are ON: the relay chain and the system parachains rely on that. The
+# individuality git dependencies inherit `serde` from their own workspace (`default-features = false`),
+# so this pin does not leak into their wasm builds.
 serde = { version = "1.0.214" }
 serde_json = { version = "1.0.132", default-features = false }
 smallvec = { version = "1.13.1" }
@@ -348,7 +313,7 @@ snowbridge-pallet-outbound-queue-v2 = { version = "0.12.0", default-features = f
 snowbridge-pallet-system = { version = "0.23.0", default-features = false }
 snowbridge-pallet-system-v2 = { version = "0.12.0", default-features = false }
 snowbridge-pallet-system-frontend = { version = "0.11.0", default-features = false }
-snowbridge-inbound-queue-primitives = { version = "0.14.0", default-features = false }
+snowbridge-inbound-queue-primitives = { version = "0.18.0", default-features = false }
 snowbridge-runtime-common = { version = "0.23.0", default-features = false }
 snowbridge-runtime-test-common = { version = "0.29.0" }
 snowbridge-system-runtime-api = { version = "0.22.0", default-features = false }
@@ -380,14 +345,14 @@ sp-transaction-storage-proof = { version = "43.0.0", default-features = false }
 sp-trie = { version = "46.0.0", default-features = false }
 sp-version = { version = "46.0.0", default-features = false }
 sp-weights = { version = "36.0.0", default-features = false }
-substrate-wasm-builder = { version = "34.0.0" }
+substrate-wasm-builder = { version = "34.0.1", default-features = false }
 system-parachains-constants = { path = "system-parachains/constants", default-features = false }
 system-parachains-common = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.4.0", package = "system-parachains-common", default-features = false }
 tokio = { version = "1.45.0" }
-xcm = { version = "24.0.0", default-features = false, package = "staging-xcm" }
-xcm-builder = { version = "29.0.0", default-features = false, package = "staging-xcm-builder" }
+xcm = { version = "24.1.0", default-features = false, package = "staging-xcm" }
+xcm-builder = { version = "29.0.1", default-features = false, package = "staging-xcm-builder" }
 xcm-emulator = { version = "0.33.0" }
-xcm-executor = { version = "28.0.0", default-features = false, package = "staging-xcm-executor" }
+xcm-executor = { version = "28.0.1", default-features = false, package = "staging-xcm-executor" }
 xcm-runtime-apis = { version = "0.16.0", default-features = false }
 anyhow = { version = "1.0.82" }
 subxt = { version = "0.43.0" }
@@ -401,30 +366,7 @@ ss58-registry = { version = "1.47.0" }
 resolver = "2"
 
 members = [
-	"pallets/airdrop",
-	"pallets/alias-accounts",
-	"pallets/chunks-manager",
-	"pallets/coinage",
-	"pallets/dotns-gateway",
-	"pallets/dummy-dim",
-	"pallets/game",
-	"pallets/honour",
-	"pallets/members",
-	"pallets/members-notifier",
-	"pallets/members-subscriber",
-	"pallets/mob-rule",
-	"pallets/network-suffix",
-	"pallets/origin-restriction",
-	"pallets/people-lite",
-	"pallets/people-multi",
-	"pallets/pgas",
-	"pallets/proof-of-ink",
-	"pallets/relay-randomness",
-	"pallets/resources",
-	"pallets/score",
 	"pallets/storage-initialization",
-	"precompiles/personhood",
-	"support",
 
 	"integration-tests/emulated/chains/parachains/assets/asset-hub-paseo",
 	"integration-tests/emulated/chains/parachains/bridges/bridge-hub-paseo",

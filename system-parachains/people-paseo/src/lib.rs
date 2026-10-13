@@ -14,7 +14,7 @@
 // limitations under the License.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-#![recursion_limit = "256"]
+#![recursion_limit = "512"]
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
@@ -715,7 +715,7 @@ impl cumulus_pallet_weight_reclaim::Config for Runtime {
 impl pallet_sudo::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeCall = RuntimeCall;
-	type WeightInfo = pallet_sudo::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::pallet_sudo::WeightInfo<Runtime>;
 }
 
 impl<LocalCall> CreateBare<LocalCall> for Runtime
@@ -841,6 +841,7 @@ construct_runtime!(
 		ProofOfInk: indiv_pallet_proof_of_ink = 53,
 		Game: indiv_pallet_game = 55,
 		Score: indiv_pallet_score = 56,
+		NftCredits: indiv_pallet_nft_credits = 57,
 		DummyDim: indiv_pallet_dummy_dim = 59,
 		StorageInitialization: indiv_pallet_storage_initialization = 60,
 		PeopleLite: indiv_pallet_people_lite = 62,
@@ -851,6 +852,7 @@ construct_runtime!(
 		MembersNotifier: indiv_pallet_members_notifier = 69,
 		Airdrop: indiv_pallet_airdrop = 70,
 		Honour: indiv_pallet_honour = 71,
+		PeopleAirdrops: indiv_pallet_people_airdrops = 72,
 		// Index 74 matches upstream's `next-people-paseo`; confirmed free in live metadata.
 		Parameters: pallet_parameters = 73,
 		NetworkSuffix: indiv_pallet_network_suffix = 74,
@@ -877,7 +879,8 @@ mod benches {
 		[frame_system_extensions, SystemExtensionsBench::<Runtime>]
 		[pallet_asset_tx_payment, AssetTxPayment]
 		[pallet_asset_rate, AssetRate]
-		[pallet_assets, Assets]
+		[pallet_assets, Local]
+		[pallet_assets, Pool]
 		[pallet_asset_conversion, AssetConversion]
 		[pallet_balances, Balances]
 		[pallet_identity, Identity]
@@ -887,9 +890,11 @@ mod benches {
 		[pallet_multisig, Multisig]
 		[pallet_proxy, Proxy]
 		[pallet_session, SessionBench::<Runtime>]
+		[pallet_sudo, Sudo]
 		[pallet_transaction_payment, TransactionPayment]
 		[pallet_timestamp, Timestamp]
 		[pallet_utility, Utility]
+		[pallet_verify_signature, VerifySignature]
 		// Cumulus
 		[cumulus_pallet_parachain_system, ParachainSystem]
 		[cumulus_pallet_weight_reclaim, WeightReclaim]
@@ -901,6 +906,8 @@ mod benches {
 		[pallet_xcm_benchmarks::generic, XcmGeneric]
 		// Individuality (Proof of Personhood)
 		[indiv_pallet_origin_restriction, OriginRestriction]
+		[indiv_pallet_relay_randomness, RelayRandomness]
+		[indiv_pallet_network_suffix, NetworkSuffix]
 		[indiv_pallet_people, People]
 		[indiv_pallet_dummy_dim, DummyDim]
 		[indiv_pallet_game, Game]
@@ -916,6 +923,8 @@ mod benches {
 		[indiv_pallet_coinage, Coinage]
 		[indiv_pallet_airdrop, Airdrop]
 		[indiv_pallet_honour, Honour]
+		[indiv_pallet_nft_credits, NftCredits]
+		[indiv_pallet_people_airdrops, PeopleAirdrops]
 	);
 
 	impl frame_system_benchmarking::Config for Runtime {
@@ -1088,10 +1097,9 @@ mod benches {
 		}
 
 		fn alias_origin() -> Result<(Location, Location), BenchmarkError> {
-			Ok((
-				Location::new(1, [Parachain(1000)]),
-				Location::new(1, [Parachain(1000), AccountId32 { id: [111u8; 32], network: None }]),
-			))
+			Ok(indiv_system_parachains_common::benchmarking::set_up_worst_case_authorized_alias::<
+				Runtime,
+			>())
 		}
 	}
 
@@ -1104,6 +1112,10 @@ mod benches {
 	pub use pallet_xcm::benchmarking::Pallet as PalletXcmExtrinsicsBenchmark;
 	pub type XcmBalances = pallet_xcm_benchmarks::fungible::Pallet<Runtime>;
 	pub type XcmGeneric = pallet_xcm_benchmarks::generic::Pallet<Runtime>;
+	// Two `pallet_assets` instances, so the bencher suffixes both weight files with the
+	// instance name: `pallet_assets_local.rs` and `pallet_assets_pool.rs`, as asset-hub-paseo.
+	pub type Local = pallet_assets::Pallet<Runtime>;
+	pub type Pool = pallet_assets::Pallet<Runtime, super::assets::PoolAssetsInstance>;
 	pub use frame_support::traits::WhitelistedStorageKeys;
 	pub use sp_storage::TrackedStorageKey;
 }
@@ -1279,7 +1291,10 @@ impl_runtime_apis! {
 
 	impl xcm_runtime_apis::fees::XcmPaymentApi<Block> for Runtime {
 		fn query_acceptable_payment_assets(xcm_version: xcm::Version) -> Result<Vec<VersionedAssetId>, XcmPaymentApiError> {
-			let acceptable_assets = vec![AssetId(xcm_config::RelayLocation::get())];
+			let acceptable_assets = alloc::vec![
+				AssetId(xcm_config::RelayLocation::get()),
+				AssetId(people::ExternalAssetLocation::get()),
+			];
 			PolkadotXcm::query_acceptable_payment_assets(xcm_version, acceptable_assets)
 		}
 
@@ -1321,6 +1336,22 @@ impl_runtime_apis! {
 		}
 	}
 
+	impl xcm_runtime_apis::authorized_aliases::AuthorizedAliasersApi<Block> for Runtime {
+		fn authorized_aliasers(target: VersionedLocation) -> Result<
+			Vec<xcm_runtime_apis::authorized_aliases::OriginAliaser>,
+			xcm_runtime_apis::authorized_aliases::Error
+		> {
+			PolkadotXcm::authorized_aliasers(target)
+		}
+
+		fn is_authorized_alias(origin: VersionedLocation, target: VersionedLocation) -> Result<
+			bool,
+			xcm_runtime_apis::authorized_aliases::Error
+		> {
+			PolkadotXcm::is_authorized_alias(origin, target)
+		}
+	}
+
 	impl xcm_runtime_apis::trusted_query::TrustedQueryApi<Block> for Runtime {
 		fn is_trusted_reserve(asset: VersionedAsset, location: VersionedLocation) -> xcm_runtime_apis::trusted_query::XcmTrustedQueryResult {
 			PolkadotXcm::is_trusted_reserve(asset, location)
@@ -1330,18 +1361,26 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl xcm_runtime_apis::authorized_aliases::AuthorizedAliasersApi<Block> for Runtime {
-		fn authorized_aliasers(target: VersionedLocation) -> Result<
-			Vec<xcm_runtime_apis::authorized_aliases::OriginAliaser>,
-			xcm_runtime_apis::authorized_aliases::Error
-		> {
-			PolkadotXcm::authorized_aliasers(target)
+	impl indiv_pallet_nft_credits::runtime_api::NftCreditsApi<Block, AccountId, BlockNumber> for Runtime {
+		fn nft_claim_credit_roots(
+			claimant: indiv_support::identity::AccountOrPerson<AccountId>,
+		) -> Vec<(BlockNumber, indiv_support::credit_trees::NftClaimCreditTree)> {
+			NftCredits::nft_claim_credit_roots(&claimant)
 		}
-		fn is_authorized_alias(origin: VersionedLocation, target: VersionedLocation) -> Result<
-			bool,
-			xcm_runtime_apis::authorized_aliases::Error
-		> {
-			PolkadotXcm::is_authorized_alias(origin, target)
+
+		fn nft_claim_credit_proofs(
+			tree_block: BlockNumber,
+			claimant: indiv_support::identity::AccountOrPerson<AccountId>,
+		) -> Result<Vec<indiv_pallet_nft_credits::NftClaimCreditProof>, indiv_pallet_nft_credits::NftClaimCreditProofError> {
+			NftCredits::nft_claim_credit_proofs(tree_block, &claimant)
+		}
+
+		fn nft_claim_credit_proof_from_awards(
+			tree_block: BlockNumber,
+			awards: Vec<indiv_pallet_nft_credits::NftClaimCreditAward<AccountId>>,
+			leaf_index: u32,
+		) -> Result<indiv_pallet_nft_credits::NftClaimCreditProof, indiv_pallet_nft_credits::NftClaimCreditProofError> {
+			NftCredits::nft_claim_credit_proof_from_awards(tree_block, awards, leaf_index)
 		}
 	}
 
