@@ -2142,6 +2142,7 @@ mod authorized_ocw {
 				identifier,
 				indices: BoundedVec::try_from(vec![0])
 					.expect("one index is within the runtime bound"),
+				discriminator: 0,
 			},
 		)
 	}

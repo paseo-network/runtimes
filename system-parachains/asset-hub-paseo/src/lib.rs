@@ -2545,13 +2545,8 @@ impl indiv_pallet_members_subscriber::Config for Runtime {
 	type SelfParaId = MembersSubscriberSelfParaId;
 	type MaxMissingRootsPerCollection = ConstU32<255>;
 	type MaxDeletedRingsPerCollection = ConstU32<100>;
-	// individuality v0.3.1 replaced `MaxRingRootsPerCollection` with the three constants below.
-	//
-	// `MaxGapScanPerBatch` MUST exceed `MaxUpdatesPerBatch` (10, set further down), otherwise the
-	// gap-scan cursor advances no faster than the ring-index frontier and never catches up.
-	// 100 keeps the old `MaxRingRootsPerCollection` figure as the per-batch scan budget, which is
-	// 10x the batch size.
-	type MaxGapScanPerBatch = ConstU32<100>;
+	type MaxGapScanPerCall = ConstU32<32>;
+	type GapScanCooldownSeconds = ConstU64<60>;
 	// Entries removed per `purge_stale_ring_roots` call. Stale prefixes only appear after a
 	// `clear_all_ring_data`, i.e. a notifier re-initialisation; there are none today
 	// (`CurrentGeneration` is pinned at 0 by `MigrateV0ToV1`). Sized to bound one page's weight.
