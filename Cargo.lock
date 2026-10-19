@@ -3281,7 +3281,7 @@ dependencies = [
  "frame-support",
  "integration-tests-helpers",
  "pallet-balances",
- "pallet-broker 0.28.0",
+ "pallet-broker 0.29.0",
  "pallet-message-queue",
  "pallet-xcm",
  "parachains-common 36.0.0",
@@ -3290,7 +3290,7 @@ dependencies = [
  "paseo-runtime-constants",
  "paseo-system-emulated-network",
  "polkadot-runtime-common 31.0.0",
- "polkadot-runtime-parachains 28.1.0",
+ "polkadot-runtime-parachains 29.0.0",
  "sp-runtime",
  "staging-xcm",
  "staging-xcm-executor",
@@ -3323,7 +3323,7 @@ dependencies = [
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
- "pallet-broker 0.28.0",
+ "pallet-broker 0.29.0",
  "pallet-collator-selection",
  "pallet-message-queue",
  "pallet-multisig",
@@ -9317,7 +9317,7 @@ dependencies = [
 [[package]]
 name = "pallet-ah-ops"
 version = "0.1.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.5.0#3936c7e4d42b449b964e41bd7b69d5f1db1e3a1f"
+source = "git+https://github.com/polkadot-fellows/runtimes?rev=refs%2Fpull%2F1316%2Fhead#6c4de0955d65f99fc2e490f5be22d1d2b0bcbd0c"
 dependencies = [
  "cumulus-primitives-core",
  "frame-benchmarking",
@@ -10492,7 +10492,7 @@ dependencies = [
 [[package]]
 name = "pallet-rc-migrator"
 version = "0.1.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?tag=v2.5.0#3936c7e4d42b449b964e41bd7b69d5f1db1e3a1f"
+source = "git+https://github.com/polkadot-fellows/runtimes?rev=refs%2Fpull%2F1316%2Fhead#6c4de0955d65f99fc2e490f5be22d1d2b0bcbd0c"
 dependencies = [
  "frame-benchmarking",
  "frame-election-provider-support",
@@ -10529,8 +10529,8 @@ dependencies = [
  "pallet-xcm",
  "parity-scale-codec",
  "polkadot-parachain-primitives",
- "polkadot-runtime-common 30.0.0",
- "polkadot-runtime-parachains 28.1.0",
+ "polkadot-runtime-common 31.0.0",
+ "polkadot-runtime-parachains 29.0.0",
  "scale-info",
  "serde",
  "sp-api",
@@ -11575,7 +11575,7 @@ dependencies = [
  "pallet-beefy",
  "pallet-beefy-mmr",
  "pallet-bounties",
- "pallet-broker 0.28.0",
+ "pallet-broker 0.29.0",
  "pallet-child-bounties",
  "pallet-conviction-voting",
  "pallet-delegated-staking",
@@ -11620,7 +11620,7 @@ dependencies = [
  "polkadot-parachain-primitives",
  "polkadot-primitives",
  "polkadot-runtime-common 31.0.0",
- "polkadot-runtime-parachains 28.1.0",
+ "polkadot-runtime-parachains 29.0.0",
  "scale-info",
  "separator",
  "serde_json",
@@ -12413,7 +12413,6 @@ dependencies = [
  "sp-session",
  "sp-staking",
  "sp-std",
- "sp-tracing",
  "staging-xcm",
  "staging-xcm-executor",
  "static_assertions",
@@ -12464,6 +12463,7 @@ dependencies = [
  "sp-session",
  "sp-staking",
  "sp-std",
+ "sp-tracing",
  "staging-xcm",
  "staging-xcm-executor",
  "static_assertions",
