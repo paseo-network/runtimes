@@ -362,6 +362,8 @@ impl Contains<Location> for SystemChainAccumulationAccounts {
 	}
 }
 
+// TODO(ahm-v2): decide whether to refuse inbound XCM from everyone but the relay chain while
+// the migration runs, so its messages do not queue behind others'.
 pub type Barrier = TrailingSetTopicAsId<
 	DenyThenTry<
 		DenyReserveTransferToRelayChain,

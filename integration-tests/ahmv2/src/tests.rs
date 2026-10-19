@@ -149,6 +149,7 @@ const OUTSIDER_PARA: u32 = 4242;
 
 /// A system para that is not Asset Hub. The barrier lets its message in, so the only thing
 /// standing between it and the migration is `CtOrigin`.
+/// Once the migration starts, the barrier admits only Asset Hub.
 const SYSTEM_IMPOSTOR_PARA: u32 = system_parachain::PEOPLE_ID;
 
 /// Schedule the migration and walk both chains through the handshake over their real queues: the

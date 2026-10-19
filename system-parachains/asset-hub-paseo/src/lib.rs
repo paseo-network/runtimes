@@ -289,6 +289,9 @@ impl Contains<RuntimeCall> for AllExceptReapStash {
 
 // Configure FRAME pallets to include in runtime.
 impl frame_system::Config for Runtime {
+	#[cfg(all(feature = "ahm-v2", not(feature = "on-chain-release-build")))]
+	type BaseCallFilter = frame_support::traits::InsideBoth<AllExceptReapStash, CtMigrator>;
+	#[cfg(not(all(feature = "ahm-v2", not(feature = "on-chain-release-build"))))]
 	type BaseCallFilter = AllExceptReapStash;
 	type BlockWeights = RuntimeBlockWeights;
 	type BlockLength = RuntimeBlockLength;
@@ -3117,6 +3120,8 @@ construct_runtime!(
 		// `pallet-rc2-migrator` hardcodes for it (`CT_MIGRATOR_PALLET_INDEX`).
 		#[cfg(all(feature = "ahm-v2", not(feature = "on-chain-release-build")))]
 		CtMigrator: pallet_ct_migrator = 255,
+		// TODO(ahm-v2): `RegistrarPara` and `HrmpPara` go here, closed until the migration is done
+		// (`ahm_v2/lockdown.rs`).
 	}
 );
 

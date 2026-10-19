@@ -88,12 +88,12 @@ indiv-pallet-storage-initialization = { path = "pallets/storage-initialization",
 # matching tag (v2.6.0 or whatever it becomes).
 pallet-rc-migrator = { git = "https://github.com/polkadot-fellows/runtimes", rev = "refs/pull/1316/head", default-features = false }
 pallet-ah-ops = { git = "https://github.com/polkadot-fellows/runtimes", rev = "refs/pull/1316/head", default-features = false }
-# AHM v2 migrator pallets (polkadot-fellows/runtimes#1285, #1305). Pinned to the merge commit of
-# the last ported PR: fellowship `main` already carries follow-ups (#1321 lockdown, ...) which
-# change the `Config` traits and are ported separately. On Paseo the Coretime chain is dead, so
+# AHM v2 migrator pallets (polkadot-fellows/runtimes#1285, #1305, #1321). Tracking fellowship
+# `main`: every AHM v2 PR there is ported here as it lands, so the runtimes' `Config` impls match
+# the pallets' current traits. On Paseo the Coretime chain is dead, so
 # `pallet-ct-migrator` runs on Asset Hub. Both are behind the runtimes' `ahm-v2` feature.
-pallet-rc2-migrator = { git = "https://github.com/polkadot-fellows/runtimes", rev = "9778ddb91c0acf99b8804e55ad64475fb5546624", default-features = false }
-pallet-ct-migrator = { git = "https://github.com/polkadot-fellows/runtimes", rev = "9778ddb91c0acf99b8804e55ad64475fb5546624", default-features = false }
+pallet-rc2-migrator = { git = "https://github.com/polkadot-fellows/runtimes", branch = "main", default-features = false }
+pallet-ct-migrator = { git = "https://github.com/polkadot-fellows/runtimes", branch = "main", default-features = false }
 pallet-election-provider-multi-block = { version = "0.11.0", default-features = false }
 pallet-staking-async = { version = "0.15.0", default-features = false }
 hex = { version = "0.4.3", default-features = false }
