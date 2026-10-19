@@ -49,9 +49,9 @@ use parachains_common::xcm_config::{
 	RelayOrOtherSystemParachains,
 };
 use paseo_runtime_constants::{system_parachain, PROTECTED_ASSET_ID};
-use polkadot_parachain_primitives::primitives::Sibling;
+use polkadot_parachain_primitives::primitives::{IsSystem, Sibling};
 use snowbridge_outbound_queue_primitives::v2::exporter::PausableExporter;
-use sp_runtime::traits::TryConvertInto;
+use sp_runtime::traits::{AccountIdConversion, TryConvertInto};
 use xcm::latest::prelude::*;
 use xcm_builder::{
 	AccountId32Aliases, AliasChildLocation, AliasOriginRootUsingFilter,
@@ -69,6 +69,7 @@ use xcm_builder::{
 };
 use xcm_executor::{traits::ConvertLocation, XcmExecutor};
 
+use system_parachains_constants::paseo::account::ACCUMULATE_FORWARD_PALLET_ID;
 pub use system_parachains_constants::paseo::locations::{AssetHubLocation, RelayChainLocation};
 
 parameter_types! {
@@ -345,6 +346,22 @@ impl Contains<Location> for LocalPlurality {
 	}
 }
 
+/// The `pallet-accumulate-and-forward` account on the relay chain or on a sibling system parachain.
+pub struct SystemChainAccumulationAccounts;
+impl Contains<Location> for SystemChainAccumulationAccounts {
+	fn contains(location: &Location) -> bool {
+		let accumulation_account: [u8; 32] = ACCUMULATE_FORWARD_PALLET_ID.into_account_truncating();
+		match location.unpack() {
+			(1, [AccountId32 { id, .. }]) => *id == accumulation_account,
+			(1, [Parachain(id), AccountId32 { id: account_id, .. }]) =>
+				ParaId::from(*id).is_system() &&
+					matches!(*id, system_parachain::PEOPLE_ID | system_parachain::BULLETIN_ID) &&
+					*account_id == accumulation_account,
+			_ => false,
+		}
+	}
+}
+
 pub type Barrier = TrailingSetTopicAsId<
 	DenyThenTry<
 		DenyReserveTransferToRelayChain,
@@ -370,6 +387,9 @@ pub type Barrier = TrailingSetTopicAsId<
 							AmbassadorEntities,
 							SecretaryEntities,
 							IsSiblingSystemParachain<ParaId, parachain_info::Pallet<Runtime>>,
+							// System chains forward their burns to the DAP staging account without
+							// paying fees.
+							SystemChainAccumulationAccounts,
 						),
 						TrustedAliasers,
 					>,
@@ -897,4 +917,35 @@ fn foreign_pallet_has_correct_local_account() {
 	let paseo = Ss58AddressFormat::try_from("polkadot").unwrap();
 	let address = Ss58Codec::to_ss58check_with_version(&account, paseo);
 	assert_eq!(address, "13w7NdvSR1Af8xsQTArDtZmVvjE8XhWNdL4yed3iFHrUNCnS");
+}
+
+#[test]
+fn system_chain_accumulation_accounts_match_only_forwarder_origins() {
+	use polkadot_parachain_primitives::primitives::LOWEST_PUBLIC_ID;
+	use system_parachain::{BULLETIN_ID, PEOPLE_ID};
+
+	let account: [u8; 32] = ACCUMULATE_FORWARD_PALLET_ID.into_account_truncating();
+	let on_parachain =
+		|para_id, id| Location::new(1, [Parachain(para_id), AccountId32 { network: None, id }]);
+
+	// The relay chain and every system parachain that forwards its burns.
+	assert!(SystemChainAccumulationAccounts::contains(&Location::new(
+		1,
+		[AccountId32 { network: None, id: account }]
+	)));
+	for para_id in [PEOPLE_ID, BULLETIN_ID] {
+		assert!(SystemChainAccumulationAccounts::contains(&on_parachain(para_id, account)));
+	}
+	// Another account on a system chain.
+	assert!(!SystemChainAccumulationAccounts::contains(&on_parachain(PEOPLE_ID, [0u8; 32])));
+	// The accumulation account on a non-system parachain.
+	assert!(!SystemChainAccumulationAccounts::contains(&on_parachain(
+		LOWEST_PUBLIC_ID.into(),
+		account
+	)));
+	// The accumulation account as a local origin.
+	assert!(!SystemChainAccumulationAccounts::contains(&Location::new(
+		0,
+		[AccountId32 { network: None, id: account }]
+	)));
 }
