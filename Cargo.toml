@@ -361,6 +361,7 @@ sp-weights = { version = "36.0.0", default-features = false }
 substrate-wasm-builder = { version = "34.0.1", default-features = false }
 system-parachains-constants = { path = "system-parachains/constants", default-features = false }
 system-parachains-common = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.4.0", package = "system-parachains-common", default-features = false }
+system-parachains-test-utils = { path = "system-parachains/common/test-utils" }
 tokio = { version = "1.45.0" }
 xcm = { version = "24.1.0", default-features = false, package = "staging-xcm" }
 xcm-builder = { version = "29.0.1", default-features = false, package = "staging-xcm-builder" }
@@ -403,6 +404,7 @@ members = [
 	"system-parachains/bulletin-paseo",
 	"system-parachains/collectives-paseo",
 	"system-parachains/collectives-paseo/constants",
+	"system-parachains/common/test-utils",
 	"system-parachains/constants",
 	"system-parachains/coretime-paseo",
 	"system-parachains/people-paseo",

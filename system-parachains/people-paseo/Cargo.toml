@@ -122,6 +122,7 @@ system-parachains-constants = { workspace = true }
 [dev-dependencies]
 frame-remote-externalities = { workspace = true }
 parachains-runtimes-test-utils = { workspace = true }
+system-parachains-test-utils = { workspace = true }
 sp-tracing = { workspace = true, default-features = true }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 

@@ -183,6 +183,7 @@ asset-test-utils = { workspace = true }
 frame-metadata = { workspace = true, features = ["std"] }
 hex = { workspace = true }
 parachains-runtimes-test-utils = { workspace = true }
+system-parachains-test-utils = { workspace = true }
 paseo-runtime = { workspace = true }
 sp-keyring = { workspace = true, default-features = true }
 sp-tracing = { workspace = true, default-features = true }
