@@ -2383,7 +2383,3 @@ impl pallet_verify_signature::Config for Runtime {
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = VerifySignatureBenchmarkHelper;
 }
-
-impl pallet_skip_feeless_payment::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-}

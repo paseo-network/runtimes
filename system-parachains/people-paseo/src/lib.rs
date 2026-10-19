@@ -173,10 +173,7 @@ pub type TxExtensionV1 = cumulus_pallet_weight_reclaim::StorageWeightReclaim<
 		frame_system::CheckEra<Runtime>,
 		frame_system::CheckNonce<Runtime>,
 		frame_system::CheckWeight<Runtime>,
-		pallet_skip_feeless_payment::SkipCheckIfFeeless<
-			Runtime,
-			pallet_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
-		>,
+		pallet_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
 		frame_metadata_hash_extension::CheckMetadataHash<Runtime>,
 	),
 >;
@@ -831,7 +828,6 @@ construct_runtime!(
 		AssetRate: pallet_asset_rate = 13,
 		AssetTxPayment: pallet_asset_tx_payment = 14,
 		AssetsHolder: pallet_assets_holder = 15,
-		SkipFeelessPayment: pallet_skip_feeless_payment = 16,
 		OriginRestriction: indiv_pallet_origin_restriction = 17,
 		AssetConversion: pallet_asset_conversion = 18,
 		PoolAssets: pallet_assets::<Instance1> = 19,

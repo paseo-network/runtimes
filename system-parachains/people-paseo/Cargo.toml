@@ -40,7 +40,6 @@ pallet-multisig = { workspace = true }
 pallet-parameters = { workspace = true }
 pallet-proxy = { workspace = true }
 pallet-session = { workspace = true }
-pallet-skip-feeless-payment = { workspace = true }
 pallet-sudo = { workspace = true }
 pallet-timestamp = { workspace = true }
 pallet-asset-tx-payment = { workspace = true }
@@ -192,7 +191,6 @@ std = [
 	"pallet-parameters/std",
 	"pallet-proxy/std",
 	"pallet-session/std",
-	"pallet-skip-feeless-payment/std",
 	"pallet-sudo/std",
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
@@ -283,7 +281,6 @@ runtime-benchmarks = [
 	"pallet-parameters/runtime-benchmarks",
 	"pallet-proxy/runtime-benchmarks",
 	"pallet-session/runtime-benchmarks",
-	"pallet-skip-feeless-payment/runtime-benchmarks",
 	"pallet-sudo/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"pallet-transaction-payment/runtime-benchmarks",
@@ -355,7 +352,6 @@ try-runtime = [
 	"pallet-parameters/try-runtime",
 	"pallet-proxy/try-runtime",
 	"pallet-session/try-runtime",
-	"pallet-skip-feeless-payment/try-runtime",
 	"pallet-sudo/try-runtime",
 	"pallet-timestamp/try-runtime",
 	"pallet-transaction-payment/try-runtime",
