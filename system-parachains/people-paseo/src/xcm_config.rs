@@ -14,31 +14,31 @@
 // limitations under the License.
 
 use super::{
-	assets::hollar::{HollarFromHydration, HollarLocation},
-	people::{ExternalAssetLocation, FungibleExternalAsset},
-	AccountId, AllPalletsWithSystem, AssetRate, Assets as AssetsPallet, Balance, Balances,
-	CollatorSelection, ParachainInfo, ParachainSystem, PasWeightToFee as WeightToFee, PolkadotXcm,
-	Runtime, RuntimeCall, RuntimeEvent, RuntimeHoldReason, RuntimeOrigin, XcmpQueue,
+	assets::hollar::HollarFromHydration, people::ExternalAssetLocation, AccountId,
+	AllPalletsWithSystem, AssetRate, Assets, Balance, Balances, CollatorSelection, ParachainInfo,
+	ParachainSystem, PasWeightToFee as WeightToFee, PolkadotXcm, Runtime, RuntimeCall,
+	RuntimeEvent, RuntimeHoldReason, RuntimeOrigin, XcmpQueue,
 };
-use crate::{people::ExternalAssetLocation, AssetRate, Assets, Balance, TransactionByteFee, CENTS};
-use cumulus_primitives_utility::TakeFirstAssetTrader;
+use crate::{system_para_deposit, TransactionByteFee, CENTS};
 #[cfg(feature = "runtime-benchmarks")]
 use assets_common::local_and_foreign_assets::ForeignAssetReserveData;
+use cumulus_primitives_utility::TakeFirstAssetTrader;
 use frame_support::{
 	parameter_types,
 	traits::{
-		fungible::{HoldConsideration, ItemOf},
-		tokens::{imbalance::{ResolveTo, ResolveAssetTo}},
+		fungible::HoldConsideration,
+		tokens::imbalance::{ResolveAssetTo, ResolveTo},
 		ConstU32, Contains, ContainsPair, Equals, Everything, LinearStoragePrice, Nothing,
 		ProcessMessageError,
 	},
 };
 use frame_system::EnsureRoot;
+use pallet_collator_selection::StakingPotAccountId;
 use pallet_xcm::{AuthorizedAliasers, XcmPassthrough};
 use parachains_common::{
 	xcm_config::{
 		AliasAccountId32FromSiblingSystemChain, AllSiblingSystemParachains,
-		AssetFeeAsExistentialDepositMultiplier, AssetFeeAsExistentialDepositMultiplier, ConcreteAssetFromSystem,
+		AssetFeeAsExistentialDepositMultiplier, ConcreteAssetFromSystem,
 		ParentRelayOrSiblingParachains, RelayOrOtherSystemParachains,
 	},
 	TREASURY_PALLET_ID,
@@ -137,12 +137,17 @@ pub type FungibleTransactor = FungibleAdapter<
 	(),
 >;
 
+/// `AssetId`/`Balance` converter for `Assets`: matches everything that comes from outside.
+/// The asset transactor, the asset-rate trader and `XcmPaymentApi` all use this one matcher.
+pub type AssetsConvertedConcreteId =
+	assets_common::ForeignAssetsConvertedConcreteId<(), Balance, Location>;
+
 /// Means for transacting other fungible tokens on this chain.
 pub type FungiblesTransactor = FungiblesAdapter<
 	// Use this implementation of `fungibles::*`.
-	AssetsPallet,
+	Assets,
 	// Match everything that comes from outside.
-	assets_common::ForeignAssetsConvertedConcreteId<(), Balance, Location>,
+	AssetsConvertedConcreteId,
 	// Convert an XCM `Location` into a local account ID.
 	LocationToAccountId,
 	// Our chain's account ID type (we can't get away without mentioning it explicitly):
@@ -346,18 +351,6 @@ pub type AssetFeeAsExistentialDepositMultiplierFeeCharger = AssetFeeAsExistentia
 >;
 
 pub type WeightToNativeFee = WeightToFee<Runtime>;
-pub struct WeightToStableFee;
-impl frame_support::weights::WeightToFee for WeightToStableFee {
-	type Balance = Balance;
-
-	fn weight_to_fee(weight: &Weight) -> Self::Balance {
-		let native_fee = WeightToNativeFee::weight_to_fee(weight);
-
-		AssetRate::to_asset_balance(native_fee, HollarLocation::get())
-			// Using max value will make the payment fail and go to the next trader component.
-			.unwrap_or(Balance::MAX)
-	}
-}
 
 /// Prices weight in PAS and converts it at the rate registered by governance.
 /// Assets without a rate cannot pay execution fees.
@@ -387,9 +380,6 @@ pub type Traders = (
 	>,
 	AssetRateTrader,
 );
-
-/// A fungible adapter for the stable asset
-pub type FungibleHollar = ItemOf<AssetsPallet, HollarLocation, AccountId>;
 
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {

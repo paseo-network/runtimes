@@ -105,6 +105,7 @@ pallet-treasury = { workspace = true }
 pallet-uniques = { workspace = true }
 pallet-utility = { workspace = true }
 pallet-vesting = { workspace = true }
+pallet-verify-signature = { workspace = true }
 pallet-vesting-precompiles = { workspace = true }
 pallet-whitelist = { workspace = true }
 sp-api = { workspace = true }
@@ -176,6 +177,7 @@ snowbridge-runtime-common = { workspace = true }
 [dev-dependencies]
 approx = { workspace = true }
 asset-test-utils = { workspace = true }
+frame-metadata = { workspace = true, features = ["std"] }
 hex = { workspace = true }
 parachains-runtimes-test-utils = { workspace = true }
 paseo-runtime = { workspace = true }
@@ -274,6 +276,7 @@ runtime-benchmarks = [
 	"pallet-treasury/runtime-benchmarks",
 	"pallet-uniques/runtime-benchmarks",
 	"pallet-utility/runtime-benchmarks",
+	"pallet-verify-signature/runtime-benchmarks",
 	"pallet-vesting-precompiles/runtime-benchmarks",
 	"pallet-vesting/runtime-benchmarks",
 	"pallet-whitelist/runtime-benchmarks",
@@ -371,6 +374,7 @@ try-runtime = [
 	"pallet-treasury/try-runtime",
 	"pallet-uniques/try-runtime",
 	"pallet-utility/try-runtime",
+	"pallet-verify-signature/try-runtime",
 	"pallet-vesting-precompiles/try-runtime",
 	"pallet-vesting/try-runtime",
 	"pallet-whitelist/try-runtime",
@@ -412,6 +416,7 @@ std = [
 	"frame-election-provider-support/std",
 	"frame-executive/std",
 	"frame-metadata-hash-extension/std",
+	"frame-metadata/std",
 	"frame-support/std",
 	"frame-system-benchmarking?/std",
 	"frame-system-rpc-runtime-api/std",
@@ -486,6 +491,7 @@ std = [
 	"pallet-treasury/std",
 	"pallet-uniques/std",
 	"pallet-utility/std",
+	"pallet-verify-signature/std",
 	"pallet-vesting-precompiles/std",
 	"pallet-vesting/std",
 	"pallet-whitelist/std",
