@@ -303,6 +303,9 @@ runtime-benchmarks = [
 coinage-benchmark-proof-cache-regenerate = [
 	"indiv-pallet-coinage/benchmark-proof-cache-regenerate",
 ]
+coinage-benchmark-proof-cache-check = [
+	"indiv-pallet-coinage/benchmark-proof-cache-check",
+]
 
 try-runtime = [
 	"assets-common/try-runtime",
