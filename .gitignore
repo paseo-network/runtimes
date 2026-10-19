@@ -44,3 +44,4 @@ target/
 *.patch
 *.db.*
 db.*
+integration-tests/ahmv2/snapshots/

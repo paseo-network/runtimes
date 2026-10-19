@@ -1408,6 +1408,7 @@ dependencies = [
  "pallet-child-bounties",
  "pallet-collator-selection",
  "pallet-conviction-voting",
+ "pallet-ct-migrator",
  "pallet-dap",
  "pallet-delegated-staking",
  "pallet-election-provider-multi-block",
@@ -1427,6 +1428,7 @@ dependencies = [
  "pallet-proxy",
  "pallet-psm",
  "pallet-rc-migrator",
+ "pallet-rc2-migrator",
  "pallet-referenda",
  "pallet-revive",
  "pallet-scheduler",
@@ -9978,6 +9980,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-ct-migrator"
+version = "0.1.0"
+source = "git+https://github.com/polkadot-fellows/runtimes?rev=bdc754b30a22fbd6bff3bde6572480317b106309#bdc754b30a22fbd6bff3bde6572480317b106309"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "staging-xcm",
+]
+
+[[package]]
 name = "pallet-dap"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -10542,6 +10557,20 @@ dependencies = [
  "staging-xcm",
  "staging-xcm-builder",
  "staging-xcm-executor",
+]
+
+[[package]]
+name = "pallet-rc2-migrator"
+version = "0.1.0"
+source = "git+https://github.com/polkadot-fellows/runtimes?rev=bdc754b30a22fbd6bff3bde6572480317b106309#bdc754b30a22fbd6bff3bde6572480317b106309"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "log",
+ "parity-scale-codec",
+ "polkadot-parachain-primitives",
+ "scale-info",
+ "staging-xcm",
 ]
 
 [[package]]
@@ -11549,6 +11578,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "paseo-integration-tests-ahmv2"
+version = "0.1.0"
+dependencies = [
+ "asset-hub-paseo-runtime",
+ "cumulus-pallet-parachain-system 0.30.0",
+ "cumulus-primitives-core",
+ "frame-remote-externalities 0.61.0",
+ "frame-support",
+ "frame-system",
+ "log",
+ "pallet-balances",
+ "pallet-ct-migrator",
+ "pallet-message-queue",
+ "pallet-rc2-migrator",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "paseo-runtime",
+ "paseo-runtime-constants",
+ "polkadot-runtime-parachains 29.0.0",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-storage",
+ "sp-tracing",
+ "staging-xcm",
+ "tokio",
+]
+
+[[package]]
 name = "paseo-runtime"
 version = "2.5.4"
 dependencies = [
@@ -11578,6 +11636,7 @@ dependencies = [
  "pallet-broker 0.29.0",
  "pallet-child-bounties",
  "pallet-conviction-voting",
+ "pallet-ct-migrator",
  "pallet-delegated-staking",
  "pallet-election-provider-multi-phase 50.0.0",
  "pallet-election-provider-support-benchmarking",
@@ -11595,6 +11654,7 @@ dependencies = [
  "pallet-preimage",
  "pallet-proxy",
  "pallet-rc-migrator",
+ "pallet-rc2-migrator",
  "pallet-referenda",
  "pallet-scheduler",
  "pallet-session",

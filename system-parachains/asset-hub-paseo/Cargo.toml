@@ -10,6 +10,8 @@ version.workspace = true
 
 [dependencies]
 pallet-ah-ops = { workspace = true }
+# Behind the `ahm-v2` feature; see `src/ahm_v2.rs`.
+pallet-ct-migrator = { workspace = true }
 
 codec = { features = ["derive", "max-encoded-len"], workspace = true }
 hex-literal = { workspace = true }
@@ -175,6 +177,7 @@ snowbridge-pallet-system-frontend = { workspace = true }
 snowbridge-runtime-common = { workspace = true }
 
 [dev-dependencies]
+pallet-rc2-migrator = { workspace = true, default-features = true }
 approx = { workspace = true }
 asset-test-utils = { workspace = true }
 frame-metadata = { workspace = true, features = ["std"] }
@@ -197,6 +200,7 @@ paseo-ahm = [
 	"pallet-rc-migrator/polkadot-ahm",
 	"paseo-runtime/paseo-ahm",
 ]
+ahm-v2 = []
 runtime-benchmarks = [
 	"assets-common/runtime-benchmarks",
 	"bp-asset-hub-kusama/runtime-benchmarks",
@@ -231,6 +235,8 @@ runtime-benchmarks = [
 	"indiv-system-parachains-common/runtime-benchmarks",
 	"kusama-runtime-constants/runtime-benchmarks",
 	"pallet-ah-ops/runtime-benchmarks",
+	"pallet-ct-migrator/runtime-benchmarks",
+	"pallet-rc2-migrator/runtime-benchmarks",
 	"pallet-asset-conversion-precompiles/runtime-benchmarks",
 	"pallet-asset-conversion-tx-payment/runtime-benchmarks",
 	"pallet-asset-conversion/runtime-benchmarks",
@@ -328,6 +334,8 @@ try-runtime = [
 	"indiv-precompile-scarcity/try-runtime",
 	"indiv-system-parachains-common/try-runtime",
 	"pallet-ah-ops/try-runtime",
+	"pallet-ct-migrator/try-runtime",
+	"pallet-rc2-migrator/try-runtime",
 	"pallet-asset-conversion-precompiles/try-runtime",
 	"pallet-asset-conversion-tx-payment/try-runtime",
 	"pallet-asset-conversion/try-runtime",
@@ -440,6 +448,7 @@ std = [
 	"kusama-runtime-constants/std",
 	"log/std",
 	"pallet-ah-ops/std",
+	"pallet-ct-migrator/std",
 	"pallet-asset-conversion-precompiles/std",
 	"pallet-asset-conversion-tx-payment/std",
 	"pallet-asset-conversion/std",

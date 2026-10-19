@@ -64,6 +64,9 @@ compile_error!("Asset Hub migration requires the `paseo-ahm` feature");
 
 extern crate alloc;
 
+// AHM v2 migration wiring. Kept out of the on-chain build.
+#[cfg(all(feature = "ahm-v2", not(feature = "on-chain-release-build")))]
+mod ahm_v2;
 // Genesis preset configurations.
 pub mod bridge_to_ethereum_config;
 pub mod genesis_config_presets;
@@ -3109,6 +3112,11 @@ construct_runtime!(
 
 		// Asset Hub Migration in the 250s
 		AhOps: pallet_ah_ops = 254,
+		// AHM v2 migrator. Paseo has no live Coretime chain, so the Coretime side of the
+		// migration (`pallet-ct-migrator`) runs here. Index 255 is what the relay chain's
+		// `pallet-rc2-migrator` hardcodes for it (`CT_MIGRATOR_PALLET_INDEX`).
+		#[cfg(all(feature = "ahm-v2", not(feature = "on-chain-release-build")))]
+		CtMigrator: pallet_ct_migrator = 255,
 	}
 );
 
