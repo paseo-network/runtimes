@@ -8701,6 +8701,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "migrator-types"
+version = "0.1.0"
+source = "git+https://github.com/polkadot-fellows/runtimes?rev=9778ddb91c0acf99b8804e55ad64475fb5546624#9778ddb91c0acf99b8804e55ad64475fb5546624"
+dependencies = [
+ "parity-scale-codec",
+ "polkadot-parachain-primitives",
+ "scale-info",
+ "sp-runtime",
+]
+
+[[package]]
 name = "minimal-lexical"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9982,13 +9993,15 @@ dependencies = [
 [[package]]
 name = "pallet-ct-migrator"
 version = "0.1.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?rev=bdc754b30a22fbd6bff3bde6572480317b106309#bdc754b30a22fbd6bff3bde6572480317b106309"
+source = "git+https://github.com/polkadot-fellows/runtimes?rev=9778ddb91c0acf99b8804e55ad64475fb5546624#9778ddb91c0acf99b8804e55ad64475fb5546624"
 dependencies = [
  "frame-support",
  "frame-system",
  "log",
+ "migrator-types",
  "parity-scale-codec",
  "scale-info",
+ "sp-runtime",
  "staging-xcm",
 ]
 
@@ -10562,14 +10575,16 @@ dependencies = [
 [[package]]
 name = "pallet-rc2-migrator"
 version = "0.1.0"
-source = "git+https://github.com/polkadot-fellows/runtimes?rev=bdc754b30a22fbd6bff3bde6572480317b106309#bdc754b30a22fbd6bff3bde6572480317b106309"
+source = "git+https://github.com/polkadot-fellows/runtimes?rev=9778ddb91c0acf99b8804e55ad64475fb5546624#9778ddb91c0acf99b8804e55ad64475fb5546624"
 dependencies = [
  "frame-support",
  "frame-system",
  "log",
+ "pallet-balances",
  "parity-scale-codec",
  "polkadot-parachain-primitives",
  "scale-info",
+ "sp-runtime",
  "staging-xcm",
 ]
 
