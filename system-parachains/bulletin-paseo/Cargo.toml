@@ -30,6 +30,7 @@ frame-system = { workspace = true }
 frame-system-benchmarking = { optional = true, workspace = true }
 frame-system-rpc-runtime-api = { workspace = true }
 frame-try-runtime = { optional = true, workspace = true }
+pallet-accumulate-and-forward = { workspace = true }
 pallet-aura = { workspace = true }
 pallet-authorship = { workspace = true }
 pallet-balances = { workspace = true }
@@ -94,6 +95,7 @@ paseo-runtime-constants = { workspace = true }
 system-parachains-constants = { workspace = true }
 
 [dev-dependencies]
+system-parachains-test-utils = { workspace = true }
 parachains-runtimes-test-utils = { workspace = true, default-features = true }
 sp-io = { workspace = true }
 
@@ -125,6 +127,7 @@ std = [
 	"frame-try-runtime?/std",
 	"pallet-aura/std",
 	"pallet-authorship/std",
+	"pallet-accumulate-and-forward/std",
 	"pallet-balances/std",
 	"pallet-bulletin-data-renewal/std",
 	"pallet-bulletin-hop-promotion/std",
@@ -186,6 +189,7 @@ runtime-benchmarks = [
 	"frame-support/runtime-benchmarks",
 	"frame-system-benchmarking/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
+	"pallet-accumulate-and-forward/runtime-benchmarks",
 	"pallet-balances/runtime-benchmarks",
 	"pallet-bulletin-data-renewal/runtime-benchmarks",
 	"pallet-bulletin-hop-promotion/runtime-benchmarks",
@@ -225,6 +229,7 @@ try-runtime = [
 	"frame-try-runtime/try-runtime",
 	"pallet-aura/try-runtime",
 	"pallet-authorship/try-runtime",
+	"pallet-accumulate-and-forward/try-runtime",
 	"pallet-balances/try-runtime",
 	"pallet-bulletin-data-renewal/try-runtime",
 	"pallet-bulletin-hop-promotion/try-runtime",

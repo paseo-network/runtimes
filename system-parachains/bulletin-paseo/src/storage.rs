@@ -14,7 +14,7 @@ use frame_support::{
 };
 use pallet_bulletin_transaction_storage::{
 	AsAuthorizer, CallInspector, EnsureAllowedAuthorizers, ValidTransactionParams,
-	DEFAULT_MAX_BLOCK_TRANSACTIONS, DEFAULT_MAX_TRANSACTION_SIZE,
+	DEFAULT_MAX_BLOCK_TRANSACTIONS, DEFAULT_MAX_TRANSACTION_SIZE, MAX_WRAPPER_DEPTH,
 };
 use pallet_xcm::EnsureXcm;
 use sp_runtime::transaction_validity::{TransactionLongevity, TransactionPriority};
@@ -70,10 +70,8 @@ parameter_types! {
 /// storage calls inside wrapper extrinsics so it can recursively validate and consume
 /// authorization.
 ///
-/// Also implements [`Contains<RuntimeCall>`] returning `true` for storage-mutating calls
-/// (store, store_with_cid_config, renew). Used with `EverythingBut` as the XCM
-/// `SafeCallFilter` to block these calls from XCM dispatch — they require on-chain
-/// authorization that XCM cannot provide.
+/// Also implements [`Contains<RuntimeCall>`] for storage and renewal calls that commit data,
+/// including inside Utility wrappers, so the XCM `SafeCallFilter` can reject them.
 #[derive(Clone, PartialEq, Eq, Default)]
 pub struct StorageCallInspector;
 
@@ -89,12 +87,32 @@ impl pallet_bulletin_transaction_storage::CallInspector<Runtime> for StorageCall
 	}
 }
 
-/// Returns `true` for storage-mutating TransactionStorage calls (store, store_with_cid_config,
-/// renew). Recursively inspects wrapper calls (Utility) to prevent bypass via nesting.
-/// Used with `EverythingBut` as the XCM `SafeCallFilter`.
+/// Reject calls that commit data over XCM: they must use on-chain authorization.
 impl Contains<RuntimeCall> for StorageCallInspector {
 	fn contains(call: &RuntimeCall) -> bool {
-		Self::is_storage_mutating_call(call, 0)
+		Self::is_storage_mutating_call(call, 0) || Self::is_renewal_committing_call(call, 0)
+	}
+}
+
+impl StorageCallInspector {
+	/// The storage pallet's predicate only knows `store` and `store_with_cid_config`.
+	/// Renewal calls need a separate walk, since Root XCM could otherwise commit permanent
+	/// bytes without the authorization extension. Only cleanup and the inherent are allowed.
+	fn is_renewal_committing_call(call: &RuntimeCall, depth: u32) -> bool {
+		use pallet_bulletin_data_renewal::Call as RenewalCall;
+		if let RuntimeCall::DataRenewal(inner) = call {
+			return !matches!(
+				inner,
+				RenewalCall::disable_auto_renew { .. } |
+					RenewalCall::process_pending_renewals { .. }
+			);
+		}
+		<Self as CallInspector<Runtime>>::inspect_wrapper(call).is_some_and(|calls| {
+			depth >= MAX_WRAPPER_DEPTH ||
+				calls
+					.into_iter()
+					.any(|inner| Self::is_renewal_committing_call(inner, depth + 1))
+		})
 	}
 }
 
