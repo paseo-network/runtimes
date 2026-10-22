@@ -685,10 +685,10 @@ impl<LocalCall> frame_system::offchain::CreateTransaction<LocalCall> for Runtime
 where
 	RuntimeCall: From<LocalCall>,
 {
-	type Extension = TxExtension;
+	type Extension = TxExtensionV0;
 
-	fn create_transaction(call: RuntimeCall, extension: TxExtension) -> UncheckedExtrinsic {
-		generic::UncheckedExtrinsic::new_transaction(call, extension).into()
+	fn create_transaction(call: RuntimeCall, extension: TxExtensionV0) -> UncheckedExtrinsic {
+		GenericUncheckedExtrinsic::new_transaction(call, extension).into()
 	}
 }
 

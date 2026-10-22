@@ -16,8 +16,9 @@
 
 use crate::{
 	xcm_config::{AssetHubLocation, LocationToAccountId, RelayChainLocation},
-	Block, PasWeightToFee as WeightToFee, Runtime, RuntimeCall, RuntimeOrigin,
+	Block, PasWeightToFee as WeightToFee, Runtime, RuntimeCall, RuntimeOrigin, SessionKeys,
 };
+use codec::Encode;
 use cumulus_primitives_core::relay_chain::AccountId;
 use sp_core::crypto::Ss58Codec;
 use xcm::prelude::*;
@@ -192,4 +193,12 @@ fn governance_authorize_upgrade_works() {
 		Runtime,
 		RuntimeOrigin,
 	>(GovernanceOrigin::Location(AssetHubLocation::get())));
+}
+
+#[test]
+fn session_key_deposit_works() {
+	system_parachains_test_utils::session_key_deposit_works::<Runtime>(|owner| {
+		let generated = SessionKeys::generate(&owner.encode(), None);
+		(generated.keys, generated.proof.encode())
+	});
 }

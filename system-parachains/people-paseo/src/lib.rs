@@ -101,6 +101,7 @@ use xcm_config::{
 	AssetHubLocation, FellowshipLocation, PriceForSiblingParachainDelivery, RelayChainLocation,
 	StakingPot, XcmConfig, XcmOriginToTransactDispatchOrigin,
 };
+use xcm_executor::traits::MatchesFungibles;
 use xcm_runtime_apis::{
 	dry_run::{CallDryRunEffects, Error as XcmDryRunApiError, XcmDryRunEffects},
 	fees::Error as XcmPaymentApiError,
@@ -118,8 +119,31 @@ pub type SignedBlock = generic::SignedBlock<Block>;
 /// BlockId type as expected by this runtime.
 pub type BlockId = generic::BlockId<Block>;
 
-/// The TransactionExtension to the basic transaction logic.
-pub type TxExtension = cumulus_pallet_weight_reclaim::StorageWeightReclaim<
+/// The Individuality transaction extension pipeline version.
+pub const INDIVIDUALITY_EXTENSION_VERSION: u8 = 1;
+
+/// The frozen standard transaction extension pipeline version 0.
+/// This follows the fellowship People Polkadot runtime implementation.
+pub type TxExtensionV0 = cumulus_pallet_weight_reclaim::StorageWeightReclaim<
+	Runtime,
+	(
+		frame_system::AuthorizeCall<Runtime>,
+		frame_system::CheckNonZeroSender<Runtime>,
+		frame_system::CheckSpecVersion<Runtime>,
+		frame_system::CheckTxVersion<Runtime>,
+		frame_system::CheckGenesis<Runtime>,
+		frame_system::CheckEra<Runtime>,
+		frame_system::CheckNonce<Runtime>,
+		frame_system::CheckWeight<Runtime>,
+		pallet_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
+		frame_metadata_hash_extension::CheckMetadataHash<Runtime>,
+	),
+>;
+
+/// The transaction extension pipeline version 1 carries the Individuality extensions.
+/// This follows upstream `next-people-paseo` (fellowship People Polkadot plus the Paseo
+/// authorization extensions).
+pub type TxExtensionV1 = cumulus_pallet_weight_reclaim::StorageWeightReclaim<
 	Runtime,
 	(
 		// Origin modifiers
@@ -149,17 +173,25 @@ pub type TxExtension = cumulus_pallet_weight_reclaim::StorageWeightReclaim<
 		frame_system::CheckEra<Runtime>,
 		frame_system::CheckNonce<Runtime>,
 		frame_system::CheckWeight<Runtime>,
-		pallet_skip_feeless_payment::SkipCheckIfFeeless<
-			Runtime,
-			pallet_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
-		>,
+		pallet_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
 		frame_metadata_hash_extension::CheckMetadataHash<Runtime>,
 	),
 >;
 
+/// The transaction extension pipelines a general transaction may select other than version 0.
+pub type TxExtensionOtherVersions =
+	sp_runtime::traits::PipelineAtVers<INDIVIDUALITY_EXTENSION_VERSION, TxExtensionV1>;
+
 /// Unchecked extrinsic type as expected by this runtime.
-pub type UncheckedExtrinsic =
-	generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, TxExtension>;
+/// Signed and version 0 general transactions use [`TxExtensionV0`].
+/// General transactions of other versions use [`TxExtensionOtherVersions`].
+pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<
+	Address,
+	RuntimeCall,
+	Signature,
+	TxExtensionV0,
+	TxExtensionOtherVersions,
+>;
 /// The runtime migrations per release.
 #[allow(deprecated, missing_docs)]
 pub mod migrations;
@@ -174,6 +206,7 @@ pub type Executive = frame_executive::Executive<
 >;
 
 impl_opaque_keys! {
+	#[derive(MaxEncodedLen)]
 	pub struct SessionKeys {
 		pub aura: Aura,
 	}
@@ -217,7 +250,12 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// the transaction extension tuple that every signer must construct. Mandatory, not hygiene: an
 	// unbumped `transaction_version` would let wallets keep building the old, now-undecodable,
 	// extension payload.
-	transaction_version: 3,
+	//
+	// BUMPED 3 -> 4 (individuality-community#101, aligned with upstream `next-people-paseo`): the
+	// transaction extensions are now versioned. V0 is the frozen fellowship People pipeline that
+	// signed (V4) transactions use; the Individuality extensions moved to the V1 general
+	// pipeline. Every signer must refresh metadata and rebuild its transactions.
+	transaction_version: 4,
 	system_version: 1,
 };
 
@@ -455,6 +493,15 @@ impl cumulus_pallet_xcmp_queue::migration::v5::V5Config for Runtime {
 pub const PERIOD: u32 = 6 * HOURS;
 pub const OFFSET: u32 = 0;
 
+parameter_types! {
+	/// One `NextKeys` entry plus one `KeyOwner` entry per session key.
+	pub SessionKeyDeposit: Balance = system_para_deposit(1, SessionKeys::max_encoded_len() as u32)
+		.saturating_add(system_para_deposit(
+			<SessionKeys as sp_runtime::traits::OpaqueKeys>::key_ids().len() as u32,
+			<Runtime as pallet_session::Config>::ValidatorId::max_encoded_len() as u32,
+		));
+}
+
 impl pallet_session::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type ValidatorId = <Self as frame_system::Config>::AccountId;
@@ -469,7 +516,7 @@ impl pallet_session::Config for Runtime {
 	type DisablingStrategy = ();
 	type WeightInfo = weights::pallet_session::WeightInfo<Runtime>;
 	type Currency = Balances;
-	type KeyDeposit = ();
+	type KeyDeposit = SessionKeyDeposit;
 }
 
 impl pallet_aura::Config for Runtime {
@@ -739,7 +786,7 @@ impl<LocalCall> CreateTransaction<LocalCall> for Runtime
 where
 	RuntimeCall: From<LocalCall>,
 {
-	type Extension = TxExtension;
+	type Extension = TxExtensionV0;
 	fn create_transaction(
 		call: <Self as frame_system::offchain::CreateTransactionBase<LocalCall>>::RuntimeCall,
 		extension: Self::Extension,
@@ -754,21 +801,7 @@ where
 {
 	fn create_extension() -> Self::Extension {
 		(
-			(
-				(),
-				pallet_verify_signature::VerifySignature::<Runtime>::Disabled,
-				indiv_pallet_people::extension::AsPerson::<Runtime>::new(None),
-				indiv_pallet_proof_of_ink::extension::AsProofOfInkParticipant::<Runtime>::new(None),
-				indiv_pallet_score::ScoreAsParticipant::<Runtime>::new(None),
-				indiv_pallet_game::GameAsInvited::<Runtime>::new(None),
-				indiv_pallet_people_lite::extension::PeopleLiteAuth::<Runtime>::new(None),
-				indiv_pallet_members::extension::AsMember::<Runtime>::new(None),
-				indiv_pallet_coinage::extension::AsCoinage::<Runtime>::new(None),
-				indiv_pallet_resources::extension::AsResources::<Runtime>::new(None),
-				indiv_pallet_honour::extension::VoterAuth::<Runtime>::new(None),
-				frame_system::AuthorizeCall::<Runtime>::new(),
-			),
-			indiv_pallet_origin_restriction::RestrictOrigin::<Runtime>::new(false),
+			frame_system::AuthorizeCall::<Runtime>::new(),
 			frame_system::CheckNonZeroSender::<Runtime>::new(),
 			frame_system::CheckSpecVersion::<Runtime>::new(),
 			frame_system::CheckTxVersion::<Runtime>::new(),
@@ -776,10 +809,7 @@ where
 			frame_system::CheckEra::<Runtime>::from(generic::Era::Immortal),
 			frame_system::CheckNonce::<Runtime>::from(0),
 			frame_system::CheckWeight::<Runtime>::new(),
-			pallet_skip_feeless_payment::SkipCheckIfFeeless::<
-				Runtime,
-				pallet_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
-			>::from(pallet_asset_tx_payment::ChargeAssetTxPayment::<Runtime>::from(0u128, None)),
+			pallet_asset_tx_payment::ChargeAssetTxPayment::<Runtime>::from(0u128, None),
 			frame_metadata_hash_extension::CheckMetadataHash::<Runtime>::new(false),
 		)
 			.into()
@@ -808,7 +838,6 @@ construct_runtime!(
 		AssetRate: pallet_asset_rate = 13,
 		AssetTxPayment: pallet_asset_tx_payment = 14,
 		AssetsHolder: pallet_assets_holder = 15,
-		SkipFeelessPayment: pallet_skip_feeless_payment = 16,
 		OriginRestriction: indiv_pallet_origin_restriction = 17,
 		AssetConversion: pallet_asset_conversion = 18,
 		PoolAssets: pallet_assets::<Instance1> = 19,
@@ -942,6 +971,11 @@ mod benches {
 
 	impl cumulus_pallet_session_benchmarking::Config for Runtime {
 		fn generate_session_keys_and_proof(owner: Self::AccountId) -> (Self::Keys, Vec<u8>) {
+			use frame_support::traits::fungible::Mutate;
+			// Mint the key deposit on top of the balance the benchmark already funded.
+			// TODO: Remove after https://github.com/paritytech/polkadot-sdk/issues/13336 is fixed.
+			Balances::mint_into(&owner, crate::SessionKeyDeposit::get())
+				.expect("mint session key deposit");
 			let keys = crate::SessionKeys::generate(&owner.encode(), None);
 			(keys.keys, keys.proof.encode())
 		}
@@ -1291,10 +1325,18 @@ impl_runtime_apis! {
 
 	impl xcm_runtime_apis::fees::XcmPaymentApi<Block> for Runtime {
 		fn query_acceptable_payment_assets(xcm_version: xcm::Version) -> Result<Vec<VersionedAssetId>, XcmPaymentApiError> {
-			let acceptable_assets = alloc::vec![
-				AssetId(xcm_config::RelayLocation::get()),
-				AssetId(people::ExternalAssetLocation::get()),
-			];
+			// PAS and existing rated assets accepted by the same matcher as the trader.
+			let acceptable_assets = core::iter::once(AssetId(xcm_config::RelayLocation::get()))
+				.chain(
+					pallet_asset_rate::ConversionRateToNative::<Runtime>::iter_keys()
+						.filter(|location| {
+							xcm_config::AssetsConvertedConcreteId::matches_fungibles(
+								&(location.clone(), 1u128).into(),
+							).is_ok() && pallet_assets::Asset::<Runtime>::contains_key(location)
+						})
+						.map(AssetId),
+				)
+				.collect::<Vec<_>>();
 			PolkadotXcm::query_acceptable_payment_assets(xcm_version, acceptable_assets)
 		}
 

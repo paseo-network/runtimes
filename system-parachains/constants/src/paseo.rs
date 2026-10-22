@@ -35,6 +35,9 @@ pub mod account {
 	pub const FELLOWSHIP_TREASURY_PALLET_ID: PalletId = PalletId(*b"py/feltr");
 	/// Ambassador treasury pallet ID
 	pub const AMBASSADOR_TREASURY_PALLET_ID: PalletId = PalletId(*b"py/ambtr");
+	/// Accumulate-and-forward pallet ID. Derives the account on the Coretime chain that gathers
+	/// coretime revenue before it is forwarded to the DAP on Asset Hub.
+	pub const ACCUMULATE_FORWARD_PALLET_ID: PalletId = PalletId(*b"acf/dott");
 }
 
 /// Consensus-related.

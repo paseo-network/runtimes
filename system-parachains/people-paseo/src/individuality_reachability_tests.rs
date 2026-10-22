@@ -185,18 +185,34 @@ fn rotating_the_network_suffix_moves_every_derived_context() {
 	});
 }
 
-/// Pins this runtime's transaction-extension pipeline, in execution order.
+/// Pins this runtime's transaction-extension pipelines, in execution order.
 ///
-/// The origin modifiers run first and every extension that charges the transaction runs after
-/// them, so an extension that installs an origin the payment extensions do not charge needs an
-/// allowance in `pallet-origin-restriction` to bound it. An addition, a removal or a reorder
-/// anywhere in this list is therefore a deliberate decision, not an implementation detail — and it
-/// changes the transaction encoding, so it also requires a `transaction_version` bump.
+/// V0 is the frozen fellowship People pipeline that signed (V4) transactions and runtime-created
+/// authorized transactions use. V1 carries the Individuality extensions: the origin modifiers run
+/// first and every extension that charges the transaction runs after them, so an extension that
+/// installs an origin the payment extensions do not charge needs an allowance in
+/// `pallet-origin-restriction` to bound it. An addition, a removal or a reorder anywhere in these
+/// lists is therefore a deliberate decision, not an implementation detail — and it changes the
+/// transaction encoding, so it also requires a `transaction_version` bump.
 #[test]
-fn the_transaction_extension_pipeline_is_the_expected_one() {
+fn the_transaction_extension_pipelines_are_the_expected_ones() {
 	use sp_runtime::traits::TransactionExtension;
 
-	const PIPELINE: [&str; 23] = [
+	const V0_PIPELINE: [&str; 11] = [
+		"AuthorizeCall",
+		"CheckNonZeroSender",
+		"CheckSpecVersion",
+		"CheckTxVersion",
+		"CheckGenesis",
+		"CheckMortality",
+		"CheckNonce",
+		"CheckWeight",
+		"ChargeAssetTxPayment",
+		"CheckMetadataHash",
+		"StorageWeightReclaim",
+	];
+
+	const V1_PIPELINE: [&str; 23] = [
 		"UnitTransactionExtension",
 		"VerifyMultiSignature",
 		"AsPerson",
@@ -222,10 +238,15 @@ fn the_transaction_extension_pipeline_is_the_expected_one() {
 		"StorageWeightReclaim",
 	];
 
-	let identifiers = <crate::TxExtension as TransactionExtension<crate::RuntimeCall>>::metadata()
+	let v0 = <crate::TxExtensionV0 as TransactionExtension<crate::RuntimeCall>>::metadata()
 		.into_iter()
 		.map(|meta| meta.identifier)
 		.collect::<alloc::vec::Vec<_>>();
+	assert_eq!(v0, V0_PIPELINE);
 
-	assert_eq!(identifiers, PIPELINE);
+	let v1 = <crate::TxExtensionV1 as TransactionExtension<crate::RuntimeCall>>::metadata()
+		.into_iter()
+		.map(|meta| meta.identifier)
+		.collect::<alloc::vec::Vec<_>>();
+	assert_eq!(v1, V1_PIPELINE);
 }

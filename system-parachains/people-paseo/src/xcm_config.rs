@@ -14,25 +14,26 @@
 // limitations under the License.
 
 use super::{
-	assets::hollar::{HollarFromHydration, HollarLocation},
-	people::{ExternalAssetLocation, FungibleExternalAsset},
-	AccountId, AllPalletsWithSystem, AssetRate, Assets as AssetsPallet, Balance, Balances,
-	CollatorSelection, ParachainInfo, ParachainSystem, PasWeightToFee as WeightToFee, PolkadotXcm,
-	Runtime, RuntimeCall, RuntimeEvent, RuntimeHoldReason, RuntimeOrigin, XcmpQueue,
+	assets::hollar::HollarFromHydration, people::ExternalAssetLocation, AccountId,
+	AllPalletsWithSystem, AssetRate, Assets, Balance, Balances, CollatorSelection, ParachainInfo,
+	ParachainSystem, PasWeightToFee as WeightToFee, PolkadotXcm, Runtime, RuntimeCall,
+	RuntimeEvent, RuntimeHoldReason, RuntimeOrigin, XcmpQueue,
 };
 use crate::{system_para_deposit, TransactionByteFee, CENTS};
 #[cfg(feature = "runtime-benchmarks")]
 use assets_common::local_and_foreign_assets::ForeignAssetReserveData;
+use cumulus_primitives_utility::TakeFirstAssetTrader;
 use frame_support::{
 	parameter_types,
 	traits::{
-		fungible::{HoldConsideration, ItemOf},
-		tokens::{imbalance::ResolveTo, ConversionToAssetBalance},
+		fungible::HoldConsideration,
+		tokens::imbalance::{ResolveAssetTo, ResolveTo},
 		ConstU32, Contains, ContainsPair, Equals, Everything, LinearStoragePrice, Nothing,
 		ProcessMessageError,
 	},
 };
 use frame_system::EnsureRoot;
+use pallet_collator_selection::StakingPotAccountId;
 use pallet_xcm::{AuthorizedAliasers, XcmPassthrough};
 use parachains_common::{
 	xcm_config::{
@@ -136,12 +137,17 @@ pub type FungibleTransactor = FungibleAdapter<
 	(),
 >;
 
+/// `AssetId`/`Balance` converter for `Assets`: matches everything that comes from outside.
+/// The asset transactor, the asset-rate trader and `XcmPaymentApi` all use this one matcher.
+pub type AssetsConvertedConcreteId =
+	assets_common::ForeignAssetsConvertedConcreteId<(), Balance, Location>;
+
 /// Means for transacting other fungible tokens on this chain.
 pub type FungiblesTransactor = FungiblesAdapter<
 	// Use this implementation of `fungibles::*`.
-	AssetsPallet,
+	Assets,
 	// Match everything that comes from outside.
-	assets_common::ForeignAssetsConvertedConcreteId<(), Balance, Location>,
+	AssetsConvertedConcreteId,
 	// Convert an XCM `Location` into a local account ID.
 	LocationToAccountId,
 	// Our chain's account ID type (we can't get away without mentioning it explicitly):
@@ -345,58 +351,34 @@ pub type AssetFeeAsExistentialDepositMultiplierFeeCharger = AssetFeeAsExistentia
 >;
 
 pub type WeightToNativeFee = WeightToFee<Runtime>;
-pub struct WeightToStableFee;
-impl frame_support::weights::WeightToFee for WeightToStableFee {
-	type Balance = Balance;
 
-	fn weight_to_fee(weight: &Weight) -> Self::Balance {
-		let native_fee = WeightToNativeFee::weight_to_fee(weight);
+/// Prices weight in PAS and converts it at the rate registered by governance.
+/// Assets without a rate cannot pay execution fees.
+pub type WeightToAssetRateFee =
+	AssetFeeAsExistentialDepositMultiplier<Runtime, WeightToNativeFee, AssetRate, ()>;
 
-		AssetRate::to_asset_balance(native_fee, HollarLocation::get())
-			// Using max value will make the payment fail and go to the next trader component.
-			.unwrap_or(Balance::MAX)
-	}
-}
+/// Buys execution weight with a rated asset accepted by the asset transactor.
+/// Fees go to the staking pot in that asset; failed deposits are burned.
+/// Register assets with `is_sufficient = true` and `min_balance` no larger than the
+/// smallest fee, or seed the pot with the asset or the native existential deposit first.
+pub type AssetRateTrader = TakeFirstAssetTrader<
+	AccountId,
+	WeightToAssetRateFee,
+	AssetsConvertedConcreteId,
+	Assets,
+	ResolveAssetTo<StakingPotAccountId<Runtime>, Assets>,
+>;
 
-pub struct WeightToExternalAssetFee;
-impl frame_support::weights::WeightToFee for WeightToExternalAssetFee {
-	type Balance = Balance;
-
-	fn weight_to_fee(weight: &Weight) -> Self::Balance {
-		let native_fee = WeightToNativeFee::weight_to_fee(weight);
-
-		AssetRate::to_asset_balance(native_fee, ExternalAssetLocation::get())
-			// Using max value will make the payment fail and go to the next trader component.
-			.unwrap_or(Balance::MAX)
-	}
-}
-
-/// A fungible adapter for the stable asset
-pub type FungibleHollar = ItemOf<AssetsPallet, HollarLocation, AccountId>;
-
-/// All ways of paying for execution fees via XCM.
+/// Pays execution fees in PAS or a foreign asset with a governance-registered rate.
 pub type Traders = (
 	UsingComponents<
 		WeightToNativeFee,
 		RelayLocation,
 		AccountId,
 		Balances,
-		ResolveTo<StakingPot, Balances>,
+		ResolveTo<StakingPotAccountId<Runtime>, Balances>,
 	>,
-	UsingComponents<
-		WeightToStableFee,
-		HollarLocation,
-		AccountId,
-		FungibleHollar,
-		ResolveTo<StakingPot, FungibleHollar>,
-	>,
-	UsingComponents<
-		WeightToExternalAssetFee,
-		ExternalAssetLocation,
-		AccountId,
-		FungibleExternalAsset,
-		ResolveTo<StakingPot, FungibleExternalAsset>,
-	>,
+	AssetRateTrader,
 );
 
 pub struct XcmConfig;

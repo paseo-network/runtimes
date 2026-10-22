@@ -1109,6 +1109,7 @@ parameter_types! {
 impl indiv_pallet_airdrop::Config for Runtime {
 	type WeightInfo = weights::indiv_pallet_airdrop::WeightInfo<Runtime>;
 	type MemberService = Members;
+	type Suffix = NetworkSuffix;
 	type Fungibles = AssetsWithHolder;
 	type ManagerOrigin = EnsureRoot<Self::AccountId>;
 	type PalletId = AirdropPalletId;
@@ -1180,6 +1181,7 @@ impl indiv_pallet_people_airdrops::benchmarking::BenchmarkHelper<Runtime>
 				Assets::mint_into(asset_id.clone(), source, BENCH_PRIZE)
 					.expect("fund prize source");
 				indiv_pallet_people_airdrops::AirdropEventInfoOf::<Runtime> {
+					product_name: Default::default(),
 					prize: indiv_pallet_airdrop::types::AirdropPrize {
 						asset_id,
 						asset_amount: BENCH_PRIZE,
@@ -2382,8 +2384,4 @@ impl pallet_verify_signature::Config for Runtime {
 	type WeightInfo = weights::pallet_verify_signature::WeightInfo<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = VerifySignatureBenchmarkHelper;
-}
-
-impl pallet_skip_feeless_payment::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
 }
