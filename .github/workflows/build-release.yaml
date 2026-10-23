@@ -341,39 +341,22 @@ jobs:
           shared-key: "paseo-global-cache"
           cache-on-failure: true
 
-      - name: Install Homebrew
-        run: |
-          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-          echo "/home/linuxbrew/.linuxbrew/bin" >> $GITHUB_PATH
-
       - name: Install Pop
         env:
-          # Pin the tap to the commit that adds pop-cli v0.12.1. The tap ships a single
-          # unversioned `pop.rb`, so there is no `pop@X.Y.Z` formula to pin by name: the only
-          # way to hold a version is to check the tap out at a fixed commit and stop brew from
-          # auto-updating it back to HEAD.
-          POP_TAP_COMMIT: 6d69ca334a23aded8e43ae9989afda358de4d32d
-          HOMEBREW_NO_AUTO_UPDATE: 1
-          HOMEBREW_NO_INSTALL_FROM_API: 1
+          POP_VERSION: 0.12.1
+          POP_SHA256: d89bee25c5eb2e5b992c15afd44cbc0cab64dd5fe303cd9af96ec4b487baf932
         run: |
           set -euo pipefail
-          brew tap r0gue-io/pop-cli
-          git -C "$(brew --repository r0gue-io/pop-cli)" checkout -q "$POP_TAP_COMMIT"
-
-          # `create-release` needs this job, so a transient install failure blocks the whole
-          # release even when every runtime built. Release v2.5.0 was lost exactly that way:
-          # `brew install r0gue-io/pop-cli/pop` exited 1 with "Broken pipe" while fetching.
-          # Pinning fixes which version we get, not the flaky fetch, so retry the install.
-          for attempt in 1 2 3; do
-            if brew install --formula r0gue-io/pop-cli/pop; then
-              pop --version
-              exit 0
-            fi
-            echo "::warning::pop install attempt ${attempt} failed; retrying in 15s"
-            sleep 15
-          done
-          echo "::error::pop install failed after 3 attempts"
-          exit 1
+          pop_dir="$RUNNER_TEMP/pop-cli"
+          pop_archive="$pop_dir/pop-x86_64-unknown-linux-gnu.tar.gz"
+          mkdir -p "$pop_dir"
+          curl --fail --location --retry 3 --retry-all-errors \
+            "https://github.com/r0gue-io/pop-cli/releases/download/v${POP_VERSION}/pop-x86_64-unknown-linux-gnu.tar.gz" \
+            --output "$pop_archive"
+          echo "$POP_SHA256  $pop_archive" | sha256sum --check
+          tar -xzf "$pop_archive" -C "$pop_dir" pop
+          "$pop_dir/pop" --version
+          echo "$pop_dir" >> "$GITHUB_PATH"
 
       - name: Generate chain specs
         run: |
@@ -467,6 +450,8 @@ jobs:
           path: artifacts
 
       - name: Prepare release notes
+        env:
+          RELEASE_NOTES_HEAD: ${{ github.event.inputs.dry_run == 'true' && github.sha || needs.create-tag.outputs.release_tag }}
         run: |
           # Add information about the release
           echo "## Release Information" >> release_notes.md
@@ -529,18 +514,18 @@ jobs:
             echo "\`\`\`" >> release_notes.md
             echo "" >> release_notes.md
             # First try to get commits that include issue numbers
-            COMMITS_WITH_ISSUES=$(git log --pretty=format:"* %h %s (%an)" --grep="#[0-9]" $LATEST_RELEASE_TAG..${{ needs.create-tag.outputs.release_tag }})
+            COMMITS_WITH_ISSUES=$(git log --pretty=format:"* %h %s (%an)" --grep="#[0-9]" "$LATEST_RELEASE_TAG..$RELEASE_NOTES_HEAD")
           
             # If we didn't find any, just get all non-merge commits
             if [ -z "$COMMITS_WITH_ISSUES" ]; then
               # Not commits with issues found, get all merge commits
-              git log --pretty=format:"* %h %s (%an)" --merges $LATEST_RELEASE_TAG..${{ needs.create-tag.outputs.release_tag }} >> release_notes.md
+              git log --pretty=format:"* %h %s (%an)" --merges "$LATEST_RELEASE_TAG..$RELEASE_NOTES_HEAD" >> release_notes.md
             else
               echo "$COMMITS_WITH_ISSUES" >> release_notes.md
             fi
             echo "\`\`\`" >> release_notes.md
             echo "" >> release_notes.md
-            echo "📝 **Compare Changes:** [${LATEST_RELEASE_TAG}...${{ needs.create-tag.outputs.release_tag }}](https://github.com/${{ github.repository }}/compare/${LATEST_RELEASE_TAG}...${{ needs.create-tag.outputs.release_tag }})" >> release_notes.md
+            echo "📝 **Compare Changes:** [${LATEST_RELEASE_TAG}...${RELEASE_NOTES_HEAD}](https://github.com/${{ github.repository }}/compare/${LATEST_RELEASE_TAG}...${RELEASE_NOTES_HEAD})" >> release_notes.md
           else
             echo "## Changes" >> release_notes.md
             echo "" >> release_notes.md
