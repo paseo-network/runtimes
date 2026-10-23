@@ -2602,7 +2602,7 @@ dependencies = [
 [[package]]
 name = "bulletin-pallets-common"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-bulletin-chain?branch=main#6020445a5d4200c44ba89765c54dd8f0323c70a6"
+source = "git+https://github.com/paritytech/polkadot-bulletin-chain?branch=main#e0190de902b41b820844ec530ec21f5af04d1f11"
 dependencies = [
  "pallet-utility",
  "parity-scale-codec",
@@ -2692,7 +2692,7 @@ dependencies = [
 [[package]]
 name = "bulletin-transaction-storage-primitives"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-bulletin-chain?branch=main#6020445a5d4200c44ba89765c54dd8f0323c70a6"
+source = "git+https://github.com/paritytech/polkadot-bulletin-chain?branch=main#e0190de902b41b820844ec530ec21f5af04d1f11"
 dependencies = [
  "cid",
  "parity-scale-codec",
@@ -3400,36 +3400,36 @@ dependencies = [
 
 [[package]]
 name = "cranelift-assembler-x64"
-version = "0.123.18"
+version = "0.123.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e92993516bcc43fd4e511b31d2e0c0c24f6b7ac18bb39e32cac2bfc05ea378e"
+checksum = "b3741b9ad77e89c710586b2fcdd619baf28482d92b70d88cecb2a081dd912ae6"
 dependencies = [
  "cranelift-assembler-x64-meta",
 ]
 
 [[package]]
 name = "cranelift-assembler-x64-meta"
-version = "0.123.18"
+version = "0.123.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "97eeeb61b08ec484f274119faf3a8a1b80dd300b0208c0247d16d05982fc89fe"
+checksum = "8243e149085051b23faebd352ef7031aeebc5f45e63aaefd63ee7f810c22c7df"
 dependencies = [
  "cranelift-srcgen",
 ]
 
 [[package]]
 name = "cranelift-bforest"
-version = "0.123.18"
+version = "0.123.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "782eb44158681a105d157cb0ce63e3dc83f78ef5674266c12234f49da3f5c6e8"
+checksum = "c538af3aee13eb6aa8a85d2ef85b4d0aa41623dae8b19f59bbacfd5d6c114920"
 dependencies = [
  "cranelift-entity",
 ]
 
 [[package]]
 name = "cranelift-bitset"
-version = "0.123.18"
+version = "0.123.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "edd59af193204c4f025fb2c2d9ee0aeb1f60929edf000b0dfa3d45543a62f264"
+checksum = "2292ea3964d7d751031da1a1261d64feb09e89bd4fbebf3c78f43f9c34c20a11"
 dependencies = [
  "serde",
  "serde_derive",
@@ -3437,9 +3437,9 @@ dependencies = [
 
 [[package]]
 name = "cranelift-codegen"
-version = "0.123.18"
+version = "0.123.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1c29bd985057d790db25f6bc60b369b311aa2d75c2f496a7e9993585bfc7d60"
+checksum = "8967a699a4982d02c32246a00f2aa4cee5bccfaaa042608d5e151cb99cba210e"
 dependencies = [
  "bumpalo",
  "cranelift-assembler-x64",
@@ -3464,9 +3464,9 @@ dependencies = [
 
 [[package]]
 name = "cranelift-codegen-meta"
-version = "0.123.18"
+version = "0.123.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9ef8a8495f19212f92db8425f768ffc67000c5cb417a0664475a8d09596700f"
+checksum = "e258eeeb6903b4e91e314a3667ab2a1e2924738ef2df08bdb50355e38decc749"
 dependencies = [
  "cranelift-assembler-x64-meta",
  "cranelift-codegen-shared",
@@ -3477,24 +3477,24 @@ dependencies = [
 
 [[package]]
 name = "cranelift-codegen-shared"
-version = "0.123.18"
+version = "0.123.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a3aa5099097666baf45bd68ef036327c8f29d8785fffaaa7db3b3b6b7e94bcc6"
+checksum = "e1d36ff0de30460c01dad152ca2097bcabef2f16c659b9ffbca2f67e9bbdb321"
 
 [[package]]
 name = "cranelift-control"
-version = "0.123.18"
+version = "0.123.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26f67f4f4e92c2934f40c2ff4574400bd27326932aad937a438b7fb459f60a63"
+checksum = "acc880d91877efb6199031bda872726ca3287dc1e18ccf3f61c07bfdab62930b"
 dependencies = [
  "arbitrary",
 ]
 
 [[package]]
 name = "cranelift-entity"
-version = "0.123.18"
+version = "0.123.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8393d09f0abaa504896069e79f4eb6f15eb1853e5645732b082dac1ed292aaa8"
+checksum = "5f7af321c4b6e5be4729e4a5b1ed0fc78fc31695c1ecd3c9b45b91908bf3d0a3"
 dependencies = [
  "cranelift-bitset",
  "serde",
@@ -3503,9 +3503,9 @@ dependencies = [
 
 [[package]]
 name = "cranelift-frontend"
-version = "0.123.18"
+version = "0.123.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "580cfaecbd11476dd82f6a393123dcbd9dfe583467df8d0c8441c641444d4985"
+checksum = "3463f1b26faac3491008cede8e9cdf7ceb83139143bd92ba86c14b0882aaf1bb"
 dependencies = [
  "cranelift-codegen",
  "log",
@@ -3515,15 +3515,15 @@ dependencies = [
 
 [[package]]
 name = "cranelift-isle"
-version = "0.123.18"
+version = "0.123.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8c044843adb7d94b1facebaad846c0a762f79a77953417e3f0182093bcbbdc38"
+checksum = "90b76554b329634c4241c5670a96058affca99ac3b33daa14fb221bd68c0038e"
 
 [[package]]
 name = "cranelift-native"
-version = "0.123.18"
+version = "0.123.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9d4c1707214e53f2040e4d13430069ea22623287b2750ed6d62e40eba88d91a"
+checksum = "36e7c67bcfd30a8160187a6d52b2ec0cbe45698a9d61f12d1292bd24701f7ed2"
 dependencies = [
  "cranelift-codegen",
  "libc",
@@ -3532,9 +3532,9 @@ dependencies = [
 
 [[package]]
 name = "cranelift-srcgen"
-version = "0.123.18"
+version = "0.123.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d355a35edc49f628db7b793f3527eed31b560e77c3e8ed0e5258aad8df8a5249"
+checksum = "1ccca83c45ddfe0412b1b2e4fe509d28d1bdbc014e306574a848519741bebc36"
 
 [[package]]
 name = "crc"
@@ -3553,9 +3553,9 @@ checksum = "217698eaf96b4a3f0bc4f3662aaa55bdf913cd54d7204591faa790070c6d0853"
 
 [[package]]
 name = "crc32fast"
-version = "1.5.2"
+version = "1.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "01a7799fd6b852db0e61728dde9a204c423b44d689dbd432522543614b490e78"
+checksum = "0ba106e844045ddc02c20768ac4b0b7cb45f2cc2ecbd833ac9f5dacb183c2055"
 dependencies = [
  "cfg-if",
 ]
@@ -4902,7 +4902,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -5070,9 +5070,9 @@ checksum = "1c66915cc5391097de7a2b0b972e8505aa33c0df401fd3a6811dbdb32881ba48"
 
 [[package]]
 name = "fixed-cache"
-version = "0.1.10"
+version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2fe63500644ef0269fe6b744e7e5dc5c20b5eebf3d881bc2be53f194636f6583"
+checksum = "57b811067c17dd16568d50c522f03fa65227c7f602c88f77d38e7842c51ba964"
 dependencies = [
  "equivalent",
  "rapidhash",
@@ -6345,9 +6345,9 @@ dependencies = [
 
 [[package]]
 name = "icu_collections"
-version = "2.3.0"
+version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa68d21081c4a05d5a901a1c62add574c77048b6a1c67be3b50ce0b60d4ca513"
+checksum = "fe090a42a0d3140fed8c63263ed1fecc02422cb2f4bfe55cd8de2de1b8e105dd"
 dependencies = [
  "displaydoc",
  "potential_utf",
@@ -6359,9 +6359,9 @@ dependencies = [
 
 [[package]]
 name = "icu_locale_core"
-version = "2.3.0"
+version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d56e28588da92eee5c3201a6eff33fabdd49b62269c8938d4ff050ce4d900deb"
+checksum = "25d29b57c17c6528d0dc4c2141cfa2d08200465acb537a3909c8b9b8a4a984c0"
 dependencies = [
  "displaydoc",
  "litemap",
@@ -6372,9 +6372,9 @@ dependencies = [
 
 [[package]]
 name = "icu_normalizer"
-version = "2.3.0"
+version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "12f9cf5f235641ed274641dd81c3f28d870e276763d0797aeeab72317b1c646f"
+checksum = "404a3b8c486f205c87fe7f23ab6894d84a4ad76d6e4671ae1981ba7def87c599"
 dependencies = [
  "icu_collections",
  "icu_normalizer_data",
@@ -6386,15 +6386,15 @@ dependencies = [
 
 [[package]]
 name = "icu_normalizer_data"
-version = "2.3.0"
+version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1563da1ed3e0b3bf3d74c9b85917ac9c56464d2f57242270c09c9e752f8021a0"
+checksum = "20f0088bfb7441f7a37fa0c9e20cb1e9cba1cac6b9ce8cd2a6dc44294f8e8cbc"
 
 [[package]]
 name = "icu_properties"
-version = "2.3.0"
+version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e7ca276ad3145661a65914e6daf131ca5120cd3dcee8f8f3214b8875184a148"
+checksum = "2ea83d991c56158f7cf898bf86436c1dfe7c07ee82fe88951f2695c9f37a379f"
 dependencies = [
  "displaydoc",
  "icu_collections",
@@ -6407,15 +6407,15 @@ dependencies = [
 
 [[package]]
 name = "icu_properties_data"
-version = "2.3.0"
+version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e590f038c1464a96894fd6d10127e90a8be4509f56ff7ecef851b15cee0b7caa"
+checksum = "b98f29af82d02b163fe50161388350e743bb3107cc8e8c2f7314cb505faddfcf"
 
 [[package]]
 name = "icu_provider"
-version = "2.3.1"
+version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d27bbb9d3abbefac45d55f647c9de1d44aafcd1186eb91879afef17c396c3e73"
+checksum = "413099315636c588ee8f011190b329b971a09a8fae9d157e01dcae8379468514"
 dependencies = [
  "displaydoc",
  "icu_locale_core",
@@ -6621,7 +6621,7 @@ dependencies = [
 [[package]]
 name = "indiv-pallet-airdrop"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-community?branch=main#d4174e44aed2b179941bf9bcc2a1d8f0a9705589"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#7137a05ee8de969fdf57714ea4aadb9525b28d93"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6645,7 +6645,7 @@ dependencies = [
 [[package]]
 name = "indiv-pallet-alias-accounts"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-community?branch=main#d4174e44aed2b179941bf9bcc2a1d8f0a9705589"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#7137a05ee8de969fdf57714ea4aadb9525b28d93"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6663,7 +6663,7 @@ dependencies = [
 [[package]]
 name = "indiv-pallet-chunks-manager"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-community?branch=main#d4174e44aed2b179941bf9bcc2a1d8f0a9705589"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#7137a05ee8de969fdf57714ea4aadb9525b28d93"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6679,7 +6679,7 @@ dependencies = [
 [[package]]
 name = "indiv-pallet-coinage"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-community?branch=main#d4174e44aed2b179941bf9bcc2a1d8f0a9705589"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#7137a05ee8de969fdf57714ea4aadb9525b28d93"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6701,7 +6701,7 @@ dependencies = [
 [[package]]
 name = "indiv-pallet-dotns-gateway"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-community?branch=main#d4174e44aed2b179941bf9bcc2a1d8f0a9705589"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#7137a05ee8de969fdf57714ea4aadb9525b28d93"
 dependencies = [
  "alloy-core",
  "frame-benchmarking",
@@ -6722,7 +6722,7 @@ dependencies = [
 [[package]]
 name = "indiv-pallet-dummy-dim"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-community?branch=main#d4174e44aed2b179941bf9bcc2a1d8f0a9705589"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#7137a05ee8de969fdf57714ea4aadb9525b28d93"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6738,7 +6738,7 @@ dependencies = [
 [[package]]
 name = "indiv-pallet-game"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-community?branch=main#d4174e44aed2b179941bf9bcc2a1d8f0a9705589"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#7137a05ee8de969fdf57714ea4aadb9525b28d93"
 dependencies = [
  "binary-merkle-tree",
  "cumulus-pallet-parachain-system 0.30.0",
@@ -6767,7 +6767,7 @@ dependencies = [
 [[package]]
 name = "indiv-pallet-honour"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-community?branch=main#d4174e44aed2b179941bf9bcc2a1d8f0a9705589"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#7137a05ee8de969fdf57714ea4aadb9525b28d93"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6784,7 +6784,7 @@ dependencies = [
 [[package]]
 name = "indiv-pallet-members"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-community?branch=main#d4174e44aed2b179941bf9bcc2a1d8f0a9705589"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#7137a05ee8de969fdf57714ea4aadb9525b28d93"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6804,7 +6804,7 @@ dependencies = [
 [[package]]
 name = "indiv-pallet-members-notifier"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-community?branch=main#d4174e44aed2b179941bf9bcc2a1d8f0a9705589"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#7137a05ee8de969fdf57714ea4aadb9525b28d93"
 dependencies = [
  "cumulus-primitives-core",
  "frame-benchmarking",
@@ -6827,7 +6827,7 @@ dependencies = [
 [[package]]
 name = "indiv-pallet-members-subscriber"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-community?branch=main#d4174e44aed2b179941bf9bcc2a1d8f0a9705589"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#7137a05ee8de969fdf57714ea4aadb9525b28d93"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6846,7 +6846,7 @@ dependencies = [
 [[package]]
 name = "indiv-pallet-mob-rule"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-community?branch=main#d4174e44aed2b179941bf9bcc2a1d8f0a9705589"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#7137a05ee8de969fdf57714ea4aadb9525b28d93"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6866,7 +6866,7 @@ dependencies = [
 [[package]]
 name = "indiv-pallet-network-suffix"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-community?branch=main#d4174e44aed2b179941bf9bcc2a1d8f0a9705589"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#7137a05ee8de969fdf57714ea4aadb9525b28d93"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6879,7 +6879,7 @@ dependencies = [
 [[package]]
 name = "indiv-pallet-nft-claims"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-community?branch=main#d4174e44aed2b179941bf9bcc2a1d8f0a9705589"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#7137a05ee8de969fdf57714ea4aadb9525b28d93"
 dependencies = [
  "binary-merkle-tree",
  "frame-benchmarking",
@@ -6899,7 +6899,7 @@ dependencies = [
 [[package]]
 name = "indiv-pallet-nft-credits"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-community?branch=main#d4174e44aed2b179941bf9bcc2a1d8f0a9705589"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#7137a05ee8de969fdf57714ea4aadb9525b28d93"
 dependencies = [
  "binary-merkle-tree",
  "cumulus-primitives-core",
@@ -6921,7 +6921,7 @@ dependencies = [
 [[package]]
 name = "indiv-pallet-origin-restriction"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-community?branch=main#d4174e44aed2b179941bf9bcc2a1d8f0a9705589"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#7137a05ee8de969fdf57714ea4aadb9525b28d93"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6937,7 +6937,7 @@ dependencies = [
 [[package]]
 name = "indiv-pallet-people"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-community?branch=main#d4174e44aed2b179941bf9bcc2a1d8f0a9705589"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#7137a05ee8de969fdf57714ea4aadb9525b28d93"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6956,7 +6956,7 @@ dependencies = [
 [[package]]
 name = "indiv-pallet-people-airdrops"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-community?branch=main#d4174e44aed2b179941bf9bcc2a1d8f0a9705589"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#7137a05ee8de969fdf57714ea4aadb9525b28d93"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6974,7 +6974,7 @@ dependencies = [
 [[package]]
 name = "indiv-pallet-people-lite"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-community?branch=main#d4174e44aed2b179941bf9bcc2a1d8f0a9705589"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#7137a05ee8de969fdf57714ea4aadb9525b28d93"
 dependencies = [
  "ed25519-zebra",
  "frame-benchmarking",
@@ -6994,7 +6994,7 @@ dependencies = [
 [[package]]
 name = "indiv-pallet-pgas"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-community?branch=main#d4174e44aed2b179941bf9bcc2a1d8f0a9705589"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#7137a05ee8de969fdf57714ea4aadb9525b28d93"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -7013,7 +7013,7 @@ dependencies = [
 [[package]]
 name = "indiv-pallet-proof-of-ink"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-community?branch=main#d4174e44aed2b179941bf9bcc2a1d8f0a9705589"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#7137a05ee8de969fdf57714ea4aadb9525b28d93"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -7034,7 +7034,7 @@ dependencies = [
 [[package]]
 name = "indiv-pallet-relay-randomness"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-community?branch=main#d4174e44aed2b179941bf9bcc2a1d8f0a9705589"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#7137a05ee8de969fdf57714ea4aadb9525b28d93"
 dependencies = [
  "cumulus-pallet-parachain-system 0.30.0",
  "cumulus-primitives-core",
@@ -7051,7 +7051,7 @@ dependencies = [
 [[package]]
 name = "indiv-pallet-resources"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-community?branch=main#d4174e44aed2b179941bf9bcc2a1d8f0a9705589"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#7137a05ee8de969fdf57714ea4aadb9525b28d93"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -7073,7 +7073,7 @@ dependencies = [
 [[package]]
 name = "indiv-pallet-scarcity"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-community?branch=main#d4174e44aed2b179941bf9bcc2a1d8f0a9705589"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#7137a05ee8de969fdf57714ea4aadb9525b28d93"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -7090,7 +7090,7 @@ dependencies = [
 [[package]]
 name = "indiv-pallet-score"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-community?branch=main#d4174e44aed2b179941bf9bcc2a1d8f0a9705589"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#7137a05ee8de969fdf57714ea4aadb9525b28d93"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -7145,7 +7145,7 @@ dependencies = [
 [[package]]
 name = "indiv-precompile-nft-claims"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-community?branch=main#d4174e44aed2b179941bf9bcc2a1d8f0a9705589"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#7137a05ee8de969fdf57714ea4aadb9525b28d93"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -7158,7 +7158,7 @@ dependencies = [
 [[package]]
 name = "indiv-precompile-personhood"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-community?branch=main#d4174e44aed2b179941bf9bcc2a1d8f0a9705589"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#7137a05ee8de969fdf57714ea4aadb9525b28d93"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -7172,7 +7172,7 @@ dependencies = [
 [[package]]
 name = "indiv-precompile-scarcity"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-community?branch=main#d4174e44aed2b179941bf9bcc2a1d8f0a9705589"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#7137a05ee8de969fdf57714ea4aadb9525b28d93"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -7184,7 +7184,7 @@ dependencies = [
 [[package]]
 name = "indiv-precompile-support"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-community?branch=main#d4174e44aed2b179941bf9bcc2a1d8f0a9705589"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#7137a05ee8de969fdf57714ea4aadb9525b28d93"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -7196,7 +7196,7 @@ dependencies = [
 [[package]]
 name = "indiv-support"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-community?branch=main#d4174e44aed2b179941bf9bcc2a1d8f0a9705589"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#7137a05ee8de969fdf57714ea4aadb9525b28d93"
 dependencies = [
  "ark-bls12-381-ext 0.6.0",
  "ark-ec 0.6.0",
@@ -8657,9 +8657,9 @@ dependencies = [
 
 [[package]]
 name = "memmap2"
-version = "0.9.11"
+version = "0.9.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d1219ed1b7f229ee7104d281dd01d6802fe28bb6e95d292942c4daacdeb798c0"
+checksum = "6b0ca1155a9ecc25aa12e8313a119f32edf0255fea2f44839c4ac0a12b2ac157"
 dependencies = [
  "libc",
 ]
@@ -9037,7 +9037,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -9841,7 +9841,7 @@ dependencies = [
 [[package]]
 name = "pallet-bulletin-data-renewal"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-bulletin-chain?branch=main#6020445a5d4200c44ba89765c54dd8f0323c70a6"
+source = "git+https://github.com/paritytech/polkadot-bulletin-chain?branch=main#e0190de902b41b820844ec530ec21f5af04d1f11"
 dependencies = [
  "array-bytes 6.2.3",
  "bulletin-transaction-storage-primitives",
@@ -9855,7 +9855,7 @@ dependencies = [
 [[package]]
 name = "pallet-bulletin-hop-promotion"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-bulletin-chain?branch=main#6020445a5d4200c44ba89765c54dd8f0323c70a6"
+source = "git+https://github.com/paritytech/polkadot-bulletin-chain?branch=main#e0190de902b41b820844ec530ec21f5af04d1f11"
 dependencies = [
  "bulletin-transaction-storage-primitives",
  "frame-support",
@@ -9873,7 +9873,7 @@ dependencies = [
 [[package]]
 name = "pallet-bulletin-transaction-storage"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-bulletin-chain?branch=main#6020445a5d4200c44ba89765c54dd8f0323c70a6"
+source = "git+https://github.com/paritytech/polkadot-bulletin-chain?branch=main#e0190de902b41b820844ec530ec21f5af04d1f11"
 dependencies = [
  "array-bytes 6.2.3",
  "bulletin-transaction-storage-primitives",
@@ -9889,7 +9889,7 @@ dependencies = [
 [[package]]
 name = "pallet-bulletin-transaction-storage-runtime-api"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-bulletin-chain?branch=main#6020445a5d4200c44ba89765c54dd8f0323c70a6"
+source = "git+https://github.com/paritytech/polkadot-bulletin-chain?branch=main#e0190de902b41b820844ec530ec21f5af04d1f11"
 dependencies = [
  "bulletin-transaction-storage-primitives",
  "parity-scale-codec",
@@ -13072,8 +13072,8 @@ version = "0.13.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "be769465445e8c1474e9c5dac2018218498557af32d9ed057325ec9a41ae81bf"
 dependencies = [
- "heck 0.4.1",
- "itertools 0.12.1",
+ "heck 0.5.0",
+ "itertools 0.14.0",
  "log",
  "multimap",
  "once_cell",
@@ -13092,8 +13092,8 @@ version = "0.14.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "03da047801ff44bb6a4d407d4860c05fd70bb81714e6b2f3812603d5b145b042"
 dependencies = [
- "heck 0.4.1",
- "itertools 0.12.1",
+ "heck 0.5.0",
+ "itertools 0.14.0",
  "log",
  "multimap",
  "petgraph 0.8.3",
@@ -13125,7 +13125,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a56d757972c98b346a9b766e3f02746cde6dd1cd1d1d563472929fdd74bec4d"
 dependencies = [
  "anyhow",
- "itertools 0.12.1",
+ "itertools 0.14.0",
  "proc-macro2",
  "quote",
  "syn 2.0.119",
@@ -13138,7 +13138,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b570b25f7617e43d59005d0990ccb79e950a423952cea19671b7a876da390adf"
 dependencies = [
  "anyhow",
- "itertools 0.12.1",
+ "itertools 0.14.0",
  "proc-macro2",
  "quote",
  "syn 2.0.119",
@@ -13173,9 +13173,9 @@ dependencies = [
 
 [[package]]
 name = "pulley-interpreter"
-version = "36.0.18"
+version = "36.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "334ae8982dcf354e5f28e79fc6f935601e028b729cc174d3937eeeaa859057b8"
+checksum = "c956c7140270b72e3bf03381a51f2eb79c70fd6881fc17cd027fa7cd3f56ae5a"
 dependencies = [
  "cranelift-bitset",
  "log",
@@ -13185,9 +13185,9 @@ dependencies = [
 
 [[package]]
 name = "pulley-macros"
-version = "36.0.18"
+version = "36.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9cd207bca4bc5e46cb4fcea87196dcbd78befc628c64c67d11dc99fce5cd5369"
+checksum = "74db420d7ce2bb03eed5b81c1f778bda5771b3fd818e2b496dfc3a2783ceb60e"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -13230,7 +13230,7 @@ dependencies = [
  "quinn-udp 0.5.16",
  "rustc-hash 2.1.3",
  "rustls",
- "socket2 0.5.10",
+ "socket2 0.6.5",
  "thiserror 2.0.21",
  "tokio",
  "tracing",
@@ -13268,9 +13268,9 @@ dependencies = [
  "cfg_aliases",
  "libc",
  "once_cell",
- "socket2 0.5.10",
+ "socket2 0.6.5",
  "tracing",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -13281,9 +13281,9 @@ checksum = "47091c86514c2e11452cb228dee77037334b99d92a23e4c69aa5982261f39247"
 dependencies = [
  "cfg_aliases",
  "libc",
- "socket2 0.5.10",
+ "socket2 0.6.5",
  "tracing",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -13996,7 +13996,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -14009,7 +14009,7 @@ dependencies = [
  "once_cell",
  "ring 0.17.14",
  "rustls-pki-types",
- "rustls-webpki 0.103.15",
+ "rustls-webpki 0.103.16",
  "subtle 2.6.1",
  "zeroize",
 ]
@@ -14050,7 +14050,7 @@ dependencies = [
  "rustls",
  "rustls-native-certs",
  "rustls-platform-verifier-android",
- "rustls-webpki 0.103.15",
+ "rustls-webpki 0.103.16",
  "security-framework",
  "security-framework-sys",
  "webpki-root-certs 0.26.11",
@@ -14075,9 +14075,9 @@ dependencies = [
 
 [[package]]
 name = "rustls-webpki"
-version = "0.103.15"
+version = "0.103.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f3c3cf1d8b1e7d4927e2d154c3fcb02979afb9939629c62cd9048d4f07b60ac2"
+checksum = "4443b1b6d39d7c663139942cc4558262562d2c84123bb6282ef177009ca8b281"
 dependencies = [
  "ring 0.17.14",
  "rustls-pki-types",
@@ -14164,7 +14164,7 @@ checksum = "81a246319d0ec7d0290441b3f24195e72b3c3df8b7c195a52977a8d9fb41d638"
 dependencies = [
  "array-bytes 6.2.3",
  "docify",
- "memmap2 0.9.11",
+ "memmap2 0.9.12",
  "parity-scale-codec",
  "sc-chain-spec-derive",
  "sc-client-api",
@@ -14191,7 +14191,7 @@ checksum = "d3646b60a61b73ab43beb4f1b6f277559ab3c172df27ad735f471551f1fd40a1"
 dependencies = [
  "array-bytes 6.2.3",
  "docify",
- "memmap2 0.9.11",
+ "memmap2 0.9.12",
  "parity-scale-codec",
  "sc-chain-spec-derive",
  "sc-client-api",
@@ -15133,9 +15133,9 @@ dependencies = [
 
 [[package]]
 name = "sctp-proto"
-version = "0.10.6"
+version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ba0d5d00068c8e8ca721d55a8f14b82b768a1fe3982243c7333272dc49cb801"
+checksum = "bba218fe5119005820ab5aa74ffae0f1267763ae242541f5787ef42427cff262"
 dependencies = [
  "bytes",
  "crc",
@@ -15672,9 +15672,9 @@ dependencies = [
 
 [[package]]
 name = "snowbridge-beacon-primitives"
-version = "0.21.0"
+version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42e7f55122c3a299bcbe83b485f3d75dedcda03b59f7b954dc681bde59b4d2cb"
+checksum = "4f2d969a672ef00f36f5542403731d589fa8e24fa34930e75c46850296d9bb28"
 dependencies = [
  "byte-slice-cast",
  "frame-support",
@@ -16103,9 +16103,9 @@ dependencies = [
 
 [[package]]
 name = "snowbridge-runtime-common"
-version = "0.23.0"
+version = "0.23.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "94201e57a41feb5b6c03c1d1b0c3877090b030f1bd22ba202431b0ca42459f7c"
+checksum = "9e417bb9eb1b29bb9701f3b5ca5116a77f1cdd62a61447b6516a03f1a61ca9aa"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -17225,9 +17225,9 @@ dependencies = [
 
 [[package]]
 name = "staging-xcm-executor"
-version = "28.0.1"
+version = "28.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "35339755ed0523a907421b01a1a882dc827b5fc1d3051b2ccdaada9451a7d6eb"
+checksum = "e16c137ce74ca3e4dd0d6a3138ba5eceb7a7d4537615cc6877453fe5e5461b69"
 dependencies = [
  "environmental",
  "frame-benchmarking",
@@ -17642,7 +17642,7 @@ dependencies = [
 [[package]]
 name = "system-parachains-common"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/individuality-community?branch=main#d4174e44aed2b179941bf9bcc2a1d8f0a9705589"
+source = "git+https://github.com/paritytech/individuality-community?branch=main#7137a05ee8de969fdf57714ea4aadb9525b28d93"
 dependencies = [
  "cumulus-pallet-parachain-system 0.30.0",
  "cumulus-primitives-core",
@@ -17760,7 +17760,7 @@ dependencies = [
  "getrandom 0.4.3",
  "once_cell",
  "rustix",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -17893,9 +17893,9 @@ dependencies = [
 
 [[package]]
 name = "tinystr"
-version = "0.8.4"
+version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1e27c91459209c2986af3dcf603a5a74a4368754ce37414f59acc971167f643"
+checksum = "abc840c238154d58f9e86b2792261edfde565a17696e1cda1a449de27979801a"
 dependencies = [
  "displaydoc",
  "zerovec",
@@ -17930,9 +17930,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "1.53.3"
+version = "1.54.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce3335fa71841cda333a58d7615b03901380ecf09d59b3296d21f8bbac0dde4e"
+checksum = "b52fd3255258d26fac7264ab5a76b53c13367136dc011d3d6ad4f8ed070396a3"
 dependencies = [
  "bytes",
  "libc",
@@ -18707,9 +18707,9 @@ dependencies = [
 
 [[package]]
 name = "wasmtime"
-version = "36.0.18"
+version = "36.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70095b9fe63cc2a87ed206729e11544610decc184c62898c5d201ff1d666d82e"
+checksum = "60e5f244a2c9d40afa9e9a607ee7f048c0648bb1c22cc28b130c5fc71e23d71d"
 dependencies = [
  "addr2line",
  "anyhow",
@@ -18755,9 +18755,9 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-environ"
-version = "36.0.18"
+version = "36.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a67ea8904b6e369e2218780bd1f9186f1980cb616445eb2c1f3c4e45c8397865"
+checksum = "3e246cd5107aa406cfa4acf6942e864bd189ae8136bab853365147da131c9ca3"
 dependencies = [
  "anyhow",
  "cpp_demangle",
@@ -18780,18 +18780,18 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-internal-asm-macros"
-version = "36.0.18"
+version = "36.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0488a52ae93e654baecb08ce04d15d478756eb2168c2bdab7915710109161ce"
+checksum = "5380a8106fea8bfedb7208bb11ced9e7488ee44394ca889ede73acd3bdfd9d0b"
 dependencies = [
  "cfg-if",
 ]
 
 [[package]]
 name = "wasmtime-internal-cache"
-version = "36.0.18"
+version = "36.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e941dc94f323850facf75e49a6cd13d71f116a99c6a49fc34717f6e732616b2d"
+checksum = "4108e1964b3a02b4b5604ea1a2918a0cbcab512e5de0ccf4c062fc6c06b2eb8e"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -18809,9 +18809,9 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-internal-cranelift"
-version = "36.0.18"
+version = "36.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f63ea7ee133de9109a4a1fc63dae3afc9ea32e92b8dada824fa4595dbf175f80"
+checksum = "7339fdd64a3fde574505adea23244e065d5b1de0e72c8dd87e150f5d4ab63a63"
 dependencies = [
  "anyhow",
  "cfg-if",
@@ -18836,9 +18836,9 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-internal-fiber"
-version = "36.0.18"
+version = "36.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "69662a0a4dbe9784d1e8add9e3c5d2db0ca348085c624c27a70992dbe2eff4a3"
+checksum = "6f3afc72d3c72f71d4ebc72e83f479ba8ca24409c41d43e5e0228f0bf82b873e"
 dependencies = [
  "anyhow",
  "cc",
@@ -18852,9 +18852,9 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-internal-jit-debug"
-version = "36.0.18"
+version = "36.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "00cb07d23903c0be359d6b920d94774ea322759c3f4d6721b61afa03602e4804"
+checksum = "21d33adf2d1eae36df9b6b033a1d549c7553ea607f4f9a81f75d51627725c354"
 dependencies = [
  "cc",
  "object 0.37.3",
@@ -18864,9 +18864,9 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-internal-jit-icache-coherence"
-version = "36.0.18"
+version = "36.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa2b47c37a6d026e2755fe2cf7ec5c1f4b0fba62e448ea910cdf6a07a4982c6a"
+checksum = "5bde2fcf14cc76084242c6fe792e49778b5a9008c7df28ca4fe21c35c69d5f55"
 dependencies = [
  "anyhow",
  "cfg-if",
@@ -18876,24 +18876,24 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-internal-math"
-version = "36.0.18"
+version = "36.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b269f0ba44102c57fd5f94f1bf4395ccd4fc2b84698fc78f627a6f2a47131a62"
+checksum = "4bd982249e933e730859f84c17254c7e95f38c3b0cdf81695bfc6a270e237852"
 dependencies = [
  "libm",
 ]
 
 [[package]]
 name = "wasmtime-internal-slab"
-version = "36.0.18"
+version = "36.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e35ac9d503d503703cd24d532e53e2e93c86109b451df40a9801500045aee25"
+checksum = "8280b359384cc412bddf0023193eeaffadcb0d7fbbf860f2b7e0580e8806a344"
 
 [[package]]
 name = "wasmtime-internal-unwinder"
-version = "36.0.18"
+version = "36.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83ce1d0930da44ed375701e6b4f187b46249f7efe2b1d8c1c77229a4adc82de9"
+checksum = "bb43477c41769fec0d031d32cb3236195acfb1e6aa4efdf463e5fd001c23f6cc"
 dependencies = [
  "anyhow",
  "cfg-if",
@@ -18904,9 +18904,9 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-internal-versioned-export-macros"
-version = "36.0.18"
+version = "36.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3b6633be262400bd7abab4ff767a16e8b6a41ff117be54bf76dabecea9f96225"
+checksum = "b33afac17819f2f767ea280b4b87a6c95458ef1ae43da410cfc5b26813ecb78f"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -18915,9 +18915,9 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-internal-winch"
-version = "36.0.18"
+version = "36.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "509d1e1cf8e3b3306f291407c92bca8381d9294f8c54ad74b692538f1f5b23c7"
+checksum = "1757c8b0626385c93994c7a3c7a23ee5b469061465b601c1fdce71ff61b11c82"
 dependencies = [
  "anyhow",
  "cranelift-codegen",
@@ -18956,14 +18956,14 @@ version = "0.26.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "75c7f0ef91146ebfb530314f5f1d24528d7f0767efbfd31dce919275413e393e"
 dependencies = [
- "webpki-root-certs 1.0.9",
+ "webpki-root-certs 1.0.10",
 ]
 
 [[package]]
 name = "webpki-root-certs"
-version = "1.0.9"
+version = "1.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b96554aa2acc8ccdb7e1c9a58a7a68dd5d13bccc69cd124cb09406db612a1c9b"
+checksum = "58ec80e73fd8baf57bf0d9615554c75348bda990d6d5bbeab964dd068319fecb"
 dependencies = [
  "rustls-pki-types",
 ]
@@ -19030,7 +19030,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.48.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -19041,9 +19041,9 @@ checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 
 [[package]]
 name = "winch-codegen"
-version = "36.0.18"
+version = "36.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e470d7e674c41ad32dddc02d8d8a94983e0a4c516028bda60747e6dd862a567"
+checksum = "69940a29fc6b01b0e6b141912b700c17eaf956d58d63bc0c6e733435caf020e4"
 dependencies = [
  "anyhow",
  "cranelift-assembler-x64",
@@ -19736,9 +19736,9 @@ dependencies = [
 
 [[package]]
 name = "yoke"
-version = "0.8.3"
+version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "709fe23a0424b6a435d82152b1bd3fdfb0833487d5fa90d05d42762a9891fef5"
+checksum = "417ef3fcf6c300b7dbd25c85531a746931c02ad536f3cf4786ed1e88223340b3"
 dependencies = [
  "stable_deref_trait",
  "yoke-derive",
@@ -19831,9 +19831,9 @@ dependencies = [
 
 [[package]]
 name = "zerovec"
-version = "0.11.8"
+version = "0.11.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb0464e17806c1d976d5cba29399c7f08e516e279e2ba493f63123b5fca67dd8"
+checksum = "f58a2799cfe9a1670c7ea8edbd52ef8edb93cb37a7f83bf31ba9e35d9dae6a40"
 dependencies = [
  "yoke",
  "zerofrom",
@@ -19842,9 +19842,9 @@ dependencies = [
 
 [[package]]
 name = "zerovec-derive"
-version = "0.11.6"
+version = "0.11.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "34df6fc39dbd26ddc9c10e6a2984476e13acce22e64e4487636ef494369225da"
+checksum = "c3743ddbf47738d929cd1ae2e199d40d0162979dfe31aef8ae646d2bf00bf97a"
 dependencies = [
  "proc-macro2",
  "quote",
