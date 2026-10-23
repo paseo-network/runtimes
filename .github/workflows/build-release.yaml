@@ -304,7 +304,7 @@ jobs:
           path: ${{ steps.release_notes.outputs.notes_file }}
 
   generate-chain-specs:
-    needs: create-tag
+    needs: [create-tag, build-runtimes]
     runs-on: ubuntu-latest
     # Chain specs are a convenience artifact, not part of a runtime release: v2.5.3's job
     # died installing `pop` (brew cannot tap homebrew/core on the runner image) after every
@@ -319,27 +319,28 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Install Dependencies
+      - name: Download release runtimes
+        uses: actions/download-artifact@v4
+        with:
+          pattern: '*-runtime-${{ needs.create-tag.outputs.release_tag }}'
+          merge-multiple: true
+          path: release-runtimes
+
+      - name: Prepare release WASM for Pop
         run: |
-          sudo apt update
-          sudo apt install -y git protobuf-compiler
-
-      - name: Setup Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: 1.90.0
-          target: wasm32v1-none
-          components: rust-src
-          override: true
-
-      - name: Add rust-src
-        run: rustup component add rust-src --toolchain 1.90.0-x86_64-unknown-linux-gnu
-
-      - name: Rust cache
-        uses: Swatinem/rust-cache@v2.8.1
-        with:
-          shared-key: "paseo-global-cache"
-          cache-on-failure: true
+          set -euo pipefail
+          # Pop --skip-build resolves runtimes through this workspace target layout.
+          # Use srtool's exact production artifact, without compiling a second runtime.
+          for runtime_file in release-runtimes/*_runtime.compressed.wasm; do
+            test -s "$runtime_file"
+            runtime_name="${runtime_file##*/}"
+            runtime_name="${runtime_name%_runtime.compressed.wasm}"
+            [[ "$runtime_name" == *_fast ]] && continue
+            package_name="${runtime_name}-runtime"
+            wasm_dir="target/release/wbuild/$package_name"
+            mkdir -p "$wasm_dir"
+            cp "$runtime_file" "$wasm_dir/${package_name//-/_}.compact.compressed.wasm"
+          done
 
       - name: Install Pop
         env:
@@ -421,6 +422,7 @@ jobs:
         with:
           name: chain-specs
           path: chain-specs
+          if-no-files-found: error
 
   create-release:
     needs: [create-tag, generate-chain-specs, build-runtimes]

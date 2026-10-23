@@ -1,3 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
 # If CHAIN_SPEC_PACKAGES is set via environment variable, use it
 # Otherwise, default to all packages
 if [ -n "${CHAIN_SPEC_PACKAGES:-}" ]; then
@@ -165,6 +168,11 @@ for pkg in "${PACKAGES[@]}"; do
 
   ## Generate specs with Pop-CLI: https://github.com/r0gue-io/pop-cli
   pop build spec "${ARGS[@]}"
+  # Pop 0.12.1 can print an error and still exit successfully.
+  if [[ ! -s "chain-specs/${pkg}-raw.json" ]]; then
+    echo "Missing raw chain spec for ${pkg}" >&2
+    exit 1
+  fi
 
   echo "✅ Spec generated for: ${pkg}"
 done
