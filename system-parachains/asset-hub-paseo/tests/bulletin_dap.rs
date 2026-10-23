@@ -5,7 +5,7 @@
 
 use asset_hub_paseo_runtime::{
 	xcm_config::{CheckingAccount, DotLocation, XcmConfig},
-	Balances, Dap, Runtime, RuntimeGenesisConfig, System,
+	Balances, Dap, RuntimeGenesisConfig, System,
 };
 use frame_support::{
 	assert_ok,
@@ -18,11 +18,16 @@ use xcm_executor::XcmExecutor;
 
 #[test]
 fn bulletin_accumulation_teleport_reaches_dap_staging() {
-	let mut ext =
-		sp_io::TestExternalities::new(RuntimeGenesisConfig::default().build_storage().unwrap());
+	let config = RuntimeGenesisConfig {
+		parachain_info: parachain_info::GenesisConfig {
+			parachain_id: 1000.into(),
+			..Default::default()
+		},
+		..Default::default()
+	};
+	let mut ext = sp_io::TestExternalities::new(config.build_storage().unwrap());
 	ext.execute_with(|| {
 		System::set_block_number(1);
-		parachain_info::ParachainId::<Runtime>::put(cumulus_primitives_core::ParaId::new(1000));
 		let amount = 10_000_000_000u128;
 		let checking = CheckingAccount::get();
 		let staging = Dap::staging_account();
