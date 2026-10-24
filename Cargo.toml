@@ -201,6 +201,7 @@ pallet-assets = { version = "53.0.0", default-features = false }
 pallet-assets-freezer = { version = "0.18.0", default-features = false }
 pallet-assets-holder = { version = "0.13.0", default-features = false }
 pallet-assets-precompiles = { version = "0.11.1", default-features = false }
+pallet-accumulate-and-forward = { version = "0.4.1", default-features = false }
 pallet-aura = { version = "48.0.0", default-features = false }
 pallet-authority-discovery = { version = "49.0.0", default-features = false }
 pallet-authorship = { version = "48.0.0", default-features = false }

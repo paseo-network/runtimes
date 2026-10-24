@@ -17,6 +17,7 @@ polkadot-core-primitives = { workspace = true }
 polkadot-primitives = { workspace = true }
 paseo-runtime-constants = { path = "../../relay/paseo/constants", default-features = false }
 sp-core = { workspace = true }
+sp-dap = { workspace = true }
 sp-runtime = { workspace = true }
 xcm = { workspace = true }
 pallet-revive = { workspace = true }
@@ -31,6 +32,7 @@ std = [
 	"polkadot-core-primitives/std",
 	"polkadot-primitives/std",
 	"sp-core/std",
+	"sp-dap/std",
 	"sp-runtime/std",
 	"xcm/std",
 ]
