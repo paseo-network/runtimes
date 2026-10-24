@@ -204,7 +204,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	impl_name: Cow::Borrowed("asset-hub-paseo"),
 	spec_name: Cow::Borrowed("asset-hub-paseo"),
 	authoring_version: 1,
-	spec_version: 2_005_004,
+	spec_version: 2_005_005,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	// BUMPED 16 -> 17 for the individuality v0.3.1 port. This is mandatory, not hygiene:
@@ -3713,7 +3713,6 @@ mod benches {
 			PeopleLocation::get(),
 			Asset { fun: Fungible(UNITS), id: AssetId(DotLocation::get()) },
 		));
-		pub const CheckedAccount: Option<(AccountId, xcm_builder::MintLocation)> = None;
 		// AssetHubPaseo trusts AssetHubKusama as reserve for KSMs
 		pub TrustedReserve: Option<(Location, Asset)> = Some({
 			use frame_support::traits::tokens::fungible::{Inspect, Mutate};
@@ -3747,7 +3746,7 @@ mod benches {
 	impl pallet_xcm_benchmarks::fungible::Config for Runtime {
 		type TransactAsset = Balances;
 
-		type CheckedAccount = CheckedAccount;
+		type CheckedAccount = xcm_config::TeleportTracking;
 		type TrustedTeleporter = TrustedTeleporter;
 		type TrustedReserve = TrustedReserve;
 
