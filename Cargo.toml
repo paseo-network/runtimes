@@ -1,5 +1,5 @@
 [workspace.package]
-version = "2.5.4"
+version = "2.5.5"
 authors = ["Paseo Core Team"]
 edition = "2021"
 homepage = "https://github.com/paseo-network/runtimes"
@@ -80,8 +80,20 @@ indiv-pallet-scarcity = { git = "https://github.com/paritytech/individuality-com
 indiv-pallet-score = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
 # Paseo-only individuality crates that upstream does not carry.
 indiv-pallet-storage-initialization = { path = "pallets/storage-initialization", default-features = false }
-pallet-rc-migrator = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.5.0", default-features = false }
-pallet-ah-ops = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.5.0", default-features = false }
+# Fellowship crates that must build against SDK stable2606-2 (polkadot-runtime-common 31,
+# polkadot-runtime-parachains 29, pallet-broker 0.29, cumulus-pallet-parachain-system 0.30):
+# Individuality forces common 31 and no fellowship tag ships those pins yet. They are taken
+# from polkadot-fellows/runtimes#1316 (branch `sdk-stable2606-2`, which lives on a personal
+# fork, hence the PR ref). Once that PR is merged and released, point them back to the
+# matching tag (v2.6.0 or whatever it becomes).
+pallet-rc-migrator = { git = "https://github.com/polkadot-fellows/runtimes", rev = "refs/pull/1316/head", default-features = false }
+pallet-ah-ops = { git = "https://github.com/polkadot-fellows/runtimes", rev = "refs/pull/1316/head", default-features = false }
+# AHM v2 migrator pallets (polkadot-fellows/runtimes#1285, #1305, #1321). Tracking fellowship
+# `main`: every AHM v2 PR there is ported here as it lands, so the runtimes' `Config` impls match
+# the pallets' current traits. On Paseo the Coretime chain is dead, so
+# `pallet-ct-migrator` runs on Asset Hub. Both are behind the runtimes' `ahm-v2` feature.
+pallet-rc2-migrator = { git = "https://github.com/polkadot-fellows/runtimes", branch = "main", default-features = false }
+pallet-ct-migrator = { git = "https://github.com/polkadot-fellows/runtimes", branch = "main", default-features = false }
 pallet-election-provider-multi-block = { version = "0.11.0", default-features = false }
 pallet-staking-async = { version = "0.15.0", default-features = false }
 hex = { version = "0.4.3", default-features = false }
@@ -167,6 +179,7 @@ enumflags2 = { version = "0.7.7" }
 frame-benchmarking = { version = "49.0.0", default-features = false }
 frame-election-provider-support = { version = "48.0.0", default-features = false }
 frame-executive = { version = "48.0.0", default-features = false }
+frame-metadata = { version = "23.0.1", default-features = false }
 frame-support = { version = "48.1.0", default-features = false }
 frame-system = { version = "48.0.0", default-features = false }
 frame-system-benchmarking = { version = "49.0.0", default-features = false }
@@ -188,6 +201,7 @@ pallet-assets = { version = "53.0.0", default-features = false }
 pallet-assets-freezer = { version = "0.18.0", default-features = false }
 pallet-assets-holder = { version = "0.13.0", default-features = false }
 pallet-assets-precompiles = { version = "0.11.1", default-features = false }
+pallet-accumulate-and-forward = { version = "0.4.1", default-features = false }
 pallet-aura = { version = "48.0.0", default-features = false }
 pallet-authority-discovery = { version = "49.0.0", default-features = false }
 pallet-authorship = { version = "48.0.0", default-features = false }
@@ -201,7 +215,7 @@ pallet-bridge-grandpa = { version = "0.29.0", default-features = false }
 pallet-bridge-messages = { version = "0.29.0", default-features = false }
 pallet-bridge-parachains = { version = "0.29.0", default-features = false }
 pallet-bridge-relayers = { version = "0.29.0", default-features = false }
-pallet-broker = { version = "0.28.0", default-features = false }
+pallet-broker = { version = "0.29.0", default-features = false }
 pallet-child-bounties = { version = "48.0.0", default-features = false }
 pallet-collator-selection = { version = "30.0.0", default-features = false }
 pallet-collective = { version = "49.0.0", default-features = false }
@@ -285,7 +299,7 @@ polkadot-runtime-common = { version = "31.0.0", default-features = false }
 primitive-types = { version = "0.13.1", default-features = false }
 frame-metadata-hash-extension = { version = "0.16.0", default-features = false }
 remote-externalities = { version = "0.61.0", package = "frame-remote-externalities" }
-runtime-parachains = { version = "28.0.0", default-features = false, package = "polkadot-runtime-parachains" }
+runtime-parachains = { version = "29.0.0", default-features = false, package = "polkadot-runtime-parachains" }
 sc-chain-spec = { version = "51.0.0" }
 sc-network = { version = "0.58.0" }
 scale-info = { version = "2.11.6", default-features = false }
@@ -348,6 +362,7 @@ sp-weights = { version = "36.0.0", default-features = false }
 substrate-wasm-builder = { version = "34.0.1", default-features = false }
 system-parachains-constants = { path = "system-parachains/constants", default-features = false }
 system-parachains-common = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.4.0", package = "system-parachains-common", default-features = false }
+system-parachains-test-utils = { path = "system-parachains/common/test-utils" }
 tokio = { version = "1.45.0" }
 xcm = { version = "24.1.0", default-features = false, package = "staging-xcm" }
 xcm-builder = { version = "29.0.1", default-features = false, package = "staging-xcm-builder" }
@@ -368,6 +383,7 @@ resolver = "2"
 members = [
 	"pallets/storage-initialization",
 
+	"integration-tests/ahmv2",
 	"integration-tests/emulated/chains/parachains/assets/asset-hub-paseo",
 	"integration-tests/emulated/chains/parachains/bridges/bridge-hub-paseo",
 	"integration-tests/emulated/chains/parachains/collectives/collectives-paseo",
@@ -389,6 +405,7 @@ members = [
 	"system-parachains/bulletin-paseo",
 	"system-parachains/collectives-paseo",
 	"system-parachains/collectives-paseo/constants",
+	"system-parachains/common/test-utils",
 	"system-parachains/constants",
 	"system-parachains/coretime-paseo",
 	"system-parachains/people-paseo",

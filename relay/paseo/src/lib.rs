@@ -135,6 +135,10 @@ use paseo_runtime_constants::{
 	currency::*, fee::*, proxy::ProxyType, system_parachain, time::*, TREASURY_PALLET_ID,
 };
 
+// AHM v2 migration wiring. Kept out of the on-chain build.
+#[cfg(all(feature = "ahm-v2", not(feature = "on-chain-release-build")))]
+mod ahm_v2;
+
 // Weights used in the runtime.
 mod weights;
 
@@ -166,7 +170,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: alloc::borrow::Cow::Borrowed("paseo"),
 	impl_name: alloc::borrow::Cow::Borrowed("paseo-testnet"),
 	authoring_version: 0,
-	spec_version: 2_005_000,
+	spec_version: 2_005_005,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 26,
@@ -253,6 +257,9 @@ parameter_types! {
 }
 
 impl frame_system::Config for Runtime {
+	#[cfg(all(feature = "ahm-v2", not(feature = "on-chain-release-build")))]
+	type BaseCallFilter = frame_support::traits::InsideBoth<PostAhmFilter, Rc2Migrator>;
+	#[cfg(not(all(feature = "ahm-v2", not(feature = "on-chain-release-build"))))]
 	type BaseCallFilter = PostAhmFilter;
 	type BlockWeights = BlockWeights;
 	type BlockLength = RuntimeBlockLength;
@@ -1282,6 +1289,8 @@ impl InstanceFilter<RuntimeCall> for TransparentProxyType<ProxyType> {
 			(x, y) if x == y => true,
 			(ProxyType::Any, _) => true,
 			(_, ProxyType::Any) => false,
+			// `Auction` admits `Registrar::swap`; `NonTransfer` omits it on purpose.
+			(ProxyType::NonTransfer, ProxyType::Auction) => false,
 			// `SafeSudo` can drive sudo, which `NonTransfer` cannot, so it is not a subset of it.
 			(ProxyType::NonTransfer, ProxyType::SafeSudo) => false,
 			(ProxyType::NonTransfer, _) => true,
@@ -1970,7 +1979,11 @@ construct_runtime! {
 		// Relay Chain Migrator
 		// The pallet must be located below `MessageQueue` to get the XCM message acknowledgements
 		// from Asset Hub before we get the `RcMigrator` `on_initialize` executed.
-		RcMigrator: pallet_rc_migrator = 255
+		RcMigrator: pallet_rc_migrator = 255,
+		// AHM v2 migrator. Below `MessageQueue` for the same reason as `RcMigrator`: its
+		// `on_initialize` has to see the block's inbound messages.
+		#[cfg(all(feature = "ahm-v2", not(feature = "on-chain-release-build")))]
+		Rc2Migrator: pallet_rc2_migrator = 254,
 	}
 }
 

@@ -10,6 +10,8 @@ version.workspace = true
 
 [dependencies]
 pallet-ah-ops = { workspace = true }
+# Behind the `ahm-v2` feature; see `src/ahm_v2.rs`.
+pallet-ct-migrator = { workspace = true }
 
 codec = { features = ["derive", "max-encoded-len"], workspace = true }
 hex-literal = { workspace = true }
@@ -105,6 +107,7 @@ pallet-treasury = { workspace = true }
 pallet-uniques = { workspace = true }
 pallet-utility = { workspace = true }
 pallet-vesting = { workspace = true }
+pallet-verify-signature = { workspace = true }
 pallet-vesting-precompiles = { workspace = true }
 pallet-whitelist = { workspace = true }
 sp-api = { workspace = true }
@@ -174,10 +177,13 @@ snowbridge-pallet-system-frontend = { workspace = true }
 snowbridge-runtime-common = { workspace = true }
 
 [dev-dependencies]
+pallet-rc2-migrator = { workspace = true, default-features = true }
 approx = { workspace = true }
 asset-test-utils = { workspace = true }
+frame-metadata = { workspace = true, features = ["std"] }
 hex = { workspace = true }
 parachains-runtimes-test-utils = { workspace = true }
+system-parachains-test-utils = { workspace = true }
 paseo-runtime = { workspace = true }
 sp-keyring = { workspace = true, default-features = true }
 sp-tracing = { workspace = true, default-features = true }
@@ -195,6 +201,7 @@ paseo-ahm = [
 	"pallet-rc-migrator/polkadot-ahm",
 	"paseo-runtime/paseo-ahm",
 ]
+ahm-v2 = []
 runtime-benchmarks = [
 	"assets-common/runtime-benchmarks",
 	"bp-asset-hub-kusama/runtime-benchmarks",
@@ -243,6 +250,7 @@ runtime-benchmarks = [
 	"pallet-child-bounties/runtime-benchmarks",
 	"pallet-collator-selection/runtime-benchmarks",
 	"pallet-conviction-voting/runtime-benchmarks",
+	"pallet-ct-migrator/runtime-benchmarks",
 	"pallet-dap/runtime-benchmarks",
 	"pallet-delegated-staking/runtime-benchmarks",
 	"pallet-election-provider-multi-block/runtime-benchmarks",
@@ -260,6 +268,7 @@ runtime-benchmarks = [
 	"pallet-proxy/runtime-benchmarks",
 	"pallet-psm/runtime-benchmarks",
 	"pallet-rc-migrator/runtime-benchmarks",
+	"pallet-rc2-migrator/runtime-benchmarks",
 	"pallet-referenda/runtime-benchmarks",
 	"pallet-revive/runtime-benchmarks",
 	"pallet-scheduler/runtime-benchmarks",
@@ -274,6 +283,7 @@ runtime-benchmarks = [
 	"pallet-treasury/runtime-benchmarks",
 	"pallet-uniques/runtime-benchmarks",
 	"pallet-utility/runtime-benchmarks",
+	"pallet-verify-signature/runtime-benchmarks",
 	"pallet-vesting-precompiles/runtime-benchmarks",
 	"pallet-vesting/runtime-benchmarks",
 	"pallet-whitelist/runtime-benchmarks",
@@ -341,6 +351,7 @@ try-runtime = [
 	"pallet-child-bounties/try-runtime",
 	"pallet-collator-selection/try-runtime",
 	"pallet-conviction-voting/try-runtime",
+	"pallet-ct-migrator/try-runtime",
 	"pallet-dap/try-runtime",
 	"pallet-delegated-staking/try-runtime",
 	"pallet-election-provider-multi-block/try-runtime",
@@ -357,6 +368,7 @@ try-runtime = [
 	"pallet-proxy/try-runtime",
 	"pallet-psm/try-runtime",
 	"pallet-rc-migrator/try-runtime",
+	"pallet-rc2-migrator/try-runtime",
 	"pallet-referenda/try-runtime",
 	"pallet-revive/try-runtime",
 	"pallet-scheduler/try-runtime",
@@ -371,6 +383,7 @@ try-runtime = [
 	"pallet-treasury/try-runtime",
 	"pallet-uniques/try-runtime",
 	"pallet-utility/try-runtime",
+	"pallet-verify-signature/try-runtime",
 	"pallet-vesting-precompiles/try-runtime",
 	"pallet-vesting/try-runtime",
 	"pallet-whitelist/try-runtime",
@@ -412,6 +425,7 @@ std = [
 	"frame-election-provider-support/std",
 	"frame-executive/std",
 	"frame-metadata-hash-extension/std",
+	"frame-metadata/std",
 	"frame-support/std",
 	"frame-system-benchmarking?/std",
 	"frame-system-rpc-runtime-api/std",
@@ -451,6 +465,7 @@ std = [
 	"pallet-child-bounties/std",
 	"pallet-collator-selection/std",
 	"pallet-conviction-voting/std",
+	"pallet-ct-migrator/std",
 	"pallet-dap/std",
 	"pallet-delegated-staking/std",
 	"pallet-election-provider-multi-block/std",
@@ -486,6 +501,7 @@ std = [
 	"pallet-treasury/std",
 	"pallet-uniques/std",
 	"pallet-utility/std",
+	"pallet-verify-signature/std",
 	"pallet-vesting-precompiles/std",
 	"pallet-vesting/std",
 	"pallet-whitelist/std",

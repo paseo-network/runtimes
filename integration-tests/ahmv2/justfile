@@ -1,0 +1,43 @@
+# AHM v2 migration test harness.
+
+snap_dir := env_var_or_default("SNAP_DIR", justfile_directory() / "snapshots") / "paseo"
+
+snap_env := "SNAP_RC=" + snap_dir / "snap_rc.snap" + " SNAP_AH=" + snap_dir / "snap_ah.snap"
+
+# RPC endpoints used to create missing snapshots. Override with `RC_URI` / `AH_URI`.
+rc_uri := env_var_or_default("RC_URI", "wss://paseo-rpc.n.dwellir.com:443")
+ah_uri := env_var_or_default("AH_URI", "wss://asset-hub-paseo-rpc.n.dwellir.com:443")
+
+# "<file key> <RPC endpoint>" per line. The keys match the `SNAP_*` env vars the suite reads.
+chains := "
+rc " + rc_uri + "
+ah " + ah_uri + "
+"
+
+default: test
+
+# Run the suite. Extra args go to `cargo test`, e.g. `just test rc_and_asset_hub`.
+#
+# Single-threaded on purpose: the Asset Hub snapshot is several GB and every test hydrates its
+# own copy, so parallel tests exhaust the memory of a developer machine.
+test *args: snapshots
+	{{ snap_env }} cargo test -p paseo-integration-tests-ahmv2 {{ args }} -- --test-threads=1
+
+# Needs the try-runtime CLI: https://github.com/paritytech/try-runtime-cli.
+#
+# Snapshot freshness rarely matters during development, so an existing file is left alone --
+# delete it to force that snapshot to be recreated.
+
+# Create any snapshot that is missing.
+snapshots:
+	#!/usr/bin/env bash
+	set -euo pipefail
+	mkdir -p "{{ snap_dir }}"
+	while read -r key uri; do
+		[ -z "$key" ] && continue
+		out="{{ snap_dir }}/snap_$key.snap"
+		[ -f "$out" ] && continue
+		# `--uri=` (with equals sign) is required; with a space, the greedy multi-value flag
+		# swallows the snapshot path argument.
+		try-runtime create-snapshot "--uri=$uri" "$out"
+	done <<< "{{ chains }}"

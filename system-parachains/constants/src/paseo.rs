@@ -35,6 +35,9 @@ pub mod account {
 	pub const FELLOWSHIP_TREASURY_PALLET_ID: PalletId = PalletId(*b"py/feltr");
 	/// Ambassador treasury pallet ID
 	pub const AMBASSADOR_TREASURY_PALLET_ID: PalletId = PalletId(*b"py/ambtr");
+	/// Accumulate-and-forward pallet ID. Derives the account on a system chain that gathers
+	/// revenue, dust and delivery fees before forwarding them to the DAP on Asset Hub.
+	pub const ACCUMULATE_FORWARD_PALLET_ID: PalletId = PalletId(*b"acf/dott");
 }
 
 /// Consensus-related.
@@ -129,10 +132,16 @@ pub mod fee {
 
 pub mod locations {
 	use frame_support::{parameter_types, traits::Contains};
-	use xcm::latest::prelude::{Junction::*, Location, NetworkId};
+	use sp_runtime::traits::AccountIdConversion;
+	use xcm::latest::prelude::{InteriorLocation, Junction::*, Location, NetworkId};
 
 	parameter_types! {
 		pub RelayChainLocation: Location = Location::parent();
+		/// Beneficiary on Asset Hub for sinks forwarded by system chains.
+		pub DapStagingLocation: InteriorLocation = AccountId32 {
+			network: None,
+			id: sp_dap::DAP_PALLET_ID.into_sub_account_truncating(sp_dap::DAP_STAGING_ACCOUNT_ID),
+		}.into();
 		pub AssetHubLocation: Location =
 			Location::new(1, Parachain(paseo_runtime_constants::system_parachain::ASSET_HUB_ID));
 		pub PeopleLocation: Location =

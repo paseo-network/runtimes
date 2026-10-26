@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![recursion_limit = "256"]
 
 // Make the WASM binary available.
 #[cfg(feature = "std")]
@@ -23,6 +24,7 @@ pub mod xcm_config;
 extern crate alloc;
 
 use alloc::{borrow::Cow, vec, vec::Vec};
+use codec::MaxEncodedLen;
 use cumulus_pallet_parachain_system::RelayNumberMonotonicallyIncreases;
 use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
 use frame_support::{
@@ -68,17 +70,20 @@ use sp_runtime::{
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use system_parachains_constants::paseo::{
+	account::ACCUMULATE_FORWARD_PALLET_ID,
 	currency::{system_para_deposit, CENTS, SYSTEM_PARA_EXISTENTIAL_DEPOSIT, UNITS},
 	fee::TRANSACTION_BYTE_FEE,
+	locations::DapStagingLocation,
 };
 
 /// Override SDK's SLOT_DURATION: 24 seconds (4 relay chain slots).
 const SLOT_DURATION: u64 = 24_000;
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 use xcm::{prelude::*, Version as XcmVersion};
-#[cfg(feature = "runtime-benchmarks")]
-use xcm_config::AssetHubLocation;
-use xcm_config::{IsGovernanceVoiceOfBody, TokenRelayLocation, XcmOriginToTransactDispatchOrigin};
+use xcm_config::{
+	AssetHubLocation, IsGovernanceVoiceOfBody, TokenRelayLocation,
+	XcmOriginToTransactDispatchOrigin,
+};
 use xcm_runtime_apis::{
 	dry_run::{CallDryRunEffects, Error as XcmDryRunApiError, XcmDryRunEffects},
 	fees::Error as XcmPaymentApiError,
@@ -138,11 +143,10 @@ pub mod migrations {
 	use super::*;
 
 	/// Unreleased migrations. Add new ones here:
-	pub type Unreleased = ();
+	pub type Unreleased = (EnsureAccumulationAccountFunded,);
 
 	/// Migrations/checks that do not need to be versioned and can run on every update.
 	pub type Permanent = (
-		pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
 		pallet_bulletin_transaction_storage::migrations::SetRetentionPeriodIfZero<
 			Runtime,
 			pallet_bulletin_transaction_storage::DefaultRetentionPeriod,
@@ -151,6 +155,27 @@ pub mod migrations {
 
 	/// All single block migrations that will run on the next runtime upgrade.
 	pub type SingleBlockMigrations = (Unreleased, Permanent);
+
+	/// Checks funding before enabling dust and delivery-fee accumulation on a live chain.
+	/// Fund the keyless account with at least the ED before enacting the upgrade.
+	pub struct EnsureAccumulationAccountFunded;
+
+	impl frame_support::traits::OnRuntimeUpgrade for EnsureAccumulationAccountFunded {
+		fn on_runtime_upgrade() -> Weight {
+			Weight::zero()
+		}
+
+		#[cfg(feature = "try-runtime")]
+		fn post_upgrade(_state: Vec<u8>) -> Result<(), sp_runtime::TryRuntimeError> {
+			use frame_support::traits::fungible::Inspect;
+			frame_support::ensure!(
+				Balances::balance(&AccumulateForward::accumulation_account()) >=
+					ExistentialDeposit::get(),
+				"Bulletin accumulation account must hold at least the existential deposit"
+			);
+			Ok(())
+		}
+	}
 
 	/// MBM migrations to apply on runtime upgrade.
 	pub type MbmMigrations = ();
@@ -168,6 +193,7 @@ pub type Executive = frame_executive::Executive<
 >;
 
 impl_opaque_keys! {
+	#[derive(MaxEncodedLen)]
 	pub struct SessionKeys {
 		pub aura: Aura,
 	}
@@ -178,7 +204,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: Cow::Borrowed("bulletin-paseo"),
 	impl_name: Cow::Borrowed("bulletin-paseo"),
 	authoring_version: 1,
-	spec_version: 2_005_004,
+	spec_version: 2_005_005,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -287,6 +313,7 @@ parameter_types! {
 			DispatchClass::Normal,
 			|m| *m = NORMAL_DISPATCH_RATIO * MAX_BLOCK_LENGTH,
 		)
+		.max_header_size(100 * 1024)
 		.build();
 	pub RuntimeBlockWeights: BlockWeights = BlockWeights::builder()
 		.base_block(BlockExecutionWeight::get())
@@ -371,7 +398,7 @@ parameter_types! {
 
 impl pallet_balances::Config for Runtime {
 	type Balance = Balance;
-	type DustRemoval = ();
+	type DustRemoval = AccumulateForward;
 	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
@@ -389,6 +416,28 @@ impl pallet_balances::Config for Runtime {
 parameter_types! {
 	/// Relay Chain `TransactionByteFee` / 20 (per Paseo system-parachain convention).
 	pub const TransactionByteFee: Balance = TRANSACTION_BYTE_FEE;
+}
+
+parameter_types! {
+	pub const AccumulateForwardPalletId: PalletId = ACCUMULATE_FORWARD_PALLET_ID;
+	pub const ForwardPeriod: BlockNumber = HOURS;
+	pub const MinForwardAmount: Balance = UNITS;
+}
+
+impl pallet_accumulate_and_forward::Config for Runtime {
+	type Currency = Balances;
+	type PalletId = AccumulateForwardPalletId;
+	type Forwarder = xcm_builder::TeleportForwarderForAccountId32<
+		xcm_config::XcmConfig,
+		AssetHubLocation,
+		TokenRelayLocation,
+		DapStagingLocation,
+	>;
+	type TransferPeriod = ForwardPeriod;
+	type MinTransferAmount = MinForwardAmount;
+	// Use the local block clock, matching this runtime's HOURS constant.
+	type BlockNumberProvider = System;
+	type WeightInfo = weights::pallet_accumulate_and_forward::WeightInfo<Runtime>;
 }
 
 impl pallet_transaction_payment::Config for Runtime {
@@ -522,6 +571,15 @@ impl cumulus_pallet_xcmp_queue::migration::v5::V5Config for Runtime {
 pub const PERIOD: u32 = 6 * HOURS;
 pub const OFFSET: u32 = 0;
 
+parameter_types! {
+	/// One `NextKeys` entry plus one `KeyOwner` entry per session key.
+	pub SessionKeyDeposit: Balance = system_para_deposit(1, SessionKeys::max_encoded_len() as u32)
+		.saturating_add(system_para_deposit(
+			<SessionKeys as sp_runtime::traits::OpaqueKeys>::key_ids().len() as u32,
+			<Runtime as pallet_session::Config>::ValidatorId::max_encoded_len() as u32,
+		));
+}
+
 impl pallet_session::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type ValidatorId = <Self as frame_system::Config>::AccountId;
@@ -536,7 +594,7 @@ impl pallet_session::Config for Runtime {
 	type DisablingStrategy = ();
 	type WeightInfo = weights::pallet_session::WeightInfo<Runtime>;
 	type Currency = Balances;
-	type KeyDeposit = ();
+	type KeyDeposit = SessionKeyDeposit;
 }
 
 impl pallet_aura::Config for Runtime {
@@ -694,6 +752,8 @@ mod runtime {
 	pub type TransactionPayment = pallet_transaction_payment;
 	#[runtime::pallet_index(12)]
 	pub type SkipFeelessPayment = pallet_skip_feeless_payment;
+	#[runtime::pallet_index(13)]
+	pub type AccumulateForward = pallet_accumulate_and_forward;
 
 	// Storage
 	#[runtime::pallet_index(40)]
@@ -738,6 +798,7 @@ mod benches {
 		[cumulus_pallet_parachain_system, ParachainSystem]
 		[pallet_timestamp, Timestamp]
 		[pallet_balances, Balances]
+		[pallet_accumulate_and_forward, AccumulateForward]
 		[pallet_transaction_payment, TransactionPayment]
 		[pallet_collator_selection, CollatorSelection]
 		[pallet_session, SessionBench::<Runtime>]
@@ -1144,6 +1205,9 @@ impl_runtime_apis! {
 			use cumulus_pallet_session_benchmarking::Pallet as SessionBench;
 			impl cumulus_pallet_session_benchmarking::Config for Runtime {
 				fn generate_session_keys_and_proof(owner: Self::AccountId) -> (Self::Keys, Vec<u8>) {
+					use frame_support::traits::fungible::Mutate;
+					// The SDK benchmark funds the ED but not the session key deposit.
+					Balances::mint_into(&owner, SessionKeyDeposit::get()).expect("mint session key deposit");
 					let keys = SessionKeys::generate(&owner.encode(), None);
 					(keys.keys, keys.proof.encode())
 				}

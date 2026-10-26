@@ -14,8 +14,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Scarcity purse transactions through the production `TxExtension` pipeline.
+//! Scarcity purse transactions through the production `TxExtensionV1` pipeline.
 
+use asset_hub_paseo_runtime::{
+	Assets, Balances, PgasAdmin, PgasAssetId, PgasMinBalance, Runtime, RuntimeCall, RuntimeOrigin,
+	TxExtensionV1, INDIVIDUALITY_EXTENSION_VERSION,
+};
 use frame_support::{
 	assert_ok,
 	dispatch::GetDispatchInfo,
@@ -24,11 +28,8 @@ use frame_support::{
 		Get,
 	},
 };
-use next_asset_hub_paseo_runtime::{
-	Assets, Balances, PgasAdmin, PgasAssetId, PgasMinBalance, Runtime, RuntimeCall, RuntimeOrigin,
-	TxExtension,
-};
 use parachains_common::AccountId;
+use polkadot_runtime_common::claims as pallet_claims;
 use sp_runtime::{
 	generic::Era,
 	traits::{DispatchTransaction, Zero},
@@ -36,7 +37,7 @@ use sp_runtime::{
 	BuildStorage,
 };
 
-fn scarcity_tx_extension(nonce: u32, state_nonce: u64) -> TxExtension {
+fn scarcity_tx_extension(nonce: u32, state_nonce: u64) -> TxExtensionV1 {
 	purse_tx_extension(
 		nonce,
 		// Names the NFT `scarcity_purse_test_state` seeds, at the same state nonce.
@@ -50,10 +51,11 @@ fn scarcity_tx_extension(nonce: u32, state_nonce: u64) -> TxExtension {
 fn purse_tx_extension(
 	nonce: u32,
 	as_scarcity: Option<indiv_pallet_scarcity::extension::AsScarcityInfo>,
-) -> TxExtension {
-	TxExtension::from((
+) -> TxExtensionV1 {
+	TxExtensionV1::from((
 		(
 			(),
+			pallet_verify_signature::VerifySignature::<Runtime>::Disabled,
 			indiv_pallet_scarcity::extension::AsScarcity::<Runtime>::new(as_scarcity),
 			frame_system::AuthorizeCall::<Runtime>::new(),
 			indiv_pallet_pgas::AsPgas::<Runtime>::new(None),
@@ -73,8 +75,11 @@ fn purse_tx_extension(
 		>::from(pallet_asset_conversion_tx_payment::ChargeAssetTxPayment::<Runtime>::from(
 			0, None,
 		)),
-		frame_metadata_hash_extension::CheckMetadataHash::<Runtime>::new(false),
-		pallet_revive::evm::tx_extension::SetOrigin::<Runtime>::default(),
+		pallet_claims::PrevalidateAttests::<Runtime>::new(),
+		(
+			frame_metadata_hash_extension::CheckMetadataHash::<Runtime>::new(false),
+			pallet_revive::evm::tx_extension::SetOrigin::<Runtime>::default(),
+		),
 	))
 }
 
@@ -117,7 +122,7 @@ fn scarcity_purse_test_state(state_nonce: u64) -> (sp_io::TestExternalities, Acc
 
 /// An NFT-only purse key — no balance, no System account — can send a feeless transfer
 /// through the full extension pipeline. This pins the security-critical ordering of
-/// `AsScarcity` within `TxExtension`.
+/// `AsScarcity` within `TxExtensionV1`.
 #[test]
 fn nft_only_purse_without_system_account_can_transfer() {
 	let (mut ext, from) = scarcity_purse_test_state(0);
@@ -135,7 +140,7 @@ fn nft_only_purse_without_system_account_can_transfer() {
 			call,
 			&info,
 			0,
-			0,
+			INDIVIDUALITY_EXTENSION_VERSION,
 		);
 		assert!(matches!(result, Ok(Ok(_))), "transaction failed: {result:?}");
 
@@ -174,7 +179,7 @@ fn a_spent_move_budget_stops_a_feeless_transfer() {
 			call,
 			&info,
 			0,
-			0,
+			INDIVIDUALITY_EXTENSION_VERSION,
 		);
 
 		assert_eq!(
@@ -222,7 +227,7 @@ fn a_pgas_funded_purse_pays_to_refill_the_move_budget() {
 			call,
 			&info,
 			0,
-			0,
+			INDIVIDUALITY_EXTENSION_VERSION,
 		);
 		assert!(matches!(result, Ok(Ok(_))), "transaction failed: {result:?}");
 
@@ -270,7 +275,7 @@ fn an_unfunded_purse_cannot_refill_the_move_budget() {
 			call,
 			&info,
 			0,
-			0,
+			INDIVIDUALITY_EXTENSION_VERSION,
 		);
 
 		assert_eq!(
@@ -302,7 +307,7 @@ fn failed_scarcity_transfer_is_feeless_and_retryable_after_lock() {
 			call,
 			&info,
 			0,
-			0,
+			INDIVIDUALITY_EXTENSION_VERSION,
 		);
 		assert!(matches!(result, Ok(Err(_))), "expected failed dispatch: {result:?}");
 
