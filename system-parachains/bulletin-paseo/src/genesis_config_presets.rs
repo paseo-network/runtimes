@@ -28,7 +28,15 @@ fn bulletin_paseo_genesis(
 ) -> serde_json::Value {
 	build_struct_json_patch!(RuntimeGenesisConfig {
 		balances: BalancesConfig {
-			balances: endowed_accounts.iter().cloned().map(|k| (k, endowment)).collect(),
+			balances: endowed_accounts
+				.iter()
+				.cloned()
+				.map(|k| (k, endowment))
+				.chain(core::iter::once((
+					AccumulateForward::accumulation_account(),
+					BULLETIN_PASEO_ED
+				)))
+				.collect(),
 		},
 		parachain_info: ParachainInfoConfig { parachain_id: id },
 		collator_selection: CollatorSelectionConfig {
@@ -170,10 +178,11 @@ mod tests {
 	/// applies a preset patch on top of the default genesis config.
 	fn json_merge(base: &mut serde_json::Value, patch: serde_json::Value) {
 		match (base, patch) {
-			(serde_json::Value::Object(base), serde_json::Value::Object(patch)) =>
+			(serde_json::Value::Object(base), serde_json::Value::Object(patch)) => {
 				for (k, v) in patch {
 					json_merge(base.entry(k).or_insert(serde_json::Value::Null), v);
-				},
+				}
+			},
 			(base, patch) => *base = patch,
 		}
 	}
@@ -190,6 +199,10 @@ mod tests {
 				serde_json::to_vec(&config).expect("merged config serializes; qed"),
 			)
 			.unwrap_or_else(|e| panic!("preset `{id}` failed to build: {e}"));
+			assert_eq!(
+				Balances::free_balance(AccumulateForward::accumulation_account()),
+				BULLETIN_PASEO_ED
+			);
 		});
 	}
 

@@ -2634,6 +2634,7 @@ dependencies = [
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
  "hex-literal",
+ "pallet-accumulate-and-forward",
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
@@ -2685,6 +2686,7 @@ dependencies = [
  "staging-xcm-executor",
  "substrate-wasm-builder",
  "system-parachains-constants 2.5.4",
+ "system-parachains-test-utils",
  "tracing",
  "xcm-runtime-apis",
 ]
@@ -17714,6 +17716,7 @@ dependencies = [
  "polkadot-primitives",
  "smallvec",
  "sp-core",
+ "sp-dap",
  "sp-runtime",
  "staging-xcm",
 ]
