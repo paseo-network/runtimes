@@ -109,6 +109,7 @@ pub type Unreleased = (
 	// Storage-version bootstrap for the pallet added in this release, as upstream
 	// `next-people-paseo` carries it. Single use: remove once the upgrade carrying it is live.
 	indiv_pallet_nft_credits::migration::MigrateV0ToV1<Runtime>,
+    indiv_pallet_score::migration::MigrateV0toV1<Runtime>,
 	// Single use! - remove once the upgrade carrying it is live.
 	indiv_pallet_airdrop::migration::MigrateV0ToV1<Runtime>,
 );
