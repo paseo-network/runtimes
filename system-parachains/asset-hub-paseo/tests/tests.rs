@@ -1849,12 +1849,10 @@ mod pgas_fees {
 			});
 	}
 
-	/// Paseo deviation from upstream `next-asset-hub-paseo`: `PGASCallFilter` lets only `Revive`
-	/// calls (and utility batches of them) be paid in PGAS. A Revive call from a signer holding
-	/// nothing but PGAS goes through; the same signer's `remark` is refused as unpayable, and a
-	/// signer one planck short of the fee in PGAS is refused too.
+	/// PGAS pays the fee of any call. A signer holding nothing but PGAS pays for both a Revive
+	/// call and a `remark` in PGAS; a signer one planck short of the fee in PGAS is refused.
 	#[test]
-	fn pgas_pays_the_fee_of_revive_calls_only() {
+	fn pgas_pays_the_fee_of_any_call() {
 		let alice = AccountId::from(ALICE);
 		let bob = AccountId::from(Sr25519Keyring::Bob.public());
 		let charlie = AccountId::from(Sr25519Keyring::Charlie.public());
@@ -1919,14 +1917,24 @@ mod pgas_fees {
 					"a PGASFeePaid event should report the fee burned"
 				);
 
-				// The filter keeps a non-Revive call off the PGAS path, and Bob holds no native.
+				// A non-Revive call takes the PGAS path too.
+				System::reset_events();
 				let xt_bob_remark = construct_extrinsic(Sr25519Keyring::Bob, remark);
 				let pgas_left = <Assets as FungiblesInspect<AccountId>>::balance(pgas, &bob);
-				assert_eq!(
-					Executive::apply_extrinsic(xt_bob_remark),
-					Err(TransactionValidityError::Invalid(InvalidTransaction::Payment))
+				assert!(Executive::apply_extrinsic(xt_bob_remark).is_ok());
+
+				let paid = pgas_left - <Assets as FungiblesInspect<AccountId>>::balance(pgas, &bob);
+				assert!(paid > 0, "the remark fee should have been taken in PGAS");
+				assert_eq!(<Balances as FungibleInspect<AccountId>>::balance(&bob), 0);
+				assert!(
+					System::events().iter().any(|record| matches!(
+						record.event,
+						RuntimeEvent::PgasAllowance(
+							pallet_pgas_allowance::Event::PGASFeePaid { actual_fee, .. }
+						) if actual_fee == paid
+					)),
+					"a PGASFeePaid event should report the remark fee burned"
 				);
-				assert_eq!(<Assets as FungiblesInspect<AccountId>>::balance(pgas, &bob), pgas_left);
 
 				assert_eq!(
 					Executive::apply_extrinsic(xt_charlie),
