@@ -109,7 +109,7 @@ pub type Unreleased = (
 	// Storage-version bootstrap for the pallet added in this release, as upstream
 	// `next-people-paseo` carries it. Single use: remove once the upgrade carrying it is live.
 	indiv_pallet_nft_credits::migration::MigrateV0ToV1<Runtime>,
-    indiv_pallet_score::migration::MigrateV0toV1<Runtime>,
+	indiv_pallet_score::migration::MigrateV0toV1<Runtime>,
 	// Single use! - remove once the upgrade carrying it is live.
 	indiv_pallet_airdrop::migration::MigrateV0ToV1<Runtime>,
 );
@@ -137,6 +137,9 @@ pub type MbmMigrations = (
 	// both require A, which runs single-block in `Unreleased` above.
 	coinage::MigrateCoinageToInstances,
 	coinage::RelocateCoinageRecyclerCollections,
+	// Single use! - remove once the upgrade carrying it is live. Backfills
+	// `PeopleLite::CounterForLitePeople` now that `LitePeople` is a counted map.
+	indiv_pallet_people_lite::migration::v1::LazyMigrationV0ToV1<Runtime>,
 );
 
 fn reserve_data_for(asset_id: &Location) -> Option<ForeignAssetReserveData> {
