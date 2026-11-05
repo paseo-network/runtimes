@@ -1,5 +1,5 @@
 [workspace.package]
-version = "2.5.5"
+version = "2.5.6"
 authors = ["Paseo Core Team"]
 edition = "2021"
 homepage = "https://github.com/paseo-network/runtimes"
