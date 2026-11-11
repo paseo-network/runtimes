@@ -4,7 +4,7 @@
 //! Regression coverage for the Bulletin upstream sync.
 
 use bulletin_paseo_runtime::{
-	xcm_config::{AssetHubLocation, TokenRelayLocation, XcmConfig},
+	xcm_config::{AssetHubLocation, Barrier, TokenRelayLocation, XcmConfig},
 	AccumulateForward, Balances, ExistentialDeposit, ForwardPeriod, MinForwardAmount,
 	ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeGenesisConfig,
 	RuntimeOrigin, SessionKeys, System, TransactionStorage, XcmpQueue,
@@ -22,16 +22,72 @@ use frame_support::{
 use pallet_bulletin_data_renewal::Call as RenewalCall;
 use pallet_bulletin_transaction_storage::TransactionRef;
 use parachains_common::AccountId;
-use paseo_runtime_constants::system_parachain::ASSET_HUB_ID;
+use paseo_runtime_constants::system_parachain::{ASSET_HUB_ID, PEOPLE_ID};
 use sp_runtime::BuildStorage;
 use xcm::latest::prelude::*;
 use xcm_executor::{
-	traits::{FeeManager, FeeReason},
+	traits::{FeeManager, FeeReason, Properties, ShouldExecute},
 	XcmExecutor,
 };
 
 fn externalities() -> sp_io::TestExternalities {
 	sp_io::TestExternalities::new(RuntimeGenesisConfig::default().build_storage().unwrap())
+}
+
+#[test]
+fn unpaid_xcm_accepts_trusted_aliases_to_an_authorizer() {
+	externalities().execute_with(|| {
+		for origin in [AssetHubLocation::get(), Location::parent()] {
+			let mut message = [
+				AliasOrigin(Location::new(1, [Parachain(PEOPLE_ID)])),
+				UnpaidExecution { weight_limit: Unlimited, check_origin: None },
+				ClearError,
+			];
+			assert_ok!(Barrier::should_execute::<RuntimeCall>(
+				&origin,
+				&mut message,
+				Weight::from_parts(1_000_000, 1024),
+				&mut Properties { weight_credit: Weight::zero(), message_id: None },
+			));
+		}
+	});
+}
+
+#[test]
+fn unpaid_xcm_rejects_untrusted_alias_to_an_authorizer() {
+	externalities().execute_with(|| {
+		let authorizer = Location::new(1, [Parachain(PEOPLE_ID)]);
+		let untrusted = Location::new(1, [Parachain(2000)]);
+		for (origin, target) in [
+			(untrusted.clone(), authorizer.clone()),
+			(Location::new(1, [Parachain(PEOPLE_ID), PalletInstance(1)]), authorizer),
+			// Asset Hub can alias this target, but the target cannot execute unpaid.
+			(AssetHubLocation::get(), untrusted),
+		] {
+			let mut message = [
+				AliasOrigin(target),
+				UnpaidExecution { weight_limit: Unlimited, check_origin: None },
+			];
+			assert!(Barrier::should_execute::<RuntimeCall>(
+				&origin,
+				&mut message,
+				Weight::from_parts(1_000_000, 1024),
+				&mut Properties { weight_credit: Weight::zero(), message_id: None },
+			)
+			.is_err());
+		}
+	});
+}
+
+#[test]
+fn slot_based_collation_reports_the_enforced_relay_parent_offset() {
+	use frame_support::traits::Get;
+	type Offset = <Runtime as cumulus_pallet_parachain_system::Config>::RelayParentOffset;
+	let reported = <Runtime as cumulus_primitives_core::runtime_decl_for_relay_parent_offset_api::RelayParentOffsetApi<
+		bulletin_paseo_runtime::Block,
+	>>::relay_parent_offset();
+	assert_eq!(reported, 1);
+	assert_eq!(reported, <Offset as Get<u32>>::get());
 }
 
 fn prepare_channel() {

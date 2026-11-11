@@ -204,7 +204,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: Cow::Borrowed("bulletin-paseo"),
 	impl_name: Cow::Borrowed("bulletin-paseo"),
 	authoring_version: 1,
-	spec_version: 2_005_005,
+	spec_version: 2_005_006,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -234,9 +234,12 @@ const MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
 	WEIGHT_REF_TIME_PER_SECOND.saturating_mul(2),
 	cumulus_primitives_core::relay_chain::MAX_POV_SIZE as u64,
 );
-/// Maximum number of blocks simultaneously accepted by the Runtime, not yet included into the
-/// relay chain.
-const UNINCLUDED_SEGMENT_CAPACITY: u32 = 3;
+/// Build one relay block behind the tip so a depth-1 relay fork cannot orphan parachain blocks.
+/// Collators must use slot-based authoring before this runtime is enacted.
+const RELAY_PARENT_OFFSET: u32 = 1;
+/// Maximum number of blocks accepted but not yet included into the relay chain. Inclusion is
+/// observed one relay parent behind the tip, so account for the additional pending blocks.
+const UNINCLUDED_SEGMENT_CAPACITY: u32 = (3 + RELAY_PARENT_OFFSET) * BLOCK_PROCESSING_VELOCITY;
 
 /// Time-related, computed from this runtime's actual 6s block time (`MILLISECS_PER_BLOCK` above),
 /// not `parachains_common::HOURS` (which assumes a stale 12s block time still used incidentally by
@@ -471,7 +474,7 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type ReservedXcmpWeight = ReservedXcmpWeight;
 	type CheckAssociatedRelayNumber = RelayNumberMonotonicallyIncreases;
 	type ConsensusHook = ConsensusHook;
-	type RelayParentOffset = ConstU32<0>;
+	type RelayParentOffset = ConstU32<RELAY_PARENT_OFFSET>;
 	type SchedulingSignatureVerifier = ();
 }
 
@@ -829,7 +832,7 @@ impl_runtime_apis! {
 
 	impl cumulus_primitives_core::RelayParentOffsetApi<Block> for Runtime {
 		fn relay_parent_offset() -> u32 {
-			0
+			RELAY_PARENT_OFFSET
 		}
 
 		fn max_claim_queue_offset() -> u8 {

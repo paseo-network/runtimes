@@ -176,5 +176,8 @@ fn xcm_alias_benchmark_exercises_authorized_aliasers() {
 			<Runtime as pallet_xcm_benchmarks::generic::Config>::alias_origin().unwrap();
 		assert!(pallet_xcm::AuthorizedAliasers::<Runtime>::contains(&origin, &target));
 		assert!(<XcmConfig as xcm_executor::Config>::Aliasers::contains(&origin, &target));
+		assert!(!bulletin_paseo_runtime::xcm_config::CheapTrustedAliasers::contains(
+			&origin, &target
+		));
 	});
 }
