@@ -81,12 +81,14 @@ use sp_version::RuntimeVersion;
 use system_parachains_constants::{
 	async_backing::{MAXIMUM_BLOCK_WEIGHT, NORMAL_DISPATCH_RATIO},
 	paseo::{
+		account::ACCUMULATE_FORWARD_PALLET_ID,
 		consensus::{
 			elastic_scaling::{BLOCK_PROCESSING_VELOCITY, UNINCLUDED_SEGMENT_CAPACITY},
 			RELAY_CHAIN_SLOT_DURATION_MILLIS,
 		},
 		currency::*,
 		fee::WeightToFee as PasWeightToFee,
+		locations::DapStagingLocation,
 	},
 };
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
@@ -334,9 +336,30 @@ parameter_types! {
 	pub const ExistentialDeposit: Balance = SYSTEM_PARA_EXISTENTIAL_DEPOSIT;
 }
 
+parameter_types! {
+	pub const AccumulateForwardPalletId: PalletId = ACCUMULATE_FORWARD_PALLET_ID;
+	pub const ForwardPeriod: BlockNumber = paseo_runtime_constants::time::HOURS;
+	pub const MinForwardAmount: Balance = UNITS;
+}
+
+impl pallet_accumulate_and_forward::Config for Runtime {
+	type Currency = Balances;
+	type PalletId = AccumulateForwardPalletId;
+	type Forwarder = xcm_builder::TeleportForwarderForAccountId32<
+		xcm_config::XcmConfig,
+		AssetHubLocation,
+		xcm_config::RelayLocation,
+		DapStagingLocation,
+	>;
+	type TransferPeriod = ForwardPeriod;
+	type MinTransferAmount = MinForwardAmount;
+	type BlockNumberProvider = cumulus_pallet_parachain_system::RelaychainDataProvider<Runtime>;
+	type WeightInfo = weights::pallet_accumulate_and_forward::WeightInfo<Runtime>;
+}
+
 impl pallet_balances::Config for Runtime {
 	type Balance = Balance;
-	type DustRemoval = ();
+	type DustRemoval = AccumulateForward;
 	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
@@ -834,6 +857,10 @@ construct_runtime!(
 		AssetRate: pallet_asset_rate = 13,
 		AssetTxPayment: pallet_asset_tx_payment = 14,
 		AssetsHolder: pallet_assets_holder = 15,
+		// Upstream uses index 19, but Paseo already has `PoolAssets` there. 16 is free since
+		// `SkipFeelessPayment` was removed (v2.5.5); storage is keyed by name and this pallet has
+		// no calls, so the reuse cannot clash.
+		AccumulateForward: pallet_accumulate_and_forward = 16,
 		OriginRestriction: indiv_pallet_origin_restriction = 17,
 		AssetConversion: pallet_asset_conversion = 18,
 		PoolAssets: pallet_assets::<Instance1> = 19,
@@ -908,6 +935,7 @@ mod benches {
 		[pallet_assets, Pool]
 		[pallet_asset_conversion, AssetConversion]
 		[pallet_balances, Balances]
+		[pallet_accumulate_and_forward, AccumulateForward]
 		[pallet_identity, Identity]
 		[pallet_message_queue, MessageQueue]
 		[pallet_migrations, MultiBlockMigrations]

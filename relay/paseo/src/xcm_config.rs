@@ -17,9 +17,9 @@
 //! XCM configuration for Paseo.
 
 use super::{
-	parachains_origin, AccountId, AllPalletsWithSystem, Balances, Dmp, GeneralAdmin, ParaId,
-	Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, StakingAdmin, TransactionByteFee, Treasurer,
-	Treasury, WeightToFee, XcmPallet,
+	parachains_origin, AccountId, AccumulateForward, AllPalletsWithSystem, Balances, Dmp,
+	GeneralAdmin, ParaId, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, StakingAdmin,
+	TransactionByteFee, Treasurer, Treasury, WeightToFee, XcmPallet,
 };
 use frame_support::{
 	parameter_types,
@@ -60,6 +60,8 @@ parameter_types! {
 	pub NoTeleportTracking: Option<(AccountId, MintLocation)> = None;
 	/// Account of the treasury pallet.
 	pub TreasuryAccount: AccountId = Treasury::account_id();
+	pub AccumulateForwardLocation: Location =
+		AccountId32 { network: None, id: AccumulateForward::accumulation_account().into() }.into();
 	// Fellows pluralistic body.
 	pub const FellowsBodyId: BodyId = BodyId::Technical;
 }
@@ -221,7 +223,8 @@ pub type Barrier = TrailingSetTopicAsId<(
 
 /// Locations that will not be charged fees in the executor, neither for execution nor delivery.
 /// We only waive fees for system functions, which these locations represent.
-pub type WaivedLocations = (SystemParachains, Equals<RootLocation>, LocalPlurality);
+pub type WaivedLocations =
+	(SystemParachains, Equals<RootLocation>, LocalPlurality, Equals<AccumulateForwardLocation>);
 
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {

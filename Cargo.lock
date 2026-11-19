@@ -11412,6 +11412,7 @@ dependencies = [
  "hex-literal",
  "log",
  "migrator-types",
+ "pallet-accumulate-and-forward",
  "pallet-asset-rate",
  "pallet-authority-discovery",
  "pallet-authorship",
@@ -11516,6 +11517,7 @@ dependencies = [
  "scale-info",
  "smallvec",
  "sp-core",
+ "sp-dap",
  "sp-runtime 49.0.0",
  "sp-trie 47.0.0",
  "sp-weights 37.0.0",
@@ -11763,6 +11765,7 @@ dependencies = [
  "indiv-pallet-storage-initialization",
  "indiv-support",
  "log",
+ "pallet-accumulate-and-forward",
  "pallet-asset-conversion",
  "pallet-asset-rate",
  "pallet-asset-tx-payment",
@@ -17672,7 +17675,6 @@ dependencies = [
  "polkadot-primitives",
  "smallvec",
  "sp-core",
- "sp-dap",
  "sp-runtime 49.0.0",
  "staging-xcm",
 ]
@@ -17681,8 +17683,10 @@ dependencies = [
 name = "system-parachains-test-utils"
 version = "2.5.5"
 dependencies = [
+ "cumulus-pallet-parachain-system",
  "frame-support 49.1.0",
  "frame-system",
+ "pallet-accumulate-and-forward",
  "pallet-balances",
  "pallet-session",
  "parachains-runtimes-test-utils",

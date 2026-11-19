@@ -14,24 +14,21 @@
 // limitations under the License.
 
 use super::*;
-use crate::{
-	parameters::{
-		AccountsApiAllowance, LiteNotificationSlotsPerPeriod, LitePaidRegistrationPeriod,
-		LitePaidRegistrationThreshold, LitePaidRegistrationsPerPeriod, LitePersonRegistrationFee,
-		LitePersonStatementLimit, LiteStmtStoreSlotsPerPeriod,
-		LongTermStorageAllowanceForLitePeople, LongTermStorageAllowanceForPeople,
-		LongTermStorageClaimsPerPeriod, LongTermStorageCleanupLimit, LongTermStorageGraceWindow,
-		LongTermStoragePeriodDuration, MaxLitePeople, NotificationAllowance,
-		NotificationPeriodDuration, NotificationSlotsPerPeriod, PeopleAirdropsPrizeSource,
-		PersonStatementLimit, StmtStoreCleanupLimit, StmtStoreGraceWindow, StmtStoreSlotsPerPeriod,
-	},
-	xcm_config::LocationToAccountId,
+use crate::parameters::{
+	AccountsApiAllowance, LiteNotificationSlotsPerPeriod, LitePaidRegistrationPeriod,
+	LitePaidRegistrationThreshold, LitePaidRegistrationsPerPeriod, LitePersonRegistrationFee,
+	LitePersonStatementLimit, LiteStmtStoreSlotsPerPeriod, LongTermStorageAllowanceForLitePeople,
+	LongTermStorageAllowanceForPeople, LongTermStorageClaimsPerPeriod, LongTermStorageCleanupLimit,
+	LongTermStorageGraceWindow, LongTermStoragePeriodDuration, MaxLitePeople,
+	NotificationAllowance, NotificationPeriodDuration, NotificationSlotsPerPeriod,
+	PeopleAirdropsPrizeSource, PersonStatementLimit, StmtStoreCleanupLimit, StmtStoreGraceWindow,
+	StmtStoreSlotsPerPeriod,
 };
 use codec::{Decode, Encode, MaxEncodedLen};
 use enumflags2::{bitflags, BitFlags};
 use frame_support::{parameter_types, CloneNoBound, DebugNoBound, EqNoBound, PartialEqNoBound};
 use pallet_identity::{Data, IdentityInformationProvider};
-use parachains_common::{impls::ToParentTreasury, DAYS, MINUTES};
+use parachains_common::{DAYS, MINUTES};
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{AccountIdConversion, Verify},
@@ -48,8 +45,6 @@ parameter_types! {
 	pub const ByteDeposit: Balance = system_para_deposit(0, 1);
 	pub const UsernameDeposit: Balance = system_para_deposit(0, 32);
 	pub const SubAccountDeposit: Balance = system_para_deposit(1, 53);
-	pub RelayTreasuryAccount: AccountId =
-		parachains_common::TREASURY_PALLET_ID.into_account_truncating();
 	pub const GeneralAdminBodyId: BodyId = BodyId::Administration;
 }
 
@@ -71,7 +66,7 @@ impl pallet_identity::Config for Runtime {
 	type MaxSubAccounts = ConstU32<100>;
 	type IdentityInformation = IdentityInfo;
 	type MaxRegistrars = ConstU32<20>;
-	type Slashed = ToParentTreasury<RelayTreasuryAccount, LocationToAccountId, Runtime>;
+	type Slashed = pallet_accumulate_and_forward::LegacyAdapter<Runtime, Balances>;
 	type ForceOrigin = EnsureRoot<Self::AccountId>;
 	type RegistrarOrigin = IdentityAdminOrigin;
 	type OffchainSignature = Signature;

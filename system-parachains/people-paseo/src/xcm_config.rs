@@ -15,9 +15,9 @@
 
 use super::{
 	assets::hollar::HollarFromHydration, people::ExternalAssetLocation, AccountId,
-	AllPalletsWithSystem, AssetRate, Assets, Balance, Balances, CollatorSelection, ParachainInfo,
-	ParachainSystem, PasWeightToFee as WeightToFee, PolkadotXcm, Runtime, RuntimeCall,
-	RuntimeEvent, RuntimeHoldReason, RuntimeOrigin, XcmpQueue,
+	AccumulateForward, AllPalletsWithSystem, AssetRate, Assets, Balance, Balances,
+	CollatorSelection, ParachainInfo, ParachainSystem, PasWeightToFee as WeightToFee, PolkadotXcm,
+	Runtime, RuntimeCall, RuntimeEvent, RuntimeHoldReason, RuntimeOrigin, XcmpQueue,
 };
 use crate::{system_para_deposit, TransactionByteFee, CENTS};
 #[cfg(feature = "runtime-benchmarks")]
@@ -86,6 +86,8 @@ parameter_types! {
 		LocationToAccountId::convert_location(&RelayTreasuryLocation::get())
 			.unwrap_or(TreasuryAccount::get());
 	pub StakingPot: AccountId = CollatorSelection::account_id();
+	pub AccumulateForwardLocation: Location =
+		AccountId32 { network: None, id: AccumulateForward::accumulation_account().into() }.into();
 }
 
 pub type PriceForParentDelivery = polkadot_runtime_common::xcm_sender::ExponentialPrice<
@@ -256,6 +258,8 @@ pub type WaivedLocations = (
 	Equals<RelayTreasuryLocation>,
 	FellowsPlurality,
 	LocalPlurality,
+	// Forwards of accumulated dust and identity slashes to the DAP.
+	Equals<AccumulateForwardLocation>,
 );
 
 /// Accept an external asset as a teleport only when it comes from Asset Hub.
