@@ -267,6 +267,7 @@ mod tests {
 		("Rc2Migrator", "resume_migration"),
 		("Rc2Migrator", "force_set_stage"),
 		("Rc2Migrator", "set_manager"),
+		("Rc2Migrator", "set_limits"),
 		("Sudo", "sudo"),
 		("Sudo", "sudo_unchecked_weight"),
 		("Sudo", "set_key"),

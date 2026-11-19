@@ -3,9 +3,10 @@
 Rust dry-run harness for the AHM v2 migration: moving account, proxy, registrar and HRMP state
 off the Relay Chain.
 
-Upstream (polkadot-fellows/runtimes) that state goes to the Coretime chain. Paseo's Coretime
-chain is dead, so on Paseo the receiving side of the migration (`pallet-ct-migrator`) runs on
-Asset Hub, and this suite loads the Relay Chain and Asset Hub.
+Upstream (polkadot-fellows/runtimes) that state goes to the Coretime chain, with free balances
+teleported to Asset Hub. Paseo's Coretime chain is dead, so on Paseo the receiving side of the
+migration (`pallet-ct-migrator`) runs on Asset Hub, both halves of every account land there, and
+this suite loads the Relay Chain and Asset Hub.
 
 The two chains are loaded from `try-runtime` snapshots of real network state. Blocks are produced
 by calling hooks directly and DMP/UMP messages are shuttled between the chains by hand (no nodes
