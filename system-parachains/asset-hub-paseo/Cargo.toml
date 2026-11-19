@@ -178,7 +178,6 @@ snowbridge-runtime-common = { workspace = true }
 
 [dev-dependencies]
 pallet-rc2-migrator = { workspace = true, default-features = true }
-approx = { workspace = true }
 asset-test-utils = { workspace = true }
 frame-metadata = { workspace = true, features = ["std"] }
 hex = { workspace = true }

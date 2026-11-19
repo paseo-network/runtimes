@@ -68,8 +68,6 @@ impl<P: frame_support::traits::PalletInfoAccess> frame_support::traits::OnRuntim
 
 /// Unreleased migrations. Add new ones here:
 pub type Unreleased = (
-	cumulus_pallet_xcmp_queue::migration::v6::MigrateV5ToV6<Runtime>,
-	cumulus_pallet_parachain_system::migration::Migration<Runtime>,
 	//
 	// 🔴 MUST RUN BEFORE ANYTHING THAT READS A RING ROOT.
 	//
@@ -77,14 +75,7 @@ pub type Unreleased = (
 	// (it stores only the ring commitment; the 480-byte KZG verifier key is now re-derived). The
 	// 24 live records are in the old layout and `RingRoot`'s hand-written `Decode` reads them
 	// **without error** — every ring would present the same root. Strips the inlined key.
-	//
-	// Ordered here because the two collection-creation migrations below fire
-	// `on_ring_root_change`, which reads roots: they must see the converted form.
 	ring_roots::MigrateRingRootsToCommitmentOnly,
-	// Creates the on-chain collections the v0.3.1 people pallets expect. Both are self-guarding
-	// (they no-op when the collection already exists).
-	indiv_pallet_people::migration::CreatePeopleCollection<Runtime>,
-	indiv_pallet_people_lite::migration::CreateLitePeopleCollection<Runtime>,
 	//
 	// PASEO-LOCAL. Unit A of the coinage migration: adopt the pre-existing coin population into
 	// instance 0, seeded from the removed `UnderlyingAssetId`.
@@ -92,9 +83,7 @@ pub type Unreleased = (
 	// Ordering, all load-bearing:
 	//   1. AFTER `SeedNetworkSuffix`. Coinage aliases derive from product contexts, which splice
 	//      the network suffix; the suffix must be in state before anything reads it back out.
-	//   2. AFTER both collection-creation migrations. Coinage's recycler and paid-unload-token
-	//      rings hang off the people / lite-people collections, so those must exist first.
-	//   3. BEFORE units B and C, which run as MBMs. Both phrase their invariants against
+	//   2. BEFORE units B and C, which run as MBMs. Both phrase their invariants against
 	//      `Instances[0]`, and every coinage call reads it.
 	//
 	// The instance is seeded `Sufficient` and native-unit-preserving, so no paid-unload fee path

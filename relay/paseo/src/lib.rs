@@ -1910,17 +1910,8 @@ pub mod migrations {
 	use super::*;
 
 	frame_support::parameter_types! {
-		pub const StateTrieMigrationName: &'static str = "StateTrieMigration";
 		pub const ElectionProviderMultiPhaseName: &'static str = "ElectionProviderMultiPhase";
 	}
-
-	/// Remove the retired `StateTrieMigration` pallet's storage, following upstream:
-	///
-	/// <https://github.com/polkadot-fellows/runtimes/issues/905>.
-	pub type RemoveStateTrieMigrationPallet = frame_support::migrations::RemovePallet<
-		StateTrieMigrationName,
-		<Runtime as frame_system::Config>::DbWeight,
-	>;
 
 	/// Remove the `ElectionProviderMultiPhase` pallet's storage. Staking elections run on Asset
 	/// Hub, see <https://github.com/polkadot-fellows/runtimes/issues/1309>.
@@ -1930,14 +1921,7 @@ pub mod migrations {
 	>;
 
 	/// Unreleased migrations. Add new ones here:
-	pub type Unreleased = (
-		parachains_on_demand::migration::MigrateV1ToV2<Runtime>,
-		parachains_scheduler::migration::MigrateV3ToV4<Runtime>,
-		parachains_configuration::migration::v13::MigrateToV13<Runtime>,
-		parachains_shared::migration::MigrateToV2<Runtime>,
-		RemoveStateTrieMigrationPallet,
-		RemoveElectionProviderMultiPhasePallet,
-	);
+	pub type Unreleased = (RemoveElectionProviderMultiPhasePallet,);
 
 	/// All migrations that will run on the next runtime upgrade.
 	pub type SingleBlockMigrations = Unreleased;
@@ -3835,7 +3819,6 @@ mod post_ahm_filter_tests {
 #[cfg(test)]
 mod upgrade_tests {
 	use super::*;
-	use frame_support::traits::OnRuntimeUpgrade;
 
 	#[test]
 	fn block_length_preserves_class_limits_and_caps_header_size() {
@@ -3848,22 +3831,5 @@ mod upgrade_tests {
 		assert_eq!(*current.max.get(DispatchClass::Operational), 5 * 1024 * 1024);
 		assert_eq!(*current.max.get(DispatchClass::Mandatory), 5 * 1024 * 1024);
 		assert_eq!(current.max_header_size(), 100 * 1024);
-	}
-
-	#[test]
-	fn retired_trie_migration_storage_is_removed_without_touching_other_pallets() {
-		sp_io::TestExternalities::default().execute_with(|| {
-			let mut retired_key = sp_io::hashing::twox_128(b"StateTrieMigration").to_vec();
-			retired_key.extend_from_slice(&sp_io::hashing::twox_128(b"MigrationProcess"));
-			let mut retained_key = sp_io::hashing::twox_128(b"System").to_vec();
-			retained_key.extend_from_slice(&sp_io::hashing::twox_128(b"Number"));
-			sp_io::storage::set(&retired_key, &[1]);
-			sp_io::storage::set(&retained_key, &[2]);
-
-			migrations::RemoveStateTrieMigrationPallet::on_runtime_upgrade();
-
-			assert!(!sp_io::storage::exists(&retired_key));
-			assert_eq!(sp_io::storage::get(&retained_key).unwrap().as_ref(), &[2]);
-		});
 	}
 }

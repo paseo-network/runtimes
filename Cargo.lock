@@ -1334,7 +1334,6 @@ dependencies = [
 name = "asset-hub-paseo-runtime"
 version = "2.5.5"
 dependencies = [
- "approx",
  "asset-test-utils",
  "assets-common",
  "bp-asset-hub-kusama",

@@ -93,8 +93,7 @@ impl pallet_bounties::Config for Runtime {
 	type OnSlash = Treasury;
 	type WeightInfo = weights::pallet_bounties::WeightInfo<Runtime>;
 	// Sweeps every asset in `BountyRelevantAssets` (native PAS only, here) when the
-	// multi-asset bounty accounts are re-derived. Leaving this as `()` silently makes
-	// `migrations::MigrateBountyAccountAssets` a no-op.
+	// multi-asset bounty accounts are re-derived.
 	type TransferAllAssets = TransferAllFungibles<AccountId, NativeAndAssets, BountyRelevantAssets>;
 }
 

@@ -93,9 +93,7 @@ use cumulus_pallet_parachain_system::{AnyRelayNumber, RelaychainDataProvider};
 use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
 use frame_support::traits::EnsureOrigin;
 use governance::{pallet_custom_origins, GeneralAdmin, StakingAdmin, Treasurer, TreasurySpender};
-use paseo_runtime_constants::time::{
-	DAYS as RC_DAYS, HOURS as RC_HOURS, MINUTES as RC_MINUTES, YEARS as RC_YEARS,
-};
+use paseo_runtime_constants::time::{DAYS as RC_DAYS, HOURS as RC_HOURS, MINUTES as RC_MINUTES};
 use polkadot_core_primitives::AccountIndex;
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, ConstU128, Get, OpaqueMetadata};
@@ -4386,7 +4384,7 @@ pallet_revive::impl_runtime_apis_plus_revive_traits!(
 
 	impl system_parachains_common::apis::Inflation<Block> for Runtime {
 		fn experimental_issuance_prediction_info() -> system_parachains_common::apis::InflationInfo {
-			crate::staking::EraPayout::impl_experimental_inflation_info()
+			crate::staking::IssuanceCurve::impl_experimental_inflation_info()
 		}
 	}
 
