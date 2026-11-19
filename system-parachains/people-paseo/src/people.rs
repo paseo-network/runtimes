@@ -23,8 +23,7 @@ use crate::{
 		LongTermStorageClaimsPerPeriod, LongTermStorageCleanupLimit, LongTermStorageGraceWindow,
 		LongTermStoragePeriodDuration, MaxLitePeople, NotificationAllowance,
 		NotificationPeriodDuration, NotificationSlotsPerPeriod, PeopleAirdropsPrizeSource,
-		PersonStatementLimit, StmtStoreCleanupLimit, StmtStoreGraceWindow,
-		StmtStoreReplacementCooldown, StmtStoreSlotsPerPeriod,
+		PersonStatementLimit, StmtStoreCleanupLimit, StmtStoreGraceWindow, StmtStoreSlotsPerPeriod,
 	},
 	xcm_config::LocationToAccountId,
 };
@@ -527,15 +526,17 @@ pub mod benchmark_utils {
 			pallet_timestamp::Now::<Runtime>::put(now.as_millis() as u64);
 		}
 
+		/// Signs with sr25519 through the host keystore. The fixed seed derives the same key on
+		/// every call, so a benchmark that signs after looking up the account signs for that
+		/// account.
 		fn sign_message(message: &[u8]) -> (sp_runtime::AccountId32, MultiSignature) {
-			use sp_core::Pair;
+			use sp_io::crypto::{sr25519_generate, sr25519_sign};
 			use sp_runtime::traits::IdentifyAccount;
-			let entropy = [1u8; 32];
-			let pair = sp_core::ed25519::Pair::from_seed(&entropy);
-			let account = pair.public().into_account().into();
-			let secret = ed25519_zebra::SigningKey::from(entropy);
-			let signature = sp_core::ed25519::Signature::from_raw(secret.sign(message).into());
-			(account, signature.into())
+			let public = sr25519_generate(0.into(), Some(b"//ResourcesBenchHelper".to_vec()));
+			let account = sp_runtime::MultiSigner::Sr25519(public).into_account();
+			let signature = sr25519_sign(0.into(), &public, message)
+				.expect("the benchmark keystore signs with a key it generated; qed");
+			(account, MultiSignature::Sr25519(signature))
 		}
 	}
 
@@ -1600,7 +1601,6 @@ impl indiv_pallet_resources::Config for Runtime {
 	type StmtStoreSlotsPerPeriod = StmtStoreSlotsPerPeriod;
 	type LiteStmtStoreSlotsPerPeriod = LiteStmtStoreSlotsPerPeriod;
 	type StmtStoreCleanupLimit = StmtStoreCleanupLimit;
-	type StmtStoreReplacementCooldown = StmtStoreReplacementCooldown;
 	type StmtStoreGraceWindow = StmtStoreGraceWindow;
 	// individuality v0.3.1 renamed the "friend request" allowance family to "notification".
 	// The rename is nominal only: every value below is byte-identical to the `FriendRequest*`
@@ -1617,6 +1617,7 @@ impl indiv_pallet_resources::Config for Runtime {
 	type EnsureLitePerson = indiv_pallet_people_lite::EnsureLitePerson<Runtime>;
 	type Clock = Timestamp;
 	type OffchainSignature = Signature;
+	type OnStmtStoreSlotCleared = ClearStmtStoreHolderUsage;
 	type LitePersonStatementLimit = LitePersonStatementLimit;
 	type PersonStatementLimit = PersonStatementLimit;
 	type MaxReservationQueueLength = MaxReservationQueueLength;
@@ -2257,6 +2258,87 @@ pub enum RestrictedEntity {
 	AccountParticipant(AccountId),
 	InvitedCandidate(AccountId),
 	LitePerson(AccountId),
+	/// The holder of the statement store slot of an alias. Usage is tracked per alias, so it
+	/// follows the slot across replacements.
+	StmtStoreHolder(Alias),
+}
+
+/// Drops the usage record of a statement store slot holder once the slot entry is removed.
+pub struct ClearStmtStoreHolderUsage;
+impl indiv_pallet_resources::OnStmtStoreSlotCleared for ClearStmtStoreHolderUsage {
+	fn on_cleared(alias: &Alias) {
+		indiv_pallet_origin_restriction::Usages::<Runtime>::remove(
+			RestrictedEntity::StmtStoreHolder(*alias),
+		);
+	}
+}
+
+/// Relay chain blocks over which a statement store slot holder recovers the fee of one
+/// replacement (15 minutes, 450 parachain blocks).
+const STMT_STORE_HOLDER_RECOVERY_RELAY_BLOCKS: u32 = 150;
+
+/// The fee the origin restriction charges for one statement store slot replacement.
+///
+/// It is the weight and length fee of a replacement transaction with an sr25519 signature, the
+/// scheme the benchmark signs with, and a mortal era. An ecdsa signature costs slightly more.
+fn stmt_store_replacement_fee() -> Balance {
+	use frame_support::{dispatch::GetDispatchInfo, weights::WeightToFee as WeightToFeeT};
+	use sp_runtime::traits::ExtensionVariant;
+
+	let call =
+		RuntimeCall::Resources(indiv_pallet_resources::Call::replace_statement_store_account {
+			period: 0,
+			alias: [0u8; 32],
+			new_account: AccountId::new([0u8; 32]),
+			since: 0,
+		});
+	let signature = MultiSignature::Sr25519(sp_core::sr25519::Signature::from_raw([0u8; 64]));
+	let tx_ext: TxExtensionV1 = (
+		(
+			(),
+			pallet_verify_signature::VerifySignature::<Runtime>::Disabled,
+			indiv_pallet_people::extension::AsPerson::<Runtime>::new(None),
+			indiv_pallet_proof_of_ink::extension::AsProofOfInkParticipant::<Runtime>::new(None),
+			indiv_pallet_score::ScoreAsParticipant::<Runtime>::new(None),
+			indiv_pallet_game::GameAsInvited::<Runtime>::new(None),
+			indiv_pallet_people_lite::extension::PeopleLiteAuth::<Runtime>::new(None),
+			indiv_pallet_members::extension::AsMember::<Runtime>::new(None),
+			indiv_pallet_coinage::extension::AsCoinage::<Runtime>::new(None),
+			indiv_pallet_resources::extension::AsResources::<Runtime>::new(Some(
+				indiv_pallet_resources::extension::AsResourcesInfo::ReplaceStatementStoreAccount(
+					signature,
+				),
+			)),
+			indiv_pallet_honour::extension::VoterAuth::<Runtime>::new(None),
+			frame_system::AuthorizeCall::<Runtime>::new(),
+		),
+		indiv_pallet_origin_restriction::RestrictOrigin::<Runtime>::new(true),
+		frame_system::CheckNonZeroSender::<Runtime>::new(),
+		frame_system::CheckSpecVersion::<Runtime>::new(),
+		frame_system::CheckTxVersion::<Runtime>::new(),
+		frame_system::CheckGenesis::<Runtime>::new(),
+		frame_system::CheckEra::<Runtime>::from(generic::Era::mortal(64, 0)),
+		frame_system::CheckNonce::<Runtime>::from(0),
+		frame_system::CheckWeight::<Runtime>::new(),
+		pallet_asset_tx_payment::ChargeAssetTxPayment::<Runtime>::from(0, None),
+		frame_metadata_hash_extension::CheckMetadataHash::<Runtime>::new(false),
+	)
+		.into();
+	let extrinsic = UncheckedExtrinsic::from_parts(
+		call,
+		generic::Preamble::General(ExtensionVariant::Other(TxExtensionOtherVersions::new(tx_ext))),
+	);
+	// Upstream defines runtime-level `WeightToFee`/`LengthToFee` aliases; Paseo reads the same
+	// converters from the transaction payment config instead.
+	let weight_fee =
+		<<Runtime as pallet_transaction_payment::Config>::WeightToFee as WeightToFeeT>::weight_to_fee(
+			&extrinsic.get_dispatch_info().total_weight(),
+		);
+	let length_fee =
+		<<Runtime as pallet_transaction_payment::Config>::LengthToFee as WeightToFeeT>::weight_to_fee(
+			&Weight::from_parts(extrinsic.encoded_size() as u64, 0),
+		);
+	weight_fee.saturating_add(length_fee)
 }
 
 impl indiv_pallet_origin_restriction::RestrictedEntity<OriginCaller, Balance> for RestrictedEntity {
@@ -2277,6 +2359,14 @@ impl indiv_pallet_origin_restriction::RestrictedEntity<OriginCaller, Balance> fo
 				max: LITE_PERSON_ALLOWANCE_MAX,
 				recovery_per_block: LITE_PERSON_ALLOWANCE_RECOVERY,
 			},
+			// With `max: 0`, a replacement runs only as a one-time excess at zero usage, so at most
+			// once per recovery of its fee.
+			RestrictedEntity::StmtStoreHolder(_) => Allowance {
+				max: 0,
+				recovery_per_block: stmt_store_replacement_fee()
+					.div_ceil(Balance::from(STMT_STORE_HOLDER_RECOVERY_RELAY_BLOCKS))
+					.max(1),
+			},
 		}
 	}
 	fn restricted_entity(origin_caller: &OriginCaller) -> Option<Self> {
@@ -2294,6 +2384,8 @@ impl indiv_pallet_origin_restriction::RestrictedEntity<OriginCaller, Balance> fo
 				Some(RestrictedEntity::AccountParticipant(account_id.clone())),
 			PeopleLite(LitePerson(account_id)) =>
 				Some(RestrictedEntity::LitePerson(account_id.clone())),
+			Resources(indiv_pallet_resources::Origin::StmtStoreHolder(alias)) =>
+				Some(RestrictedEntity::StmtStoreHolder(*alias)),
 			_ => None,
 		}
 	}
@@ -2340,6 +2432,12 @@ impl ContainsPair<RestrictedEntity, RuntimeCall> for OperationAllowedOneTimeExce
 			},
 			RestrictedEntity::PersonalAlias(_) | RestrictedEntity::PersonalIdentity(_) => false,
 			RestrictedEntity::LitePerson(_) => false,
+			RestrictedEntity::StmtStoreHolder(_) => matches!(
+				call,
+				RuntimeCall::Resources(
+					indiv_pallet_resources::Call::replace_statement_store_account { .. }
+				)
+			),
 		}
 	}
 }
@@ -2350,12 +2448,17 @@ pub struct OriginRestrictionBenchmarkHelper;
 impl indiv_pallet_origin_restriction::BenchmarkHelper<OriginCaller, RuntimeCall>
 	for OriginRestrictionBenchmarkHelper
 {
+	/// The statement store holder pair, whose allowance computes the replacement fee estimate
+	/// on every validation, so the extension weight covers that cost.
 	fn excess_pair() -> (OriginCaller, RuntimeCall) {
 		(
-			OriginCaller::Score(indiv_pallet_score::Origin::AccountParticipant(
-				sp_runtime::AccountId32::new([0u8; 32]),
-			)),
-			RuntimeCall::Score(indiv_pallet_score::Call::cash_out {}),
+			OriginCaller::Resources(indiv_pallet_resources::Origin::StmtStoreHolder([0u8; 32])),
+			RuntimeCall::Resources(indiv_pallet_resources::Call::replace_statement_store_account {
+				period: 0,
+				alias: [0u8; 32],
+				new_account: AccountId::new([0u8; 32]),
+				since: 0,
+			}),
 		)
 	}
 }

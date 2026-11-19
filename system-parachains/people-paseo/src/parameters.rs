@@ -77,8 +77,7 @@ pub mod dynamic_params {
 		pub static LiteStmtStoreSlotsPerPeriod: u32 = 10;
 		#[codec(index = 3)]
 		pub static StmtStoreCleanupLimit: u32 = 50;
-		#[codec(index = 4)]
-		pub static StmtStoreReplacementCooldown: u32 = 60;
+		// Index 4 belonged to the removed `StmtStoreReplacementCooldown`. Do not reuse it.
 		#[codec(index = 5)]
 		pub static StmtStoreGraceWindow: u32 = 2 * 24 * 60 * 60;
 		#[codec(index = 7)]
@@ -176,12 +175,6 @@ pub type StmtStoreCleanupLimit = BenchmarkMax<
 		ConstU32<STMT_STORE_CLEANUP_LIMIT_CAP>,
 	>,
 	ConstU32<STMT_STORE_CLEANUP_LIMIT_CAP>,
->;
-
-/// Statement replacement cooldown, kept non-zero and at most one day, the statement-store period.
-pub type StmtStoreReplacementCooldown = AtMost<
-	AtLeastOne<dynamic_params::statement_storage::StmtStoreReplacementCooldown>,
-	ConstU32<SECONDS_PER_DAY>,
 >;
 
 /// Statement-store grace window, kept non-zero.
