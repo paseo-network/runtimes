@@ -35,7 +35,9 @@ impl pallet_nomination_pools::Config for Runtime {
 	type U256ToBalance = polkadot_runtime_common::U256ToBalance;
 	type StakeAdapter =
 		pallet_nomination_pools::adapter::DelegateStake<Self, Staking, DelegatedStaking>;
-	type PostUnbondingPoolsWindow = frame_support::traits::ConstU32<4>;
+	// Bonding duration (28) plus a post-unbonding window of 4 eras. It bounds the stored unbonding
+	// pools, so a smaller value leaves existing `SubPoolsStorage` entries undecodable.
+	type MaxUnbondingPools = frame_support::traits::ConstU32<32>;
 	type MaxMetadataLen = frame_support::traits::ConstU32<256>;
 	// we use the same number of allowed unlocking chunks as with staking.
 	type MaxUnbonding = <Self as pallet_staking_async::Config>::MaxUnlockingChunks;

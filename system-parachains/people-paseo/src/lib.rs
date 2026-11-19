@@ -72,8 +72,6 @@ use sp_runtime::{
 	ApplyExtrinsicResult, Debug,
 };
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
-#[cfg(feature = "std")]
-use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 // This runtime produces 2-second blocks (`elastic_scaling`: a 6s relay slot at
 // `BLOCK_PROCESSING_VELOCITY = 3`), which is the async-backing block cadence. Its block *weight*
@@ -258,12 +256,6 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	transaction_version: 4,
 	system_version: 1,
 };
-
-/// The version information used to identify this runtime when compiled natively.
-#[cfg(feature = "std")]
-pub fn native_version() -> NativeVersion {
-	NativeVersion { runtime_version: VERSION, can_author_with: Default::default() }
-}
 
 /// TODO: Uncomment me after 2.3.1 is on chain
 /// pub const SLOT_DURATION: u64 = 24_000;
@@ -1018,6 +1010,40 @@ mod benches {
 
 		fn get_asset() -> Asset {
 			Asset { id: AssetId(Location::parent()), fun: Fungible(ExistentialDeposit::get()) }
+		}
+
+		fn get_assets(n: u32) -> Assets {
+			use frame_support::traits::tokens::fungible;
+			let account: AccountId = frame_benchmarking::whitelisted_caller();
+			frame_support::assert_ok!(<Balances as fungible::Mutate<_>>::mint_into(
+				&account,
+				ExistentialDeposit::get(),
+			));
+			let amount = 1_000_000u128;
+			// Worst case: `n` distinct foreign assets, which `AssetTransactors` matches
+			// after the native token.
+			let assets = (0..n)
+				.map(|i| {
+					let asset_location = Location::new(
+						1,
+						[Parachain(3000), PalletInstance(53), GeneralIndex((1984 + i).into())],
+					);
+					// `Assets` in this module is the XCM type; the pallet lives in `super`.
+					frame_support::assert_ok!(super::Assets::force_create(
+						super::RuntimeOrigin::root(),
+						asset_location.clone(),
+						account.clone().into(),
+						true,
+						1u128,
+					));
+					Asset { id: AssetId(asset_location), fun: Fungible(amount) }
+				})
+				.collect::<Vec<_>>();
+			assets.into()
+		}
+
+		fn batch_call(calls: Vec<RuntimeCall>) -> Option<RuntimeCall> {
+			Some(RuntimeCall::Utility(pallet_utility::Call::batch { calls }))
 		}
 	}
 

@@ -2468,7 +2468,7 @@ mod legacy_v0 {
 						_,
 						sp_runtime::DispatchError,
 					>(
-						Revive::dry_run_eth_transact(transaction.clone(), Default::default()),
+						Revive::dry_run_eth_transact(transaction.clone(), None, true, None),
 					))
 				})
 				.expect("rolling back the estimate succeeds")
@@ -2991,7 +2991,7 @@ mod credit_tree_removal {
 				.0
 				.into_iter()
 				.find_map(|instruction| match instruction {
-					Instruction::Transact { call, .. } => Some(call.into_encoded()),
+					Instruction::Transact { call, .. } => Some(call.encoded().to_vec()),
 					_ => None,
 				})
 				.expect("the XCM carries a Transact");
