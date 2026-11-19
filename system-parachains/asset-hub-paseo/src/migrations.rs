@@ -315,12 +315,17 @@ mod multiblock_migrations {
 	use xcm_builder::StartsWith;
 
 	/// MBM migrations to apply on runtime upgrade.
-	pub type MbmMigrations =
+	pub type MbmMigrations = (
 		assets_common::migrations::foreign_assets_reserves::ForeignAssetsReservesMigration<
 			Runtime,
 			ForeignAssetsInstance,
 			AssetHubPaseoForeignAssetsReservesProvider,
-		>;
+		>,
+		// Scarcity `Instances` v2 -> v3: each value becomes a `Location`. It starts once the
+		// single-block `MigrateV1ToV2` above has left the pallet at version 2, and is a no-op on
+		// any other version.
+		indiv_pallet_scarcity::migration::v3::MigrateToLocations<Runtime>,
+	);
 
 	/// This type provides reserves information for `asset_id`. Meant to be used in a migration
 	/// running on the Asset Hub Paseo upgrade which changes the Foreign Assets
