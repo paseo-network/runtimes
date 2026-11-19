@@ -253,7 +253,11 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// transaction extensions are now versioned. V0 is the frozen fellowship People pipeline that
 	// signed (V4) transactions use; the Individuality extensions moved to the V1 general
 	// pipeline. Every signer must refresh metadata and rebuild its transactions.
-	transaction_version: 4,
+	//
+	// BUMPED 4 -> 5 (individuality-community#175): `GameSchedule` gained `tenure_claim_window`,
+	// which changes the encoding of `Game::schedule_games`, and the game pallet gained
+	// `set_tenure_thresholds` and `claim_tenure_credits` (call indices 28 and 29).
+	transaction_version: 5,
 	system_version: 1,
 };
 
@@ -1488,9 +1492,16 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl indiv_pallet_game::runtime_api::PalletGameApi<Block, Balance> for Runtime {
+	#[api_version(2)]
+	impl indiv_pallet_game::runtime_api::PalletGameApi<Block, Balance, AccountId> for Runtime {
 		fn play_deposit() -> Balance {
 			indiv_pallet_game::PlayDepositAmount::<Runtime>::get()
+		}
+
+		fn tenure_credits(
+			player: indiv_support::identity::AccountOrPerson<AccountId>,
+		) -> Result<u32, sp_runtime::DispatchError> {
+			Game::tenure_credits(player)
 		}
 	}
 

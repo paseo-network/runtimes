@@ -280,11 +280,9 @@ use indiv_support::{
 use paseo_runtime_constants::system_parachain::AssetHubParaId;
 #[cfg(feature = "runtime-benchmarks")]
 use paseo_runtime_constants::system_parachain::ASSET_HUB_ID;
-#[cfg(feature = "runtime-benchmarks")]
-use sp_runtime::BoundedVec;
 use sp_runtime::{
 	traits::{ConstI8, ConstU16},
-	DispatchResult, MultiSignature, MultiSigner, Percent,
+	BoundedVec, DispatchResult, MultiSignature, MultiSigner, Percent,
 };
 use sp_statement_store::StatementAllowance;
 use verifiable::{ring::bandersnatch::BandersnatchVrfVerifiable, GenerateVerifiable};
@@ -858,6 +856,8 @@ impl indiv_pallet_game::Config for Runtime {
 	type MaxAttendanceHistoryDepth = ConstU32<12>;
 	// Game credits become NFT claims on Asset Hub through `NftCredits` / `NftClaims`.
 	type NftClaimCredits = NftCredits;
+	type MaxTenureThresholds = MaxTenureThresholds;
+	type DefaultTenureThresholds = DefaultTenureThresholds;
 	type DefaultPhaseDurations = GamePhaseDurations;
 	// Two 12-second jumps of the block timestamp. That covers the fewest steps a phase needs:
 	// `end_registration` then one `advance_shuffle` for the shuffle, `end_reporting` then two
@@ -944,22 +944,20 @@ impl indiv_pallet_nft_credits::Config for Runtime {
 	type MaxCreditTreesPerMessage = ConstU32<32>;
 	type ReplayCooldownSeconds = ConstU64<60>;
 	type NftClaimsRemoteWeight = NftClaimsRemoteWeight;
-	// Entries are the distinct blocks whose trees commit a claimant's credits, not a window of
-	// consecutive ones, so the bound counts games rather than time. One game awards a claimant at
-	// most `(MaxGroupSize - 1) * MaxRounds = 15` credits, one per co-player that reported `Person`-
-	// on them, plus the attendance backfill, which awards the rest in a single call. Those land in
-	// 16 distinct blocks only if no two reports ever share one, and reports cluster. At one game a
-	// week `AwardRetentionTtl` spans about 13 games, so 208 entries cover the window even at that
-	// worst case; this leaves margin over it, and about 85 games at the few blocks a game usually
-	// takes. The list costs 1 KB at this bound.
+	// Entries are the tree blocks that hold a claimant's credits, so the bound counts games rather
+	// than time. A game puts a claimant's credits in at most 19 blocks: 15 for reports and up to
+	// two each for the attendance backfill and the tenure claim, whose credits can spill into the
+	// next block's buffer. At one game a week `AwardRetentionTtl` spans about 13 games, so the
+	// worst case is 247 blocks. The list costs 1 KB at this bound.
 	//
 	// Being a count, the window shortens as games run more often. Governance sets the schedule and
 	// `new_game` only refuses a concurrent game, so back-to-back games would fill this in a day.
 	type MaxCreditBlocksPerClaimant = ConstU32<256>;
 	// The claims chain's own deadline, which is what the two have to agree on. What it costs this
 	// chain follows participation rather than a constant: a player earns at most
-	// `(MaxGroupSize - 1) * MaxRounds = 15` credits a game, so at one game a week 90 days is about
-	// 195 credits, or 13 KB at 65 bytes an award. Retaining personhood needs one game per
+	// `(MaxGroupSize - 1) * MaxRounds = 15` report credits and one tenure credit per
+	// `MaxTenureThresholds` entry a game, so at one game a week 90 days is about 299 credits,
+	// or 19 KB at 65 bytes an award. Retaining personhood needs one game per
 	// `NonPlayingKickoutTime` and costs a fraction of that.
 	type AwardRetentionTtl = ClaimsChainTreeTtl;
 	type EnsureClaimsChainOrigin = EnsureClaimsChainSibling;
@@ -988,6 +986,14 @@ parameter_types! {
 	/// roots for less time than the claims chain gives a claimant, which strands credits inside their
 	/// deadline. A value above it keeps roots after the last credit has expired.
 	pub const ClaimsChainTreeTtl: u64 = 90 * 24 * 60 * 60;
+	/// The tenure credits a player earns in one game at most. Each takes a credit slot after the
+	/// game's 18 report slots, out of the 128 a claimant has per game.
+	pub const MaxTenureThresholds: u32 = 8;
+	/// Thresholds at 0, 1, 2, 4, 8 and 13 games attended while recognised. A player earns one
+	/// tenure credit per game for each threshold their tenure reaches. Every player reaches the
+	/// first, and a person earns 6 credits a game from 13 games on.
+	pub DefaultTenureThresholds: BoundedVec<indiv_pallet_game::GamesAttended, MaxTenureThresholds> =
+		BoundedVec::truncate_from(vec![0, 1, 2, 4, 8, 13]);
 }
 
 /// Origin check for the parachain the credit trees are delivered to. Only that chain may name the
@@ -2426,6 +2432,7 @@ impl ContainsPair<RestrictedEntity, RuntimeCall> for OperationAllowedOneTimeExce
 						RuntimeCall::Score(register { .. }) |
 						RuntimeCall::Game(sign_up_with_account { .. }) |
 						RuntimeCall::Game(report { .. }) |
+						RuntimeCall::Game(claim_tenure_credits { .. }) |
 						RuntimeCall::Game(offboard { .. }) |
 						RuntimeCall::Game(claim_airdrop { .. })
 				)
