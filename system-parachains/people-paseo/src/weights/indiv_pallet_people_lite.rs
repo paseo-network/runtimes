@@ -309,4 +309,9 @@ impl<T: frame_system::Config> indiv_pallet_people_lite::WeightInfo for WeightInf
 			.saturating_add(Weight::from_parts(0, 1486))
 			.saturating_add(T::DbWeight::get().reads(1))
 	}
+
+	// Upstream SDK-compatible weights for new benchmarks; regenerate before release.
+	fn migrate_v1_step() -> Weight {
+		<indiv_pallet_people_lite::weights::SubstrateWeight<T> as indiv_pallet_people_lite::WeightInfo>::migrate_v1_step()
+	}
 }

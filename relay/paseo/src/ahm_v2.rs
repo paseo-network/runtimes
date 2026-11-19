@@ -28,19 +28,68 @@ pub mod lockdown;
 
 use crate::{
 	xcm_config::{AssetHubLocation, XcmRouter},
-	AccountId, Runtime, RuntimeEvent, Timestamp,
+	AccountId, BrokerPalletId, CrowdloanId, DelegatedStakingPalletId, OnDemandPalletId,
+	PoolsPalletId, ProxyType, Runtime, RuntimeEvent, Timestamp, TransparentProxyType,
+	TreasuryPalletId,
 };
-use frame_support::{parameter_types, traits::Equals};
+use frame_support::{
+	parameter_types,
+	traits::{Contains, Equals},
+};
 use frame_system::EnsureRoot;
+use migrator_types::PortableProxyType;
 use pallet_xcm::EnsureXcm;
 use paseo_runtime_constants::system_parachain;
+use sp_runtime::traits::AccountIdConversion;
 
 parameter_types! {
 	/// Asset Hub stands in for the Coretime chain on Paseo.
 	pub const AssetHubId: u32 = system_parachain::ASSET_HUB_ID;
 }
 
+parameter_types! {
+	pub const CtFreeBuffer: u128 = paseo_runtime_constants::currency::UNITS;
+}
+
+/// Leave chain pots for the dedicated sweep stage.
+pub struct SweptAccounts;
+impl Contains<AccountId> for SweptAccounts {
+	fn contains(who: &AccountId) -> bool {
+		[
+			TreasuryPalletId::get(),
+			BrokerPalletId::get(),
+			OnDemandPalletId::get(),
+			CrowdloanId::get(),
+			PoolsPalletId::get(),
+			DelegatedStakingPalletId::get(),
+		]
+		.into_iter()
+		.any(|id| AccountIdConversion::<AccountId>::into_account_truncating(&id) == *who)
+	}
+}
+
+impl TryFrom<TransparentProxyType<ProxyType>> for PortableProxyType {
+	type Error = ();
+	fn try_from(t: TransparentProxyType<ProxyType>) -> Result<Self, ()> {
+		match t.0 {
+			ProxyType::Any => Ok(Self::Any),
+			ProxyType::NonTransfer => Ok(Self::NonTransfer),
+			ProxyType::CancelProxy => Ok(Self::CancelProxy),
+			ProxyType::ParaRegistration => Ok(Self::ParaRegistration),
+			ProxyType::Governance |
+			ProxyType::Staking |
+			ProxyType::Auction |
+			ProxyType::NominationPools |
+			ProxyType::StakingOperator |
+			ProxyType::SafeSudo => Err(()),
+		}
+	}
+}
+
 impl pallet_rc2_migrator::Config for Runtime {
+	type AhParaId = AssetHubId;
+	type CtFreeBuffer = CtFreeBuffer;
+	type SweptAccounts = SweptAccounts;
 	type RuntimeEvent = RuntimeEvent;
 	type SendXcm = XcmRouter;
 	type CtParaId = AssetHubId;

@@ -126,4 +126,13 @@ impl<T: frame_system::Config> pallet_whitelist::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(3))
 			.saturating_add(T::DbWeight::get().writes(2))
 	}
+
+	// SDK stable2609-2 weights for new benchmarks; regenerate for this runtime before release.
+	fn defer_dispatch(n: u32, ) -> Weight {
+		<pallet_whitelist::weights::SubstrateWeight<T> as pallet_whitelist::WeightInfo>::defer_dispatch(n)
+	}
+
+	fn remove_deferred_dispatch() -> Weight {
+		<pallet_whitelist::weights::SubstrateWeight<T> as pallet_whitelist::WeightInfo>::remove_deferred_dispatch()
+	}
 }

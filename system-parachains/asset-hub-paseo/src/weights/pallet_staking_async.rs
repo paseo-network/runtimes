@@ -1117,4 +1117,9 @@ impl<T: frame_system::Config> pallet_staking_async::WeightInfo for WeightInfo<T>
 			.saturating_add(T::DbWeight::get().writes(79))
 			.saturating_add(Weight::from_parts(0, 83).saturating_mul(v.into()))
 	}
+
+	// SDK stable2609-2 weights for new benchmarks; regenerate for this runtime before release.
+	fn chill_inactive(v: u32, ) -> Weight {
+		<pallet_staking_async::weights::SubstrateWeight<T> as pallet_staking_async::WeightInfo>::chill_inactive(v)
+	}
 }

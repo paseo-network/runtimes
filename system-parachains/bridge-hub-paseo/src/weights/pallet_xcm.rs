@@ -330,12 +330,13 @@ impl<T: frame_system::Config> pallet_xcm::WeightInfo for WeightInfo<T> {
 	/// Proof: `PolkadotXcm::ShouldRecordXcm` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
 	/// Storage: `PolkadotXcm::AssetTraps` (r:1 w:1)
 	/// Proof: `PolkadotXcm::AssetTraps` (`max_values`: None, `max_size`: None, mode: `Measured`)
-	fn claim_assets() -> Weight {
+	// SDK stable2609-2 upstream benchmark; regenerate for Paseo before release.
+	fn claim_assets(_n: u32, ) -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `24`
 		//  Estimated: `3489`
-		// Minimum execution time: 97_564_000 picoseconds.
-		Weight::from_parts(101_130_000, 0)
+		// Minimum execution time: 33_722_000 picoseconds.
+		Weight::from_parts(35_972_290, 0)
 			.saturating_add(Weight::from_parts(0, 3489))
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(1))
@@ -368,12 +369,27 @@ impl<T: frame_system::Config> pallet_xcm::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(2))
 	}
-	fn weigh_message() -> Weight {
+	// SDK stable2609-2 upstream benchmark; regenerate for Paseo before release.
+	fn weigh_message(n: u32, ) -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
-		// Minimum execution time: 28_884_000 picoseconds.
-		Weight::from_parts(29_304_000, 0)
+		// Minimum execution time: 1_138_000 picoseconds.
+		Weight::from_parts(272_997, 0)
 			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 202
+			.saturating_add(Weight::from_parts(93_388, 0).saturating_mul(n.into()))
+	}
+
+	// SDK stable2609-2 upstream benchmark; regenerate for Paseo before release.
+	fn decode_xcm(n: u32, ) -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 221_000 picoseconds.
+		Weight::from_parts(1_134_664, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 1
+			.saturating_add(Weight::from_parts(1_554, 0).saturating_mul(n.into()))
 	}
 }

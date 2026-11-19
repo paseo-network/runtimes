@@ -29,12 +29,15 @@ use crate::{
 };
 use codec::{Decode, Encode, MaxEncodedLen};
 use enumflags2::{bitflags, BitFlags};
-use frame_support::{parameter_types, CloneNoBound, DebugNoBound, EqNoBound, PartialEqNoBound};
+use frame_support::{
+	dispatch::GetDispatchInfo, parameter_types, weights::WeightToFee as WeightToFeeT, CloneNoBound,
+	DebugNoBound, EqNoBound, PartialEqNoBound,
+};
 use pallet_identity::{Data, IdentityInformationProvider};
 use parachains_common::{impls::ToParentTreasury, DAYS, MINUTES};
 use scale_info::TypeInfo;
 use sp_runtime::{
-	traits::{AccountIdConversion, Verify},
+	traits::{AccountIdConversion, ExtensionVariant, Verify},
 	Debug,
 };
 use xcm::latest::prelude::BodyId;
@@ -405,6 +408,7 @@ parameter_types! {
 }
 
 impl indiv_pallet_people::Config for Runtime {
+	type Clock = Timestamp;
 	type WeightInfo = weights::indiv_pallet_people::WeightInfo<Runtime>;
 	type MemberService = Members;
 	type RingExponent = MembersFlexibleRingExponent;
@@ -830,6 +834,7 @@ parameter_types! {
 }
 
 impl indiv_pallet_game::Config for Runtime {
+	type MinStepPhaseDuration = ConstU32<{ 2 * (SLOT_DURATION / 1_000) as u32 }>;
 	const TESTNET: bool = true;
 	type WeightInfo = weights::indiv_pallet_game::WeightInfo<Runtime>;
 	type MaxGroupSize = ConstU32<6>;
@@ -1544,6 +1549,12 @@ impl indiv_pallet_relay_randomness::Config for Runtime {
 }
 
 impl indiv_pallet_people_lite::Config for Runtime {
+	type Clock = Timestamp;
+	// Preserve the previous uncapped registration policy.
+	type MaxLitePeople = ConstU32<{ u32::MAX }>;
+	type PaidRegistrationThreshold = ConstU32<{ u32::MAX }>;
+	type PaidRegistrationPeriod = ConstU32<86_400>;
+	type PaidRegistrationsPerPeriod = ConstU32<{ u32::MAX }>;
 	type WeightInfo = weights::indiv_pallet_people_lite::WeightInfo<Runtime>;
 	type Currency = Balances;
 	type PotId = LitePeoplePotId;
@@ -1577,6 +1588,7 @@ parameter_types! {
 }
 
 impl indiv_pallet_resources::Config for Runtime {
+	type OnStmtStoreSlotCleared = ClearStmtStoreHolderUsage;
 	type WeightInfo = indiv_pallet_resources::weights::SubstrateWeight<Runtime>;
 	// Same source of truth as Asset Hub's `pgas`/`dotns-gateway` bindings: the on-chain
 	// `NetworkSuffix` pallet, whose default is the shared `system-parachains-constants` value.
@@ -1589,7 +1601,6 @@ impl indiv_pallet_resources::Config for Runtime {
 	type StmtStoreSlotsPerPeriod = StmtStoreSlotsPerPeriod;
 	type LiteStmtStoreSlotsPerPeriod = LiteStmtStoreSlotsPerPeriod;
 	type StmtStoreCleanupLimit = StmtStoreCleanupLimit;
-	type StmtStoreReplacementCooldown = StmtStoreReplacementCooldown;
 	type StmtStoreGraceWindow = StmtStoreGraceWindow;
 	// individuality v0.3.1 renamed the "friend request" allowance family to "notification".
 	// The rename is nominal only: every value below is byte-identical to the `FriendRequest*`
@@ -2246,6 +2257,59 @@ pub enum RestrictedEntity {
 	AccountParticipant(AccountId),
 	InvitedCandidate(AccountId),
 	LitePerson(AccountId),
+	StmtStoreHolder(Alias),
+}
+
+fn stmt_store_replacement_fee() -> Balance {
+	let call =
+		RuntimeCall::Resources(indiv_pallet_resources::Call::replace_statement_store_account {
+			period: 0,
+			alias: [0u8; 32],
+			new_account: AccountId::new([0u8; 32]),
+			since: 0,
+		});
+	let signature = MultiSignature::Sr25519(sp_core::sr25519::Signature::from_raw([0u8; 64]));
+	let tx_ext: TxExtensionV1 = (
+		(
+			(),
+			pallet_verify_signature::VerifySignature::<Runtime>::Disabled,
+			indiv_pallet_people::extension::AsPerson::<Runtime>::new(None),
+			indiv_pallet_proof_of_ink::extension::AsProofOfInkParticipant::<Runtime>::new(None),
+			indiv_pallet_score::ScoreAsParticipant::<Runtime>::new(None),
+			indiv_pallet_game::GameAsInvited::<Runtime>::new(None),
+			indiv_pallet_people_lite::extension::PeopleLiteAuth::<Runtime>::new(None),
+			indiv_pallet_members::extension::AsMember::<Runtime>::new(None),
+			indiv_pallet_coinage::extension::AsCoinage::<Runtime>::new(None),
+			indiv_pallet_resources::extension::AsResources::<Runtime>::new(Some(
+				indiv_pallet_resources::extension::AsResourcesInfo::ReplaceStatementStoreAccount(
+					signature,
+				),
+			)),
+			indiv_pallet_honour::extension::VoterAuth::<Runtime>::new(None),
+			frame_system::AuthorizeCall::<Runtime>::new(),
+		),
+		indiv_pallet_origin_restriction::RestrictOrigin::<Runtime>::new(true),
+		frame_system::CheckNonZeroSender::<Runtime>::new(),
+		frame_system::CheckSpecVersion::<Runtime>::new(),
+		frame_system::CheckTxVersion::<Runtime>::new(),
+		frame_system::CheckGenesis::<Runtime>::new(),
+		frame_system::CheckEra::<Runtime>::from(generic::Era::mortal(64, 0)),
+		frame_system::CheckNonce::<Runtime>::from(0),
+		frame_system::CheckWeight::<Runtime>::new(),
+		pallet_asset_tx_payment::ChargeAssetTxPayment::<Runtime>::from(0, None),
+		frame_metadata_hash_extension::CheckMetadataHash::<Runtime>::new(false),
+	)
+		.into();
+	let extrinsic = UncheckedExtrinsic::from_parts(
+		call,
+		generic::Preamble::General(ExtensionVariant::Other(TxExtensionOtherVersions::new(tx_ext))),
+	);
+	let weight_fee = <<Runtime as pallet_transaction_payment::Config>::WeightToFee as WeightToFeeT>::weight_to_fee(&extrinsic.get_dispatch_info().total_weight());
+	let length_fee = <<Runtime as pallet_transaction_payment::Config>::LengthToFee as WeightToFeeT>::weight_to_fee(&Weight::from_parts(
+		extrinsic.encoded_size() as u64,
+		0,
+	));
+	weight_fee.saturating_add(length_fee)
 }
 
 impl indiv_pallet_origin_restriction::RestrictedEntity<OriginCaller, Balance> for RestrictedEntity {
@@ -2262,6 +2326,13 @@ impl indiv_pallet_origin_restriction::RestrictedEntity<OriginCaller, Balance> fo
 				Allowance { max: 0, recovery_per_block: POI_CANDIDATE_RECOVERY },
 			RestrictedEntity::AccountParticipant(_) =>
 				Allowance { max: 0, recovery_per_block: ACCOUNT_PARTICIPANT_RECOVERY },
+			RestrictedEntity::StmtStoreHolder(_) => Allowance {
+				max: 0,
+				// Preserve the existing local cooldown, expressed in relay blocks.
+				recovery_per_block: stmt_store_replacement_fee()
+					.div_ceil(Balance::from(StmtStoreReplacementCooldown::get().div_ceil(6).max(1)))
+					.max(1),
+			},
 			RestrictedEntity::LitePerson(_) => Allowance {
 				max: LITE_PERSON_ALLOWANCE_MAX,
 				recovery_per_block: LITE_PERSON_ALLOWANCE_RECOVERY,
@@ -2283,8 +2354,19 @@ impl indiv_pallet_origin_restriction::RestrictedEntity<OriginCaller, Balance> fo
 				Some(RestrictedEntity::AccountParticipant(account_id.clone())),
 			PeopleLite(LitePerson(account_id)) =>
 				Some(RestrictedEntity::LitePerson(account_id.clone())),
+			Resources(indiv_pallet_resources::Origin::StmtStoreHolder(alias)) =>
+				Some(RestrictedEntity::StmtStoreHolder(*alias)),
 			_ => None,
 		}
+	}
+}
+
+pub struct ClearStmtStoreHolderUsage;
+impl indiv_pallet_resources::OnStmtStoreSlotCleared for ClearStmtStoreHolderUsage {
+	fn on_cleared(alias: &Alias) {
+		indiv_pallet_origin_restriction::Usages::<Runtime>::remove(
+			RestrictedEntity::StmtStoreHolder(*alias),
+		);
 	}
 }
 
@@ -2329,6 +2411,12 @@ impl ContainsPair<RestrictedEntity, RuntimeCall> for OperationAllowedOneTimeExce
 			},
 			RestrictedEntity::PersonalAlias(_) | RestrictedEntity::PersonalIdentity(_) => false,
 			RestrictedEntity::LitePerson(_) => false,
+			RestrictedEntity::StmtStoreHolder(_) => matches!(
+				call,
+				RuntimeCall::Resources(
+					indiv_pallet_resources::Call::replace_statement_store_account { .. }
+				)
+			),
 		}
 	}
 }
@@ -2384,4 +2472,47 @@ impl pallet_verify_signature::Config for Runtime {
 	type WeightInfo = weights::pallet_verify_signature::WeightInfo<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = VerifySignatureBenchmarkHelper;
+}
+
+#[cfg(test)]
+mod statement_slot_holder_tests {
+	use super::*;
+	use indiv_pallet_origin_restriction::RestrictedEntity as _;
+
+	#[test]
+	fn statement_slot_holder_is_rate_limited_and_cleanup_removes_its_usage() {
+		sp_io::TestExternalities::default().execute_with(|| {
+			let alias = [7u8; 32];
+			let origin =
+				OriginCaller::Resources(indiv_pallet_resources::Origin::StmtStoreHolder(alias));
+			let entity = RestrictedEntity::restricted_entity(&origin).unwrap();
+			assert_eq!(entity, RestrictedEntity::StmtStoreHolder(alias));
+			let call = RuntimeCall::Resources(
+				indiv_pallet_resources::Call::replace_statement_store_account {
+					period: 0,
+					alias,
+					new_account: AccountId::new([8u8; 32]),
+					since: 0,
+				},
+			);
+			assert!(OperationAllowedOneTimeExcess::contains(&entity, &call));
+			assert!(!OperationAllowedOneTimeExcess::contains(
+				&entity,
+				&RuntimeCall::System(frame_system::Call::remark { remark: vec![] })
+			));
+			let allowance = entity.allowance();
+			assert_eq!(allowance.max, 0);
+			assert!(allowance.recovery_per_block > 0);
+			let fee = stmt_store_replacement_fee();
+			assert!(fee > allowance.recovery_per_block);
+			let cooldown_blocks = StmtStoreReplacementCooldown::get().div_ceil(6).max(1);
+			assert!(allowance.recovery_per_block.saturating_mul(cooldown_blocks.into()) >= fee);
+			indiv_pallet_origin_restriction::Usages::<Runtime>::insert(
+				&entity,
+				indiv_pallet_origin_restriction::Usage { used: fee, at_block: 1 },
+			);
+			<ClearStmtStoreHolderUsage as indiv_pallet_resources::OnStmtStoreSlotCleared>::on_cleared(&alias);
+			assert!(!indiv_pallet_origin_restriction::Usages::<Runtime>::contains_key(entity));
+		});
+	}
 }

@@ -179,6 +179,7 @@ pub fn call_allowed_status(call: &RuntimeCall) -> (bool, bool) {
 		Coretime(..) => (OFF, OFF),
 		XcmPallet(..) => (OFF, OFF),
 		MessageQueue(..) => (OFF, OFF),
+		MultiBlockMigrations(..) => (OFF, OFF),
 		AssetRate(..) => (OFF, OFF),
 		Beefy(..) => (OFF, OFF),
 		// Root only.

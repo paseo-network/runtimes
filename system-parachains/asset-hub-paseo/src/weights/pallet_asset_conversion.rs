@@ -203,4 +203,13 @@ impl<T: frame_system::Config> pallet_asset_conversion::WeightInfo for WeightInfo
 			.saturating_add(Weight::from_parts(0, 4273))
 			.saturating_add(T::DbWeight::get().reads(3))
 	}
+
+	// SDK stable2609-2 weights for new benchmarks; regenerate for this runtime before release.
+	fn create_pool_with_fee() -> Weight {
+		<pallet_asset_conversion::weights::SubstrateWeight<T> as pallet_asset_conversion::WeightInfo>::create_pool_with_fee()
+	}
+
+	fn set_pool_fee() -> Weight {
+		<pallet_asset_conversion::weights::SubstrateWeight<T> as pallet_asset_conversion::WeightInfo>::set_pool_fee()
+	}
 }

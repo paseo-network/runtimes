@@ -332,12 +332,13 @@ impl<T: frame_system::Config> pallet_xcm::WeightInfo for WeightInfo<T> {
 	/// Proof: `PolkadotXcm::ShouldRecordXcm` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
 	/// Storage: `PolkadotXcm::AssetTraps` (r:1 w:1)
 	/// Proof: `PolkadotXcm::AssetTraps` (`max_values`: None, `max_size`: None, mode: `Measured`)
-	fn claim_assets() -> Weight {
+	// SDK stable2609-2 upstream benchmark; regenerate for Paseo before release.
+	fn claim_assets(_n: u32, ) -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `23`
 		//  Estimated: `3488`
-		// Minimum execution time: 85_470_000 picoseconds.
-		Weight::from_parts(95_529_000, 0)
+		// Minimum execution time: 33_942_000 picoseconds.
+		Weight::from_parts(36_222_611, 0)
 			.saturating_add(Weight::from_parts(0, 3488))
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(1))
@@ -370,12 +371,27 @@ impl<T: frame_system::Config> pallet_xcm::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(2))
 	}
-	fn weigh_message() -> Weight {
+	// SDK stable2609-2 upstream benchmark; regenerate for Paseo before release.
+	fn weigh_message(n: u32, ) -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
-		// Minimum execution time: 15_719_000 picoseconds.
-		Weight::from_parts(18_665_000, 0)
+		// Minimum execution time: 849_000 picoseconds.
+		Weight::from_parts(646_617, 0)
 			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 164
+			.saturating_add(Weight::from_parts(75_472, 0).saturating_mul(n.into()))
+	}
+
+	// SDK stable2609-2 upstream benchmark; regenerate for Paseo before release.
+	fn decode_xcm(n: u32, ) -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 244_000 picoseconds.
+		Weight::from_parts(1_289_630, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 0
+			.saturating_add(Weight::from_parts(1_855, 0).saturating_mul(n.into()))
 	}
 }

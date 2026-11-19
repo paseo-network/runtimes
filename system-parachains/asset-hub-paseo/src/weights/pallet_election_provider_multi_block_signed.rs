@@ -209,4 +209,16 @@ impl<T: frame_system::Config> pallet_election_provider_multi_block::signed::Weig
 			.saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(p.into())))
 			.saturating_add(Weight::from_parts(0, 2507).saturating_mul(p.into()))
 	}
+
+	// SDK stable2609-2 upstream benchmark; regenerate for Paseo before release.
+	fn claim_unpaid_reward() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `1604`
+		//  Estimated: `5069`
+		// Minimum execution time: 42_910_000 picoseconds.
+		Weight::from_parts(45_488_000, 0)
+			.saturating_add(Weight::from_parts(0, 5069))
+			.saturating_add(T::DbWeight::get().reads(2))
+			.saturating_add(T::DbWeight::get().writes(2))
+	}
 }

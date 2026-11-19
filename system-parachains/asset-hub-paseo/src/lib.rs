@@ -114,8 +114,6 @@ use xcm_runtime_apis::{
 	fees::Error as XcmPaymentApiError,
 };
 
-#[cfg(feature = "std")]
-use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
 use codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
@@ -231,12 +229,6 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	transaction_version: 22,
 	system_version: 1,
 };
-
-/// The version information used to identify this runtime when compiled natively.
-#[cfg(feature = "std")]
-pub fn native_version() -> NativeVersion {
-	NativeVersion { runtime_version: VERSION, can_author_with: Default::default() }
-}
 
 /// TODO: Uncomment me after 2.3.1 is on chain
 /// pub const SLOT_DURATION: u64 = 24_000;
@@ -1272,7 +1264,13 @@ parameter_types! {
 pub type PoolIdToAccountId =
 	pallet_asset_conversion::AccountIdConverter<AssetConversionPalletId, (Location, Location)>;
 
+parameter_types! {
+	pub MaxSwapFee: sp_runtime::Permill = sp_runtime::Permill::from_percent(2);
+}
+
 impl pallet_asset_conversion::Config for Runtime {
+	type AdminOrigin = frame_system::EnsureRoot<AccountId>;
+	type MaxSwapFee = MaxSwapFee;
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type HigherPrecisionBalance = sp_core::U256;

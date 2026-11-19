@@ -53,104 +53,6 @@ use core::marker::PhantomData;
 /// Weight functions for `indiv_pallet_game`.
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> indiv_pallet_game::WeightInfo for WeightInfo<T> {
-	/// Storage: `Game::Game` (r:1 w:1)
-	/// Proof: `Game::Game` (`max_values`: Some(1), `max_size`: Some(74), added: 569, mode: `MaxEncodedLen`)
-	/// Storage: `Timestamp::Now` (r:1 w:0)
-	/// Proof: `Timestamp::Now` (`max_values`: Some(1), `max_size`: Some(8), added: 503, mode: `MaxEncodedLen`)
-	/// Storage: `Game::StoredPhaseDurations` (r:1 w:0)
-	/// Proof: `Game::StoredPhaseDurations` (`max_values`: Some(1), `max_size`: Some(20), added: 515, mode: `MaxEncodedLen`)
-	/// Storage: `Game::GameIndex` (r:1 w:1)
-	/// Proof: `Game::GameIndex` (`max_values`: Some(1), `max_size`: Some(4), added: 499, mode: `MaxEncodedLen`)
-	/// Storage: `Assets::Asset` (r:1 w:1)
-	/// Proof: `Assets::Asset` (`max_values`: None, `max_size`: Some(808), added: 3283, mode: `MaxEncodedLen`)
-	/// Storage: `Assets::Account` (r:2 w:2)
-	/// Proof: `Assets::Account` (`max_values`: None, `max_size`: Some(732), added: 3207, mode: `MaxEncodedLen`)
-	/// Storage: `AssetsHolder::BalancesOnHold` (r:2 w:1)
-	/// Proof: `AssetsHolder::BalancesOnHold` (`max_values`: None, `max_size`: Some(682), added: 3157, mode: `MaxEncodedLen`)
-	/// Storage: `Airdrop::SupportedAssets` (r:1 w:0)
-	/// Proof: `Airdrop::SupportedAssets` (`max_values`: None, `max_size`: Some(626), added: 3101, mode: `MaxEncodedLen`)
-	/// Storage: `Airdrop::Events` (r:16 w:16)
-	/// Proof: `Airdrop::Events` (`max_values`: None, `max_size`: Some(800), added: 3275, mode: `MaxEncodedLen`)
-	/// Storage: `AssetsHolder::Holds` (r:1 w:1)
-	/// Proof: `AssetsHolder::Holds` (`max_values`: None, `max_size`: Some(883), added: 3358, mode: `MaxEncodedLen`)
-	/// Storage: `Game::GameHistory` (r:0 w:1)
-	/// Proof: `Game::GameHistory` (`max_values`: None, `max_size`: Some(16), added: 2491, mode: `MaxEncodedLen`)
-	/// Storage: `Airdrop::ActionSchedule` (r:0 w:16)
-	/// Proof: `Airdrop::ActionSchedule` (`max_values`: None, `max_size`: Some(40), added: 2515, mode: `MaxEncodedLen`)
-	/// The range of component `n` is `[0, 16]`.
-	fn new_game(n: u32, ) -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `825`
-		//  Estimated: `7404 + n * (3275 ±0)`
-		// Minimum execution time: 10_069_000 picoseconds.
-		Weight::from_parts(27_540_878, 0)
-			.saturating_add(Weight::from_parts(0, 7404))
-			// Standard Error: 86_340
-			.saturating_add(Weight::from_parts(65_767_977, 0).saturating_mul(n.into()))
-			.saturating_add(T::DbWeight::get().reads(9))
-			.saturating_add(T::DbWeight::get().reads((1_u64).saturating_mul(n.into())))
-			.saturating_add(T::DbWeight::get().writes(7))
-			.saturating_add(T::DbWeight::get().writes((2_u64).saturating_mul(n.into())))
-			.saturating_add(Weight::from_parts(0, 3275).saturating_mul(n.into()))
-	}
-	/// Storage: `Game::Game` (r:1 w:0)
-	/// Proof: `Game::Game` (`max_values`: Some(1), `max_size`: Some(74), added: 569, mode: `MaxEncodedLen`)
-	fn get_game() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `230`
-		//  Estimated: `1559`
-		// Minimum execution time: 4_178_000 picoseconds.
-		Weight::from_parts(4_478_000, 0)
-			.saturating_add(Weight::from_parts(0, 1559))
-			.saturating_add(T::DbWeight::get().reads(1))
-	}
-	/// Storage: `Game::GameSchedules` (r:1 w:0)
-	/// Proof: `Game::GameSchedules` (`max_values`: Some(1), `max_size`: Some(264005), added: 264500, mode: `MaxEncodedLen`)
-	/// The range of component `n` is `[1, 26]`.
-	fn get_game_schedules(n: u32, ) -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `137 + n * (714 ±0)`
-		//  Estimated: `265490`
-		// Minimum execution time: 8_085_000 picoseconds.
-		Weight::from_parts(3_313_178, 0)
-			.saturating_add(Weight::from_parts(0, 265490))
-			// Standard Error: 8_106
-			.saturating_add(Weight::from_parts(4_419_723, 0).saturating_mul(n.into()))
-			.saturating_add(T::DbWeight::get().reads(1))
-	}
-	/// Storage: `Timestamp::Now` (r:1 w:0)
-	/// Proof: `Timestamp::Now` (`max_values`: Some(1), `max_size`: Some(8), added: 503, mode: `MaxEncodedLen`)
-	fn unix_time() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `94`
-		//  Estimated: `1493`
-		// Minimum execution time: 3_176_000 picoseconds.
-		Weight::from_parts(3_386_000, 0)
-			.saturating_add(Weight::from_parts(0, 1493))
-			.saturating_add(T::DbWeight::get().reads(1))
-	}
-	/// Storage: `Game::Game` (r:0 w:1)
-	/// Proof: `Game::Game` (`max_values`: Some(1), `max_size`: Some(74), added: 569, mode: `MaxEncodedLen`)
-	fn put_game() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `0`
-		//  Estimated: `0`
-		// Minimum execution time: 391_000 picoseconds.
-		Weight::from_parts(491_000, 0)
-			.saturating_add(Weight::from_parts(0, 0))
-			.saturating_add(T::DbWeight::get().writes(1))
-	}
-	/// Storage: `Game::GameSchedules` (r:0 w:1)
-	/// Proof: `Game::GameSchedules` (`max_values`: Some(1), `max_size`: Some(264005), added: 264500, mode: `MaxEncodedLen`)
-	fn put_game_schedules() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `0`
-		//  Estimated: `0`
-		// Minimum execution time: 31_740_000 picoseconds.
-		Weight::from_parts(35_476_000, 0)
-			.saturating_add(Weight::from_parts(0, 0))
-			.saturating_add(T::DbWeight::get().writes(1))
-	}
 	/// Storage: `Timestamp::Now` (r:1 w:0)
 	/// Proof: `Timestamp::Now` (`max_values`: Some(1), `max_size`: Some(8), added: 503, mode: `MaxEncodedLen`)
 	/// Storage: `System::ParentHash` (r:1 w:0)
@@ -903,20 +805,6 @@ impl<T: frame_system::Config> indiv_pallet_game::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().writes(2))
 			.saturating_add(Weight::from_parts(0, 3275).saturating_mul(n.into()))
 	}
-	/// Storage: `Game::Game` (r:1 w:1)
-	/// Proof: `Game::Game` (`max_values`: Some(1), `max_size`: Some(74), added: 569, mode: `MaxEncodedLen`)
-	/// Storage: `Timestamp::Now` (r:1 w:0)
-	/// Proof: `Timestamp::Now` (`max_values`: Some(1), `max_size`: Some(8), added: 503, mode: `MaxEncodedLen`)
-	fn process_reporting() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `264`
-		//  Estimated: `1559`
-		// Minimum execution time: 6_723_000 picoseconds.
-		Weight::from_parts(7_164_000, 0)
-			.saturating_add(Weight::from_parts(0, 1559))
-			.saturating_add(T::DbWeight::get().reads(2))
-			.saturating_add(T::DbWeight::get().writes(1))
-	}
 	/// Storage: `Game::PlayerAttendanceHistory` (r:1 w:1)
 	/// Proof: `Game::PlayerAttendanceHistory` (`max_values`: None, `max_size`: Some(98), added: 2573, mode: `MaxEncodedLen`)
 	/// Storage: `Game::GameParticipantCount` (r:1 w:1)
@@ -1028,5 +916,30 @@ impl<T: frame_system::Config> indiv_pallet_game::WeightInfo for WeightInfo<T> {
 			.saturating_add(Weight::from_parts(0, 7404))
 			.saturating_add(T::DbWeight::get().reads(12))
 			.saturating_add(T::DbWeight::get().writes(8))
+	}
+
+	// Upstream SDK-compatible weights for new benchmarks; regenerate before release.
+	fn start_game() -> Weight {
+		<indiv_pallet_game::weights::SubstrateWeight<T> as indiv_pallet_game::WeightInfo>::start_game()
+	}
+
+	fn end_registration_shuffle() -> Weight {
+		<indiv_pallet_game::weights::SubstrateWeight<T> as indiv_pallet_game::WeightInfo>::end_registration_shuffle()
+	}
+
+	fn end_registration_cancel(n: u32, ) -> Weight {
+		<indiv_pallet_game::weights::SubstrateWeight<T> as indiv_pallet_game::WeightInfo>::end_registration_cancel(n)
+	}
+
+	fn authorize_game_step() -> Weight {
+		<indiv_pallet_game::weights::SubstrateWeight<T> as indiv_pallet_game::WeightInfo>::authorize_game_step()
+	}
+
+	fn game_step_base() -> Weight {
+		<indiv_pallet_game::weights::SubstrateWeight<T> as indiv_pallet_game::WeightInfo>::game_step_base()
+	}
+
+	fn end_reporting() -> Weight {
+		<indiv_pallet_game::weights::SubstrateWeight<T> as indiv_pallet_game::WeightInfo>::end_reporting()
 	}
 }

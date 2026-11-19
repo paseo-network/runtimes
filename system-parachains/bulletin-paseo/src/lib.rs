@@ -66,8 +66,6 @@ use sp_runtime::{
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, MultiAddress, Perbill,
 };
-#[cfg(feature = "std")]
-use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use system_parachains_constants::paseo::{
 	account::ACCUMULATE_FORWARD_PALLET_ID,
@@ -211,15 +209,9 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	system_version: 1,
 };
 
-/// The version information used to identify this runtime when compiled natively.
-#[cfg(feature = "std")]
-pub fn native_version() -> NativeVersion {
-	NativeVersion { runtime_version: VERSION, can_author_with: Default::default() }
-}
-
 /// Consensus/timing constants, kept local rather than sourced from
 /// `system_parachains_constants::paseo::consensus`: this runtime uses the base async-backing
-/// parameters (`BLOCK_PROCESSING_VELOCITY = 1`, no relay-parent offset), not the
+/// parameters (`BLOCK_PROCESSING_VELOCITY = 1`, `RELAY_PARENT_OFFSET = 1`), not the
 /// `elastic_scaling` variant (`BLOCK_PROCESSING_VELOCITY = 3`, `RELAY_PARENT_OFFSET = 1`) that
 /// the other system chains have since moved to — switching would be a real, untested change to
 /// this chain's block-authoring/collation timing, not just deduplication.

@@ -475,11 +475,9 @@ jobs:
       - name: Load pins from the common env files
         run: cat "$TOOLS/.github/env" .github/env >> $GITHUB_ENV
 
-      # RUST_STABLE_VERSION must name the same toolchain as rust-toolchain.toml (channel "1.91"),
-      # because that file is what cargo actually honours. "1.91.0" here installed a second,
-      # separately-named toolchain and put rust-src on it, leaving the one the build used without
-      # it - pallet-revive-fixtures builds with build-std and dies on "unable to build with the
-      # standard library".
+      # RUST_STABLE_VERSION must name the same toolchain as rust-toolchain.toml (channel "1.93.0"),
+      # because that file is what cargo actually honours. Installing rust-src under a differently
+      # named toolchain leaves build-std without the sources needed by pallet-revive-fixtures.
       - name: Install stable toolchain
         uses: dtolnay/rust-toolchain@master
         with:

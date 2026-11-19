@@ -286,4 +286,9 @@ impl<T: frame_system::Config> pallet_bounties::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(3))
 			.saturating_add(T::DbWeight::get().writes(2))
 	}
+
+	// SDK stable2609-2 weights for new benchmarks; regenerate for this runtime before release.
+	fn reclaim_bounty_funds() -> Weight {
+		<pallet_bounties::weights::SubstrateWeight<T> as pallet_bounties::WeightInfo>::reclaim_bounty_funds()
+	}
 }

@@ -106,4 +106,16 @@ impl<T: frame_system::Config> runtime_parachains::coretime::WeightInfo for Weigh
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
+
+	// SDK stable2609-2 upstream benchmark; regenerate for Paseo before release.
+	fn queue_on_demand_batch(_s: u32, ) -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `80051`
+		//  Estimated: `81536`
+		// Minimum execution time: 91_630_000 picoseconds.
+		Weight::from_parts(102_316_049, 0)
+			.saturating_add(Weight::from_parts(0, 81536))
+			.saturating_add(T::DbWeight::get().reads(1))
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
 }

@@ -270,7 +270,13 @@ frame_support::ord_parameter_types! {
 pub type PoolIdToAccountId =
 	pallet_asset_conversion::AccountIdConverter<AssetConversionPalletId, (Location, Location)>;
 
+parameter_types! {
+	pub MaxSwapFee: sp_runtime::Permill = sp_runtime::Permill::from_percent(2);
+}
+
 impl pallet_asset_conversion::Config for Runtime {
+	type AdminOrigin = frame_system::EnsureRoot<AccountId>;
+	type MaxSwapFee = MaxSwapFee;
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type HigherPrecisionBalance = sp_core::U256;

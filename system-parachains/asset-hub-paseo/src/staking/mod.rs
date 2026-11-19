@@ -261,7 +261,14 @@ parameter_types! {
 	pub RewardBase: Balance = UNITS * 5;
 }
 
+parameter_types! {
+	pub SignedRewardPot: Option<AccountId> = None;
+}
+
 impl multi_block::signed::Config for Runtime {
+	type Slash = ();
+	type RewardSource = multi_block::signed::ActivePot<SignedRewardPot>;
+	type MaxFeeRefund = multi_block::signed::FullSubmissionFee<Runtime, TransactionPayment>;
 	type Currency = Balances;
 	type BailoutGraceRatio = BailoutGraceRatio;
 	type EjectGraceRatio = EjectGraceRatio;
@@ -485,6 +492,7 @@ parameter_types! {
 }
 
 impl pallet_staking_async::Config for Runtime {
+	type IsValidatorInactive = ();
 	type Filter = ();
 	type OldCurrency = Balances;
 	type Currency = Balances;

@@ -26,6 +26,10 @@ parameter_types! {
 	pub const MaxPointsToBalance: u8 = 10;
 }
 
+parameter_types! {
+	pub MaxUnbondingPools: u32 = <Runtime as pallet_staking_async::Config>::BondingDuration::get().saturating_add(4);
+}
+
 impl pallet_nomination_pools::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
@@ -35,7 +39,7 @@ impl pallet_nomination_pools::Config for Runtime {
 	type U256ToBalance = polkadot_runtime_common::U256ToBalance;
 	type StakeAdapter =
 		pallet_nomination_pools::adapter::DelegateStake<Self, Staking, DelegatedStaking>;
-	type PostUnbondingPoolsWindow = frame_support::traits::ConstU32<4>;
+	type MaxUnbondingPools = MaxUnbondingPools;
 	type MaxMetadataLen = frame_support::traits::ConstU32<256>;
 	// we use the same number of allowed unlocking chunks as with staking.
 	type MaxUnbonding = <Self as pallet_staking_async::Config>::MaxUnlockingChunks;

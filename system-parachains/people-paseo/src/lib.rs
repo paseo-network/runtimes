@@ -72,8 +72,6 @@ use sp_runtime::{
 	ApplyExtrinsicResult, Debug,
 };
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
-#[cfg(feature = "std")]
-use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 // This runtime produces 2-second blocks (`elastic_scaling`: a 6s relay slot at
 // `BLOCK_PROCESSING_VELOCITY = 3`), which is the async-backing block cadence. Its block *weight*
@@ -258,12 +256,6 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	transaction_version: 4,
 	system_version: 1,
 };
-
-/// The version information used to identify this runtime when compiled natively.
-#[cfg(feature = "std")]
-pub fn native_version() -> NativeVersion {
-	NativeVersion { runtime_version: VERSION, can_author_with: Default::default() }
-}
 
 /// TODO: Uncomment me after 2.3.1 is on chain
 /// pub const SLOT_DURATION: u64 = 24_000;

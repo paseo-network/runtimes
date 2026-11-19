@@ -73,6 +73,8 @@ parameter_types! {
 }
 
 impl pallet_whitelist::Config for Runtime {
+	type DeferredDispatchExpiration = ConstU32<{ 28 * paseo_runtime_constants::time::DAYS }>;
+	type BlockNumberProvider = cumulus_pallet_parachain_system::RelaychainDataProvider<Runtime>;
 	type WeightInfo = weights::pallet_whitelist::WeightInfo<Self>;
 	type RuntimeCall = RuntimeCall;
 	type RuntimeEvent = RuntimeEvent;

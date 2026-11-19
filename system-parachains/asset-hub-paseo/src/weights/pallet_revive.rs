@@ -1633,4 +1633,141 @@ impl<T: frame_system::Config> pallet_revive::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(5))
 			.saturating_add(T::DbWeight::get().writes(5))
 	}
+
+	// SDK stable2609-2 weights for new benchmarks; regenerate for this runtime before release.
+	fn overlay_probe_full(n: u32, ) -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::overlay_probe_full(n)
+	}
+
+	fn overlay_probe_empty(n: u32, ) -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::overlay_probe_empty(n)
+	}
+
+	fn seal_set_storage_hot(n: u32, o: u32, ) -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::seal_set_storage_hot(n, o)
+	}
+
+	fn clear_storage_hot(n: u32, ) -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::clear_storage_hot(n)
+	}
+
+	fn seal_get_storage_hot(n: u32, ) -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::seal_get_storage_hot(n)
+	}
+
+	fn contains_storage_hot(n: u32, ) -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::contains_storage_hot(n)
+	}
+
+	fn take_storage_hot(n: u32, ) -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::take_storage_hot(n)
+	}
+
+	fn access_list_touch_cold_full() -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::access_list_touch_cold_full()
+	}
+
+	fn access_list_touch_hot_full() -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::access_list_touch_hot_full()
+	}
+
+	fn access_list_touch_cold_empty() -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::access_list_touch_cold_empty()
+	}
+
+	fn access_list_touch_hot_single_element() -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::access_list_touch_hot_single_element()
+	}
+
+	fn access_list_rollback_amortization() -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::access_list_rollback_amortization()
+	}
+
+	fn evm_pop_opcode(r: u32, ) -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_pop_opcode(r)
+	}
+
+	fn evm_div_opcode(r: u32, ) -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_div_opcode(r)
+	}
+
+	fn evm_div_opcode_one_limb_variant(r: u32, ) -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_div_opcode_one_limb_variant(r)
+	}
+
+	fn evm_div_opcode_mixed_variant(r: u32, ) -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_div_opcode_mixed_variant(r)
+	}
+
+	fn evm_div_opcode_fixed_knuth_variant(r: u32, ) -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_div_opcode_fixed_knuth_variant(r)
+	}
+
+	fn evm_sdiv_opcode(r: u32, ) -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_sdiv_opcode(r)
+	}
+
+	fn evm_sdiv_opcode_one_limb_variant(r: u32, ) -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_sdiv_opcode_one_limb_variant(r)
+	}
+
+	fn evm_sdiv_opcode_mixed_variant(r: u32, ) -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_sdiv_opcode_mixed_variant(r)
+	}
+
+	fn evm_sdiv_opcode_fixed_knuth_variant(r: u32, ) -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_sdiv_opcode_fixed_knuth_variant(r)
+	}
+
+	fn evm_mod_opcode(r: u32, ) -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_mod_opcode(r)
+	}
+
+	fn evm_mod_opcode_one_limb_variant(r: u32, ) -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_mod_opcode_one_limb_variant(r)
+	}
+
+	fn evm_mod_opcode_mixed_variant(r: u32, ) -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_mod_opcode_mixed_variant(r)
+	}
+
+	fn evm_mod_opcode_fixed_knuth_variant(r: u32, ) -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_mod_opcode_fixed_knuth_variant(r)
+	}
+
+	fn evm_smod_opcode(r: u32, ) -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_smod_opcode(r)
+	}
+
+	fn evm_smod_opcode_one_limb_variant(r: u32, ) -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_smod_opcode_one_limb_variant(r)
+	}
+
+	fn evm_smod_opcode_mixed_variant(r: u32, ) -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_smod_opcode_mixed_variant(r)
+	}
+
+	fn evm_smod_opcode_fixed_knuth_variant(r: u32, ) -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_smod_opcode_fixed_knuth_variant(r)
+	}
+
+	fn evm_addmod_opcode(r: u32, ) -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_addmod_opcode(r)
+	}
+
+	fn evm_addmod_opcode_one_limb_variant(r: u32, ) -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_addmod_opcode_one_limb_variant(r)
+	}
+
+	fn evm_addmod_opcode_mixed_variant(r: u32, ) -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_addmod_opcode_mixed_variant(r)
+	}
+
+	fn evm_addmod_opcode_fixed_knuth_variant(r: u32, ) -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_addmod_opcode_fixed_knuth_variant(r)
+	}
+
+	fn evm_mulmod_opcode(r: u32, ) -> Weight {
+		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_mulmod_opcode(r)
+	}
 }

@@ -583,4 +583,9 @@ impl<T: frame_system::Config> pallet_identity::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(3))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
+
+	// SDK stable2609-2 weights for new benchmarks; regenerate for this runtime before release.
+	fn remove_registrar(r: u32, ) -> Weight {
+		<pallet_identity::weights::SubstrateWeight<T> as pallet_identity::WeightInfo>::remove_registrar(r)
+	}
 }

@@ -13,6 +13,7 @@ license.workspace = true
 pallet-rc-migrator = { workspace = true }
 # Behind the `ahm-v2` feature; see `src/ahm_v2.rs`.
 pallet-rc2-migrator = { workspace = true }
+migrator-types = { workspace = true }
 # End: Asset Hub Migration concerning deps
 
 codec = { features = ["derive", "max-encoded-len"], workspace = true }
@@ -65,6 +66,7 @@ frame-metadata-hash-extension = { workspace = true }
 pallet-grandpa = { workspace = true }
 pallet-indices = { workspace = true }
 pallet-message-queue = { workspace = true }
+pallet-migrations = { workspace = true }
 pallet-mmr = { workspace = true }
 pallet-multisig = { workspace = true }
 pallet-nomination-pools = { workspace = true }
@@ -143,6 +145,7 @@ ahm-v2 = []
 std = [
 	"pallet-rc-migrator/std",
 	"pallet-rc2-migrator/std",
+	"migrator-types/std",
 
 	"authority-discovery-primitives/std",
 	"babe-primitives/std",
@@ -178,6 +181,7 @@ std = [
 	"pallet-grandpa/std",
 	"pallet-indices/std",
 	"pallet-message-queue/std",
+	"pallet-migrations/std",
 	"pallet-mmr/std",
 	"pallet-multisig/std",
 	"pallet-nomination-pools-runtime-api/std",
@@ -264,6 +268,7 @@ runtime-benchmarks = [
 	"pallet-grandpa/runtime-benchmarks",
 	"pallet-indices/runtime-benchmarks",
 	"pallet-message-queue/runtime-benchmarks",
+	"pallet-migrations/runtime-benchmarks",
 	"pallet-mmr/runtime-benchmarks",
 	"pallet-multisig/runtime-benchmarks",
 	"pallet-nomination-pools/runtime-benchmarks",
@@ -329,6 +334,7 @@ try-runtime = [
 	"pallet-grandpa/try-runtime",
 	"pallet-indices/try-runtime",
 	"pallet-message-queue/try-runtime",
+	"pallet-migrations/try-runtime",
 	"pallet-mmr/try-runtime",
 	"pallet-multisig/try-runtime",
 	"pallet-nomination-pools/try-runtime",

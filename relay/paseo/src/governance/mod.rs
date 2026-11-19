@@ -61,6 +61,8 @@ pub type TreasurySpender = EnsureRootWithSuccess<AccountId, MaxBalance>;
 impl origins::pallet_custom_origins::Config for Runtime {}
 
 impl pallet_whitelist::Config for Runtime {
+	type DeferredDispatchExpiration = ConstU32<{ 28 * DAYS }>;
+	type BlockNumberProvider = System;
 	type WeightInfo = weights::pallet_whitelist::WeightInfo<Self>;
 	type RuntimeCall = RuntimeCall;
 	type RuntimeEvent = RuntimeEvent;

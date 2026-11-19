@@ -124,6 +124,9 @@ pub type SingleBlockMigrations = (Unreleased, Permanent);
 /// `pallet_assets::Config::ReserveData` changed from `()` to `ForeignAssetReserveData`, so the
 /// per-asset reserve entries must be backfilled from the previously hardcoded XCM rules.
 pub type MbmMigrations = (
+	indiv_pallet_people_lite::migration::v1::LazyMigrationV0ToV1<Runtime>,
+	indiv_pallet_people::migration::MigrateV0ToV1<Runtime>,
+	indiv_pallet_resources::migration::v1::RecordGrantedAllowances<Runtime>,
 	assets_common::migrations::foreign_assets_reserves::ForeignAssetsReservesMigration<
 		Runtime,
 		(),

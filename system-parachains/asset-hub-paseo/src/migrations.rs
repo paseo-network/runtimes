@@ -252,6 +252,7 @@ impl OnRuntimeUpgrade for ForceCreatePgasAsset {
 
 /// Unreleased migrations. Add new ones here:
 pub type Unreleased = (
+	pallet_election_provider_multi_block::signed::migrations::v1::MigrateV0ToV1<Runtime>,
 	// Remove an old staking value
 	crate::staking::RemoveMarchTIValue,
 	cumulus_pallet_xcmp_queue::migration::v6::MigrateV5ToV6<crate::Runtime>,

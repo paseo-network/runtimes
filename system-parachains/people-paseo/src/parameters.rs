@@ -29,9 +29,11 @@ use frame_support::{
 	PalletId,
 };
 use indiv_pallet_resources::types::LongTermStorageAllocation;
-use indiv_support::parameters::{
-	AtLeast, AtLeastOne, AtMost, BenchmarkMax, SaturatingSubOne, StatementAllowanceGetter,
-	StatementAllowanceParameter,
+use indiv_support::{
+	parameters::{
+		AtLeast, AtLeastOne, AtMost, BenchmarkMax, SaturatingSubOne, StatementAllowanceGetter,
+	},
+	statement_allowance::BoundedStatementAllowance,
 };
 use sp_runtime::traits::AccountIdConversion;
 
@@ -56,17 +58,17 @@ pub mod dynamic_params {
 	#[codec(index = 0)]
 	pub mod statement_storage {
 		#[codec(index = 0)]
-		pub static AccountsApiAllowance: StatementAllowanceParameter =
-			StatementAllowanceParameter { max_size: 500 * 1024, max_count: 2 };
+		pub static AccountsApiAllowance: BoundedStatementAllowance =
+			BoundedStatementAllowance { max_size: 500 * 1024, max_count: 2 };
 		#[codec(index = 6)]
-		pub static NotificationAllowance: StatementAllowanceParameter =
-			StatementAllowanceParameter { max_size: 10 * 1024, max_count: 1 };
+		pub static NotificationAllowance: BoundedStatementAllowance =
+			BoundedStatementAllowance { max_size: 10 * 1024, max_count: 1 };
 		#[codec(index = 10)]
-		pub static LitePersonStatementLimit: StatementAllowanceParameter =
-			StatementAllowanceParameter { max_size: 500 * 1024, max_count: 50 };
+		pub static LitePersonStatementLimit: BoundedStatementAllowance =
+			BoundedStatementAllowance { max_size: 500 * 1024, max_count: 50 };
 		#[codec(index = 11)]
-		pub static PersonStatementLimit: StatementAllowanceParameter =
-			StatementAllowanceParameter { max_size: 1024 * 1024, max_count: 200 };
+		pub static PersonStatementLimit: BoundedStatementAllowance =
+			BoundedStatementAllowance { max_size: 1024 * 1024, max_count: 200 };
 		#[codec(index = 1)]
 		pub static StmtStoreSlotsPerPeriod: u32 = 20;
 		#[codec(index = 2)]

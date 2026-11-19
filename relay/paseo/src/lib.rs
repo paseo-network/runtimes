@@ -119,8 +119,6 @@ use sp_runtime::{
 	ApplyExtrinsicResult, Debug, FixedU128, KeyTypeId, OpaqueValue, Perbill, Percent, Permill,
 };
 use sp_staking::{EraIndex, SessionIndex};
-#[cfg(any(feature = "std", test))]
-use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use xcm::prelude::*;
 use xcm_builder::PayOverXcm;
@@ -183,12 +181,6 @@ pub const BABE_GENESIS_EPOCH_CONFIG: babe_primitives::BabeEpochConfiguration =
 		c: PRIMARY_PROBABILITY,
 		allowed_slots: babe_primitives::AllowedSlots::PrimaryAndSecondaryVRFSlots,
 	};
-
-/// Native version.
-#[cfg(any(feature = "std", test))]
-pub fn native_version() -> NativeVersion {
-	NativeVersion { runtime_version: VERSION, can_author_with: Default::default() }
-}
 
 parameter_types! {
 	pub const Version: RuntimeVersion = VERSION;
@@ -286,10 +278,28 @@ impl frame_system::Config for Runtime {
 	type OnSetCode = ();
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 	type SingleBlockMigrations = migrations::SingleBlockMigrations;
-	type MultiBlockMigrator = ();
+	type MultiBlockMigrator = MultiBlockMigrations;
 	type PreInherents = ();
 	type PostInherents = ();
 	type PostTransactions = ();
+}
+
+parameter_types! {
+	pub MbmServiceWeight: Weight = Perbill::from_percent(80) * BlockWeights::get().max_block;
+}
+
+impl pallet_migrations::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	#[cfg(not(feature = "runtime-benchmarks"))]
+	type Migrations = migrations::MbmMigrations;
+	#[cfg(feature = "runtime-benchmarks")]
+	type Migrations = pallet_migrations::mock_helpers::MockedMigrations;
+	type CursorMaxLen = ConstU32<65_536>;
+	type IdentifierMaxLen = ConstU32<256>;
+	type MigrationStatusHandler = ();
+	type FailedMigrationHandler = frame_support::migrations::ForceUnstuckOnFailedMigration;
+	type MaxServiceWeight = MbmServiceWeight;
+	type WeightInfo = pallet_migrations::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -1410,7 +1420,9 @@ impl pallet_message_queue::Config for Runtime {
 	type IdleMaxServiceWeight = MessageQueueIdleServiceWeight;
 }
 
-impl parachains_dmp::Config for Runtime {}
+impl parachains_dmp::Config for Runtime {
+	type WeightInfo = runtime_parachains::dmp::weights::SubstrateWeight<Runtime>;
+}
 
 parameter_types! {
 	pub const HrmpChannelSizeAndCapacityWithSystemRatio: Percent = Percent::from_percent(100);
@@ -1601,6 +1613,10 @@ parameter_types! {
 	pub const MaxPointsToBalance: u8 = 10;
 }
 
+parameter_types! {
+	pub MaxUnbondingPools: u32 = <Runtime as pallet_staking::Config>::BondingDuration::get().saturating_add(4);
+}
+
 impl pallet_nomination_pools::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
@@ -1610,7 +1626,7 @@ impl pallet_nomination_pools::Config for Runtime {
 	type U256ToBalance = polkadot_runtime_common::U256ToBalance;
 	type StakeAdapter =
 		pallet_nomination_pools::adapter::DelegateStake<Self, Staking, DelegatedStaking>;
-	type PostUnbondingPoolsWindow = frame_support::traits::ConstU32<4>;
+	type MaxUnbondingPools = MaxUnbondingPools;
 	type MaxMetadataLen = frame_support::traits::ConstU32<256>;
 	// we use the same number of allowed unlocking chunks as with staking.
 	type MaxUnbonding = <Self as pallet_staking::Config>::MaxUnlockingChunks;
@@ -1965,6 +1981,8 @@ construct_runtime! {
 		// Asset rate.
 		AssetRate: pallet_asset_rate = 101,
 
+		MultiBlockMigrations: pallet_migrations = 102,
+
 		// BEEFY Bridges support.
 		Beefy: pallet_beefy = 200,
 		// MMR leaf construction must be after session in order to have a leaf's next_auth_set
@@ -2049,6 +2067,8 @@ pub mod migrations {
 
 	/// All migrations that will run on the next runtime upgrade.
 	pub type SingleBlockMigrations = Unreleased;
+
+	pub type MbmMigrations = (parachains_dmp::migration::MigrateV0ToV1<Runtime>,);
 }
 
 /// Unchecked extrinsic type as expected by this runtime.
@@ -2099,6 +2119,7 @@ mod benches {
 		[pallet_fast_unstake, FastUnstake]
 		[pallet_indices, Indices]
 		[pallet_message_queue, MessageQueue]
+		[pallet_migrations, MultiBlockMigrations]
 		[pallet_multisig, Multisig]
 		[pallet_offences, OffencesBench::<Runtime>]
 		[pallet_parameters, Parameters]

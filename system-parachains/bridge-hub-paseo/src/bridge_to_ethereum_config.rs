@@ -69,6 +69,11 @@ pub type SnowbridgeExporterV2 = EthereumBlobExporterV2<
 	EthereumOutboundQueueV2,
 	EthereumSystemV2,
 	AssetHubParaId,
+	frame_support::traits::EverythingBut<
+		frame_support::traits::Equals<
+			system_parachains_constants::paseo::locations::AssetHubLocation,
+		>,
+	>,
 >;
 
 parameter_types! {
