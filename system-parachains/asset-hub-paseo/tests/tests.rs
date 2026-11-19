@@ -1374,7 +1374,7 @@ fn slash_goes_to_dap_buffer_account() {
 		assert_eq!(<Balances as Inspect<_>>::balance(&dap_buffer), dap_buffer_before);
 
 		// on_idle drains staging into buffer and deactivates.
-		pallet_dap::Pallet::<Runtime>::on_idle(1, Weight::MAX);
+		<pallet_dap::Pallet<Runtime> as Hooks<_>>::on_idle(1, Weight::MAX);
 		assert_eq!(<Balances as Inspect<_>>::balance(&dap_staging), dap_staging_before);
 		assert_eq!(
 			<Balances as Inspect<_>>::balance(&dap_buffer),
@@ -1396,7 +1396,7 @@ fn slash_goes_to_dap_buffer_account() {
 		);
 
 		// After on_idle: staging drains into buffer and deactivates.
-		pallet_dap::Pallet::<Runtime>::on_idle(2, Weight::MAX);
+		<pallet_dap::Pallet<Runtime> as Hooks<_>>::on_idle(2, Weight::MAX);
 		assert_eq!(<Balances as Inspect<_>>::balance(&dap_staging), dap_staging_before);
 		assert_eq!(
 			<Balances as Inspect<_>>::balance(&dap_buffer),
@@ -1558,7 +1558,7 @@ fn dust_goes_to_dap_and_is_deactivated() {
 		assert_eq!(Balances::total_issuance(), issuance_before);
 
 		// The drain deactivates it: still issued, no longer active.
-		pallet_dap::Pallet::<Runtime>::on_idle(1, Weight::MAX);
+		<pallet_dap::Pallet<Runtime> as Hooks<_>>::on_idle(1, Weight::MAX);
 
 		assert_eq!(<Balances as Inspect<_>>::balance(&dap_staging), staging_before);
 		assert_eq!(<Balances as Inspect<_>>::balance(&dap_buffer), buffer_before + dust);
@@ -1597,7 +1597,7 @@ fn dap_staging_account_keeps_ed_through_drain() {
 
 	sp_io::TestExternalities::from(t).execute_with(|| {
 		// Draining an empty staging account leaves the ED.
-		pallet_dap::Pallet::<Runtime>::on_idle(1, Weight::MAX);
+		<pallet_dap::Pallet<Runtime> as Hooks<_>>::on_idle(1, Weight::MAX);
 		assert_eq!(<Balances as Inspect<_>>::balance(&dap_staging), ed);
 
 		// Dust arrives and drains in one pass, leaving the ED, not reaped.
@@ -1610,7 +1610,7 @@ fn dap_staging_account_keeps_ed_through_drain() {
 		));
 		assert_eq!(<Balances as Inspect<_>>::balance(&dap_staging), ed + dust);
 
-		pallet_dap::Pallet::<Runtime>::on_idle(2, Weight::MAX);
+		<pallet_dap::Pallet<Runtime> as Hooks<_>>::on_idle(2, Weight::MAX);
 		assert_eq!(<Balances as Inspect<_>>::balance(&dap_staging), ed);
 		assert!(frame_system::Pallet::<Runtime>::account_exists(&dap_staging));
 

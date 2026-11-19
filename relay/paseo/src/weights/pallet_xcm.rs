@@ -346,12 +346,13 @@ impl<T: frame_system::Config> pallet_xcm::WeightInfo for WeightInfo<T> {
 	/// Proof: `XcmPallet::ShouldRecordXcm` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
 	/// Storage: `XcmPallet::AssetTraps` (r:1 w:1)
 	/// Proof: `XcmPallet::AssetTraps` (`max_values`: None, `max_size`: None, mode: `Measured`)
-	fn claim_assets() -> Weight {
+	/// The range of component `n` is `[1, 20]`.
+	fn claim_assets(_n: u32, ) -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `23`
 		//  Estimated: `3488`
-		// Minimum execution time: 61_365_000 picoseconds.
-		Weight::from_parts(62_637_000, 0)
+		// Minimum execution time: 38_000_000 picoseconds.
+		Weight::from_parts(41_471_761, 0)
 			.saturating_add(Weight::from_parts(0, 3488))
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(1))
@@ -376,12 +377,26 @@ impl<T: frame_system::Config> pallet_xcm::WeightInfo for WeightInfo<T> {
 		Weight::from_parts(18_446_744_073_709_551_000, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 	}
-	fn weigh_message() -> Weight {
+	/// The range of component `n` is `[0, 8192]`.
+	fn weigh_message(n: u32, ) -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
-		// Minimum execution time: 15_900_000 picoseconds.
-		Weight::from_parts(16_511_000, 0)
+		// Minimum execution time: 1_051_000 picoseconds.
+		Weight::from_parts(1_262_742, 0)
 			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 319
+			.saturating_add(Weight::from_parts(107_844, 0).saturating_mul(n.into()))
+	}
+	/// The range of component `n` is `[0, 131072]`.
+	fn decode_xcm(n: u32, ) -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 340_000 picoseconds.
+		Weight::from_parts(943_628, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 3
+			.saturating_add(Weight::from_parts(2_018, 0).saturating_mul(n.into()))
 	}
 }
