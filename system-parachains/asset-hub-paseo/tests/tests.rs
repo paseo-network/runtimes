@@ -3002,6 +3002,66 @@ mod credit_tree_removal {
 	}
 }
 
+/// The alias-accounts view functions return the values that governance sets through
+/// `pallet_parameters`.
+mod alias_accounts_view_functions {
+	use super::*;
+	use asset_hub_paseo_runtime::{
+		dynamic_params::alias_accounts::{AliasFee, Parameters, StaleAliasSweepInterval},
+		RuntimeParameters,
+	};
+	use frame_support::view_functions::ViewFunction;
+	use indiv_pallet_alias_accounts::{
+		GetAliasFeeViewFunction, GetOffchainWorkerIntervalViewFunction,
+	};
+	use parachains_common::BlockNumber;
+
+	fn set_parameter(parameter: Parameters) {
+		assert_ok!(pallet_parameters::Pallet::<Runtime>::set_parameter(
+			RuntimeOrigin::root(),
+			RuntimeParameters::AliasAccounts(parameter)
+		));
+	}
+
+	/// Runs a view function without arguments through the runtime dispatch that clients call.
+	fn execute_view_function<Query: ViewFunction>() -> Query::ReturnType
+	where
+		Query::ReturnType: Decode,
+	{
+		let output = Runtime::execute_view_function(Query::id(), Vec::new())
+			.expect("the runtime dispatches the view function");
+		Decode::decode(&mut &output[..]).expect("the output decodes as the return type")
+	}
+
+	#[test]
+	fn alias_fee_view_function_returns_the_updated_parameter() {
+		sp_io::TestExternalities::default().execute_with(|| {
+			assert_eq!(execute_view_function::<GetAliasFeeViewFunction<Runtime>>(), None);
+
+			set_parameter(Parameters::AliasFee(AliasFee, Some(Some(7))));
+
+			assert_eq!(execute_view_function::<GetAliasFeeViewFunction<Runtime>>(), Some(7));
+		});
+	}
+
+	#[test]
+	fn offchain_worker_interval_view_function_returns_the_interval_that_the_sweep_uses() {
+		sp_io::TestExternalities::default().execute_with(|| {
+			let interval = |blocks: BlockNumber| {
+				set_parameter(Parameters::StaleAliasSweepInterval(
+					StaleAliasSweepInterval,
+					Some(blocks),
+				));
+				execute_view_function::<GetOffchainWorkerIntervalViewFunction<Runtime>>()
+			};
+
+			assert_eq!(interval(9), 9);
+			// The runtime keeps the interval non-zero whatever governance stores.
+			assert_eq!(interval(0), 1);
+		});
+	}
+}
+
 #[test]
 fn session_key_deposit_works() {
 	system_parachains_test_utils::session_key_deposit_works::<Runtime>(|owner| {
