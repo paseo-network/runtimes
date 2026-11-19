@@ -143,6 +143,10 @@ pub type MbmMigrations = (
 	// Single use! - remove once the upgrade carrying it is live. Adds a `RecognitionHistory` to
 	// every `People::People` record and bumps `People` to storage version 1.
 	indiv_pallet_people::migration::MigrateV0ToV1<Runtime>,
+	// Single use! - remove once the upgrade carrying it is live. Records the granted allowance in
+	// every `Resources` statement store entry and notification registration, and bumps
+	// `Resources` to storage version 1.
+	indiv_pallet_resources::migration::v1::RecordGrantedAllowances<Runtime>,
 );
 
 fn reserve_data_for(asset_id: &Location) -> Option<ForeignAssetReserveData> {
