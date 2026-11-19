@@ -120,6 +120,7 @@ parachains-common = { workspace = true }
 system-parachains-constants = { workspace = true }
 
 [dev-dependencies]
+frame-metadata = { workspace = true, features = ["std"] }
 frame-remote-externalities = { workspace = true }
 parachains-runtimes-test-utils = { workspace = true }
 system-parachains-test-utils = { workspace = true }
@@ -148,6 +149,7 @@ std = [
 	"frame-benchmarking?/std",
 	"frame-executive/std",
 	"frame-metadata-hash-extension/std",
+	"frame-metadata/std",
 	"frame-support/std",
 	"frame-system-benchmarking?/std",
 	"frame-system-rpc-runtime-api/std",
