@@ -61,29 +61,29 @@ pub mod dynamic_params {
 	pub mod statement_storage {
 		#[codec(index = 0)]
 		pub static AccountsApiAllowance: BoundedStatementAllowance =
-			BoundedStatementAllowance { max_size: 500 * 1024, max_count: 2 };
+			BoundedStatementAllowance { max_size: 50 * 1024, max_count: 2 };
 		#[codec(index = 6)]
 		pub static NotificationAllowance: BoundedStatementAllowance =
-			BoundedStatementAllowance { max_size: 10 * 1024, max_count: 1 };
+			BoundedStatementAllowance { max_size: 5 * 1024 / 2, max_count: 1 };
 		#[codec(index = 10)]
 		pub static LitePersonStatementLimit: BoundedStatementAllowance =
-			BoundedStatementAllowance { max_size: 500 * 1024, max_count: 50 };
+			BoundedStatementAllowance { max_size: 100 * 1024, max_count: 50 };
 		#[codec(index = 11)]
 		pub static PersonStatementLimit: BoundedStatementAllowance =
 			BoundedStatementAllowance { max_size: 1024 * 1024, max_count: 200 };
 		#[codec(index = 1)]
-		pub static StmtStoreSlotsPerPeriod: u32 = 20;
+		pub static StmtStoreSlotsPerPeriod: u32 = 70;
 		#[codec(index = 2)]
-		pub static LiteStmtStoreSlotsPerPeriod: u32 = 10;
+		pub static LiteStmtStoreSlotsPerPeriod: u32 = 50;
 		#[codec(index = 3)]
 		pub static StmtStoreCleanupLimit: u32 = 50;
 		// Index 4 belonged to the removed `StmtStoreReplacementCooldown`. Do not reuse it.
 		#[codec(index = 5)]
 		pub static StmtStoreGraceWindow: u32 = 2 * 24 * 60 * 60;
 		#[codec(index = 7)]
-		pub static NotificationSlotsPerPeriod: u8 = 16;
+		pub static NotificationSlotsPerPeriod: u8 = 70;
 		#[codec(index = 8)]
-		pub static LiteNotificationSlotsPerPeriod: u8 = 8;
+		pub static LiteNotificationSlotsPerPeriod: u8 = 50;
 		#[codec(index = 9)]
 		pub static NotificationPeriodDuration: u32 = SECONDS_PER_DAY;
 	}
