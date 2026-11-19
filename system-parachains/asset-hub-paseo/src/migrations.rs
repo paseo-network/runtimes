@@ -266,6 +266,9 @@ pub type Unreleased = (
 	>,
 	MigrateBountyAccountAssets,
 	pallet_staking_async::migrations::SetWeightedPointsFormulaStartEra<Runtime>,
+	// stable2609-2: adds the registration base deposit to each stored signed-phase
+	// `SubmissionMetadata`. `VersionedMigration` (storage version 0 -> 1).
+	pallet_election_provider_multi_block::signed::migrations::v1::MigrateV0ToV1<Runtime>,
 	// Create the PGAS asset (id 2_000_000_000) used by the individuality pallets.
 	ForceCreatePgasAsset,
 	// individuality v0.3.1 gave `AccountNameRecord` a `chat` field on each of `lite`/`full`.
