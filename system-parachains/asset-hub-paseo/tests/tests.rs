@@ -1374,7 +1374,7 @@ fn slash_goes_to_dap_buffer_account() {
 		assert_eq!(<Balances as Inspect<_>>::balance(&dap_buffer), dap_buffer_before);
 
 		// on_idle drains staging into buffer and deactivates.
-		pallet_dap::Pallet::<Runtime>::on_idle(1, Weight::MAX);
+		<pallet_dap::Pallet<Runtime> as Hooks<_>>::on_idle(1, Weight::MAX);
 		assert_eq!(<Balances as Inspect<_>>::balance(&dap_staging), dap_staging_before);
 		assert_eq!(
 			<Balances as Inspect<_>>::balance(&dap_buffer),
@@ -1396,103 +1396,12 @@ fn slash_goes_to_dap_buffer_account() {
 		);
 
 		// After on_idle: staging drains into buffer and deactivates.
-		pallet_dap::Pallet::<Runtime>::on_idle(2, Weight::MAX);
+		<pallet_dap::Pallet<Runtime> as Hooks<_>>::on_idle(2, Weight::MAX);
 		assert_eq!(<Balances as Inspect<_>>::balance(&dap_staging), dap_staging_before);
 		assert_eq!(
 			<Balances as Inspect<_>>::balance(&dap_buffer),
 			dap_buffer_before + slash_amount + slash_amount_2
 		);
-	});
-}
-
-#[test]
-fn migrate_bounty_account_assets_moves_native_and_leaves_the_rest() {
-	use asset_hub_paseo_runtime::{
-		migrations::MigrateBountyAccountAssets, treasury::TreasuryPalletId,
-	};
-	use frame_support::traits::{
-		fungible::Mutate as _, tokens::fungibles::Mutate as _, Get as _, OnRuntimeUpgrade,
-		PalletInfoAccess,
-	};
-	use pallet_multi_asset_bounties::{Bounty, BountyStatus};
-	use polkadot_runtime_common::impls::VersionedLocatableAsset;
-	use sp_core::H256;
-	use sp_runtime::traits::AccountIdConversion;
-
-	const BOUNTY_ID: u32 = 7;
-	const USDT_ASSET_ID: u32 = 1984;
-	const USDC_ASSET_ID: u32 = 1337;
-	const UNRELATED_ASSET_ID: u32 = 99; // NOT used by multi-asset bounties, must NOT move
-	const DOT_AMOUNT: Balance = 100 * UNITS;
-	const USDT_AMOUNT: Balance = 250_000 * 1_000_000; // 6 decimals
-	const USDC_AMOUNT: Balance = 100_000 * 1_000_000; // 6 decimals
-	const UNRELATED_AMOUNT: Balance = 999 * 1_000_000;
-
-	ExtBuilder::<Runtime>::default().build().execute_with(|| {
-		let bounty = Bounty::<
-			AccountId,
-			Balance,
-			VersionedLocatableAsset,
-			H256,
-			xcm::v5::QueryId,
-			parachains_common::pay::VersionedLocatableAccount,
-		> {
-			asset_kind: VersionedLocatableAsset::V5 {
-				location: Location::new(0, []),
-				asset_id: AssetId(Location::new(
-					0,
-					[
-						PalletInstance(<Assets as PalletInfoAccess>::index() as u8),
-						GeneralIndex(USDT_ASSET_ID.into()),
-					],
-				)),
-			},
-			value: USDT_AMOUNT,
-			metadata: H256::zero(),
-			status: BountyStatus::CuratorUnassigned,
-		};
-		pallet_multi_asset_bounties::Bounties::<Runtime>::insert(BOUNTY_ID, bounty);
-
-		let pallet_id = TreasuryPalletId::get();
-		let old: AccountId = pallet_id.into_sub_account_truncating(("mbt", BOUNTY_ID));
-		let new: AccountId = pallet_id.into_sub_account_truncating((
-			pallet_multi_asset_bounties::BountyAccountPrefix::get(),
-			BOUNTY_ID,
-		));
-		assert_ne!(old, new);
-
-		// Native DOT (Balances).
-		Balances::mint_into(&old, DOT_AMOUNT).unwrap();
-		// Trust-backed assets the multi-asset bounties pallet supports.
-		for id in [USDT_ASSET_ID, USDC_ASSET_ID, UNRELATED_ASSET_ID] {
-			assert_ok!(Assets::force_create(
-				RuntimeHelper::root_origin(),
-				id.into(),
-				AccountId::from(SOME_ASSET_ADMIN).into(),
-				true,
-				1,
-			));
-		}
-		Assets::mint_into(USDT_ASSET_ID, &old, USDT_AMOUNT).unwrap();
-		Assets::mint_into(USDC_ASSET_ID, &old, USDC_AMOUNT).unwrap();
-		Assets::mint_into(UNRELATED_ASSET_ID, &old, UNRELATED_AMOUNT).unwrap();
-
-		MigrateBountyAccountAssets::on_runtime_upgrade();
-
-		// Native PAS moves: it is the only entry in `BountyRelevantAssets`.
-		assert_eq!(Balances::free_balance(&old), 0);
-		assert_eq!(Balances::free_balance(&new), DOT_AMOUNT);
-		// USDT and USDC do NOT move here, unlike on Polkadot Asset Hub: Paseo deliberately
-		// lists native only in `treasury::BountyRelevantAssets` ("Paseo testnet only uses
-		// native PAS"), and `TransferAllFungibles` sweeps exactly that list. If those assets
-		// are ever added to the list, these two pairs flip to the `&new` account.
-		assert_eq!(Assets::balance(USDT_ASSET_ID, &old), USDT_AMOUNT);
-		assert_eq!(Assets::balance(USDT_ASSET_ID, &new), 0);
-		assert_eq!(Assets::balance(USDC_ASSET_ID, &old), USDC_AMOUNT);
-		assert_eq!(Assets::balance(USDC_ASSET_ID, &new), 0);
-		// An asset not used by the multi-asset bounties pallet stays at the old account.
-		assert_eq!(Assets::balance(UNRELATED_ASSET_ID, &old), UNRELATED_AMOUNT);
-		assert_eq!(Assets::balance(UNRELATED_ASSET_ID, &new), 0);
 	});
 }
 
@@ -1558,7 +1467,7 @@ fn dust_goes_to_dap_and_is_deactivated() {
 		assert_eq!(Balances::total_issuance(), issuance_before);
 
 		// The drain deactivates it: still issued, no longer active.
-		pallet_dap::Pallet::<Runtime>::on_idle(1, Weight::MAX);
+		<pallet_dap::Pallet<Runtime> as Hooks<_>>::on_idle(1, Weight::MAX);
 
 		assert_eq!(<Balances as Inspect<_>>::balance(&dap_staging), staging_before);
 		assert_eq!(<Balances as Inspect<_>>::balance(&dap_buffer), buffer_before + dust);
@@ -1597,7 +1506,7 @@ fn dap_staging_account_keeps_ed_through_drain() {
 
 	sp_io::TestExternalities::from(t).execute_with(|| {
 		// Draining an empty staging account leaves the ED.
-		pallet_dap::Pallet::<Runtime>::on_idle(1, Weight::MAX);
+		<pallet_dap::Pallet<Runtime> as Hooks<_>>::on_idle(1, Weight::MAX);
 		assert_eq!(<Balances as Inspect<_>>::balance(&dap_staging), ed);
 
 		// Dust arrives and drains in one pass, leaving the ED, not reaped.
@@ -1610,7 +1519,7 @@ fn dap_staging_account_keeps_ed_through_drain() {
 		));
 		assert_eq!(<Balances as Inspect<_>>::balance(&dap_staging), ed + dust);
 
-		pallet_dap::Pallet::<Runtime>::on_idle(2, Weight::MAX);
+		<pallet_dap::Pallet<Runtime> as Hooks<_>>::on_idle(2, Weight::MAX);
 		assert_eq!(<Balances as Inspect<_>>::balance(&dap_staging), ed);
 		assert!(frame_system::Pallet::<Runtime>::account_exists(&dap_staging));
 
@@ -1654,6 +1563,53 @@ fn dust_removal_terminates_when_staging_is_dusted() {
 			ed - dust,
 			Preservation::Expendable,
 		);
+	});
+}
+
+/// Regression test for the dotUSD supply drift fixed by polkadot-fellows/runtimes#1334.
+///
+/// In `staging-xcm-executor` < 28.1.0 a failing `WithdrawAsset` rolled back the storage of the
+/// assets already withdrawn by the same instruction, but dropped their credit only afterwards. The
+/// credit drop decreased the asset's `supply` while the account balances stayed unchanged.
+#[test]
+fn failed_withdraw_asset_does_not_decrease_trust_backed_asset_supply() {
+	use frame_support::traits::fungibles::{Inspect, Mutate};
+	use xcm_executor::XcmExecutor;
+
+	const DOT_USD: AssetIdForTrustBackedAssets = 7873;
+	const AMOUNT: Balance = 1_000 * 1_000_000;
+
+	ExtBuilder::<Runtime>::default().build().execute_with(|| {
+		let alice = AccountId::from(ALICE);
+		assert_ok!(Assets::force_create(
+			RuntimeHelper::root_origin(),
+			DOT_USD.into(),
+			AccountId::from(SOME_ASSET_ADMIN).into(),
+			true,
+			1,
+		));
+		assert_ok!(Assets::mint_into(DOT_USD, &alice, AMOUNT));
+		assert_eq!(Assets::total_issuance(DOT_USD), AMOUNT);
+
+		let dot_usd = AssetIdForTrustBackedAssetsConvertLatest::convert_back(&DOT_USD).unwrap();
+		// dotUSD sorts before DOT, so it is withdrawn first and the DOT withdrawal (Alice has
+		// none) fails afterwards.
+		let xcm = Xcm::<RuntimeCall>(vec![WithdrawAsset(
+			vec![(dot_usd, AMOUNT).into(), (DotLocation::get(), UNITS).into()].into(),
+		)]);
+
+		let mut hash = xcm.using_encoded(sp_io::hashing::blake2_256);
+		let outcome = XcmExecutor::<XcmConfig>::prepare_and_execute(
+			Location::new(0, [AccountId32 { network: None, id: ALICE }]),
+			xcm,
+			&mut hash,
+			Weight::MAX,
+			Weight::MAX,
+		);
+		assert!(matches!(outcome, Outcome::Incomplete { .. }), "unexpected outcome: {outcome:?}");
+
+		assert_eq!(Assets::balance(DOT_USD, &alice), AMOUNT);
+		assert_eq!(Assets::total_issuance(DOT_USD), AMOUNT);
 	});
 }
 
@@ -2468,7 +2424,7 @@ mod legacy_v0 {
 						_,
 						sp_runtime::DispatchError,
 					>(
-						Revive::dry_run_eth_transact(transaction.clone(), Default::default()),
+						Revive::dry_run_eth_transact(transaction.clone(), None, true, None),
 					))
 				})
 				.expect("rolling back the estimate succeeds")
@@ -2991,13 +2947,73 @@ mod credit_tree_removal {
 				.0
 				.into_iter()
 				.find_map(|instruction| match instruction {
-					Instruction::Transact { call, .. } => Some(call.into_encoded()),
+					Instruction::Transact { call, .. } => Some(call.encoded().to_vec()),
 					_ => None,
 				})
 				.expect("the XCM carries a Transact");
 
 			let expected = (57u8, 20u8, codec::Compact(1u32), BLOCK).encode();
 			assert_eq!(call, expected, "the pallet and call indices are the game chain's");
+		});
+	}
+}
+
+/// The alias-accounts view functions return the values that governance sets through
+/// `pallet_parameters`.
+mod alias_accounts_view_functions {
+	use super::*;
+	use asset_hub_paseo_runtime::{
+		dynamic_params::alias_accounts::{AliasFee, Parameters, StaleAliasSweepInterval},
+		RuntimeParameters,
+	};
+	use frame_support::view_functions::ViewFunction;
+	use indiv_pallet_alias_accounts::{
+		GetAliasFeeViewFunction, GetOffchainWorkerIntervalViewFunction,
+	};
+	use parachains_common::BlockNumber;
+
+	fn set_parameter(parameter: Parameters) {
+		assert_ok!(pallet_parameters::Pallet::<Runtime>::set_parameter(
+			RuntimeOrigin::root(),
+			RuntimeParameters::AliasAccounts(parameter)
+		));
+	}
+
+	/// Runs a view function without arguments through the runtime dispatch that clients call.
+	fn execute_view_function<Query: ViewFunction>() -> Query::ReturnType
+	where
+		Query::ReturnType: Decode,
+	{
+		let output = Runtime::execute_view_function(Query::id(), Vec::new())
+			.expect("the runtime dispatches the view function");
+		Decode::decode(&mut &output[..]).expect("the output decodes as the return type")
+	}
+
+	#[test]
+	fn alias_fee_view_function_returns_the_updated_parameter() {
+		sp_io::TestExternalities::default().execute_with(|| {
+			assert_eq!(execute_view_function::<GetAliasFeeViewFunction<Runtime>>(), None);
+
+			set_parameter(Parameters::AliasFee(AliasFee, Some(Some(7))));
+
+			assert_eq!(execute_view_function::<GetAliasFeeViewFunction<Runtime>>(), Some(7));
+		});
+	}
+
+	#[test]
+	fn offchain_worker_interval_view_function_returns_the_interval_that_the_sweep_uses() {
+		sp_io::TestExternalities::default().execute_with(|| {
+			let interval = |blocks: BlockNumber| {
+				set_parameter(Parameters::StaleAliasSweepInterval(
+					StaleAliasSweepInterval,
+					Some(blocks),
+				));
+				execute_view_function::<GetOffchainWorkerIntervalViewFunction<Runtime>>()
+			};
+
+			assert_eq!(interval(9), 9);
+			// The runtime keeps the interval non-zero whatever governance stores.
+			assert_eq!(interval(0), 1);
 		});
 	}
 }

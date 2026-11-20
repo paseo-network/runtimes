@@ -40,19 +40,6 @@ get_package_params() {
       TYPE="development"
       CHAIN="development"
     ;;
-    # Substitute relay — fresh from-genesis Paseo relay (4 community-provider bootstrap validators,
-    # ah_client Passive). Presents AS Paseo (name/id "paseo") since it replaces it; only the
-    # protocol-id differs ("pad" = polkadot apps devenet). Not in the default PACKAGES list; build:
-    #   CHAIN_SPEC_PACKAGES="paseo-substitute" ./scripts/generate_chain_specs.sh
-    paseo-substitute)
-      NAME="Paseo"
-      ID="paseo"
-      RUNTIME="relay/paseo"
-      PROTOCOL_ID="pad"
-      TYPE="live"
-      CHAIN="substitute"
-      SS58=42
-    ;;
     asset-hub-paseo-local)
       NAME="Asset Hub Paseo Local"
       ID="asset-hub-paseo-local"

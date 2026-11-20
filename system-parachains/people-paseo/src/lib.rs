@@ -72,8 +72,6 @@ use sp_runtime::{
 	ApplyExtrinsicResult, Debug,
 };
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
-#[cfg(feature = "std")]
-use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 // This runtime produces 2-second blocks (`elastic_scaling`: a 6s relay slot at
 // `BLOCK_PROCESSING_VELOCITY = 3`), which is the async-backing block cadence. Its block *weight*
@@ -83,12 +81,14 @@ use sp_version::RuntimeVersion;
 use system_parachains_constants::{
 	async_backing::{MAXIMUM_BLOCK_WEIGHT, NORMAL_DISPATCH_RATIO},
 	paseo::{
+		account::ACCUMULATE_FORWARD_PALLET_ID,
 		consensus::{
 			elastic_scaling::{BLOCK_PROCESSING_VELOCITY, UNINCLUDED_SEGMENT_CAPACITY},
 			RELAY_CHAIN_SLOT_DURATION_MILLIS,
 		},
 		currency::*,
 		fee::WeightToFee as PasWeightToFee,
+		locations::DapStagingLocation,
 	},
 };
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
@@ -255,15 +255,13 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// transaction extensions are now versioned. V0 is the frozen fellowship People pipeline that
 	// signed (V4) transactions use; the Individuality extensions moved to the V1 general
 	// pipeline. Every signer must refresh metadata and rebuild its transactions.
-	transaction_version: 4,
+	//
+	// BUMPED 4 -> 5 (individuality-community#175): `GameSchedule` gained `tenure_claim_window`,
+	// which changes the encoding of `Game::schedule_games`, and the game pallet gained
+	// `set_tenure_thresholds` and `claim_tenure_credits` (call indices 28 and 29).
+	transaction_version: 5,
 	system_version: 1,
 };
-
-/// The version information used to identify this runtime when compiled natively.
-#[cfg(feature = "std")]
-pub fn native_version() -> NativeVersion {
-	NativeVersion { runtime_version: VERSION, can_author_with: Default::default() }
-}
 
 /// TODO: Uncomment me after 2.3.1 is on chain
 /// pub const SLOT_DURATION: u64 = 24_000;
@@ -338,9 +336,30 @@ parameter_types! {
 	pub const ExistentialDeposit: Balance = SYSTEM_PARA_EXISTENTIAL_DEPOSIT;
 }
 
+parameter_types! {
+	pub const AccumulateForwardPalletId: PalletId = ACCUMULATE_FORWARD_PALLET_ID;
+	pub const ForwardPeriod: BlockNumber = paseo_runtime_constants::time::HOURS;
+	pub const MinForwardAmount: Balance = UNITS;
+}
+
+impl pallet_accumulate_and_forward::Config for Runtime {
+	type Currency = Balances;
+	type PalletId = AccumulateForwardPalletId;
+	type Forwarder = xcm_builder::TeleportForwarderForAccountId32<
+		xcm_config::XcmConfig,
+		AssetHubLocation,
+		xcm_config::RelayLocation,
+		DapStagingLocation,
+	>;
+	type TransferPeriod = ForwardPeriod;
+	type MinTransferAmount = MinForwardAmount;
+	type BlockNumberProvider = cumulus_pallet_parachain_system::RelaychainDataProvider<Runtime>;
+	type WeightInfo = weights::pallet_accumulate_and_forward::WeightInfo<Runtime>;
+}
+
 impl pallet_balances::Config for Runtime {
 	type Balance = Balance;
-	type DustRemoval = ();
+	type DustRemoval = AccumulateForward;
 	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
@@ -838,6 +857,10 @@ construct_runtime!(
 		AssetRate: pallet_asset_rate = 13,
 		AssetTxPayment: pallet_asset_tx_payment = 14,
 		AssetsHolder: pallet_assets_holder = 15,
+		// Upstream uses index 19, but Paseo already has `PoolAssets` there. 16 is free since
+		// `SkipFeelessPayment` was removed (v2.5.5); storage is keyed by name and this pallet has
+		// no calls, so the reuse cannot clash.
+		AccumulateForward: pallet_accumulate_and_forward = 16,
 		OriginRestriction: indiv_pallet_origin_restriction = 17,
 		AssetConversion: pallet_asset_conversion = 18,
 		PoolAssets: pallet_assets::<Instance1> = 19,
@@ -912,6 +935,7 @@ mod benches {
 		[pallet_assets, Pool]
 		[pallet_asset_conversion, AssetConversion]
 		[pallet_balances, Balances]
+		[pallet_accumulate_and_forward, AccumulateForward]
 		[pallet_identity, Identity]
 		[pallet_message_queue, MessageQueue]
 		[pallet_migrations, MultiBlockMigrations]
@@ -1018,6 +1042,48 @@ mod benches {
 
 		fn get_asset() -> Asset {
 			Asset { id: AssetId(Location::parent()), fun: Fungible(ExistentialDeposit::get()) }
+		}
+
+		fn get_assets(n: u32) -> Assets {
+			use frame_support::traits::tokens::fungible;
+			let account: AccountId = frame_benchmarking::whitelisted_caller();
+			frame_support::assert_ok!(<Balances as fungible::Mutate<_>>::mint_into(
+				&account,
+				ExistentialDeposit::get(),
+			));
+			let amount = 1_000_000u128;
+			// Worst case: `n` distinct foreign assets, which `AssetTransactors` matches
+			// after the native token.
+			let assets = (0..n)
+				.map(|i| {
+					let asset_location = Location::new(
+						1,
+						[Parachain(3000), PalletInstance(53), GeneralIndex((1984 + i).into())],
+					);
+					// `Assets` in this module is the XCM type; the pallet lives in `super`.
+					frame_support::assert_ok!(super::Assets::force_create(
+						super::RuntimeOrigin::root(),
+						asset_location.clone(),
+						account.clone().into(),
+						true,
+						1u128,
+					));
+					Asset { id: AssetId(asset_location), fun: Fungible(amount) }
+				})
+				.collect::<Vec<_>>();
+			assets.into()
+		}
+
+		fn batch_call(calls: Vec<RuntimeCall>) -> Option<RuntimeCall> {
+			Some(RuntimeCall::Utility(pallet_utility::Call::batch { calls }))
+		}
+
+		/// `Multisig::as_multi_threshold_1`, a single-call dispatcher to nest calls with.
+		fn wrap_call(call: RuntimeCall) -> Option<RuntimeCall> {
+			Some(RuntimeCall::Multisig(pallet_multisig::Call::<Runtime>::as_multi_threshold_1 {
+				other_signatories: Vec::new(),
+				call: alloc::boxed::Box::new(call),
+			}))
 		}
 	}
 
@@ -1462,9 +1528,16 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl indiv_pallet_game::runtime_api::PalletGameApi<Block, Balance> for Runtime {
+	#[api_version(2)]
+	impl indiv_pallet_game::runtime_api::PalletGameApi<Block, Balance, AccountId> for Runtime {
 		fn play_deposit() -> Balance {
 			indiv_pallet_game::PlayDepositAmount::<Runtime>::get()
+		}
+
+		fn tenure_credits(
+			player: indiv_support::identity::AccountOrPerson<AccountId>,
+		) -> Result<u32, sp_runtime::DispatchError> {
+			Game::tenure_credits(player)
 		}
 	}
 

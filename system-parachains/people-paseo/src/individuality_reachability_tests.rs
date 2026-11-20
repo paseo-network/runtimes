@@ -135,7 +135,7 @@ fn person_gated_contexts_are_distinct() {
 /// shape that v0.3.1 deleted) would fail.
 #[test]
 fn derived_contexts_resolve_against_the_shared_network_suffix() {
-	use indiv_support::context::{build_product_context, personhood};
+	use indiv_support::context::{build_product_context, personhood, signing_context};
 	use system_parachains_constants::paseo::individuality::NETWORK_SUFFIX;
 
 	sp_io::TestExternalities::default().execute_with(|| {
@@ -153,6 +153,20 @@ fn derived_contexts_resolve_against_the_shared_network_suffix() {
 			indiv_pallet_people_lite::Pallet::<Runtime>::auth_context(),
 			expect(personhood::PEOPLE_LITE_AUTH),
 		);
+
+		// Signing contexts of the account signatures over non-transaction messages.
+		assert_eq!(
+			indiv_pallet_people_lite::Pallet::<Runtime>::signing_context(),
+			signing_context(personhood::PRODUCT_NAME, NETWORK_SUFFIX),
+		);
+		assert_eq!(
+			indiv_pallet_resources::Pallet::<Runtime>::signing_context(),
+			signing_context(personhood::PRODUCT_NAME, NETWORK_SUFFIX),
+		);
+		assert_eq!(
+			indiv_pallet_game::Pallet::<Runtime>::signing_context(),
+			signing_context(indiv_pallet_game::PRODUCT_NAME, NETWORK_SUFFIX),
+		);
 	});
 }
 
@@ -166,6 +180,9 @@ fn rotating_the_network_suffix_moves_every_derived_context() {
 			indiv_pallet_score::Pallet::<Runtime>::score_context(),
 			indiv_pallet_resources::Pallet::<Runtime>::resources_context(),
 			indiv_pallet_people_lite::Pallet::<Runtime>::auth_context(),
+			indiv_pallet_people_lite::Pallet::<Runtime>::signing_context(),
+			indiv_pallet_resources::Pallet::<Runtime>::signing_context(),
+			indiv_pallet_game::Pallet::<Runtime>::signing_context(),
 		);
 
 		indiv_pallet_network_suffix::NetworkSuffix::<Runtime>::put(
@@ -177,11 +194,66 @@ fn rotating_the_network_suffix_moves_every_derived_context() {
 			indiv_pallet_score::Pallet::<Runtime>::score_context(),
 			indiv_pallet_resources::Pallet::<Runtime>::resources_context(),
 			indiv_pallet_people_lite::Pallet::<Runtime>::auth_context(),
+			indiv_pallet_people_lite::Pallet::<Runtime>::signing_context(),
+			indiv_pallet_resources::Pallet::<Runtime>::signing_context(),
+			indiv_pallet_game::Pallet::<Runtime>::signing_context(),
 		);
 
 		assert_ne!(before.0, after.0, "score context did not follow the suffix");
 		assert_ne!(before.1, after.1, "resources context did not follow the suffix");
 		assert_ne!(before.2, after.2, "people-lite auth context did not follow the suffix");
+		assert_ne!(before.3, after.3, "people-lite signing context did not follow the suffix");
+		assert_ne!(before.4, after.4, "resources signing context did not follow the suffix");
+		assert_ne!(before.5, after.5, "game signing context did not follow the suffix");
+		assert_eq!(
+			after.3,
+			indiv_support::context::signing_context(
+				indiv_support::context::personhood::PRODUCT_NAME,
+				b"rotated"
+			),
+		);
+		assert_eq!(after.3, after.4, "people-lite and resources sign in the same context");
+	});
+}
+
+/// Wallets read the signing context from metadata to build the bytes an account signs for a
+/// message that is not a transaction. Each verifying pallet must publish the context it checks.
+#[test]
+fn signing_contexts_are_published_as_pallet_constants() {
+	use codec::Encode;
+
+	sp_io::TestExternalities::default().execute_with(|| {
+		let frame_metadata::RuntimeMetadata::V14(metadata) = Runtime::metadata().1 else {
+			panic!("runtime metadata is not V14");
+		};
+		let constant = |pallet: &str| {
+			metadata
+				.pallets
+				.iter()
+				.find(|p| p.name == pallet)
+				.unwrap_or_else(|| panic!("{pallet} is in the metadata"))
+				.constants
+				.iter()
+				.find(|c| c.name == "SigningContext")
+				.unwrap_or_else(|| panic!("{pallet} publishes SigningContext"))
+				.value
+				.clone()
+		};
+
+		// Each verifying pallet publishes the context it verifies, as 32 raw bytes.
+		assert_eq!(
+			constant("PeopleLite"),
+			indiv_pallet_people_lite::Pallet::<Runtime>::signing_context().encode()
+		);
+		assert_eq!(
+			constant("Resources"),
+			indiv_pallet_resources::Pallet::<Runtime>::signing_context().encode()
+		);
+		assert_eq!(
+			constant("Game"),
+			indiv_pallet_game::Pallet::<Runtime>::signing_context().encode()
+		);
+		assert_eq!(constant("PeopleLite").len(), 32);
 	});
 }
 

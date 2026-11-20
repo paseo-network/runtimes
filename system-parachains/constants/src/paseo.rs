@@ -19,25 +19,11 @@ pub mod account {
 
 	/// Polkadot treasury pallet id, used to convert into AccountId
 	pub const POLKADOT_TREASURY_PALLET_ID: PalletId = PalletId(*b"py/trsry");
-	/// Alliance pallet ID.
-	/// Used as a temporary place to deposit a slashed imbalance before teleporting to the Treasury.
-	pub const ALLIANCE_PALLET_ID: PalletId = PalletId(*b"py/allia");
-	/// Referenda pallet ID.
-	/// Used as a temporary place to deposit a slashed imbalance before teleporting to the Treasury.
-	pub const REFERENDA_PALLET_ID: PalletId = PalletId(*b"py/refer");
-	/// Ambassador Referenda pallet ID.
-	/// Used as a temporary place to deposit a slashed imbalance before teleporting to the Treasury.
-	pub const AMBASSADOR_REFERENDA_PALLET_ID: PalletId = PalletId(*b"py/amref");
-	/// Identity pallet ID.
-	/// Used as a temporary place to deposit a slashed imbalance before teleporting to the Treasury.
-	pub const IDENTITY_PALLET_ID: PalletId = PalletId(*b"py/ident");
 	/// Fellowship treasury pallet ID
 	pub const FELLOWSHIP_TREASURY_PALLET_ID: PalletId = PalletId(*b"py/feltr");
 	/// Ambassador treasury pallet ID
 	pub const AMBASSADOR_TREASURY_PALLET_ID: PalletId = PalletId(*b"py/ambtr");
-	/// Accumulate-and-forward pallet ID. Derives the account on a system chain that gathers
-	/// revenue, dust and delivery fees before forwarding them to the DAP on Asset Hub.
-	pub const ACCUMULATE_FORWARD_PALLET_ID: PalletId = PalletId(*b"acf/dott");
+	pub use paseo_runtime_constants::account::ACCUMULATE_FORWARD_PALLET_ID;
 }
 
 /// Consensus-related.
@@ -132,16 +118,10 @@ pub mod fee {
 
 pub mod locations {
 	use frame_support::{parameter_types, traits::Contains};
-	use sp_runtime::traits::AccountIdConversion;
-	use xcm::latest::prelude::{InteriorLocation, Junction::*, Location, NetworkId};
+	use xcm::latest::prelude::{Junction::*, Location, NetworkId};
 
 	parameter_types! {
 		pub RelayChainLocation: Location = Location::parent();
-		/// Beneficiary on Asset Hub for sinks forwarded by system chains.
-		pub DapStagingLocation: InteriorLocation = AccountId32 {
-			network: None,
-			id: sp_dap::DAP_PALLET_ID.into_sub_account_truncating(sp_dap::DAP_STAGING_ACCOUNT_ID),
-		}.into();
 		pub AssetHubLocation: Location =
 			Location::new(1, Parachain(paseo_runtime_constants::system_parachain::ASSET_HUB_ID));
 		pub PeopleLocation: Location =
@@ -151,6 +131,8 @@ pub mod locations {
 
 		pub EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 11155111 };
 	}
+
+	pub use paseo_runtime_constants::xcm::DapStagingLocation;
 
 	/// `Contains` implementation for the asset hub location pluralities.
 	pub struct AssetHubPlurality;

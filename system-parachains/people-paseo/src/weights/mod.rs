@@ -41,6 +41,7 @@ pub mod indiv_pallet_proof_of_ink;
 pub mod indiv_pallet_relay_randomness;
 pub mod indiv_pallet_score;
 pub mod indiv_pallet_storage_initialization;
+pub mod pallet_accumulate_and_forward;
 pub mod pallet_asset_conversion;
 pub mod pallet_asset_rate;
 pub mod pallet_asset_tx_payment;

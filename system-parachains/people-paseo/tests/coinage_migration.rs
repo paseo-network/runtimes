@@ -53,11 +53,11 @@
 
 #![cfg(feature = "try-runtime")]
 
-use frame_remote_externalities::{Builder, Mode, OfflineConfig, SnapshotConfig};
 use frame_support::{
 	traits::OnRuntimeUpgrade,
 	weights::{Weight, WeightMeter},
 };
+use remote_externalities::{Builder, Mode, OfflineConfig, SnapshotConfig};
 use sp_runtime::AccountId32 as AccountId;
 extern crate alloc;
 
