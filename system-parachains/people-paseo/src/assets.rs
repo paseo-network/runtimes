@@ -251,6 +251,8 @@ parameter_types! {
 	pub StakingPotAccount: AccountId =
 		<pallet_collator_selection::StakingPotAccountId<Runtime> as frame_support::traits::TypedGet>::get();
 	pub LpFee: Permill = Permill::from_rational(3u32, 1_000u32);
+	/// The highest swap fee `AdminOrigin` can set on a single pool.
+	pub MaxSwapFee: Permill = Permill::from_percent(2);
 	pub const PoolSetupFee: Balance = system_para_deposit(1, 4) + AssetDeposit::get();
 }
 
@@ -270,13 +272,7 @@ frame_support::ord_parameter_types! {
 pub type PoolIdToAccountId =
 	pallet_asset_conversion::AccountIdConverter<AssetConversionPalletId, (Location, Location)>;
 
-parameter_types! {
-	pub MaxSwapFee: sp_runtime::Permill = sp_runtime::Permill::from_percent(2);
-}
-
 impl pallet_asset_conversion::Config for Runtime {
-	type AdminOrigin = frame_system::EnsureRoot<AccountId>;
-	type MaxSwapFee = MaxSwapFee;
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type HigherPrecisionBalance = sp_core::U256;
@@ -296,6 +292,8 @@ impl pallet_asset_conversion::Config for Runtime {
 	type PoolSetupFeeTarget = ResolveAssetTo<StakingPotAccount, Self::Assets>;
 	type LiquidityWithdrawalFee = LiquidityWithdrawalFee;
 	type LPFee = LpFee;
+	type AdminOrigin = EnsureRoot<AccountId>;
+	type MaxSwapFee = MaxSwapFee;
 	type PalletId = AssetConversionPalletId;
 	type MaxSwapPathLength = ConstU32<3>;
 	type MintMinLiquidity = ConstU128<100>;

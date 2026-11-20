@@ -204,13 +204,12 @@ impl pallet_referenda::Config<AmbassadorReferendaInstance> for Runtime {
 	type AlarmInterval = AlarmInterval;
 	type Tracks = tracks::TracksInfo;
 	type Preimages = Preimage;
-	type BlockNumberProvider = crate::System;
+	type BlockNumberProvider = System;
 }
 
 pub type AmbassadorCoreInstance = pallet_core_fellowship::Instance2;
 
 impl pallet_core_fellowship::Config<AmbassadorCoreInstance> for Runtime {
-	type BlockNumberProvider = crate::System;
 	type WeightInfo = weights::pallet_core_fellowship_ambassador_core::WeightInfo<Runtime>;
 	type RuntimeEvent = RuntimeEvent;
 	type Members = pallet_ranked_collective::Pallet<Runtime, AmbassadorCollectiveInstance>;
@@ -374,7 +373,7 @@ impl pallet_treasury::Config<AmbassadorTreasuryInstance> for Runtime {
 		sp_core::ConstU8<1>,
 		ConstU32<1000>,
 	>;
-	type BlockNumberProvider = crate::System;
+	type BlockNumberProvider = System;
 }
 
 #[cfg(all(test, not(feature = "runtime-benchmarks")))]

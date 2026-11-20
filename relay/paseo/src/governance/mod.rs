@@ -61,14 +61,16 @@ pub type TreasurySpender = EnsureRootWithSuccess<AccountId, MaxBalance>;
 impl origins::pallet_custom_origins::Config for Runtime {}
 
 impl pallet_whitelist::Config for Runtime {
-	type DeferredDispatchExpiration = ConstU32<{ 28 * DAYS }>;
-	type BlockNumberProvider = System;
 	type WeightInfo = weights::pallet_whitelist::WeightInfo<Self>;
 	type RuntimeCall = RuntimeCall;
 	type RuntimeEvent = RuntimeEvent;
 	type WhitelistOrigin = EnsureRoot<Self::AccountId>;
 	type DispatchWhitelistedOrigin = EitherOf<EnsureRoot<Self::AccountId>, WhitelistedCaller>;
 	type Preimages = Preimage;
+	// How long a call dispatched by the Whitelisted Caller before the Fellowship whitelists it
+	// stays executable by any signed origin (polkadot-sdk#11336).
+	type DeferredDispatchExpiration = ConstU32<{ 28 * DAYS }>;
+	type BlockNumberProvider = System;
 }
 
 impl pallet_referenda::Config for Runtime {

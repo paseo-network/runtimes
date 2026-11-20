@@ -346,7 +346,7 @@ impl<T: frame_system::Config> pallet_xcm::WeightInfo for WeightInfo<T> {
 	/// Proof: `XcmPallet::ShouldRecordXcm` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
 	/// Storage: `XcmPallet::AssetTraps` (r:1 w:1)
 	/// Proof: `XcmPallet::AssetTraps` (`max_values`: None, `max_size`: None, mode: `Measured`)
-	// SDK stable2609-2 upstream benchmark; regenerate for Paseo before release.
+	/// The range of component `n` is `[1, 20]`.
 	fn claim_assets(_n: u32, ) -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `23`
@@ -377,7 +377,7 @@ impl<T: frame_system::Config> pallet_xcm::WeightInfo for WeightInfo<T> {
 		Weight::from_parts(18_446_744_073_709_551_000, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 	}
-	// SDK stable2609-2 upstream benchmark; regenerate for Paseo before release.
+	/// The range of component `n` is `[0, 8192]`.
 	fn weigh_message(n: u32, ) -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
@@ -388,8 +388,7 @@ impl<T: frame_system::Config> pallet_xcm::WeightInfo for WeightInfo<T> {
 			// Standard Error: 319
 			.saturating_add(Weight::from_parts(107_844, 0).saturating_mul(n.into()))
 	}
-
-	// SDK stable2609-2 upstream benchmark; regenerate for Paseo before release.
+	/// The range of component `n` is `[0, 131072]`.
 	fn decode_xcm(n: u32, ) -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`

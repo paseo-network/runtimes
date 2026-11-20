@@ -68,8 +68,6 @@ impl<P: frame_support::traits::PalletInfoAccess> frame_support::traits::OnRuntim
 
 /// Unreleased migrations. Add new ones here:
 pub type Unreleased = (
-	cumulus_pallet_xcmp_queue::migration::v6::MigrateV5ToV6<Runtime>,
-	cumulus_pallet_parachain_system::migration::Migration<Runtime>,
 	//
 	// 🔴 MUST RUN BEFORE ANYTHING THAT READS A RING ROOT.
 	//
@@ -77,14 +75,7 @@ pub type Unreleased = (
 	// (it stores only the ring commitment; the 480-byte KZG verifier key is now re-derived). The
 	// 24 live records are in the old layout and `RingRoot`'s hand-written `Decode` reads them
 	// **without error** — every ring would present the same root. Strips the inlined key.
-	//
-	// Ordered here because the two collection-creation migrations below fire
-	// `on_ring_root_change`, which reads roots: they must see the converted form.
 	ring_roots::MigrateRingRootsToCommitmentOnly,
-	// Creates the on-chain collections the v0.3.1 people pallets expect. Both are self-guarding
-	// (they no-op when the collection already exists).
-	indiv_pallet_people::migration::CreatePeopleCollection<Runtime>,
-	indiv_pallet_people_lite::migration::CreateLitePeopleCollection<Runtime>,
 	//
 	// PASEO-LOCAL. Unit A of the coinage migration: adopt the pre-existing coin population into
 	// instance 0, seeded from the removed `UnderlyingAssetId`.
@@ -92,9 +83,7 @@ pub type Unreleased = (
 	// Ordering, all load-bearing:
 	//   1. AFTER `SeedNetworkSuffix`. Coinage aliases derive from product contexts, which splice
 	//      the network suffix; the suffix must be in state before anything reads it back out.
-	//   2. AFTER both collection-creation migrations. Coinage's recycler and paid-unload-token
-	//      rings hang off the people / lite-people collections, so those must exist first.
-	//   3. BEFORE units B and C, which run as MBMs. Both phrase their invariants against
+	//   2. BEFORE units B and C, which run as MBMs. Both phrase their invariants against
 	//      `Instances[0]`, and every coinage call reads it.
 	//
 	// The instance is seeded `Sufficient` and native-unit-preserving, so no paid-unload fee path
@@ -109,8 +98,11 @@ pub type Unreleased = (
 	// Storage-version bootstrap for the pallet added in this release, as upstream
 	// `next-people-paseo` carries it. Single use: remove once the upgrade carrying it is live.
 	indiv_pallet_nft_credits::migration::MigrateV0ToV1<Runtime>,
+	indiv_pallet_score::migration::MigrateV0ToV1<Runtime>,
 	// Single use! - remove once the upgrade carrying it is live.
 	indiv_pallet_airdrop::migration::MigrateV0ToV1<Runtime>,
+	// Single use! - remove once the upgrade carrying it is live.
+	indiv_pallet_game::migration::MigrateV0ToV1<Runtime>,
 );
 
 /// Migrations/checks that do not need to be versioned and can run on every update.
@@ -124,9 +116,6 @@ pub type SingleBlockMigrations = (Unreleased, Permanent);
 /// `pallet_assets::Config::ReserveData` changed from `()` to `ForeignAssetReserveData`, so the
 /// per-asset reserve entries must be backfilled from the previously hardcoded XCM rules.
 pub type MbmMigrations = (
-	indiv_pallet_people_lite::migration::v1::LazyMigrationV0ToV1<Runtime>,
-	indiv_pallet_people::migration::MigrateV0ToV1<Runtime>,
-	indiv_pallet_resources::migration::v1::RecordGrantedAllowances<Runtime>,
 	assets_common::migrations::foreign_assets_reserves::ForeignAssetsReservesMigration<
 		Runtime,
 		(),
@@ -139,6 +128,16 @@ pub type MbmMigrations = (
 	// both require A, which runs single-block in `Unreleased` above.
 	coinage::MigrateCoinageToInstances,
 	coinage::RelocateCoinageRecyclerCollections,
+	// Single use! - remove once the upgrade carrying it is live. Backfills
+	// `PeopleLite::CounterForLitePeople` now that `LitePeople` is a counted map.
+	indiv_pallet_people_lite::migration::v1::LazyMigrationV0ToV1<Runtime>,
+	// Single use! - remove once the upgrade carrying it is live. Adds a `RecognitionHistory` to
+	// every `People::People` record and bumps `People` to storage version 1.
+	indiv_pallet_people::migration::MigrateV0ToV1<Runtime>,
+	// Single use! - remove once the upgrade carrying it is live. Records the granted allowance in
+	// every `Resources` statement store entry and notification registration, and bumps
+	// `Resources` to storage version 1.
+	indiv_pallet_resources::migration::v1::RecordGrantedAllowances<Runtime>,
 );
 
 fn reserve_data_for(asset_id: &Location) -> Option<ForeignAssetReserveData> {

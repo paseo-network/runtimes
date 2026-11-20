@@ -1633,141 +1633,379 @@ impl<T: frame_system::Config> pallet_revive::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(5))
 			.saturating_add(T::DbWeight::get().writes(5))
 	}
-
-	// SDK stable2609-2 weights for new benchmarks; regenerate for this runtime before release.
+	/// Storage: `Skipped::Metadata` (r:0 w:0)
+	/// Proof: `Skipped::Metadata` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// The range of component `n` is `[0, 2048]`.
 	fn overlay_probe_full(n: u32, ) -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::overlay_probe_full(n)
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 584_665_000 picoseconds.
+		Weight::from_parts(609_315_441, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 450
+			.saturating_add(Weight::from_parts(645_210, 0).saturating_mul(n.into()))
+			.saturating_add(T::DbWeight::get().writes(2048))
 	}
-
+	/// Storage: `Skipped::Metadata` (r:0 w:0)
+	/// Proof: `Skipped::Metadata` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// The range of component `n` is `[0, 2048]`.
 	fn overlay_probe_empty(n: u32, ) -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::overlay_probe_empty(n)
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 174_000 picoseconds.
+		Weight::from_parts(20_118_110, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 609
+			.saturating_add(Weight::from_parts(548_657, 0).saturating_mul(n.into()))
 	}
-
+	/// Storage: `Skipped::Metadata` (r:0 w:0)
+	/// Proof: `Skipped::Metadata` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// The range of component `n` is `[0, 416]`.
+	/// The range of component `o` is `[0, 416]`.
 	fn seal_set_storage_hot(n: u32, o: u32, ) -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::seal_set_storage_hot(n, o)
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 2_971_000 picoseconds.
+		Weight::from_parts(3_247_646, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 18
+			.saturating_add(Weight::from_parts(303, 0).saturating_mul(n.into()))
+			// Standard Error: 18
+			.saturating_add(Weight::from_parts(125, 0).saturating_mul(o.into()))
 	}
-
+	/// Storage: `Skipped::Metadata` (r:0 w:0)
+	/// Proof: `Skipped::Metadata` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// The range of component `n` is `[0, 416]`.
 	fn clear_storage_hot(n: u32, ) -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::clear_storage_hot(n)
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 4_051_000 picoseconds.
+		Weight::from_parts(4_479_828, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 22
+			.saturating_add(Weight::from_parts(209, 0).saturating_mul(n.into()))
 	}
-
+	/// Storage: `Skipped::Metadata` (r:0 w:0)
+	/// Proof: `Skipped::Metadata` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// The range of component `n` is `[0, 416]`.
 	fn seal_get_storage_hot(n: u32, ) -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::seal_get_storage_hot(n)
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 2_453_000 picoseconds.
+		Weight::from_parts(2_711_549, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 12
+			.saturating_add(Weight::from_parts(528, 0).saturating_mul(n.into()))
 	}
-
-	fn contains_storage_hot(n: u32, ) -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::contains_storage_hot(n)
+	/// Storage: `Skipped::Metadata` (r:0 w:0)
+	/// Proof: `Skipped::Metadata` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// The range of component `n` is `[0, 416]`.
+	fn contains_storage_hot(_n: u32, ) -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 3_377_000 picoseconds.
+		Weight::from_parts(3_775_777, 0)
+			.saturating_add(Weight::from_parts(0, 0))
 	}
-
+	/// Storage: `Skipped::Metadata` (r:0 w:0)
+	/// Proof: `Skipped::Metadata` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// The range of component `n` is `[0, 416]`.
 	fn take_storage_hot(n: u32, ) -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::take_storage_hot(n)
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 3_987_000 picoseconds.
+		Weight::from_parts(4_631_206, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 22
+			.saturating_add(Weight::from_parts(729, 0).saturating_mul(n.into()))
 	}
-
 	fn access_list_touch_cold_full() -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::access_list_touch_cold_full()
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 2_846_000 picoseconds.
+		Weight::from_parts(2_984_000, 0)
+			.saturating_add(Weight::from_parts(0, 0))
 	}
-
 	fn access_list_touch_hot_full() -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::access_list_touch_hot_full()
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 3_165_000 picoseconds.
+		Weight::from_parts(3_318_000, 0)
+			.saturating_add(Weight::from_parts(0, 0))
 	}
-
 	fn access_list_touch_cold_empty() -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::access_list_touch_cold_empty()
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 283_000 picoseconds.
+		Weight::from_parts(363_000, 0)
+			.saturating_add(Weight::from_parts(0, 0))
 	}
-
 	fn access_list_touch_hot_single_element() -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::access_list_touch_hot_single_element()
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 259_000 picoseconds.
+		Weight::from_parts(323_000, 0)
+			.saturating_add(Weight::from_parts(0, 0))
 	}
-
 	fn access_list_rollback_amortization() -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::access_list_rollback_amortization()
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 2_999_000 picoseconds.
+		Weight::from_parts(3_105_000, 0)
+			.saturating_add(Weight::from_parts(0, 0))
 	}
-
+	/// The range of component `r` is `[0, 1024]`.
 	fn evm_pop_opcode(r: u32, ) -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_pop_opcode(r)
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 241_000 picoseconds.
+		Weight::from_parts(461_822, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 6
+			.saturating_add(Weight::from_parts(6_081, 0).saturating_mul(r.into()))
 	}
-
+	/// The range of component `r` is `[0, 512]`.
 	fn evm_div_opcode(r: u32, ) -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_div_opcode(r)
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 236_000 picoseconds.
+		Weight::from_parts(1_359_720, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 185
+			.saturating_add(Weight::from_parts(269_442, 0).saturating_mul(r.into()))
 	}
-
+	/// The range of component `r` is `[0, 512]`.
 	fn evm_div_opcode_one_limb_variant(r: u32, ) -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_div_opcode_one_limb_variant(r)
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 247_000 picoseconds.
+		Weight::from_parts(862_096, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 143
+			.saturating_add(Weight::from_parts(156_686, 0).saturating_mul(r.into()))
 	}
-
+	/// The range of component `r` is `[0, 512]`.
 	fn evm_div_opcode_mixed_variant(r: u32, ) -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_div_opcode_mixed_variant(r)
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 231_000 picoseconds.
+		Weight::from_parts(2_501_510, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 308
+			.saturating_add(Weight::from_parts(222_195, 0).saturating_mul(r.into()))
 	}
-
+	/// The range of component `r` is `[0, 512]`.
 	fn evm_div_opcode_fixed_knuth_variant(r: u32, ) -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_div_opcode_fixed_knuth_variant(r)
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 241_000 picoseconds.
+		Weight::from_parts(1_046_300, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 91
+			.saturating_add(Weight::from_parts(260_826, 0).saturating_mul(r.into()))
 	}
-
+	/// The range of component `r` is `[0, 512]`.
 	fn evm_sdiv_opcode(r: u32, ) -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_sdiv_opcode(r)
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 252_000 picoseconds.
+		Weight::from_parts(1_567_700, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 271
+			.saturating_add(Weight::from_parts(306_577, 0).saturating_mul(r.into()))
 	}
-
+	/// The range of component `r` is `[0, 512]`.
 	fn evm_sdiv_opcode_one_limb_variant(r: u32, ) -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_sdiv_opcode_one_limb_variant(r)
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 251_000 picoseconds.
+		Weight::from_parts(990_894, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 181
+			.saturating_add(Weight::from_parts(194_577, 0).saturating_mul(r.into()))
 	}
-
+	/// The range of component `r` is `[0, 512]`.
 	fn evm_sdiv_opcode_mixed_variant(r: u32, ) -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_sdiv_opcode_mixed_variant(r)
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 233_000 picoseconds.
+		Weight::from_parts(1_954_049, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 291
+			.saturating_add(Weight::from_parts(255_737, 0).saturating_mul(r.into()))
 	}
-
+	/// The range of component `r` is `[0, 512]`.
 	fn evm_sdiv_opcode_fixed_knuth_variant(r: u32, ) -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_sdiv_opcode_fixed_knuth_variant(r)
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 231_000 picoseconds.
+		Weight::from_parts(1_116_874, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 183
+			.saturating_add(Weight::from_parts(300_198, 0).saturating_mul(r.into()))
 	}
-
+	/// The range of component `r` is `[0, 512]`.
 	fn evm_mod_opcode(r: u32, ) -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_mod_opcode(r)
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 235_000 picoseconds.
+		Weight::from_parts(1_259_575, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 206
+			.saturating_add(Weight::from_parts(267_920, 0).saturating_mul(r.into()))
 	}
-
+	/// The range of component `r` is `[0, 512]`.
 	fn evm_mod_opcode_one_limb_variant(r: u32, ) -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_mod_opcode_one_limb_variant(r)
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 245_000 picoseconds.
+		Weight::from_parts(964_063, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 97
+			.saturating_add(Weight::from_parts(156_912, 0).saturating_mul(r.into()))
 	}
-
+	/// The range of component `r` is `[0, 512]`.
 	fn evm_mod_opcode_mixed_variant(r: u32, ) -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_mod_opcode_mixed_variant(r)
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 238_000 picoseconds.
+		Weight::from_parts(2_715_233, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 332
+			.saturating_add(Weight::from_parts(221_286, 0).saturating_mul(r.into()))
 	}
-
+	/// The range of component `r` is `[0, 512]`.
 	fn evm_mod_opcode_fixed_knuth_variant(r: u32, ) -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_mod_opcode_fixed_knuth_variant(r)
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 236_000 picoseconds.
+		Weight::from_parts(1_042_164, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 80
+			.saturating_add(Weight::from_parts(260_548, 0).saturating_mul(r.into()))
 	}
-
+	/// The range of component `r` is `[0, 512]`.
 	fn evm_smod_opcode(r: u32, ) -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_smod_opcode(r)
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 243_000 picoseconds.
+		Weight::from_parts(1_430_929, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 249
+			.saturating_add(Weight::from_parts(272_441, 0).saturating_mul(r.into()))
 	}
-
+	/// The range of component `r` is `[0, 512]`.
 	fn evm_smod_opcode_one_limb_variant(r: u32, ) -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_smod_opcode_one_limb_variant(r)
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 240_000 picoseconds.
+		Weight::from_parts(710_468, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 114
+			.saturating_add(Weight::from_parts(161_083, 0).saturating_mul(r.into()))
 	}
-
+	/// The range of component `r` is `[0, 512]`.
 	fn evm_smod_opcode_mixed_variant(r: u32, ) -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_smod_opcode_mixed_variant(r)
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 243_000 picoseconds.
+		Weight::from_parts(1_976_768, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 298
+			.saturating_add(Weight::from_parts(221_088, 0).saturating_mul(r.into()))
 	}
-
+	/// The range of component `r` is `[0, 512]`.
 	fn evm_smod_opcode_fixed_knuth_variant(r: u32, ) -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_smod_opcode_fixed_knuth_variant(r)
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 253_000 picoseconds.
+		Weight::from_parts(1_119_518, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 97
+			.saturating_add(Weight::from_parts(263_535, 0).saturating_mul(r.into()))
 	}
-
+	/// The range of component `r` is `[0, 341]`.
 	fn evm_addmod_opcode(r: u32, ) -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_addmod_opcode(r)
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 243_000 picoseconds.
+		Weight::from_parts(1_987_641, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 509
+			.saturating_add(Weight::from_parts(519_657, 0).saturating_mul(r.into()))
 	}
-
+	/// The range of component `r` is `[0, 341]`.
 	fn evm_addmod_opcode_one_limb_variant(r: u32, ) -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_addmod_opcode_one_limb_variant(r)
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 240_000 picoseconds.
+		Weight::from_parts(1_143_593, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 234
+			.saturating_add(Weight::from_parts(290_057, 0).saturating_mul(r.into()))
 	}
-
+	/// The range of component `r` is `[0, 341]`.
 	fn evm_addmod_opcode_mixed_variant(r: u32, ) -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_addmod_opcode_mixed_variant(r)
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 244_000 picoseconds.
+		Weight::from_parts(2_836_705, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 598
+			.saturating_add(Weight::from_parts(437_200, 0).saturating_mul(r.into()))
 	}
-
+	/// The range of component `r` is `[0, 341]`.
 	fn evm_addmod_opcode_fixed_knuth_variant(r: u32, ) -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_addmod_opcode_fixed_knuth_variant(r)
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 240_000 picoseconds.
+		Weight::from_parts(1_227_396, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 204
+			.saturating_add(Weight::from_parts(517_391, 0).saturating_mul(r.into()))
 	}
-
+	/// The range of component `r` is `[0, 341]`.
 	fn evm_mulmod_opcode(r: u32, ) -> Weight {
-		<pallet_revive::weights::SubstrateWeight<T> as pallet_revive::WeightInfo>::evm_mulmod_opcode(r)
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 225_000 picoseconds.
+		Weight::from_parts(1_176_520, 0)
+			.saturating_add(Weight::from_parts(0, 0))
+			// Standard Error: 237
+			.saturating_add(Weight::from_parts(363_553, 0).saturating_mul(r.into()))
 	}
 }

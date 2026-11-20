@@ -14,30 +14,24 @@
 // limitations under the License.
 
 use super::*;
-use crate::{
-	parameters::{
-		AccountsApiAllowance, LiteNotificationSlotsPerPeriod, LitePersonRegistrationFee,
-		LitePersonStatementLimit, LiteStmtStoreSlotsPerPeriod,
-		LongTermStorageAllowanceForLitePeople, LongTermStorageAllowanceForPeople,
-		LongTermStorageClaimsPerPeriod, LongTermStorageCleanupLimit, LongTermStorageGraceWindow,
-		LongTermStoragePeriodDuration, NotificationAllowance, NotificationPeriodDuration,
-		NotificationSlotsPerPeriod, PeopleAirdropsPrizeSource, PersonStatementLimit,
-		StmtStoreCleanupLimit, StmtStoreGraceWindow, StmtStoreReplacementCooldown,
-		StmtStoreSlotsPerPeriod,
-	},
-	xcm_config::LocationToAccountId,
+use crate::parameters::{
+	AccountsApiAllowance, LiteNotificationSlotsPerPeriod, LitePaidRegistrationPeriod,
+	LitePaidRegistrationThreshold, LitePaidRegistrationsPerPeriod, LitePersonRegistrationFee,
+	LitePersonStatementLimit, LiteStmtStoreSlotsPerPeriod, LongTermStorageAllowanceForLitePeople,
+	LongTermStorageAllowanceForPeople, LongTermStorageClaimsPerPeriod, LongTermStorageCleanupLimit,
+	LongTermStorageGraceWindow, LongTermStoragePeriodDuration, MaxLitePeople,
+	NotificationAllowance, NotificationPeriodDuration, NotificationSlotsPerPeriod,
+	PeopleAirdropsPrizeSource, PersonStatementLimit, StmtStoreCleanupLimit, StmtStoreGraceWindow,
+	StmtStoreSlotsPerPeriod,
 };
 use codec::{Decode, Encode, MaxEncodedLen};
 use enumflags2::{bitflags, BitFlags};
-use frame_support::{
-	dispatch::GetDispatchInfo, parameter_types, weights::WeightToFee as WeightToFeeT, CloneNoBound,
-	DebugNoBound, EqNoBound, PartialEqNoBound,
-};
+use frame_support::{parameter_types, CloneNoBound, DebugNoBound, EqNoBound, PartialEqNoBound};
 use pallet_identity::{Data, IdentityInformationProvider};
-use parachains_common::{impls::ToParentTreasury, DAYS, MINUTES};
+use parachains_common::{DAYS, MINUTES};
 use scale_info::TypeInfo;
 use sp_runtime::{
-	traits::{AccountIdConversion, ExtensionVariant, Verify},
+	traits::{AccountIdConversion, Verify},
 	Debug,
 };
 use xcm::latest::prelude::BodyId;
@@ -51,8 +45,6 @@ parameter_types! {
 	pub const ByteDeposit: Balance = system_para_deposit(0, 1);
 	pub const UsernameDeposit: Balance = system_para_deposit(0, 32);
 	pub const SubAccountDeposit: Balance = system_para_deposit(1, 53);
-	pub RelayTreasuryAccount: AccountId =
-		parachains_common::TREASURY_PALLET_ID.into_account_truncating();
 	pub const GeneralAdminBodyId: BodyId = BodyId::Administration;
 }
 
@@ -74,7 +66,7 @@ impl pallet_identity::Config for Runtime {
 	type MaxSubAccounts = ConstU32<100>;
 	type IdentityInformation = IdentityInfo;
 	type MaxRegistrars = ConstU32<20>;
-	type Slashed = ToParentTreasury<RelayTreasuryAccount, LocationToAccountId, Runtime>;
+	type Slashed = pallet_accumulate_and_forward::LegacyAdapter<Runtime, Balances>;
 	type ForceOrigin = EnsureRoot<Self::AccountId>;
 	type RegistrarOrigin = IdentityAdminOrigin;
 	type OffchainSignature = Signature;
@@ -283,11 +275,9 @@ use indiv_support::{
 use paseo_runtime_constants::system_parachain::AssetHubParaId;
 #[cfg(feature = "runtime-benchmarks")]
 use paseo_runtime_constants::system_parachain::ASSET_HUB_ID;
-#[cfg(feature = "runtime-benchmarks")]
-use sp_runtime::BoundedVec;
 use sp_runtime::{
 	traits::{ConstI8, ConstU16},
-	DispatchResult, MultiSignature, MultiSigner, Percent,
+	BoundedVec, DispatchResult, MultiSignature, MultiSigner, Percent,
 };
 use sp_statement_store::StatementAllowance;
 use verifiable::{ring::bandersnatch::BandersnatchVrfVerifiable, GenerateVerifiable};
@@ -408,9 +398,9 @@ parameter_types! {
 }
 
 impl indiv_pallet_people::Config for Runtime {
-	type Clock = Timestamp;
 	type WeightInfo = weights::indiv_pallet_people::WeightInfo<Runtime>;
 	type MemberService = Members;
+	type Clock = Timestamp;
 	type RingExponent = MembersFlexibleRingExponent;
 	type CollectionOwner = PeopleCollectionOwner;
 	type AccountContexts = AccountContexts;
@@ -529,15 +519,17 @@ pub mod benchmark_utils {
 			pallet_timestamp::Now::<Runtime>::put(now.as_millis() as u64);
 		}
 
+		/// Signs with sr25519 through the host keystore. The fixed seed derives the same key on
+		/// every call, so a benchmark that signs after looking up the account signs for that
+		/// account.
 		fn sign_message(message: &[u8]) -> (sp_runtime::AccountId32, MultiSignature) {
-			use sp_core::Pair;
+			use sp_io::crypto::{sr25519_generate, sr25519_sign};
 			use sp_runtime::traits::IdentifyAccount;
-			let entropy = [1u8; 32];
-			let pair = sp_core::ed25519::Pair::from_seed(&entropy);
-			let account = pair.public().into_account().into();
-			let secret = ed25519_zebra::SigningKey::from(entropy);
-			let signature = sp_core::ed25519::Signature::from_raw(secret.sign(message).into());
-			(account, signature.into())
+			let public = sr25519_generate(0.into(), Some(b"//ResourcesBenchHelper".to_vec()));
+			let account = sp_runtime::MultiSigner::Sr25519(public).into_account();
+			let signature = sr25519_sign(0.into(), &public, message)
+				.expect("the benchmark keystore signs with a key it generated; qed");
+			(account, MultiSignature::Sr25519(signature))
 		}
 	}
 
@@ -834,7 +826,6 @@ parameter_types! {
 }
 
 impl indiv_pallet_game::Config for Runtime {
-	type MinStepPhaseDuration = ConstU32<{ 2 * (SLOT_DURATION / 1_000) as u32 }>;
 	const TESTNET: bool = true;
 	type WeightInfo = weights::indiv_pallet_game::WeightInfo<Runtime>;
 	type MaxGroupSize = ConstU32<6>;
@@ -860,7 +851,13 @@ impl indiv_pallet_game::Config for Runtime {
 	type MaxAttendanceHistoryDepth = ConstU32<12>;
 	// Game credits become NFT claims on Asset Hub through `NftCredits` / `NftClaims`.
 	type NftClaimCredits = NftCredits;
+	type MaxTenureThresholds = MaxTenureThresholds;
+	type DefaultTenureThresholds = DefaultTenureThresholds;
 	type DefaultPhaseDurations = GamePhaseDurations;
+	// Two 12-second jumps of the block timestamp. That covers the fewest steps a phase needs:
+	// `end_registration` then one `advance_shuffle` for the shuffle, `end_reporting` then two
+	// `process_players` for the player process.
+	type MinStepPhaseDuration = ConstU32<{ 2 * (SLOT_DURATION / 1_000) as u32 }>;
 	type AccountSignature = Signature;
 	type PlayerStatementLimit = PlayerStatementLimit;
 	type PeopleVoteWeight = ConstUint<2>;
@@ -942,22 +939,20 @@ impl indiv_pallet_nft_credits::Config for Runtime {
 	type MaxCreditTreesPerMessage = ConstU32<32>;
 	type ReplayCooldownSeconds = ConstU64<60>;
 	type NftClaimsRemoteWeight = NftClaimsRemoteWeight;
-	// Entries are the distinct blocks whose trees commit a claimant's credits, not a window of
-	// consecutive ones, so the bound counts games rather than time. One game awards a claimant at
-	// most `(MaxGroupSize - 1) * MaxRounds = 15` credits, one per co-player that reported `Person`-
-	// on them, plus the attendance backfill, which awards the rest in a single call. Those land in
-	// 16 distinct blocks only if no two reports ever share one, and reports cluster. At one game a
-	// week `AwardRetentionTtl` spans about 13 games, so 208 entries cover the window even at that
-	// worst case; this leaves margin over it, and about 85 games at the few blocks a game usually
-	// takes. The list costs 1 KB at this bound.
+	// Entries are the tree blocks that hold a claimant's credits, so the bound counts games rather
+	// than time. A game puts a claimant's credits in at most 19 blocks: 15 for reports and up to
+	// two each for the attendance backfill and the tenure claim, whose credits can spill into the
+	// next block's buffer. At one game a week `AwardRetentionTtl` spans about 13 games, so the
+	// worst case is 247 blocks. The list costs 1 KB at this bound.
 	//
 	// Being a count, the window shortens as games run more often. Governance sets the schedule and
 	// `new_game` only refuses a concurrent game, so back-to-back games would fill this in a day.
 	type MaxCreditBlocksPerClaimant = ConstU32<256>;
 	// The claims chain's own deadline, which is what the two have to agree on. What it costs this
 	// chain follows participation rather than a constant: a player earns at most
-	// `(MaxGroupSize - 1) * MaxRounds = 15` credits a game, so at one game a week 90 days is about
-	// 195 credits, or 13 KB at 65 bytes an award. Retaining personhood needs one game per
+	// `(MaxGroupSize - 1) * MaxRounds = 15` report credits and one tenure credit per
+	// `MaxTenureThresholds` entry a game, so at one game a week 90 days is about 299 credits,
+	// or 19 KB at 65 bytes an award. Retaining personhood needs one game per
 	// `NonPlayingKickoutTime` and costs a fraction of that.
 	type AwardRetentionTtl = ClaimsChainTreeTtl;
 	type EnsureClaimsChainOrigin = EnsureClaimsChainSibling;
@@ -986,6 +981,14 @@ parameter_types! {
 	/// roots for less time than the claims chain gives a claimant, which strands credits inside their
 	/// deadline. A value above it keeps roots after the last credit has expired.
 	pub const ClaimsChainTreeTtl: u64 = 90 * 24 * 60 * 60;
+	/// The tenure credits a player earns in one game at most. Each takes a credit slot after the
+	/// game's 18 report slots, out of the 128 a claimant has per game.
+	pub const MaxTenureThresholds: u32 = 8;
+	/// Thresholds at 0, 1, 2, 4, 8 and 13 games attended while recognised. A player earns one
+	/// tenure credit per game for each threshold their tenure reaches. Every player reaches the
+	/// first, and a person earns 6 credits a game from 13 games on.
+	pub DefaultTenureThresholds: BoundedVec<indiv_pallet_game::GamesAttended, MaxTenureThresholds> =
+		BoundedVec::truncate_from(vec![0, 1, 2, 4, 8, 13]);
 }
 
 /// Origin check for the parachain the credit trees are delivered to. Only that chain may name the
@@ -1549,12 +1552,6 @@ impl indiv_pallet_relay_randomness::Config for Runtime {
 }
 
 impl indiv_pallet_people_lite::Config for Runtime {
-	type Clock = Timestamp;
-	// Preserve the previous uncapped registration policy.
-	type MaxLitePeople = ConstU32<{ u32::MAX }>;
-	type PaidRegistrationThreshold = ConstU32<{ u32::MAX }>;
-	type PaidRegistrationPeriod = ConstU32<86_400>;
-	type PaidRegistrationsPerPeriod = ConstU32<{ u32::MAX }>;
 	type WeightInfo = weights::indiv_pallet_people_lite::WeightInfo<Runtime>;
 	type Currency = Balances;
 	type PotId = LitePeoplePotId;
@@ -1564,6 +1561,11 @@ impl indiv_pallet_people_lite::Config for Runtime {
 	// the lite-people ring, on a chain whose native token is faucet-dispensed. See the
 	// remaining-risk list in RUNTIME_WIRING_RESULT.md before enactment.
 	type RegistrationFee = LitePersonRegistrationFee;
+	type MaxLitePeople = MaxLitePeople;
+	type Clock = Timestamp;
+	type PaidRegistrationThreshold = LitePaidRegistrationThreshold;
+	type PaidRegistrationPeriod = LitePaidRegistrationPeriod;
+	type PaidRegistrationsPerPeriod = LitePaidRegistrationsPerPeriod;
 	type Suffix = NetworkSuffix;
 	type AttestationAllowanceManager = EnsureRoot<Self::AccountId>;
 	type MemberService = Members;
@@ -1588,7 +1590,6 @@ parameter_types! {
 }
 
 impl indiv_pallet_resources::Config for Runtime {
-	type OnStmtStoreSlotCleared = ClearStmtStoreHolderUsage;
 	type WeightInfo = indiv_pallet_resources::weights::SubstrateWeight<Runtime>;
 	// Same source of truth as Asset Hub's `pgas`/`dotns-gateway` bindings: the on-chain
 	// `NetworkSuffix` pallet, whose default is the shared `system-parachains-constants` value.
@@ -1617,6 +1618,7 @@ impl indiv_pallet_resources::Config for Runtime {
 	type EnsureLitePerson = indiv_pallet_people_lite::EnsureLitePerson<Runtime>;
 	type Clock = Timestamp;
 	type OffchainSignature = Signature;
+	type OnStmtStoreSlotCleared = ClearStmtStoreHolderUsage;
 	type LitePersonStatementLimit = LitePersonStatementLimit;
 	type PersonStatementLimit = PersonStatementLimit;
 	type MaxReservationQueueLength = MaxReservationQueueLength;
@@ -1795,6 +1797,12 @@ impl indiv_pallet_coinage::BenchmarkHelper<Runtime> for CoinageBenchHelper {
 			provider,
 		)
 		.expect("failed to add liquidity to the fee conversion pool");
+
+		// Top up the unload caller; fee-failure benchmarks need exact funding.
+		let caller: AccountId = frame_benchmarking::account("caller", 0, 0);
+		let fee_reserve = Coinage::get_paid_unload_token_fee_quote_in_asset(0, 1)
+			.expect("benchmark: fee conversion pool must provide a quote");
+		Self::fund_account(&caller, fee_reserve);
 	}
 
 	fn create_people_proof(
@@ -2257,10 +2265,33 @@ pub enum RestrictedEntity {
 	AccountParticipant(AccountId),
 	InvitedCandidate(AccountId),
 	LitePerson(AccountId),
+	/// The holder of the statement store slot of an alias. Usage is tracked per alias, so it
+	/// follows the slot across replacements.
 	StmtStoreHolder(Alias),
 }
 
+/// Drops the usage record of a statement store slot holder once the slot entry is removed.
+pub struct ClearStmtStoreHolderUsage;
+impl indiv_pallet_resources::OnStmtStoreSlotCleared for ClearStmtStoreHolderUsage {
+	fn on_cleared(alias: &Alias) {
+		indiv_pallet_origin_restriction::Usages::<Runtime>::remove(
+			RestrictedEntity::StmtStoreHolder(*alias),
+		);
+	}
+}
+
+/// Relay chain blocks over which a statement store slot holder recovers the fee of one
+/// replacement (15 minutes, 450 parachain blocks).
+const STMT_STORE_HOLDER_RECOVERY_RELAY_BLOCKS: u32 = 150;
+
+/// The fee the origin restriction charges for one statement store slot replacement.
+///
+/// It is the weight and length fee of a replacement transaction with an sr25519 signature, the
+/// scheme the benchmark signs with, and a mortal era. An ecdsa signature costs slightly more.
 fn stmt_store_replacement_fee() -> Balance {
+	use frame_support::{dispatch::GetDispatchInfo, weights::WeightToFee as WeightToFeeT};
+	use sp_runtime::traits::ExtensionVariant;
+
 	let call =
 		RuntimeCall::Resources(indiv_pallet_resources::Call::replace_statement_store_account {
 			period: 0,
@@ -2304,11 +2335,16 @@ fn stmt_store_replacement_fee() -> Balance {
 		call,
 		generic::Preamble::General(ExtensionVariant::Other(TxExtensionOtherVersions::new(tx_ext))),
 	);
-	let weight_fee = <<Runtime as pallet_transaction_payment::Config>::WeightToFee as WeightToFeeT>::weight_to_fee(&extrinsic.get_dispatch_info().total_weight());
-	let length_fee = <<Runtime as pallet_transaction_payment::Config>::LengthToFee as WeightToFeeT>::weight_to_fee(&Weight::from_parts(
-		extrinsic.encoded_size() as u64,
-		0,
-	));
+	// Upstream defines runtime-level `WeightToFee`/`LengthToFee` aliases; Paseo reads the same
+	// converters from the transaction payment config instead.
+	let weight_fee =
+		<<Runtime as pallet_transaction_payment::Config>::WeightToFee as WeightToFeeT>::weight_to_fee(
+			&extrinsic.get_dispatch_info().total_weight(),
+		);
+	let length_fee =
+		<<Runtime as pallet_transaction_payment::Config>::LengthToFee as WeightToFeeT>::weight_to_fee(
+			&Weight::from_parts(extrinsic.encoded_size() as u64, 0),
+		);
 	weight_fee.saturating_add(length_fee)
 }
 
@@ -2326,16 +2362,17 @@ impl indiv_pallet_origin_restriction::RestrictedEntity<OriginCaller, Balance> fo
 				Allowance { max: 0, recovery_per_block: POI_CANDIDATE_RECOVERY },
 			RestrictedEntity::AccountParticipant(_) =>
 				Allowance { max: 0, recovery_per_block: ACCOUNT_PARTICIPANT_RECOVERY },
-			RestrictedEntity::StmtStoreHolder(_) => Allowance {
-				max: 0,
-				// Preserve the existing local cooldown, expressed in relay blocks.
-				recovery_per_block: stmt_store_replacement_fee()
-					.div_ceil(Balance::from(StmtStoreReplacementCooldown::get().div_ceil(6).max(1)))
-					.max(1),
-			},
 			RestrictedEntity::LitePerson(_) => Allowance {
 				max: LITE_PERSON_ALLOWANCE_MAX,
 				recovery_per_block: LITE_PERSON_ALLOWANCE_RECOVERY,
+			},
+			// With `max: 0`, a replacement runs only as a one-time excess at zero usage, so at most
+			// once per recovery of its fee.
+			RestrictedEntity::StmtStoreHolder(_) => Allowance {
+				max: 0,
+				recovery_per_block: stmt_store_replacement_fee()
+					.div_ceil(Balance::from(STMT_STORE_HOLDER_RECOVERY_RELAY_BLOCKS))
+					.max(1),
 			},
 		}
 	}
@@ -2358,15 +2395,6 @@ impl indiv_pallet_origin_restriction::RestrictedEntity<OriginCaller, Balance> fo
 				Some(RestrictedEntity::StmtStoreHolder(*alias)),
 			_ => None,
 		}
-	}
-}
-
-pub struct ClearStmtStoreHolderUsage;
-impl indiv_pallet_resources::OnStmtStoreSlotCleared for ClearStmtStoreHolderUsage {
-	fn on_cleared(alias: &Alias) {
-		indiv_pallet_origin_restriction::Usages::<Runtime>::remove(
-			RestrictedEntity::StmtStoreHolder(*alias),
-		);
 	}
 }
 
@@ -2405,6 +2433,7 @@ impl ContainsPair<RestrictedEntity, RuntimeCall> for OperationAllowedOneTimeExce
 						RuntimeCall::Score(register { .. }) |
 						RuntimeCall::Game(sign_up_with_account { .. }) |
 						RuntimeCall::Game(report { .. }) |
+						RuntimeCall::Game(claim_tenure_credits { .. }) |
 						RuntimeCall::Game(offboard { .. }) |
 						RuntimeCall::Game(claim_airdrop { .. })
 				)
@@ -2427,12 +2456,17 @@ pub struct OriginRestrictionBenchmarkHelper;
 impl indiv_pallet_origin_restriction::BenchmarkHelper<OriginCaller, RuntimeCall>
 	for OriginRestrictionBenchmarkHelper
 {
+	/// The statement store holder pair, whose allowance computes the replacement fee estimate
+	/// on every validation, so the extension weight covers that cost.
 	fn excess_pair() -> (OriginCaller, RuntimeCall) {
 		(
-			OriginCaller::Score(indiv_pallet_score::Origin::AccountParticipant(
-				sp_runtime::AccountId32::new([0u8; 32]),
-			)),
-			RuntimeCall::Score(indiv_pallet_score::Call::cash_out {}),
+			OriginCaller::Resources(indiv_pallet_resources::Origin::StmtStoreHolder([0u8; 32])),
+			RuntimeCall::Resources(indiv_pallet_resources::Call::replace_statement_store_account {
+				period: 0,
+				alias: [0u8; 32],
+				new_account: AccountId::new([0u8; 32]),
+				since: 0,
+			}),
 		)
 	}
 }
@@ -2472,47 +2506,4 @@ impl pallet_verify_signature::Config for Runtime {
 	type WeightInfo = weights::pallet_verify_signature::WeightInfo<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = VerifySignatureBenchmarkHelper;
-}
-
-#[cfg(test)]
-mod statement_slot_holder_tests {
-	use super::*;
-	use indiv_pallet_origin_restriction::RestrictedEntity as _;
-
-	#[test]
-	fn statement_slot_holder_is_rate_limited_and_cleanup_removes_its_usage() {
-		sp_io::TestExternalities::default().execute_with(|| {
-			let alias = [7u8; 32];
-			let origin =
-				OriginCaller::Resources(indiv_pallet_resources::Origin::StmtStoreHolder(alias));
-			let entity = RestrictedEntity::restricted_entity(&origin).unwrap();
-			assert_eq!(entity, RestrictedEntity::StmtStoreHolder(alias));
-			let call = RuntimeCall::Resources(
-				indiv_pallet_resources::Call::replace_statement_store_account {
-					period: 0,
-					alias,
-					new_account: AccountId::new([8u8; 32]),
-					since: 0,
-				},
-			);
-			assert!(OperationAllowedOneTimeExcess::contains(&entity, &call));
-			assert!(!OperationAllowedOneTimeExcess::contains(
-				&entity,
-				&RuntimeCall::System(frame_system::Call::remark { remark: vec![] })
-			));
-			let allowance = entity.allowance();
-			assert_eq!(allowance.max, 0);
-			assert!(allowance.recovery_per_block > 0);
-			let fee = stmt_store_replacement_fee();
-			assert!(fee > allowance.recovery_per_block);
-			let cooldown_blocks = StmtStoreReplacementCooldown::get().div_ceil(6).max(1);
-			assert!(allowance.recovery_per_block.saturating_mul(cooldown_blocks.into()) >= fee);
-			indiv_pallet_origin_restriction::Usages::<Runtime>::insert(
-				&entity,
-				indiv_pallet_origin_restriction::Usage { used: fee, at_block: 1 },
-			);
-			<ClearStmtStoreHolderUsage as indiv_pallet_resources::OnStmtStoreSlotCleared>::on_cleared(&alias);
-			assert!(!indiv_pallet_origin_restriction::Usages::<Runtime>::contains_key(entity));
-		});
-	}
 }

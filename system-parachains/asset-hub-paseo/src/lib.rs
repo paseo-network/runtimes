@@ -93,9 +93,7 @@ use cumulus_pallet_parachain_system::{AnyRelayNumber, RelaychainDataProvider};
 use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
 use frame_support::traits::EnsureOrigin;
 use governance::{pallet_custom_origins, GeneralAdmin, StakingAdmin, Treasurer, TreasurySpender};
-use paseo_runtime_constants::time::{
-	DAYS as RC_DAYS, HOURS as RC_HOURS, MINUTES as RC_MINUTES, YEARS as RC_YEARS,
-};
+use paseo_runtime_constants::time::{DAYS as RC_DAYS, HOURS as RC_HOURS, MINUTES as RC_MINUTES};
 use polkadot_core_primitives::AccountIndex;
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, ConstU128, Get, OpaqueMetadata};
@@ -202,7 +200,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	impl_name: Cow::Borrowed("asset-hub-paseo"),
 	spec_name: Cow::Borrowed("asset-hub-paseo"),
 	authoring_version: 1,
-	spec_version: 2_005_006,
+	spec_version: 2_005_005,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	// BUMPED 16 -> 17 for the individuality v0.3.1 port. This is mandatory, not hygiene:
@@ -689,6 +687,7 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 				RuntimeCall::Scheduler(..) |
 				// Not on AH RuntimeCall::Babe(..) |
 				RuntimeCall::Timestamp(..) |
+				RuntimeCall::CollatorSelection(..) |
 				RuntimeCall::Indices(pallet_indices::Call::claim{..}) |
 				RuntimeCall::Indices(pallet_indices::Call::free{..}) |
 				RuntimeCall::Indices(pallet_indices::Call::freeze{..}) |
@@ -869,15 +868,19 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 			(ProxyType::Assets, ProxyType::AssetOwner) => true,
 			(ProxyType::Assets, ProxyType::AssetManager) => true,
 			(ProxyType::Staking, ProxyType::StakingOperator) => true,
+			// Only list proxy types whose calls are all allowed by `NonTransfer`.
+			// `SafeSudo` is left out on purpose: it can drive sudo, which `NonTransfer` cannot.
 			(
 				ProxyType::NonTransfer,
-				ProxyType::Assets |
-					ProxyType::AssetOwner |
-					ProxyType::AssetManager |
-					// `SafeSudo` can drive sudo, which `NonTransfer` cannot.
-					ProxyType::SafeSudo,
-			) => false,
-			(ProxyType::NonTransfer, _) => true,
+				ProxyType::CancelProxy |
+				ProxyType::Collator |
+				ProxyType::Governance |
+				ProxyType::Staking |
+				ProxyType::StakingOperator |
+				ProxyType::NominationPools |
+				ProxyType::Auction |
+				ProxyType::ParaRegistration,
+			) => true,
 			_ => false,
 		}
 	}
@@ -1256,6 +1259,8 @@ parameter_types! {
 	pub const AssetConversionPalletId: PalletId = PalletId(*b"py/ascon");
 	pub const LiquidityWithdrawalFee: Permill = Permill::from_percent(0);
 	pub LpFee: Permill =  Permill::from_rational(3u32, 1_000u32);
+	/// The highest swap fee `AdminOrigin` can set on a single pool.
+	pub MaxSwapFee: Permill = Permill::from_percent(2);
 	// Storage deposit for pool setup within asset conversion pallet
 	// and pool's lp token creation within assets pallet.
 	pub const PoolSetupFee: Balance = system_para_deposit(1, 4) + AssetDeposit::get();
@@ -1264,13 +1269,7 @@ parameter_types! {
 pub type PoolIdToAccountId =
 	pallet_asset_conversion::AccountIdConverter<AssetConversionPalletId, (Location, Location)>;
 
-parameter_types! {
-	pub MaxSwapFee: sp_runtime::Permill = sp_runtime::Permill::from_percent(2);
-}
-
 impl pallet_asset_conversion::Config for Runtime {
-	type AdminOrigin = frame_system::EnsureRoot<AccountId>;
-	type MaxSwapFee = MaxSwapFee;
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type HigherPrecisionBalance = sp_core::U256;
@@ -1290,6 +1289,8 @@ impl pallet_asset_conversion::Config for Runtime {
 	type PoolSetupFeeTarget = ResolveAssetTo<staking::DapStagingAccount, Self::Assets>;
 	type LiquidityWithdrawalFee = LiquidityWithdrawalFee;
 	type LPFee = LpFee;
+	type AdminOrigin = AssetsForceOrigin;
+	type MaxSwapFee = MaxSwapFee;
 	type PalletId = AssetConversionPalletId;
 	type MaxSwapPathLength = ConstU32<3>;
 	type MintMinLiquidity = ConstU128<100>;
@@ -1761,6 +1762,10 @@ impl indiv_pallet_scarcity::Config for Runtime {
 	// The collections are exposed as ERC-721 contracts, whose `name`, `symbol` and `tokenURI`
 	// are `string`. Held here so the rule covers the extrinsics too, not only the precompile.
 	type MetadataPolicy = indiv_precompile_scarcity::Erc721MetadataPolicy<Runtime>;
+	// A deployed contract holds any number of instances, so a game can keep several players'
+	// stakes. Every other key receives one while it holds none, and an address whose code is
+	// gone keeps what it held.
+	type ContractAccounts = indiv_precompile_scarcity::ReviveContracts<Runtime>;
 }
 
 impl pallet_revive::Config for Runtime {
@@ -3635,6 +3640,47 @@ mod benches {
 				Location::new(0, [PalletInstance(50), GeneralIndex(asset_id.into())]);
 			Asset { id: AssetId(asset_location), fun: Fungible(amount) }
 		}
+
+		fn get_assets(n: u32) -> XcmAssets {
+			use frame_support::traits::tokens::fungible;
+			let account: AccountId = frame_benchmarking::whitelisted_caller();
+			assert_ok!(<Balances as fungible::Mutate<_>>::mint_into(
+				&account,
+				<Balances as fungible::Inspect<_>>::minimum_balance(),
+			));
+			let amount = 1_000_000u128;
+			// Worst case: `n` distinct `ForeignAssets`. A full `Location` key books more proof
+			// than a trust-backed asset id, and `AssetTransactors` matches them last.
+			let assets = (0..n)
+				.map(|i| {
+					let asset_location = Location::new(
+						1,
+						[Parachain(3000), PalletInstance(53), GeneralIndex((1984 + i).into())],
+					);
+					assert_ok!(ForeignAssets::force_create(
+						RuntimeOrigin::root(),
+						asset_location.clone(),
+						account.clone().into(),
+						true,
+						1u128,
+					));
+					Asset { id: AssetId(asset_location), fun: Fungible(amount) }
+				})
+				.collect::<Vec<_>>();
+			assets.into()
+		}
+
+		fn batch_call(calls: Vec<RuntimeCall>) -> Option<RuntimeCall> {
+			Some(RuntimeCall::Utility(pallet_utility::Call::batch { calls }))
+		}
+
+		/// `Multisig::as_multi_threshold_1`, a single-call dispatcher to nest calls with.
+		fn wrap_call(call: RuntimeCall) -> Option<RuntimeCall> {
+			Some(RuntimeCall::Multisig(pallet_multisig::Call::<Runtime>::as_multi_threshold_1 {
+				other_signatories: Vec::new(),
+				call: alloc::boxed::Box::new(call),
+			}))
+		}
 	}
 
 	impl pallet_xcm_benchmarks::Config for Runtime {
@@ -4338,7 +4384,7 @@ pallet_revive::impl_runtime_apis_plus_revive_traits!(
 
 	impl system_parachains_common::apis::Inflation<Block> for Runtime {
 		fn experimental_issuance_prediction_info() -> system_parachains_common::apis::InflationInfo {
-			crate::staking::EraPayout::impl_experimental_inflation_info()
+			crate::staking::IssuanceCurve::impl_experimental_inflation_info()
 		}
 	}
 
@@ -4530,6 +4576,87 @@ mod tests {
 		// A weaker proxy must NOT be able to mint a SafeSudo proxy; only Any is its superset.
 		assert!(!ProxyType::NonTransfer.is_superset(&ProxyType::SafeSudo));
 		assert!(ProxyType::Any.is_superset(&ProxyType::SafeSudo));
+	}
+
+	/// Every `is_superset` edge must be backed by the call filters, otherwise a proxy can
+	/// escalate itself by adding a "subset" proxy that allows more calls.
+	#[test]
+	fn proxy_type_superset_relation_matches_call_filters() {
+		use frame_support::traits::InstanceFilter;
+		use sp_runtime::MultiAddress;
+
+		let who = MultiAddress::Id(AccountId::from([0u8; 32]));
+		let remark = RuntimeCall::System(frame_system::Call::remark { remark: vec![] });
+		let calls = vec![
+			remark.clone(),
+			RuntimeCall::Balances(pallet_balances::Call::transfer_keep_alive {
+				dest: who.clone(),
+				value: 1,
+			}),
+			RuntimeCall::CollatorSelection(pallet_collator_selection::Call::leave_intent {}),
+			RuntimeCall::Session(pallet_session::Call::purge_keys {}),
+			RuntimeCall::Staking(pallet_staking_async::Call::chill {}),
+			RuntimeCall::StakingRcClient(pallet_staking_async_rc_client::Call::purge_keys {
+				max_delivery_and_remote_execution_fee: None,
+			}),
+			RuntimeCall::NominationPools(pallet_nomination_pools::Call::chill { pool_id: 0 }),
+			RuntimeCall::Treasury(pallet_treasury::Call::check_status { index: 0 }),
+			RuntimeCall::ConvictionVoting(pallet_conviction_voting::Call::remove_vote {
+				class: None,
+				index: 0,
+			}),
+			RuntimeCall::Utility(pallet_utility::Call::batch { calls: vec![] }),
+			RuntimeCall::Multisig(pallet_multisig::Call::as_multi_threshold_1 {
+				other_signatories: vec![],
+				call: Box::new(remark),
+			}),
+			RuntimeCall::Proxy(pallet_proxy::Call::reject_announcement {
+				delegate: who.clone(),
+				call_hash: Default::default(),
+			}),
+			RuntimeCall::Proxy(pallet_proxy::Call::add_proxy {
+				delegate: who.clone(),
+				proxy_type: ProxyType::StakingOperator,
+				delay: 0,
+			}),
+			RuntimeCall::Assets(TrustBackedAssetsCall::create {
+				id: 1.into(),
+				admin: who.clone(),
+				min_balance: 1,
+			}),
+			RuntimeCall::Assets(TrustBackedAssetsCall::mint {
+				id: 1.into(),
+				beneficiary: who,
+				amount: 1,
+			}),
+		];
+		let proxy_types = [
+			ProxyType::Any,
+			ProxyType::NonTransfer,
+			ProxyType::CancelProxy,
+			ProxyType::Assets,
+			ProxyType::AssetOwner,
+			ProxyType::AssetManager,
+			ProxyType::Collator,
+			ProxyType::Governance,
+			ProxyType::Staking,
+			ProxyType::NominationPools,
+			ProxyType::Auction,
+			ProxyType::ParaRegistration,
+			ProxyType::StakingOperator,
+			ProxyType::SafeSudo,
+		];
+
+		for sup in &proxy_types {
+			for sub in proxy_types.iter().filter(|sub| sup.is_superset(sub)) {
+				for call in calls.iter().filter(|call| sub.filter(call)) {
+					assert!(
+						sup.filter(call),
+						"{sup:?} is a superset of {sub:?}, but does not allow {call:?}"
+					);
+				}
+			}
+		}
 	}
 
 	#[test]
@@ -4826,15 +4953,15 @@ mod tests {
 		assert!(AllExceptReapStash::contains(&chill_other));
 	}
 
-	/// The nomination-pools `with_era` bound (`TotalUnbondingPools`) must stay pinned at its
-	/// historical maximum (32) across the `AreNominatorsSlashable` fast-unbond flip. Otherwise a
-	/// lowered nominator bonding duration would shrink the bound, making oversized historical
-	/// sub-pools undecodable and destroying per-era unbonding accounting on the next `unbond`.
+	/// The nomination-pools `with_era` bound (`MaxUnbondingPools`) must stay pinned at its
+	/// historical maximum (32) across the `AreNominatorsSlashable` fast-unbond flip. A lower
+	/// bound makes oversized historical sub-pools undecodable and destroys per-era unbonding
+	/// accounting on the next `unbond`.
 	///
-	/// Paseo holds this by pinning `NominatorFastUnbondDuration` to `BondingDuration` (28), so
-	/// neither flag state moves the bound off 32. If the fast-unbond duration is ever actually
-	/// shortened, `PostUnbondingPoolsWindow` (currently a flat `ConstU32<4>`) has to widen by the
-	/// same amount, and this test should be updated to pin that relationship instead.
+	/// Since stable2609 the bound is a flat config value instead of the bonding duration plus
+	/// `PostUnbondingPoolsWindow`, so the flip cannot shrink it. The post-unbonding window is now
+	/// `MaxUnbondingPools - bonding_duration`. Paseo pins `NominatorFastUnbondDuration` to
+	/// `BondingDuration` (28), so the window stays the legacy 4 in both flag states.
 	#[test]
 	fn nomination_pools_bound_survives_nominator_unslashable_flip() {
 		use frame_support::traits::Get;
@@ -4842,39 +4969,29 @@ mod tests {
 
 		sp_io::TestExternalities::new(Default::default()).execute_with(|| {
 			// The bound the pallet actually uses for `SubPools::with_era`.
-			let total_unbonding_pools = || {
-				<Staking as StakingInterface>::nominator_bonding_duration() +
-					<<Runtime as pallet_nomination_pools::Config>::PostUnbondingPoolsWindow as Get<u32>>::get()
-			};
+			let max_unbonding_pools =
+				<<Runtime as pallet_nomination_pools::Config>::MaxUnbondingPools as Get<u32>>::get;
 
 			// Pre-flip: nominators slashable, so the nominator bonding duration is the full
-			// `BondingDuration` and the post-unbonding window is the legacy 4. Set explicitly
-			// rather than relying on the storage default so the test pins both flag states
-			// itself.
+			// `BondingDuration`. Set explicitly rather than relying on the storage default so
+			// the test pins both flag states itself.
 			pallet_staking_async::AreNominatorsSlashable::<Runtime>::put(true);
 			assert_eq!(<Staking as StakingInterface>::nominator_bonding_duration(), 28);
+			assert_eq!(max_unbonding_pools(), 32);
 			assert_eq!(
-				<<Runtime as pallet_nomination_pools::Config>::PostUnbondingPoolsWindow as Get<
-					u32,
-				>>::get(),
+				max_unbonding_pools() - <Staking as StakingInterface>::nominator_bonding_duration(),
 				4
 			);
-			assert_eq!(total_unbonding_pools(), 32);
 
-			// The flip: nominators become non-slashable. Paseo pins
-			// `NominatorFastUnbondDuration` to `BondingDuration` (both 28), so the nominator
-			// bonding duration does not move and the bound stays 32 on its own. This is the
-			// mechanism by which the invariant is held here: the fast-unbond path is configured
-			// flat rather than the window being widened to compensate.
+			// The flip: nominators become non-slashable. The nominator bonding duration does not
+			// move, so neither the bound nor the post-unbonding window changes.
 			pallet_staking_async::AreNominatorsSlashable::<Runtime>::put(false);
 			assert_eq!(<Staking as StakingInterface>::nominator_bonding_duration(), 28);
+			assert_eq!(max_unbonding_pools(), 32);
 			assert_eq!(
-				<<Runtime as pallet_nomination_pools::Config>::PostUnbondingPoolsWindow as Get<
-					u32,
-				>>::get(),
+				max_unbonding_pools() - <Staking as StakingInterface>::nominator_bonding_duration(),
 				4
 			);
-			assert_eq!(total_unbonding_pools(), 32);
 		});
 	}
 

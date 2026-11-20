@@ -15,50 +15,8 @@
 
 //! The runtime migrations per release.
 
-use crate::{
-	Assets, PgasAdmin, PgasAssetId, PgasMinBalance, Runtime, RuntimeOrigin,
-	TrustBackedAssetsInstance, Weight,
-};
+use crate::Runtime;
 use frame_support::parameter_types;
-
-/// Provides the initial `LastIssuanceTimestamp` for the DAP V1->V2 migration.
-///
-/// Uses the start of the active era (ms since unix epoch) so the catch-up drip covers
-/// the gap between the last era boundary and the migration. Falls back to 0 (no catch-up)
-/// if no era is active.
-pub struct DapLastIssuanceTimestamp;
-impl frame_support::traits::Get<u64> for DapLastIssuanceTimestamp {
-	fn get() -> u64 {
-		pallet_staking_async::ActiveEra::<Runtime>::get()
-			.and_then(|era| era.start)
-			.unwrap_or(0)
-	}
-}
-
-/// Default DAP budget allocation: 15% buffer, 85% staker rewards, 0% validator incentive.
-///
-/// Matches the previous `EraPayout` split (15% treasury / 85% stakers), now enforced
-/// at the DAP drip level instead of at era payout time. The 15% share initially
-/// accumulates in the DAP buffer and can be redirected by governance.
-pub struct DefaultDapBudget;
-impl frame_support::traits::Get<pallet_dap::BudgetAllocationMap> for DefaultDapBudget {
-	fn get() -> pallet_dap::BudgetAllocationMap {
-		use sp_runtime::Perbill;
-		use sp_staking::budget::BudgetRecipientList;
-
-		let recipients = <Runtime as pallet_dap::Config>::BudgetRecipients::recipients();
-		// Order matches `pallet_dap::Config::BudgetRecipients`:
-		// [dap (buffer), StakerRewardRecipient, ValidatorIncentiveRecipient]
-		let percentages =
-			[Perbill::from_percent(15), Perbill::from_percent(85), Perbill::from_percent(0)];
-
-		let mut map = pallet_dap::BudgetAllocationMap::new();
-		for ((key, _), perbill) in recipients.into_iter().zip(percentages) {
-			let _ = map.try_insert(key, perbill);
-		}
-		map
-	}
-}
 
 parameter_types! {
 	pub const AhMigratorPalletName: &'static str = "AhMigrator";
@@ -68,79 +26,6 @@ pub type RemoveAhMigratorPallet = frame_support::migrations::RemovePallet<
 	AhMigratorPalletName,
 	<Runtime as frame_system::Config>::DbWeight,
 >;
-
-/// Moves the funds of every `pallet-multi-asset-bounties` bounty and child-bounty
-/// from the previous account derivation to the new one introduced by
-/// <https://github.com/paritytech/polkadot-sdk/pull/11052>.
-///
-/// Until v2.2.2 the local wrapper in `system-parachains-common` derived the
-/// bounty pot accounts as
-/// `Treasury::PalletId.into_sub_account_truncating(("mbt", id))`, with `"mbt"`
-/// passed as a `&str` (SCALE-encoded as a length-prefixed sequence). Starting
-/// from `pallet-multi-asset-bounties` 0.4.0 the prefix is supplied as a fixed
-/// `[u8; 3]` (`*b"mbt"`), which encodes as 3 raw bytes — a different seed and
-/// therefore a different sub-account. Same story for child bounties (`"mcb"`).
-///
-/// Without this migration, any funds sitting at the old (`&str`-derived)
-/// accounts at the moment of the runtime upgrade would no longer be reachable
-/// by the pallet, which after the upgrade only knows the new (`[u8; 3]`-derived)
-/// accounts.
-///
-/// Reuses the runtime's `pallet_bounties::Config::TransferAllAssets`, which
-/// sweeps every asset listed in `treasury::BountyRelevantAssets` (DOT, USDT,
-/// USDC, on PAH). Native account collisions with the legacy bounties
-/// pallet are not possible — legacy uses `"bt"`/`"cb"` prefixes, multi-asset
-/// uses `"mbt"`/`"mcb"`, so the derived accounts are disjoint.
-pub struct MigrateBountyAccountAssets;
-impl frame_support::traits::OnRuntimeUpgrade for MigrateBountyAccountAssets {
-	fn on_runtime_upgrade() -> frame_support::weights::Weight {
-		use frame_support::traits::Get;
-		use pallet_bounties::TransferAllAssets;
-		use sp_runtime::traits::AccountIdConversion;
-
-		let pallet_id = <Runtime as pallet_treasury::Config>::PalletId::get();
-		let assets_per_bounty = crate::treasury::BountyRelevantAssets::get().len() as u64;
-
-		type Transferer = <Runtime as pallet_bounties::Config>::TransferAllAssets;
-
-		let db_weight = <Runtime as frame_system::Config>::DbWeight::get();
-		let mut weight = frame_support::weights::Weight::zero();
-
-		for bounty_id in pallet_multi_asset_bounties::Bounties::<Runtime>::iter_keys() {
-			// Old: `&str "mbt"` (length-prefixed encoding).
-			let old: crate::AccountId = pallet_id.into_sub_account_truncating(("mbt", bounty_id));
-			// New: `[u8; 3] *b"mbt"` (raw 3 bytes).
-			let new: crate::AccountId = pallet_id.into_sub_account_truncating((
-				pallet_multi_asset_bounties::BountyAccountPrefix::get(),
-				bounty_id,
-			));
-			let _ = Transferer::force_transfer_all_assets(&old, &new);
-			// `TransferAllFungibles` iterates the relevant assets twice and does at
-			// most one read + one write per asset.
-			weight = weight.saturating_add(
-				db_weight.reads_writes(2 * assets_per_bounty, 2 * assets_per_bounty),
-			);
-		}
-
-		for (parent_id, child_id) in
-			pallet_multi_asset_bounties::ChildBounties::<Runtime>::iter_keys()
-		{
-			let old: crate::AccountId =
-				pallet_id.into_sub_account_truncating(("mcb", parent_id, child_id));
-			let new: crate::AccountId = pallet_id.into_sub_account_truncating((
-				pallet_multi_asset_bounties::ChildBountyAccountPrefix::get(),
-				parent_id,
-				child_id,
-			));
-			let _ = Transferer::force_transfer_all_assets(&old, &new);
-			weight = weight.saturating_add(
-				db_weight.reads_writes(2 * assets_per_bounty, 2 * assets_per_bounty),
-			);
-		}
-
-		weight
-	}
-}
 
 /// Resets a pallet's on-chain storage version to 0.
 ///
@@ -183,106 +68,26 @@ impl<P: frame_support::traits::PalletInfoAccess> frame_support::traits::OnRuntim
 	}
 }
 
-#[cfg(feature = "try-runtime")]
-use frame_support::ensure;
-use frame_support::traits::OnRuntimeUpgrade;
-
-/// Creates the PGAS asset with [`pallet_assets::Pallet::force_create`] from the root origin.
-///
-/// Asset creation through `fungibles::Create` must follow `AssetIdAllocator`.
-/// With `AutoIncAssetId`, this path accepts only `NextAssetId`.
-/// `force_create` from `ForceOrigin` may pick any unused id instead
-/// (<https://github.com/paritytech/polkadot-sdk/pull/12378>).
-///
-/// `AutoIncAssetId::advance_from` only moves `NextAssetId` past [`PgasAssetId`] when the id is
-/// at or beyond the sequence, so permissionless asset creation is not affected while
-/// `NextAssetId` is above it.
-///
-/// Idempotent: a no-op if the asset already exists.
-pub struct ForceCreatePgasAsset;
-impl OnRuntimeUpgrade for ForceCreatePgasAsset {
-	fn on_runtime_upgrade() -> Weight {
-		const LOG_TARGET: &str = "runtime::asset-hub-paseo::migrations";
-		type AssetsWeightInfo =
-			<Runtime as pallet_assets::Config<TrustBackedAssetsInstance>>::WeightInfo;
-
-		let db_weight = <Runtime as frame_system::Config>::DbWeight::get();
-		let asset_id = PgasAssetId::get();
-
-		if pallet_assets::Asset::<Runtime, TrustBackedAssetsInstance>::contains_key(asset_id) {
-			log::info!(target: LOG_TARGET, "PGAS asset already exists; skipping.");
-			return db_weight.reads(1);
-		}
-
-		// Same asset as `indiv_pallet_pgas::Pallet::do_create_pgas_asset` would create: owned
-		// and administered by `PgasAdmin`, sufficient, with `PgasMinBalance` as the minimum
-		// balance.
-		match Assets::force_create(
-			RuntimeOrigin::root(),
-			asset_id.into(),
-			PgasAdmin::get().into(),
-			true,
-			PgasMinBalance::get(),
-		) {
-			Ok(()) => log::info!(target: LOG_TARGET, "PGAS asset created."),
-			Err(e) => log::error!(target: LOG_TARGET, "failed to create PGAS asset: {e:?}"),
-		}
-
-		// The `contains_key` check above, then `force_create`, whose benchmark covers the
-		// `Asset` insert and `AutoIncAssetId::advance_from`'s `NextAssetId` read and write.
-		db_weight
-			.reads(1)
-			.saturating_add(<AssetsWeightInfo as pallet_assets::WeightInfo>::force_create())
-	}
-
-	#[cfg(feature = "try-runtime")]
-	fn post_upgrade(_state: Vec<u8>) -> Result<(), sp_runtime::TryRuntimeError> {
-		let details =
-			pallet_assets::Asset::<Runtime, TrustBackedAssetsInstance>::get(PgasAssetId::get())
-				.ok_or("PGAS asset must exist after migration")?;
-		ensure!(details.owner == PgasAdmin::get(), "PGAS asset must be owned by `PgasAdmin`");
-		ensure!(details.is_sufficient, "PGAS asset must be sufficient");
-		ensure!(
-			details.min_balance == PgasMinBalance::get(),
-			"PGAS asset must use `PgasMinBalance`"
-		);
-		Ok(())
-	}
-}
-
 /// Unreleased migrations. Add new ones here:
 pub type Unreleased = (
+	// Wipes the storage the retired `AhMigrator` pallet left behind. Upstream ran it before
+	// v2.5.0; on Paseo it was never wired and the pallet's keys are still on chain.
+	RemoveAhMigratorPallet,
+	// stable2609-2: adds the registration base deposit to each stored signed-phase
+	// `SubmissionMetadata`. `VersionedMigration` (storage version 0 -> 1).
 	pallet_election_provider_multi_block::signed::migrations::v1::MigrateV0ToV1<Runtime>,
-	// Remove an old staking value
-	crate::staking::RemoveMarchTIValue,
-	cumulus_pallet_xcmp_queue::migration::v6::MigrateV5ToV6<crate::Runtime>,
-	cumulus_pallet_parachain_system::migration::Migration<Runtime>,
-	// DAP V1->V2: seed `BudgetAllocation` and `LastIssuanceTimestamp`, credit a one-shot
-	// catch-up drip. Required when moving staking to non-minting mode (see SDK PR #11616).
-	pallet_dap::migrations::MigrateV1ToV2<
-		Runtime,
-		DapLastIssuanceTimestamp,
-		DefaultDapBudget,
-		crate::dynamic_params::staking_election::MaxEraDuration,
-	>,
-	MigrateBountyAccountAssets,
-	pallet_staking_async::migrations::SetWeightedPointsFormulaStartEra<Runtime>,
-	// Create the PGAS asset (id 2_000_000_000) used by the individuality pallets.
-	ForceCreatePgasAsset,
 	// individuality v0.3.1 gave `AccountNameRecord` a `chat` field on each of `lite`/`full`.
 	// Live `AccountNames` entries are in the old two-`Option<BaseLabel>` shape and would fail
 	// to decode. `VersionedMigration`, so it is self-guarding and cannot run twice.
 	indiv_pallet_dotns_gateway::migration::MigrateV0ToV1<Runtime>,
-	// The v2.5.0 Paseo-local `MembersSubscriber` and `OriginRestriction` migrations have run on
-	// chain and are retired; see `ResetStorageVersion` for the version they left behind.
-	ResetStorageVersion<crate::MembersSubscriber>,
+	// The v2.5.0 Paseo-local `OriginRestriction` migration has run on chain and is retired; see
+	// `ResetStorageVersion` for the version it left behind.
 	ResetStorageVersion<crate::OriginRestriction>,
 	// Storage-version bootstrap for the two pallets added in this release, as upstream
 	// `next-asset-hub-paseo` carries them. Both are `VersionedMigration`s over empty maps here.
 	indiv_pallet_scarcity::migration::MigrateV0ToV1<Runtime>,
 	indiv_pallet_scarcity::migration::MigrateV1ToV2<Runtime>,
 	indiv_pallet_nft_claims::migration::MigrateV0ToV1<Runtime>,
-	indiv_pallet_members_subscriber::migration::MigrateV0ToV1<Runtime>,
 );
 
 /// Migrations/checks that do not need to be versioned and can run on every update.
@@ -291,132 +96,11 @@ pub type Permanent = pallet_xcm::migration::MigrateToLatestXcmVersion<crate::Run
 /// All single block migrations that will run on the next runtime upgrade.
 pub type SingleBlockMigrations = (Unreleased, Permanent);
 
+/// MBM migrations to apply on runtime upgrade.
 #[cfg(not(feature = "runtime-benchmarks"))]
-pub use multiblock_migrations::MbmMigrations;
-
-#[cfg(not(feature = "runtime-benchmarks"))]
-mod multiblock_migrations {
-	use crate::{
-		xcm_config::bridging::{
-			to_ethereum::EthereumLocation,
-			to_kusama::{AssetHubKusama, KsmLocation},
-		},
-		*,
-	};
-	use alloc::{vec, vec::Vec};
-	use assets_common::{
-		local_and_foreign_assets::ForeignAssetReserveData,
-		migrations::foreign_assets_reserves::ForeignAssetsReservesProvider,
-	};
-	use frame_support::traits::Contains;
-	use xcm::v5::{Junction, Location};
-	use xcm_builder::StartsWith;
-
-	/// MBM migrations to apply on runtime upgrade.
-	pub type MbmMigrations =
-		assets_common::migrations::foreign_assets_reserves::ForeignAssetsReservesMigration<
-			Runtime,
-			ForeignAssetsInstance,
-			AssetHubPaseoForeignAssetsReservesProvider,
-		>;
-
-	/// This type provides reserves information for `asset_id`. Meant to be used in a migration
-	/// running on the Asset Hub Paseo upgrade which changes the Foreign Assets
-	/// reserve-transfers and teleports from hardcoded rules to per-asset configured reserves.
-	///
-	/// The hardcoded rules (see `xcm_config.rs`) migrated here:
-	/// 1. Foreign Assets native to sibling parachains are teleportable between the asset's native
-	///    chain and Asset Hub ==> `ForeignAssetReserveData { reserve: "Asset's native chain",
-	///    teleport: true }`
-	/// 2. Foreign assets native to Ethereum Ecosystem have Ethereum as trusted reserve. ==>
-	///    `ForeignAssetReserveData { reserve: "Ethereum", teleport: false }`
-	/// 3. Foreign assets native to Kusama Ecosystem have Asset Hub Kusama as trusted reserve. ==>
-	///    `ForeignAssetReserveData { reserve: "Asset Hub Kusama", teleport: false }`
-	pub struct AssetHubPaseoForeignAssetsReservesProvider;
-	impl ForeignAssetsReservesProvider for AssetHubPaseoForeignAssetsReservesProvider {
-		type ReserveData = ForeignAssetReserveData;
-		fn reserves_for(asset_id: &Location) -> Vec<Self::ReserveData> {
-			let reserves = if StartsWith::<KsmLocation>::contains(asset_id) {
-				// rule 3: Kusama asset, Asset Hub Kusama reserve, non teleportable
-				vec![(AssetHubKusama::get(), false).into()]
-			} else if StartsWith::<EthereumLocation>::contains(asset_id) {
-				// rule 2: Ethereum asset, Ethereum reserve, non teleportable
-				vec![(EthereumLocation::get(), false).into()]
-			} else {
-				match asset_id.unpack() {
-					(1, interior) => {
-						match interior.first() {
-							Some(Junction::Parachain(sibling_para_id))
-								if sibling_para_id.ne(
-									&paseo_runtime_constants::system_parachain::ASSET_HUB_ID,
-								) =>
-							{
-								// rule 1: sibling parachain asset, sibling parachain reserve,
-								// teleportable
-								vec![ForeignAssetReserveData {
-									reserve: Location::new(
-										1,
-										Junction::Parachain(*sibling_para_id),
-									),
-									teleportable: true,
-								}]
-							},
-							_ => vec![],
-						}
-					},
-					_ => vec![],
-				}
-			};
-			if reserves.is_empty() {
-				log::error!(
-					target: "runtime::AssetHubPaseoForeignAssetsReservesProvider::reserves_for",
-					"unexpected asset id {asset_id:?}",
-				);
-			}
-			reserves
-		}
-
-		#[cfg(feature = "try-runtime")]
-		fn check_reserves_for(asset_id: &Location, reserves: Vec<Self::ReserveData>) -> bool {
-			if StartsWith::<KsmLocation>::contains(asset_id) {
-				let expected =
-					ForeignAssetReserveData { reserve: AssetHubKusama::get(), teleportable: false };
-				// rule 3: Kusama asset
-				reserves.len() == 1 && expected.eq(reserves.get(0).unwrap())
-			} else if StartsWith::<EthereumLocation>::contains(asset_id) {
-				let expected = ForeignAssetReserveData {
-					reserve: EthereumLocation::get(),
-					teleportable: false,
-				};
-				// rule 2: Ethereum asset
-				reserves.len() == 1 && expected.eq(reserves.get(0).unwrap())
-			} else {
-				match asset_id.unpack() {
-					(1, interior) => {
-						match interior.first() {
-							Some(Junction::Parachain(sibling_para_id))
-								if sibling_para_id.ne(
-									&paseo_runtime_constants::system_parachain::ASSET_HUB_ID,
-								) =>
-							{
-								let expected = ForeignAssetReserveData {
-									reserve: Location::new(
-										1,
-										Junction::Parachain(*sibling_para_id),
-									),
-									teleportable: true,
-								};
-								// rule 1: sibling parachain asset
-								reserves.len() == 1 && expected.eq(reserves.get(0).unwrap())
-							},
-							// unexpected asset
-							_ => false,
-						}
-					},
-					// unexpected asset
-					_ => false,
-				}
-			}
-		}
-	}
-}
+pub type MbmMigrations = (
+	// Scarcity `Instances` v2 -> v3: each value becomes a `Location`. It starts once the
+	// single-block `MigrateV1ToV2` above has left the pallet at version 2, and is a no-op on
+	// any other version.
+	indiv_pallet_scarcity::migration::v3::MigrateToLocations<Runtime>,
+);

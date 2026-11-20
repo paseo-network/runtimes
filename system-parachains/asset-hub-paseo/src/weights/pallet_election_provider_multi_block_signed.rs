@@ -209,15 +209,17 @@ impl<T: frame_system::Config> pallet_election_provider_multi_block::signed::Weig
 			.saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(p.into())))
 			.saturating_add(Weight::from_parts(0, 2507).saturating_mul(p.into()))
 	}
-
-	// SDK stable2609-2 upstream benchmark; regenerate for Paseo before release.
+	/// Storage: `MultiBlockElectionSigned::UnpaidRewards` (r:1 w:1)
+	/// Proof: `MultiBlockElectionSigned::UnpaidRewards` (`max_values`: Some(1), `max_size`: Some(833), added: 1328, mode: `Measured`)
+	/// Storage: `System::Account` (r:1 w:1)
+	/// Proof: `System::Account` (`max_values`: None, `max_size`: Some(128), added: 2603, mode: `Measured`)
 	fn claim_unpaid_reward() -> Weight {
 		// Proof Size summary in bytes:
-		//  Measured:  `1604`
-		//  Estimated: `5069`
-		// Minimum execution time: 42_910_000 picoseconds.
-		Weight::from_parts(45_488_000, 0)
-			.saturating_add(Weight::from_parts(0, 5069))
+		//  Measured:  `1775`
+		//  Estimated: `5240`
+		// Minimum execution time: 63_385_000 picoseconds.
+		Weight::from_parts(66_312_000, 0)
+			.saturating_add(Weight::from_parts(0, 5240))
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(2))
 	}

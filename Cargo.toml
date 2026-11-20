@@ -1,5 +1,5 @@
 [workspace.package]
-version = "2.5.6"
+version = "2.5.5"
 authors = ["Paseo Core Team"]
 edition = "2021"
 homepage = "https://github.com/paseo-network/runtimes"
@@ -45,56 +45,60 @@ sp-statement-store = { version = "29.0.0", default-features = false }
 pallet-verify-signature = { version = "0.13.0", default-features = false }
 pallet-pgas-allowance = { version = "0.5.0", default-features = false }
 
-# ---- Individuality crates compatible with SDK stable2609-2 ----
-# Keep the SDK-compatible tag aligned with the shared FRAME dependencies.
-indiv-system-parachains-common = { git = "https://github.com/paritytech/individuality-community", tag = "sdk-2609-2-3004014", package = "system-parachains-common", default-features = false }
-indiv-support = { git = "https://github.com/paritytech/individuality-community", tag = "sdk-2609-2-3004014", default-features = false }
-indiv-precompile-nft-claims = { git = "https://github.com/paritytech/individuality-community", tag = "sdk-2609-2-3004014", default-features = false }
-indiv-precompile-personhood = { git = "https://github.com/paritytech/individuality-community", tag = "sdk-2609-2-3004014", default-features = false }
-indiv-precompile-scarcity = { git = "https://github.com/paritytech/individuality-community", tag = "sdk-2609-2-3004014", default-features = false }
-indiv-pallet-airdrop = { git = "https://github.com/paritytech/individuality-community", tag = "sdk-2609-2-3004014", default-features = false }
-indiv-pallet-alias-accounts = { git = "https://github.com/paritytech/individuality-community", tag = "sdk-2609-2-3004014", default-features = false }
-indiv-pallet-chunks-manager = { git = "https://github.com/paritytech/individuality-community", tag = "sdk-2609-2-3004014", default-features = false }
-indiv-pallet-coinage = { git = "https://github.com/paritytech/individuality-community", tag = "sdk-2609-2-3004014", default-features = false }
-indiv-pallet-dotns-gateway = { git = "https://github.com/paritytech/individuality-community", tag = "sdk-2609-2-3004014", default-features = false }
-indiv-pallet-dummy-dim = { git = "https://github.com/paritytech/individuality-community", tag = "sdk-2609-2-3004014", default-features = false }
-indiv-pallet-game = { git = "https://github.com/paritytech/individuality-community", tag = "sdk-2609-2-3004014", default-features = false }
-indiv-pallet-honour = { git = "https://github.com/paritytech/individuality-community", tag = "sdk-2609-2-3004014", default-features = false }
-indiv-pallet-members = { git = "https://github.com/paritytech/individuality-community", tag = "sdk-2609-2-3004014", default-features = false }
-indiv-pallet-members-notifier = { git = "https://github.com/paritytech/individuality-community", tag = "sdk-2609-2-3004014", default-features = false }
-indiv-pallet-members-subscriber = { git = "https://github.com/paritytech/individuality-community", tag = "sdk-2609-2-3004014", default-features = false }
-indiv-pallet-mob-rule = { git = "https://github.com/paritytech/individuality-community", tag = "sdk-2609-2-3004014", default-features = false }
-indiv-pallet-network-suffix = { git = "https://github.com/paritytech/individuality-community", tag = "sdk-2609-2-3004014", default-features = false }
-indiv-pallet-nft-claims = { git = "https://github.com/paritytech/individuality-community", tag = "sdk-2609-2-3004014", default-features = false }
-indiv-pallet-nft-credits = { git = "https://github.com/paritytech/individuality-community", tag = "sdk-2609-2-3004014", default-features = false }
-indiv-pallet-origin-restriction = { git = "https://github.com/paritytech/individuality-community", tag = "sdk-2609-2-3004014", default-features = false }
-indiv-pallet-people-airdrops = { git = "https://github.com/paritytech/individuality-community", tag = "sdk-2609-2-3004014", default-features = false }
-indiv-pallet-people-lite = { git = "https://github.com/paritytech/individuality-community", tag = "sdk-2609-2-3004014", default-features = false }
-indiv-pallet-people = { git = "https://github.com/paritytech/individuality-community", tag = "sdk-2609-2-3004014", default-features = false }
-indiv-pallet-pgas = { git = "https://github.com/paritytech/individuality-community", tag = "sdk-2609-2-3004014", default-features = false }
-indiv-pallet-proof-of-ink = { git = "https://github.com/paritytech/individuality-community", tag = "sdk-2609-2-3004014", default-features = false }
-indiv-pallet-relay-randomness = { git = "https://github.com/paritytech/individuality-community", tag = "sdk-2609-2-3004014", default-features = false }
-indiv-pallet-resources = { git = "https://github.com/paritytech/individuality-community", tag = "sdk-2609-2-3004014", default-features = false }
-indiv-pallet-scarcity = { git = "https://github.com/paritytech/individuality-community", tag = "sdk-2609-2-3004014", default-features = false }
-indiv-pallet-score = { git = "https://github.com/paritytech/individuality-community", tag = "sdk-2609-2-3004014", default-features = false }
+# ---- Individuality (proof-of-personhood) crates, consumed from upstream `main` ----
+# The pallets, precompiles and `indiv-support` are no longer vendored in this repository. Cargo.lock
+# pins the exact upstream commit; bump it with `cargo update -p indiv-support` (and friends).
+indiv-system-parachains-common = { git = "https://github.com/paritytech/individuality-community", branch = "main", package = "system-parachains-common", default-features = false }
+indiv-support = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-precompile-nft-claims = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-precompile-personhood = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-precompile-scarcity = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-airdrop = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-alias-accounts = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-chunks-manager = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-coinage = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-dotns-gateway = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-dummy-dim = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-game = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-honour = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-members = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-members-notifier = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-members-subscriber = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-mob-rule = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-network-suffix = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-nft-claims = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-nft-credits = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-origin-restriction = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-people-airdrops = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-people-lite = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-people = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-pgas = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-proof-of-ink = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-relay-randomness = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-resources = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-scarcity = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
+indiv-pallet-score = { git = "https://github.com/paritytech/individuality-community", branch = "main", default-features = false }
 # Paseo-only individuality crates that upstream does not carry.
 indiv-pallet-storage-initialization = { path = "pallets/storage-initialization", default-features = false }
-# Fellowship migrators must use the same stable2609-2 SDK as Bulletin.
+# Fellowship crates, taken from the fellowship release that ships SDK stable2609-2 (v2.6.0).
 pallet-rc-migrator = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.6.0", default-features = false }
 pallet-ah-ops = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.6.0", default-features = false }
-# AHM v2 migrator pallets use the SDK-compatible Fellowship release.
-# On Paseo the Coretime chain is dead, so
-# `pallet-ct-migrator` runs on Asset Hub. Both are behind the runtimes' `ahm-v2` feature.
-migrator-types = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.6.0", default-features = false }
+# AHM v2 migrator pallets (polkadot-fellows/runtimes#1285, #1305, #1321, #1324, #1337). Every AHM
+# v2 PR there is ported here as it lands, and these pins move with it, so the runtimes' `Config`
+# impls match the pallets' traits. On Paseo the Coretime chain is dead, so `pallet-ct-migrator`
+# runs on Asset Hub. Both are behind the runtimes' `ahm-v2` feature.
 pallet-rc2-migrator = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.6.0", default-features = false }
 pallet-ct-migrator = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.6.0", default-features = false }
+migrator-types = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.6.0", default-features = false }
 pallet-election-provider-multi-block = { version = "0.13.0", default-features = false }
 pallet-staking-async = { version = "0.17.1", default-features = false }
 hex = { version = "0.4.3", default-features = false }
 rand = { version = "0.9.2" }
 impl-trait-for-tuples = { version = "0.2.3", default-features = false }
 
-# Keep the macro on the same SDK release as pallet-revive.
+# Pin pallet-revive-proc-macro to 0.7.2 because 0.7.3 doesn't generate
+# `lookup_syscall_index` used by pallet-revive 0.13.0. Remove when upstream
+# publishes a compatible version.
 pallet-revive-proc-macro = "0.10.0"
 
 kusama-runtime-constants = { git = "https://github.com/polkadot-fellows/runtimes", tag = "v2.6.0", package = "kusama-runtime-constants", default-features = false }
@@ -177,7 +181,6 @@ frame-system = { version = "49.0.0", default-features = false }
 frame-system-benchmarking = { version = "50.0.0", default-features = false }
 frame-system-rpc-runtime-api = { version = "44.0.0", default-features = false }
 frame-try-runtime = { version = "0.55.0", default-features = false }
-frame-remote-externalities = { version = "0.62.0" }
 grandpa = { version = "0.45.0", package = "sc-consensus-grandpa" }
 grandpa-primitives = { version = "31.0.0", default-features = false, package = "sp-consensus-grandpa" }
 hex-literal = { version = "0.4.1" }
@@ -214,8 +217,6 @@ pallet-collective = { version = "50.0.0", default-features = false }
 pallet-conviction-voting = { version = "50.0.0", default-features = false }
 pallet-dap = { version = "0.7.0", default-features = false }
 pallet-core-fellowship = { version = "34.0.0", default-features = false }
-pallet-election-provider-multi-phase = { version = "51.0.0", default-features = false }
-pallet-election-provider-support-benchmarking = { version = "49.0.0", default-features = false }
 pallet-fast-unstake = { version = "49.0.0", default-features = false }
 pallet-glutton = { version = "36.0.0", default-features = false }
 pallet-grandpa = { version = "50.0.0", default-features = false }
@@ -313,7 +314,7 @@ snowbridge-pallet-inbound-queue = { version = "0.34.0", default-features = false
 snowbridge-pallet-inbound-queue-v2 = { version = "0.23.0", default-features = false }
 snowbridge-pallet-inbound-queue-fixtures = { version = "0.42.0", default-features = false }
 snowbridge-pallet-inbound-queue-v2-fixtures = { version = "0.23.0", default-features = false }
-snowbridge-pallet-ethereum-client-fixtures = { version = "0.32.0" }
+snowbridge-pallet-ethereum-client-fixtures = { version = "0.31.0" }
 snowbridge-pallet-outbound-queue = { version = "0.25.0", default-features = false }
 snowbridge-pallet-outbound-queue-v2 = { version = "0.14.0", default-features = false }
 snowbridge-pallet-system = { version = "0.25.0", default-features = false }

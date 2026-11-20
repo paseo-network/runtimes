@@ -22,6 +22,7 @@
 //! nodes and no networking involved.
 #![cfg(test)]
 
+pub mod checks;
 pub mod lockdown;
 pub mod mock;
 pub mod tests;

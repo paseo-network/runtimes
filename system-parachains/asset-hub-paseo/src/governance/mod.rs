@@ -73,8 +73,6 @@ parameter_types! {
 }
 
 impl pallet_whitelist::Config for Runtime {
-	type DeferredDispatchExpiration = ConstU32<{ 28 * paseo_runtime_constants::time::DAYS }>;
-	type BlockNumberProvider = cumulus_pallet_parachain_system::RelaychainDataProvider<Runtime>;
 	type WeightInfo = weights::pallet_whitelist::WeightInfo<Self>;
 	type RuntimeCall = RuntimeCall;
 	type RuntimeEvent = RuntimeEvent;
@@ -83,6 +81,8 @@ impl pallet_whitelist::Config for Runtime {
 		EnsureXcm<IsVoiceOfBody<FellowshipLocation, FellowsBodyId>>,
 	>;
 	type DispatchWhitelistedOrigin = EitherOf<EnsureRoot<Self::AccountId>, WhitelistedCaller>;
+	type DeferredDispatchExpiration = ConstU32<{ 28 * RC_DAYS }>;
+	type BlockNumberProvider = RelaychainDataProvider<Runtime>;
 	type Preimages = Preimage;
 }
 

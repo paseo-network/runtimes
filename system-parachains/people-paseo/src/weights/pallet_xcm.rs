@@ -355,15 +355,13 @@ impl<T: frame_system::Config> pallet_xcm::WeightInfo for WeightInfo<T> {
 	/// Storage: `PolkadotXcm::AssetTraps` (r:1 w:1)
 	/// Proof: `PolkadotXcm::AssetTraps` (`max_values`: None, `max_size`: None, mode: `Measured`)
 	/// The range of component `n` is `[1, 20]`.
-	fn claim_assets(n: u32, ) -> Weight {
+	fn claim_assets(_n: u32, ) -> Weight {
 		// Proof Size summary in bytes:
-		//  Measured:  `23`
-		//  Estimated: `3488`
-		// Minimum execution time: 33_232_000 picoseconds.
-		Weight::from_parts(35_046_995, 0)
-			.saturating_add(Weight::from_parts(0, 3488))
-			// Standard Error: 1_802
-			.saturating_add(Weight::from_parts(11_418, 0).saturating_mul(n.into()))
+		//  Measured:  `24`
+		//  Estimated: `3489`
+		// Minimum execution time: 44_915_000 picoseconds.
+		Weight::from_parts(47_590_173, 0)
+			.saturating_add(Weight::from_parts(0, 3489))
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
@@ -400,11 +398,11 @@ impl<T: frame_system::Config> pallet_xcm::WeightInfo for WeightInfo<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
-		// Minimum execution time: 1_232_000 picoseconds.
-		Weight::from_parts(1_387_355, 0)
+		// Minimum execution time: 1_185_000 picoseconds.
+		Weight::from_parts(813_340, 0)
 			.saturating_add(Weight::from_parts(0, 0))
-			// Standard Error: 0
-			.saturating_add(Weight::from_parts(12, 0).saturating_mul(n.into()))
+			// Standard Error: 16
+			.saturating_add(Weight::from_parts(40_116, 0).saturating_mul(n.into()))
 	}
 	/// The range of component `n` is `[0, 131072]`.
 	fn decode_xcm(n: u32, ) -> Weight {

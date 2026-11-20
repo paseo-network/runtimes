@@ -350,21 +350,15 @@ impl<T: frame_system::Config> pallet_xcm::WeightInfo for WeightInfo<T> {
 	/// Proof: `PolkadotXcm::ShouldRecordXcm` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
 	/// Storage: `PolkadotXcm::AssetTraps` (r:1 w:1)
 	/// Proof: `PolkadotXcm::AssetTraps` (`max_values`: None, `max_size`: None, mode: `Measured`)
-	// SDK stable2609-2 upstream benchmark; regenerate for Paseo before release.
-	fn claim_assets(n: u32, ) -> Weight {
+	fn claim_assets() -> Weight {
 		// Proof Size summary in bytes:
-		//  Measured:  `54 + n * (43 ±0)`
-		//  Estimated: `3518 + n * (2561 ±0)`
-		// Minimum execution time: 18_906_000 picoseconds.
-		Weight::from_parts(15_160_724, 0)
-			.saturating_add(Weight::from_parts(0, 3518))
-			// Standard Error: 4_194
-			.saturating_add(Weight::from_parts(5_671_325, 0).saturating_mul(n.into()))
+		//  Measured:  `24`
+		//  Estimated: `3489`
+		// Minimum execution time: 60_574_000 picoseconds.
+		Weight::from_parts(63_399_000, 0)
+			.saturating_add(Weight::from_parts(0, 3489))
 			.saturating_add(T::DbWeight::get().reads(2))
-			.saturating_add(T::DbWeight::get().reads((1_u64).saturating_mul(n.into())))
 			.saturating_add(T::DbWeight::get().writes(1))
-			.saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(n.into())))
-			.saturating_add(Weight::from_parts(0, 2561).saturating_mul(n.into()))
 	}
 	/// Storage: `PolkadotXcm::AuthorizedAliases` (r:1 w:1)
 	/// Proof: `PolkadotXcm::AuthorizedAliases` (`max_values`: None, `max_size`: None, mode: `Measured`)
@@ -394,27 +388,12 @@ impl<T: frame_system::Config> pallet_xcm::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(2))
 	}
-	// SDK stable2609-2 upstream benchmark; regenerate for Paseo before release.
-	fn weigh_message(n: u32, ) -> Weight {
+	fn weigh_message() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
-		// Minimum execution time: 803_000 picoseconds.
-		Weight::from_parts(1_048_972, 0)
+		// Minimum execution time: 15_319_000 picoseconds.
+		Weight::from_parts(15_900_000, 0)
 			.saturating_add(Weight::from_parts(0, 0))
-			// Standard Error: 23
-			.saturating_add(Weight::from_parts(68_380, 0).saturating_mul(n.into()))
-	}
-
-	// SDK stable2609-2 upstream benchmark; regenerate for Paseo before release.
-	fn decode_xcm(n: u32, ) -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `0`
-		//  Estimated: `0`
-		// Minimum execution time: 248_000 picoseconds.
-		Weight::from_parts(1_208_058, 0)
-			.saturating_add(Weight::from_parts(0, 0))
-			// Standard Error: 0
-			.saturating_add(Weight::from_parts(1_603, 0).saturating_mul(n.into()))
 	}
 }

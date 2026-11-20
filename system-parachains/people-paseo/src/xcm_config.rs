@@ -15,9 +15,9 @@
 
 use super::{
 	assets::hollar::HollarFromHydration, people::ExternalAssetLocation, AccountId,
-	AllPalletsWithSystem, AssetRate, Assets, Balance, Balances, CollatorSelection, ParachainInfo,
-	ParachainSystem, PasWeightToFee as WeightToFee, PolkadotXcm, Runtime, RuntimeCall,
-	RuntimeEvent, RuntimeHoldReason, RuntimeOrigin, XcmpQueue,
+	AccumulateForward, AllPalletsWithSystem, AssetRate, Assets, Balance, Balances,
+	CollatorSelection, ParachainInfo, ParachainSystem, PasWeightToFee as WeightToFee, PolkadotXcm,
+	Runtime, RuntimeCall, RuntimeEvent, RuntimeHoldReason, RuntimeOrigin, XcmpQueue,
 };
 use crate::{system_para_deposit, TransactionByteFee, CENTS};
 #[cfg(feature = "runtime-benchmarks")]
@@ -29,7 +29,6 @@ use frame_support::{
 		fungible::HoldConsideration,
 		tokens::imbalance::{ResolveAssetTo, ResolveTo},
 		ConstU32, Contains, ContainsPair, Equals, Everything, LinearStoragePrice, Nothing,
-		ProcessMessageError,
 	},
 };
 use frame_system::EnsureRoot;
@@ -59,10 +58,7 @@ use xcm_builder::{
 	SovereignSignedViaLocation, TakeWeightCredit, TrailingSetTopicAsId, UsingComponents,
 	WeightInfoBounds, WithComputedOrigin, WithUniqueTopic, XcmFeeManagerFromComponents,
 };
-use xcm_executor::{
-	traits::{ConvertLocation, Properties, ShouldExecute},
-	XcmExecutor,
-};
+use xcm_executor::{traits::ConvertLocation, XcmExecutor};
 
 pub use system_parachains_constants::paseo::locations::{
 	AssetHubLocation, AssetHubPlurality, RelayChainLocation,
@@ -90,6 +86,8 @@ parameter_types! {
 		LocationToAccountId::convert_location(&RelayTreasuryLocation::get())
 			.unwrap_or(TreasuryAccount::get());
 	pub StakingPot: AccountId = CollatorSelection::account_id();
+	pub AccumulateForwardLocation: Location =
+		AccountId32 { network: None, id: AccumulateForward::accumulation_account().into() }.into();
 }
 
 pub type PriceForParentDelivery = polkadot_runtime_common::xcm_sender::ExponentialPrice<
@@ -214,23 +212,6 @@ impl Contains<Location> for FellowsPlurality {
 	}
 }
 
-/// Custom barrier for Asset Hub - allows any execution from Asset Hub.
-pub struct AllowAssetHubExecution;
-impl ShouldExecute for AllowAssetHubExecution {
-	fn should_execute<RuntimeCall>(
-		origin: &Location,
-		_instructions: &mut [Instruction<RuntimeCall>],
-		_max_weight: Weight,
-		_properties: &mut Properties,
-	) -> Result<(), ProcessMessageError> {
-		if origin == &AssetHubLocation::get() {
-			Ok(())
-		} else {
-			Err(ProcessMessageError::Unsupported)
-		}
-	}
-}
-
 pub type Barrier = TrailingSetTopicAsId<
 	DenyThenTry<
 		DenyRecursively<DenyReserveTransferToRelayChain>,
@@ -239,13 +220,12 @@ pub type Barrier = TrailingSetTopicAsId<
 			TakeWeightCredit,
 			// Expected responses are OK.
 			AllowKnownQueryResponses<PolkadotXcm>,
-			AllowAssetHubExecution,
 			WithComputedOrigin<
 				(
 					// If the message is one that immediately attempts to pay for execution, then
 					// allow it.
 					AllowTopLevelPaidExecutionFrom<Everything>,
-					// Parent and its pluralities (i.e. governance bodies) get free execution.
+					// Parent, Asset Hub and their pluralities get free execution.
 					AllowExplicitUnpaidExecutionFrom<
 						(
 							ParentOrParentsPlurality,
@@ -278,6 +258,8 @@ pub type WaivedLocations = (
 	Equals<RelayTreasuryLocation>,
 	FellowsPlurality,
 	LocalPlurality,
+	// Forwards of accumulated dust and identity slashes to the DAP.
+	Equals<AccumulateForwardLocation>,
 );
 
 /// Accept an external asset as a teleport only when it comes from Asset Hub.

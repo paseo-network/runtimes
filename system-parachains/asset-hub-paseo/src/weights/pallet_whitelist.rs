@@ -126,13 +126,41 @@ impl<T: frame_system::Config> pallet_whitelist::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(3))
 			.saturating_add(T::DbWeight::get().writes(2))
 	}
-
-	// SDK stable2609-2 weights for new benchmarks; regenerate for this runtime before release.
+	/// Storage: `Whitelist::WhitelistedCall` (r:1 w:0)
+	/// Proof: `Whitelist::WhitelistedCall` (`max_values`: None, `max_size`: Some(40), added: 2515, mode: `MaxEncodedLen`)
+	/// Storage: `ParachainSystem::ValidationData` (r:1 w:0)
+	/// Proof: `ParachainSystem::ValidationData` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
+	/// Storage: `ParachainSystem::LastRelayChainBlockNumber` (r:1 w:0)
+	/// Proof: `ParachainSystem::LastRelayChainBlockNumber` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
+	/// Storage: `Whitelist::DeferredDispatch` (r:1 w:1)
+	/// Proof: `Whitelist::DeferredDispatch` (`max_values`: None, `max_size`: Some(44), added: 2519, mode: `MaxEncodedLen`)
+	/// The range of component `n` is `[1, 10000]`.
 	fn defer_dispatch(n: u32, ) -> Weight {
-		<pallet_whitelist::weights::SubstrateWeight<T> as pallet_whitelist::WeightInfo>::defer_dispatch(n)
+		// Proof Size summary in bytes:
+		//  Measured:  `142`
+		//  Estimated: `3509`
+		// Minimum execution time: 15_632_000 picoseconds.
+		Weight::from_parts(16_688_470, 0)
+			.saturating_add(Weight::from_parts(0, 3509))
+			// Standard Error: 0
+			.saturating_add(Weight::from_parts(1_372, 0).saturating_mul(n.into()))
+			.saturating_add(T::DbWeight::get().reads(4))
+			.saturating_add(T::DbWeight::get().writes(1))
 	}
-
+	/// Storage: `Whitelist::DeferredDispatch` (r:1 w:1)
+	/// Proof: `Whitelist::DeferredDispatch` (`max_values`: None, `max_size`: Some(44), added: 2519, mode: `MaxEncodedLen`)
+	/// Storage: `ParachainSystem::ValidationData` (r:1 w:0)
+	/// Proof: `ParachainSystem::ValidationData` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
+	/// Storage: `ParachainSystem::LastRelayChainBlockNumber` (r:1 w:0)
+	/// Proof: `ParachainSystem::LastRelayChainBlockNumber` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
 	fn remove_deferred_dispatch() -> Weight {
-		<pallet_whitelist::weights::SubstrateWeight<T> as pallet_whitelist::WeightInfo>::remove_deferred_dispatch()
+		// Proof Size summary in bytes:
+		//  Measured:  `211`
+		//  Estimated: `3509`
+		// Minimum execution time: 14_853_000 picoseconds.
+		Weight::from_parts(15_919_000, 0)
+			.saturating_add(Weight::from_parts(0, 3509))
+			.saturating_add(T::DbWeight::get().reads(3))
+			.saturating_add(T::DbWeight::get().writes(1))
 	}
 }
