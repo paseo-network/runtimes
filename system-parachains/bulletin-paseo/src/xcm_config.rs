@@ -175,11 +175,11 @@ pub type Barrier = TrailingSetTopicAsId<(
 			AllowTopLevelPaidExecutionFrom<Everything>,
 			// Parent, its pluralities (i.e. governance bodies), governance parachains, and
 			// authorizer parachains get free execution.
-			AllowExplicitUnpaidExecutionFrom<(
-				ParentOrParentsPlurality,
-				IsGovernanceLocation,
-				IsAuthorizerParachain,
-			)>,
+			AllowExplicitUnpaidExecutionFrom<
+				(ParentOrParentsPlurality, IsGovernanceLocation, IsAuthorizerParachain),
+				// The barrier runs before charging fees; alias checks must not read storage.
+				CheapTrustedAliasers,
+			>,
 			// Subscriptions for version tracking are OK.
 			AllowSubscriptionsFrom<ParentRelayOrSiblingParachains>,
 			// HRMP notifications from the relay chain are OK.
@@ -210,18 +210,20 @@ pub type WaivedLocations = (
 /// Trust the relay chain and other system parachains to teleport the relay chain native token.
 pub type TrustedTeleporters = ConcreteAssetFromSystem<TokenRelayLocation>;
 
-/// Defines origin aliasing rules for this chain.
+/// Computation-only aliasing rules that the unpaid-execution barrier can check before charging
+/// fees. Storage-backed authorization belongs to [`TrustedAliasers`] alone.
 ///
 /// - Allow any origin to alias into a child sub-location (equivalent to DescendOrigin),
 /// - Allow same accounts to alias into each other across system chains,
-/// - Allow AssetHub root to alias into anything,
-/// - Allow origins explicitly authorized to alias into target location.
-pub type TrustedAliasers = (
+/// - Allow AssetHub root to alias into anything.
+pub type CheapTrustedAliasers = (
 	AliasChildLocation,
 	AliasAccountId32FromSiblingSystemChain,
 	AliasOriginRootUsingFilter<AssetHubLocation, Everything>,
-	AuthorizedAliasers<Runtime>,
 );
+
+/// Executor aliasing rules, including origins explicitly authorized by the target location.
+pub type TrustedAliasers = (CheapTrustedAliasers, AuthorizedAliasers<Runtime>);
 
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
