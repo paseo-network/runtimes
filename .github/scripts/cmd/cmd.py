@@ -272,6 +272,36 @@ def bench_cmd(runtime, pallet, out_dir, smoke):
     return cmd
 
 
+def carry_over_excluded(generated, current, excluded):
+    """A benchmark in `benchmarks_exclude_extrinsics` is missing from the generated weight file,
+    which then no longer implements the pallet's `WeightInfo` and breaks the build. Copies each
+    excluded function, doc comments included, from the file being replaced into the new one, so a
+    hand-written weight survives a re-benchmark."""
+    if not excluded or not os.path.exists(current):
+        return
+    with open(current) as f:
+        old = f.read().split('\n')
+    with open(generated) as f:
+        new = f.read()
+    blocks = []
+    for name in excluded:
+        if f'\tfn {name}(' in new:
+            continue
+        start = next((i for i, line in enumerate(old) if line.startswith(f'\tfn {name}(')), None)
+        if start is None:
+            log(f'-- {current} has no `{name}` to carry over: the runtime will not build without it')
+            continue
+        end = old.index('\t}', start)
+        while start > 0 and old[start - 1].startswith('\t///'):
+            start -= 1
+        blocks.append('\n'.join(old[start:end + 1]))
+    if blocks:
+        # Right before the `}` closing the `impl`, the last line of the file.
+        close = new.rstrip().rfind('\n}')
+        with open(generated, 'w') as f:
+            f.write(new[:close] + '\n' + '\n'.join(blocks) + new[close:])
+
+
 def run_bench(runtime, pallet, smoke, stop, fail_fast):
     """Benchmarks one pallet into a private temp dir, so pallets running in parallel never see each
     other's files. Returns (exit status, temp dir holding the generated files)."""
@@ -358,11 +388,14 @@ def on_bench_done(runtime, pallet, status, out_dir):
         write_summary()
         return
 
-    dest_dir = output_path(runtimesMatrix[runtime], pallet)
+    config = runtimesMatrix[runtime]
+    excluded = (config.get("benchmarks_exclude_extrinsics", {}) or {}).get(pallet, [])
+    dest_dir = output_path(config, pallet)
     os.makedirs(dest_dir, exist_ok=True)
     written = []
     for name in sorted(os.listdir(out_dir)):
         dest = os.path.join(dest_dir, name)
+        carry_over_excluded(os.path.join(out_dir, name), dest, excluded)
         shutil.move(os.path.join(out_dir, name), dest)
         written.append(dest)
     log(f'-- {pallet} in {runtime} done: {written}')
